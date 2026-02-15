@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { LogOut, Grid, ChefHat, DollarSign, User, Sun, Moon, Menu, X, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { LogOut, ChefHat, DollarSign, User, Sun, Moon, Menu, X, ChevronLeft, ChevronRight, Settings, BookOpen } from 'lucide-react';
+
+import iconMesas from '../assets/icons/icon-mesas.svg';
+import iconCategoria from '../assets/icons/icon-categoria.svg';
+import iconReporte from '../assets/icons/icon-reporte.svg';
 
 const DashboardLayout = () => {
     const { user, logout } = useAuth();
@@ -10,6 +14,13 @@ const DashboardLayout = () => {
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
+
+    // Helper for icon styling to match Lucide size
+    const iconStyle = {
+        width: 20,
+        height: 20,
+        objectFit: 'contain'
+    };
 
     const handleLogout = () => {
         setMobileOpen(false);
@@ -53,7 +64,7 @@ const DashboardLayout = () => {
                     borderRadius: 0,
                     border: 0,
                     width: collapsed ? 80 : 250,
-                    transition: 'width 0.3s ease-in-out',
+                    transition: 'width 0.6s ease-in-out',
                 }}
             >
                 {/* Mobile Close Button */}
@@ -65,48 +76,63 @@ const DashboardLayout = () => {
                 </div>
 
                 {/* Desktop Header & Toggle */}
-                <div className="desktop-sidebar-header" style={{ marginBottom: 20, textAlign: 'center', position: 'relative' }}>
+                <div className="desktop-sidebar-header" style={{ marginBottom: 20, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', padding: '0 5px' }}>
 
-                    {!collapsed && (
-                        <>
-                            <h2 style={{ color: 'var(--primary)', marginBottom: 5, fontSize: '1.5rem', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden' }} onClick={() => window.location.href = '/'}>
-                                ComandaGo
-                            </h2>
-                            <div className="badge" style={{ background: 'var(--item-hover)', color: 'var(--text-main)', display: 'inline-block' }}>{user?.rol}</div>
-                        </>
-                    )}
-                    {collapsed && (
-                        <h2 style={{ color: 'var(--primary)', marginBottom: 5, fontSize: '1.2rem', cursor: 'pointer' }} onClick={() => window.location.href = '/'}>CG</h2>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                        {/* Logo Icon - Always Visible */}
+                        <div className="logo-icon" style={{
+                            color: '#DB2A40',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '24px' // Ensure it doesn't shrink
+                        }}>
+                            <img
+                                src="/iconCG-32x32.png"
+                                alt="Logo"
+                                style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    objectFit: 'contain'
+                                }}
+                            />
+                        </div>
 
-                    {/* Toggle Button */}
-                    <button
-                        className="glass-button icon"
-                        onClick={() => setCollapsed(!collapsed)}
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            right: collapsed ? -1000 : -10, // Hide or move out of way? Better strategy below
-                            display: 'none' // We'll put it differently
-                        }}
-                    >
-                    </button>
-
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 5 }}>
-                        <button
-                            className="glass-button"
-                            style={{ padding: 5, borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'absolute', right: collapsed ? 'auto' : 0, top: 5, left: collapsed ? '50%' : 'auto', transform: collapsed ? 'translateX(-50%)' : 'none' }}
-                            onClick={() => setCollapsed(!collapsed)}
+                        {/* Text - Persistent in DOM, animated via CSS classes */}
+                        <h2
+                            className={`sidebar-logo speed-type-text ${!collapsed ? 'enter' : 'exit'}`}
+                            onClick={() => window.location.href = '/'}
+                            style={{ margin: 0, fontSize: '1.1rem' }}
                         >
-                            {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-                        </button>
+                            COMANDAGO
+                        </h2>
                     </div>
+
+                    <button
+                        className="glass-button"
+                        style={{
+                            padding: 5,
+                            borderRadius: '50%',
+                            width: 24,
+                            height: 24,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: 'none',
+                            background: 'transparent',
+                            color: 'var(--sidebar-muted)',
+                            marginLeft: collapsed ? '5px' : '0'
+                        }}
+                        onClick={() => setCollapsed(!collapsed)}
+                    >
+                        {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                    </button>
                 </div>
 
                 <nav style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, overflowX: 'hidden' }}>
                     {(user?.rol === 'mozo' || user?.rol === 'admin') && (
                         <NavLink to="/tables" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Mesas">
-                            <Grid size={20} /> {!collapsed && <span>Mesas</span>}
+                            <img src={iconMesas} alt="Mesas" style={iconStyle} className="module-icon-svg" /> {!collapsed && <span>Mesas</span>}
                         </NavLink>
                     )}
 
@@ -122,10 +148,10 @@ const DashboardLayout = () => {
                                 <DollarSign size={20} /> {!collapsed && <span>Caja</span>}
                             </NavLink>
                             <NavLink to="/admin/categories" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Categorías">
-                                <Grid size={20} /> {!collapsed && <span>Categorías</span>}
+                                <img src={iconCategoria} alt="Categorías" style={iconStyle} className="module-icon-svg" /> {!collapsed && <span>Categorías</span>}
                             </NavLink>
                             <NavLink to="/admin/inventory" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Almacén">
-                                <ChefHat size={20} /> {!collapsed && <span>Almacén</span>}
+                                <BookOpen size={20} /> {!collapsed && <span>Almacén</span>}
                             </NavLink>
                         </>
                     )}
@@ -138,7 +164,7 @@ const DashboardLayout = () => {
                                 <User size={20} /> {!collapsed && <span>Usuarios</span>}
                             </NavLink>
                             <NavLink to="/admin/staff-stats" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Reporte Personal">
-                                <Grid size={20} /> {!collapsed && <span>Reporte Personal</span>}
+                                <img src={iconReporte} alt="Reporte" style={iconStyle} className="module-icon-svg" /> {!collapsed && <span>Reporte Personal</span>}
                             </NavLink>
                         </>
                     )}
@@ -147,7 +173,7 @@ const DashboardLayout = () => {
                         <Settings size={20} /> {!collapsed && <span>Ajustes</span>}
                     </NavLink>
 
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', padding: collapsed ? '10px 0' : 10, color: 'var(--text-muted)' }}>
+                    <div className={`user-profile-container ${collapsed ? 'collapsed' : ''}`}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             {user?.foto ? (
                                 <img src={user.foto} alt="Profile" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)' }} />
@@ -157,13 +183,13 @@ const DashboardLayout = () => {
                                 </div>
                             )}
                             {!collapsed && (
-                                <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                    <span style={{ fontWeight: 'bold', color: 'var(--text-main)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: 120, overflow: 'hidden' }}>{user?.nombre}</span>
+                                <div className="user-info">
+                                    <span className="user-name">{user?.nombre}</span>
                                 </div>
                             )}
                         </div>
                         {!collapsed && (
-                            <button onClick={toggleMode} className="glass-button" style={{ padding: 5, borderRadius: '50%' }}>
+                            <button onClick={toggleMode} className="glass-button theme-toggle">
                                 {mode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
                             </button>
                         )}

@@ -23,6 +23,12 @@
   --table-header-bg: rgba(255, 255, 255, 0.1);
   --table-row-border: rgba(255, 255, 255, 0.1);
   --item-hover: rgba(255, 255, 255, 0.1);
+
+  /* Sidebar Variables (Default inherits from theme) */
+  --sidebar-bg: var(--bg-secondary);
+  --sidebar-text: var(--text-main);
+  --sidebar-muted: var(--text-muted);
+  --sidebar-border: var(--glass-border);
 }
 
 /* THEME CLASSES */
@@ -63,21 +69,150 @@
   --primary-hover: #2563eb;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
+  --text-muted: #94a3b8;
+}
+
+/* Minimalist Theme Variables */
+/* Default to "Paper-White" (Light) look if mode is not specified, but usually mode class is present */
+.theme-minimalist {
+  --bg-primary: #ffffff;
+  --bg-secondary: #ffffff;
+  --bg-surface: #ffffff;
+  --glass-border: #000000;
+  --accent: #000000;
+  --primary: #000000;
+  --primary-hover: #333333;
+  --text-main: #000000;
+  --text-muted: #333333;
+
+  /* Sidebar Specifics - Always Black */
+  --sidebar-bg: #000000;
+  --sidebar-text: #ffffff;
+  --sidebar-muted: #cccccc;
+  --sidebar-border: #ffffff;
+
+  --item-hover: #f0f0f0;
+  --input-bg: #ffffff;
+  --input-text: #000000;
+}
+
+/* Minimalist Dark Mode - Inverted (Black Content) */
+.mode-dark.theme-minimalist {
+  --bg-primary: #000000;
+  --bg-secondary: #000000;
+  --bg-surface: #000000;
+  --glass-border: #ffffff;
+  --accent: #ffffff;
+  --primary: #ffffff;
+  --primary-hover: #cccccc;
+  --text-main: #ffffff;
+  --text-muted: #cccccc;
+  --item-hover: #222222;
+  --input-bg: #000000;
+  --input-text: #ffffff;
+  /* Sidebar remains black */
+}
+
+/* Minimalist Light Mode - Paper White (White Content) */
+/* We can leave the default .theme-minimalist variables as Light */
+
+
+/* Sidebar Items Styling in Minimalist Theme */
+
+/* Active Item: White Bg, Black Text, White Border */
+.theme-minimalist .glass-button.active {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #ffffff !important;
+}
+
+/* Active Icon: Black */
+.theme-minimalist .glass-button.active .module-icon-svg {
+  filter: none !important;
+  /* Original Black (if source is black) or verify source color */
+  /* If source SVG is black, no filter needed to be black. */
+  /* If source SVG is colored, we need to force black. */
+  filter: brightness(0) !important;
+}
+
+.theme-minimalist .glass-button.active svg {
+  color: #000000 !important;
+}
+
+/* Inactive Items: Transparent/Black Bg, White Text, White Border */
+.theme-minimalist .glass-button:not(.active) {
+  background: transparent !important;
+  color: #ffffff !important;
+  border: 1px solid #ffffff !important;
+}
+
+/* Inactive Icon: White */
+.theme-minimalist .glass-button:not(.active) .module-icon-svg {
+  filter: brightness(0) invert(1) !important;
+  /* Force White */
+}
+
+.theme-minimalist .glass-button:not(.active) svg {
+  color: #ffffff !important;
+}
+
+/* Global Borders in Minimalist Theme */
+.theme-minimalist .glass-panel,
+.theme-minimalist .glass-button,
+.theme-minimalist .glass-input,
+.theme-minimalist .card {
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: none !important;
+}
+
+/* Fix Input styles for Dark/Light Minimalist */
+.theme-minimalist input,
+.theme-minimalist select,
+.theme-minimalist textarea {
+  border: 1px solid var(--glass-border) !important;
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
+}
+
+/* Tables */
+.theme-minimalist tr,
+.theme-minimalist td,
+.theme-minimalist th {
+  border-bottom: 1px solid var(--glass-border) !important;
+  color: var(--text-main) !important;
+}
+
+/* Kitchen Titles - Force Red for "En Proceso" globally overrides theme */
+.kitchen-title-process {
+  color: #ff0000 !important;
+}
+
+/* DEFAULT DARK THEME SVG FILTER (For other themes) */
+/* Apply this ONLY when NOT in minimalist theme or when minimalist inactive */
+:not(.theme-minimalist) .module-icon-svg {
+  filter: brightness(0) invert(1);
 }
 
 /* LIGHT MODE OVERRIDES - Applies on top of any theme */
 .mode-light {
-  /* Force light backgrounds */
+  /* Force light backgrounds for CONTENT */
   --bg-primary: #ffffff !important;
-  --bg-secondary: rgba(255, 255, 255, 0.8) !important;
+  --bg-secondary: #f8fafc !important;
+  /* Card background */
   --bg-surface: #ffffff !important;
 
-  /* Force dark text */
-  --text-main: #0f172a !important;
+  /* Force dark text for CONTENT */
+  --text-main: #1a1a1a !important;
   --text-muted: #64748b !important;
   --text-inverse: #ffffff !important;
 
-  /* Adjust borders for light mode visibility */
+  /* Sidebar SPECIFIC overrides (Must remain Dark) */
+  --sidebar-bg: #000000 !important;
+  --sidebar-text: #ffffff !important;
+  --sidebar-muted: rgba(255, 255, 255, 0.6) !important;
+  --sidebar-border: rgba(255, 255, 255, 0.15) !important;
+
+  /* Adjust borders for light mode visibility in content */
   --glass-border: rgba(0, 0, 0, 0.1) !important;
   --table-header-bg: rgba(0, 0, 0, 0.05) !important;
   --table-row-border: rgba(0, 0, 0, 0.1) !important;
@@ -86,7 +221,6 @@
   /* Inputs need to be dark text on light background */
   --input-bg: rgba(0, 0, 0, 0.05) !important;
   --input-text: #000000 !important;
-  /* Force Black */
 }
 
 /* Ensure glass panels look right in light mode */
@@ -239,11 +373,129 @@ html {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border-right: 1px solid var(--glass-border);
-  background: var(--bg-secondary);
-  transition: width 0.3s ease-in-out, padding 0.3s ease-in-out;
+  border-right: 1px solid var(--sidebar-border);
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  transition: width 0.6s ease-in-out, padding 0.6s ease-in-out, background 0.3s, color 0.3s;
   overflow: visible;
   /* Allows toggle button to overlap if needed, or tooltip */
+}
+
+/* ... (other styles) ... */
+
+/* Speed-Type Animation */
+@keyframes speedType {
+  from {
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+    opacity: 0;
+  }
+
+  to {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    opacity: 1;
+  }
+}
+
+@keyframes speedTypeReverse {
+  from {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    opacity: 1;
+  }
+
+  to {
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+    opacity: 0;
+  }
+}
+
+.speed-type-text {
+  font-family: 'Lexend Peta', sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  color: #DB2A40;
+  /* Flash Red */
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+  /* Default state handled by enter/exit classes */
+  opacity: 0;
+  /* Hidden by default if no class */
+}
+
+.speed-type-text.enter {
+  animation: speedType 0.4s steps(40, end) forwards;
+}
+
+.speed-type-text.exit {
+  animation: speedTypeReverse 0.4s steps(40, end) forwards;
+}
+
+/* Sidebar Components */
+.sidebar-logo {
+  color: var(--primary);
+  margin-bottom: 5px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-logo.small {
+  font-size: 1.2rem;
+}
+
+.user-profile-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  color: var(--sidebar-muted);
+  border-top: 1px solid var(--sidebar-border);
+}
+
+.user-profile-container.collapsed {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.user-name {
+  font-weight: bold;
+  color: var(--sidebar-text);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 120px;
+  overflow: hidden;
+}
+
+.theme-toggle {
+  padding: 5px;
+  border-radius: 50%;
+  color: var(--sidebar-text);
+  border-color: var(--sidebar-border);
+}
+
+/* Light Mode specific button override for Sidebar */
+.mode-light .sidebar .glass-button {
+  color: var(--sidebar-text);
+  border-color: var(--sidebar-border);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mode-light .sidebar .glass-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.mode-light .sidebar .glass-button.active,
+.mode-light .sidebar .glass-button.primary {
+  background: var(--primary) !important;
+  color: white !important;
+  border-color: var(--primary) !important;
 }
 
 .sidebar.collapsed {
@@ -397,6 +649,32 @@ h2 {
   animation: fadeIn 0.3s ease-out forwards;
 }
 
+/* Speed-Type Animation */
+@keyframes speedType {
+  from {
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+    opacity: 0;
+  }
+
+  to {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    opacity: 1;
+  }
+}
+
+.speed-type-text {
+  font-family: 'Lexend Peta', sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  color: #DB2A40;
+  /* Flash Red */
+  white-space: nowrap;
+  animation: speedType 0.4s steps(40, end) forwards;
+  /* Fast typing effect */
+  display: inline-block;
+  vertical-align: middle;
+}
+
 /* Modals */
 .modal-overlay {
   position: fixed;
@@ -479,6 +757,8 @@ td {
   --primary: #ff6b6b;
   --text-main: #1f2937;
   --text-muted: #6b7280;
+  --sidebar-bg: #121212;
+  /* Enforce black sidebar in light mode */
 }
 
 body {
@@ -576,7 +856,8 @@ body {
 
 .sidebar {
   width: 250px;
-  /* background: rgba(20, 20, 20, 0.9); */
+  background: var(--sidebar-bg, rgba(20, 20, 20, 0.9));
+  /* Use sidebar-bg if defined, else default dark */
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -616,14 +897,6 @@ h2 {
   color: var(--text-muted);
 }
 
-/* Responsive Utilities */
-.order-layout {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 20px;
-  height: calc(100vh - 60px);
-}
-
 /* Mobile Header */
 .mobile-header {
   display: none;
@@ -638,20 +911,11 @@ h2 {
   top: 0;
 }
 
-.mobile-nav-toggle {
-  display: none;
-}
-
 /* Mobile UX Improvements */
 .responsive-grid {
   display: grid !important;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
 }
 
 .table-responsive {
@@ -734,8 +998,6 @@ table {
   .glass-button {
     padding: 12px 16px;
     /* Larger touch targets */
-    padding: 12px 16px;
-    /* Larger touch targets */
     font-size: 1rem;
     min-height: 48px;
     /* Minimum touch target size recommended 48px */
@@ -775,103 +1037,6 @@ table {
     font-size: 16px;
     /* Prevent zoom on iOS */
   }
-}
-
-/* Status Badges */
-.badge {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.status-libre {
-  background: rgba(81, 207, 102, 0.2);
-  color: var(--success);
-  border: 1px solid var(--success);
-}
-
-.status-ocupada {
-  background: rgba(252, 196, 25, 0.2);
-  color: var(--warning);
-  border: 1px solid var(--warning);
-}
-
-.status-cerrada {
-  background: rgba(255, 107, 107, 0.2);
-  color: var(--danger);
-  border: 1px solid var(--danger);
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-/* Modals */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(5px);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.modal-content {
-  background: var(--bg-surface);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  padding: 25px;
-  max-width: 500px;
-  width: 100%;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-  animation: fadeIn 0.3s ease-out;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--glass-border);
-  padding-bottom: 15px;
-}
-
-.modal-body {
-  overflow-y: auto;
-  flex: 1;
-}
-
-.modal-footer {
-  margin-top: 20px;
-  padding-top: 15px;
-  border-top: 1px solid var(--glass-border);
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
 }
 
 /* Staff Stats View Responsiveness */

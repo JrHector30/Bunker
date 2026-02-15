@@ -126,7 +126,7 @@ const KitchenView = () => {
 
                 {/* COLUMN 2: EN PROCESO */}
                 <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', overflow: 'hidden', height: '100%' }}>
-                    <h2 style={{ padding: 15, borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--primary)' }}>
+                    <h2 style={{ padding: 15, borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: 10, color: '#ff0000' }}>
                         <ChefHat /> En Proceso ({inProcessItems.length})
                     </h2>
                     <div style={{ flex: 1, overflowY: 'auto', padding: 15 }}>

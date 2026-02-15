@@ -4,7 +4,12 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
     // Theme references COLOR (carbon, blue, red)
-    const [theme, setTheme] = useState(localStorage.getItem('app-theme') || 'theme-green');
+    const validThemes = ['theme-green', 'theme-blue', 'theme-red', 'theme-carbon'];
+    const storedTheme = localStorage.getItem('app-theme');
+    // If stored theme is valid use it, otherwise default to theme-green
+    const initialTheme = (storedTheme && validThemes.includes(storedTheme)) ? storedTheme : 'theme-green';
+
+    const [theme, setTheme] = useState(initialTheme);
 
     // Mode references BRIGHTNESS (dark, light)
     // Default to dark as per original design
@@ -13,6 +18,7 @@ export const ThemeProvider = ({ children }) => {
     useEffect(() => {
         const root = document.documentElement;
 
+        // Remove all potential theme/mode classes
         // Remove all potential theme/mode classes
         root.classList.remove('theme-carbon', 'theme-green', 'theme-red', 'theme-blue');
         root.classList.remove('mode-dark', 'mode-light'); // If we decide to use classes for both
