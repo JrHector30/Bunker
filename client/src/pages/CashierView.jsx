@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft } from 'lucide-react';
 import PaymentModal from '../components/PaymentModal';
 import CashCountTable from '../components/CashCountTable';
+import { useAuth } from '../context/AuthContext';
 
 const CashierView = () => {
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [openTables, setOpenTables] = useState([]);
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -102,7 +104,7 @@ const CashierView = () => {
                                             const res = await fetch(`/api/orders/${activeOrder.id}/cancel`, {
                                                 method: 'PUT',
                                                 headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ motivo, usuarioResponsable: "Caja/Admin" })
+                                                body: JSON.stringify({ motivo, usuarioResponsable: "Caja/Admin", usuarioId: user.id })
                                             });
                                             if (res.ok) {
                                                 alert("Pedido anulado y mesa liberada.");

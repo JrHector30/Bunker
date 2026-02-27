@@ -265,7 +265,7 @@ const InventoryView = () => {
                 <div className="glass-panel table-responsive" style={{ padding: 0 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left' }}>
+                            <tr style={{ background: 'var(--table-header-bg)', textAlign: 'left' }}>
                                 <th style={{ padding: 15 }}>Imagen</th>
                                 <SortHeader label="Nombre" sortKey="nombre" />
                                 <SortHeader label="Categoría" sortKey="categoria" />
@@ -282,7 +282,7 @@ const InventoryView = () => {
                                 const isWarning = margenPct > 40;
 
                                 return (
-                                    <tr key={prod.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <tr key={prod.id} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
                                         <td style={{ padding: 15 }}>
                                             {prod.imagen ? <img src={prod.imagen} alt={prod.nombre} style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 8 }} />
                                                 : <div style={{ width: 50, height: 50, background: 'var(--item-hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={20} className="text-muted" /></div>}
@@ -318,6 +318,16 @@ const InventoryView = () => {
 
     const renderInsumosTab = () => {
         const filteredInsumos = insumos.filter(i => i.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
+        const sortedInsumos = [...filteredInsumos].sort((a, b) => {
+            if (!sortConfig.key) return 0;
+            let valA = a[sortConfig.key];
+            let valB = b[sortConfig.key];
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+            if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
 
         return (
             <>
@@ -335,24 +345,24 @@ const InventoryView = () => {
                 <div className="glass-panel table-responsive" style={{ padding: 0 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left' }}>
-                                <th style={{ padding: 15 }}>Nombre</th>
-                                <th style={{ padding: 15 }}>Costo Unitario Bruto</th>
-                                <th style={{ padding: 15 }}>Stock Actual</th>
+                            <tr style={{ background: 'var(--table-header-bg)', textAlign: 'left' }}>
+                                <SortHeader label="Nombre" sortKey="nombre" />
+                                <SortHeader label="Costo Unitario Bruto" sortKey="precioCompra" />
+                                <SortHeader label="Stock Actual" sortKey="stock" />
                                 <th style={{ padding: 15 }}>Nivel de Stock</th>
                                 <th style={{ padding: 15 }}>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredInsumos.map(insumo => {
+                            {sortedInsumos.map(insumo => {
                                 const stockPct = Math.min(100, Math.max(0, (insumo.stock / 100) * 100)); // Demo ratio against 100 units
                                 return (
-                                    <tr key={insumo.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <tr key={insumo.id} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
                                         <td style={{ padding: 15, fontWeight: 'bold' }}>{insumo.nombre}</td>
                                         <td style={{ padding: 15 }}>S/. {insumo.precioCompra.toFixed(2)} / {insumo.unidadMedida}</td>
-                                        <td style={{ padding: 15 }}>{insumo.stock} {insumo.unidadMedida}</td>
+                                        <td style={{ padding: 15 }}>{insumo.stock.toFixed(2)} {insumo.unidadMedida}</td>
                                         <td style={{ padding: 15 }}>
-                                            <div style={{ height: 8, width: 150, background: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden' }}>
+                                            <div style={{ height: 10, width: 150, background: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
                                                 <div style={{ height: '100%', width: `${stockPct}%`, background: stockPct < 20 ? 'var(--danger)' : 'var(--primary)', transition: 'width 0.3s' }} />
                                             </div>
                                         </td>
@@ -388,7 +398,7 @@ const InventoryView = () => {
                         <label style={{ display: 'block', marginBottom: 10, fontSize: '1.1rem', fontWeight: 'bold' }}>Seleccionar Plato del Menú</label>
                         <select className="glass-input" style={{ fontSize: '1.1rem', padding: 15 }} value={selectedPlatoId} onChange={e => setSelectedPlatoId(e.target.value)}>
                             <option value="">-- Elija un plato --</option>
-                            {products.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                            {[...products].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                         </select>
                         <p className="text-muted" style={{ marginTop: 10, fontSize: '0.9rem' }}>El costo se descontará del stock en Logística al venderse este plato.</p>
                     </div>
@@ -431,9 +441,9 @@ const InventoryView = () => {
                             </div>
                         ) : (
                             <div className="table-responsive">
-                                <table style={{ width: '100%', marginBottom: 20 }}>
+                                <table className="recipe-table" style={{ width: '100%', marginBottom: 20 }}>
                                     <thead>
-                                        <tr style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left' }}>
+                                        <tr style={{ background: 'var(--table-header-bg)', textAlign: 'left' }}>
                                             <th style={{ padding: 15 }}>Insumo</th>
                                             <th style={{ padding: 15 }}>Unidad</th>
                                             <th style={{ padding: 15 }}>Cantidad a descontar</th>
@@ -446,11 +456,11 @@ const InventoryView = () => {
                                             const insu = item.insumo || insumos.find(i => i.id === parseInt(item.insumoId));
                                             const subtotal = insu && item.cantidad ? (insu.precioCompra * item.cantidad) : 0;
                                             return (
-                                                <tr key={index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <tr key={index} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
                                                     <td style={{ padding: 15 }}>
                                                         <select className="glass-input" value={item.insumoId} onChange={e => handleIngredientChange(index, 'insumoId', e.target.value)}>
                                                             <option value="">-- Seleccionar Insumo --</option>
-                                                            {insumos.map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
+                                                            {[...insumos].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
                                                         </select>
                                                     </td>
                                                     <td style={{ padding: 15 }} className="text-muted">{insu ? insu.unidadMedida : '-'}</td>
@@ -517,7 +527,7 @@ const InventoryView = () => {
                 <div className="glass-panel table-responsive" style={{ padding: 0 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left' }}>
+                            <tr style={{ background: 'var(--table-header-bg)', textAlign: 'left' }}>
                                 <th style={{ padding: 15 }}>Fecha y Hora</th>
                                 <th style={{ padding: 15 }}>Insumo</th>
                                 <th style={{ padding: 15 }}>Tipo</th>
@@ -532,7 +542,7 @@ const InventoryView = () => {
                                 const isPositive = ['COMPRA', 'AJUSTE_POSITIVO'].includes(mov.tipoMovimiento);
                                 const color = isPositive ? 'var(--success)' : (mov.tipoMovimiento === 'VENTA' ? 'var(--primary)' : 'var(--danger)');
                                 return (
-                                    <tr key={mov.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <tr key={mov.id} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
                                         <td style={{ padding: 15 }}>{new Date(mov.fecha).toLocaleString()}</td>
                                         <td style={{ padding: 15, fontWeight: 'bold' }}>{mov.insumo?.nombre}</td>
                                         <td style={{ padding: 15 }}>
@@ -603,6 +613,18 @@ const InventoryView = () => {
             return insumo && !isNaN(real) && Math.abs(real - insumo.stock) >= 0.0001;
         });
 
+        // Add sorting logic for Auditoria
+        const sortedAuditInsumos = [...insumos].sort((a, b) => {
+            if (!sortConfig.key) return 0;
+            let valA = a[sortConfig.key];
+            let valB = b[sortConfig.key];
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+            if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+
         return (
             <div className="fade-in">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -619,14 +641,14 @@ const InventoryView = () => {
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left' }}>
-                                <th style={{ padding: 15 }}>Insumo</th>
-                                <th style={{ padding: 15 }}>Stock Teórico (Actual)</th>
+                                <SortHeader label="Insumo" sortKey="nombre" />
+                                <SortHeader label="Stock Teórico (Actual)" sortKey="stock" />
                                 <th style={{ padding: 15 }}>Stock Físico (Real)</th>
                                 <th style={{ padding: 15 }}>Diferencia</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {insumos.map(insumo => {
+                            {sortedAuditInsumos.map(insumo => {
                                 const realInput = auditData[insumo.id] !== undefined ? auditData[insumo.id] : '';
                                 const realValue = parseFloat(realInput);
                                 const dif = !isNaN(realValue) ? realValue - insumo.stock : 0;

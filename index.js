@@ -109,28 +109,7 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// 2. Tables
-app.get('/api/tables', async (req, res) => {
-    const tables = await prisma.mesa.findMany({
-        include: {
-            comandas: {
-                where: { estado: { not: 'cerrada' } },
-                include: {
-                    detalles: {
-                        include: {
-                            plato: {
-                                include: { categoria: true }
-                            },
-                            cocinero: true
-                        }
-                    },
-                    usuario: true // Include Waiter Info
-                }
-            }
-        }
-    });
-    res.json(tables);
-});
+// 2. Tables -> Moved to line 502
 
 app.post('/api/tables', async (req, res) => {
     const { numero, capacidad } = req.body;
@@ -504,8 +483,22 @@ app.get('/api/tables', async (req, res) => {
         const tables = await prisma.mesa.findMany({
             include: {
                 comandas: {
-                    where: { estado: { not: 'cerrada' } }, // Only active
-                    include: { usuario: true, detalles: true }
+                    where: { estado: { notIn: ['cerrada', 'anulada'] } }, // Strict exclusion
+                    orderBy: { id: 'desc' }, // HOTFIX: Always get the latest active comanda
+                    take: 1, // HOTFIX: Only take the 1 most recent active comanda per table
+                    include: {
+                        usuario: true,
+                        detalles: {
+                            where: { estado: { notIn: ['anulado'] } }, // HOTFIX: Nunca enviar detalles anulados al frontend
+                            include: {
+                                plato: {
+                                    include: {
+                                        categoria: true
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         });
@@ -517,8 +510,10 @@ app.get('/api/tables', async (req, res) => {
                     const raw = await prisma.$queryRawUnsafe(`SELECT comensales FROM Comanda WHERE id = ${t.comandas[0].id}`);
                     if (raw[0]) t.comandas[0].comensales = raw[0].comensales;
                 } catch (e) {
-                    // Ignore if column missing (safe fallback)
+                    // Ignore if column missing
                 }
+                // Debugging requested by user
+                console.log(`[API TABLES] Mesa ${t.numero} -> Comanda Activa ID: ${t.comandas[0].id}, Detalles: ${t.comandas[0].detalles.length}`);
             }
         }
         res.json(tables);
@@ -531,8 +526,8 @@ app.get('/api/tables', async (req, res) => {
 app.get('/api/kitchen/queue', async (req, res) => {
     const queue = await prisma.detalleComanda.findMany({
         where: {
-            estado: { not: 'entregado' }, // Show everything not yet delivered
-            comanda: { estado: { not: 'cerrada' } }, // Only active orders
+            estado: { notIn: ['entregado', 'anulado'] }, // Show everything not yet delivered or cancelled
+            comanda: { estado: { notIn: ['cerrada', 'anulada'] } }, // Only active orders
             plato: {
                 categoria: { enviarCocina: true } // FILTER: Only Kitchen Categories
             }
@@ -548,12 +543,28 @@ app.get('/api/kitchen/queue', async (req, res) => {
 });
 
 app.post('/api/orders', async (req, res) => {
-    const { mesaId, usuarioId, detalles } = req.body; // detalles: [{ platoId, cantidad }]
+    const { mesaId, usuarioId, detalles } = req.body;
 
-    // Check if there is an active order for this table
-    let order = await prisma.comanda.findFirst({
-        where: { mesaId: parseInt(mesaId), estado: { not: 'cerrada' } }
+    // Hotfix: Check if there are MULTIPLE active orders due to desyncs
+    const activeOrders = await prisma.comanda.findMany({
+        where: { mesaId: parseInt(mesaId), estado: { notIn: ['cerrada', 'anulada'] } },
+        orderBy: { id: 'desc' } // Newest first
     });
+
+    let order = activeOrders.length > 0 ? activeOrders[0] : null;
+
+    // Self-heal: If there are older orphaned orders on this table, anulate them to prevent array collisions in Frontend
+    if (activeOrders.length > 1) {
+        for (let i = 1; i < activeOrders.length; i++) {
+            await prisma.comanda.update({
+                where: { id: activeOrders[i].id },
+                data: { estado: 'anulada' }
+            });
+            console.log(`Auto-Healed: Cancelled orphaned comanda ${activeOrders[i].id} on Mesa ${mesaId}`);
+        }
+    }
+
+    console.log(`Mesa ${mesaId}: Buscando orden activa... Encontrada: ${order ? order.id : 'NINGUNA. Generando NUEVO orderId.'}`);
 
     if (!order) {
         order = await prisma.comanda.create({
@@ -579,10 +590,14 @@ app.post('/api/orders', async (req, res) => {
             data: { estado: 'ocupada' }
         });
     } else {
+        // Self-Healing: If for any reason the mesa was visually 'libre', force it back to 'ocupada'
+        await prisma.mesa.update({
+            where: { id: parseInt(mesaId) },
+            data: { estado: 'ocupada' }
+        });
+
         // Append to existing order
         for (const d of detalles) {
-            // Check if same product is already 'pendiente' in this order
-            // Only merge if there is no special observation
             let existingDetail = null;
             if (!d.observacion) {
                 existingDetail = await prisma.detalleComanda.findFirst({
@@ -590,7 +605,7 @@ app.post('/api/orders', async (req, res) => {
                         comandaId: order.id,
                         platoId: d.platoId,
                         estado: 'pendiente',
-                        observacion: null // Only merge with non-observed items
+                        observacion: null
                     }
                 });
             }
@@ -764,7 +779,7 @@ app.get('/api/staff/stats', async (req, res) => {
             include: {
                 detallesCocina: {
                     where: {
-                        estado: 'listo',
+                        estado: { in: ['listo', 'entregado'] },
                         // Note: detallesCocina doesn't have a direct date field usually, 
                         // but we can try to filter by fechaPreparacion or link to Comanda date.
                         // Ideally we check if the LINKED COMANDA is from that date if detalle doesn't have it.
@@ -866,13 +881,14 @@ app.delete('/api/orders/details/:id', async (req, res) => {
             return res.status(404).json({ error: "Detalle no encontrado" });
         }
 
-        await prisma.detalleComanda.delete({
-            where: { id: parseInt(id) }
+        await prisma.detalleComanda.update({
+            where: { id: parseInt(id) },
+            data: { estado: 'anulado' }
         });
 
         // AUTO-LIBERATION LOGIC
         const remainingDetails = await prisma.detalleComanda.count({
-            where: { comandaId: detail.comandaId }
+            where: { comandaId: detail.comandaId, estado: { notIn: ['anulado'] } }
         });
 
         if (remainingDetails === 0) {
@@ -901,7 +917,7 @@ app.delete('/api/orders/details/:id', async (req, res) => {
 // ANULAR COMANDA COMPLETAMENTE
 app.put('/api/orders/:id/cancel', async (req, res) => {
     const { id } = req.params;
-    const { usuarioResponsable, motivo } = req.body;
+    const { usuarioResponsable, motivo, usuarioId } = req.body;
 
     try {
         const orderId = parseInt(id);
@@ -946,6 +962,50 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
                 where: { id: comanda.mesaId },
                 data: { estado: 'libre' }
             });
+
+            // Eliminar detalles para no dejar rastro en estadísticas
+            for (const detalle of comanda.detalles) {
+                let isMerma = false;
+
+                if (detalle.estado === 'preparando' && detalle.fechaPreparacion) {
+                    const diffMins = (new Date() - new Date(detalle.fechaPreparacion)) / 60000;
+                    if (diffMins >= 10) isMerma = true;
+                } else if (detalle.estado === 'listo' || detalle.estado === 'entregada') {
+                    isMerma = true;
+                }
+
+                if (isMerma) {
+                    // Generar Merma en Kardex y descontar stock
+                    const receta = await tx.recetaInsumo.findMany({
+                        where: { platoId: detalle.platoId }
+                    });
+
+                    for (const ingrediente of receta) {
+                        const cantidadConsumida = ingrediente.cantidad * detalle.cantidad;
+
+                        await tx.insumo.update({
+                            where: { id: ingrediente.insumoId },
+                            data: { stock: { decrement: cantidadConsumida } }
+                        });
+
+                        await tx.movimientoInsumo.create({
+                            data: {
+                                insumoId: ingrediente.insumoId,
+                                tipoMovimiento: 'MERMA',
+                                cantidad: cantidadConsumida,
+                                motivo: `Anulación (>10m prep o listo). Motivo Mozo: ${motivo || 'N/A'}. Mesa: ${comanda.mesa.numero}`,
+                                usuarioId: usuarioId ? parseInt(usuarioId) : 1
+                            }
+                        });
+                    }
+                }
+
+                // FIX: Borrar el detalle LÓGICAMENTE para que no queden rastros en Kitchen KDS ni Stats pero se preserve en BD
+                await tx.detalleComanda.update({
+                    where: { id: detalle.id },
+                    data: { estado: 'anulado' }
+                });
+            }
 
             return log;
         });
@@ -997,6 +1057,12 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
                 observacion: observation || null,
                 emailCliente: email || null
             }
+        });
+
+        // Set all active details to 'entregado' so they clear from the Kitchen KDS natively
+        await prisma.detalleComanda.updateMany({
+            where: { comandaId: order.id, estado: { notIn: ['anulado'] } },
+            data: { estado: 'entregado' }
         });
 
         // Free table
@@ -1272,7 +1338,7 @@ app.post('/api/cashier/toggle', async (req, res) => {
             // CLOSE EXISTING SHIFT
             // 1. Validate Pending Orders
             const pendingOrdersCount = await prisma.comanda.count({
-                where: { estado: { not: 'cerrada' } }
+                where: { estado: { notIn: ['cerrada', 'anulada'] } }
             });
 
             if (pendingOrdersCount > 0) {
@@ -1744,6 +1810,37 @@ app.post('/api/kardex', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+app.get('/api/ping', (req, res) => res.json({ status: 'OK_UPDATED' }));
+
+// --- SERVER START & BOOT CLEANUP ---
+const runBootCleanup = async () => {
+    try {
+        console.log("=== RUNNING BOOT CLEANUP ===");
+        // 1. Find tables that are 'libre' but might have hanging non-archived comandas
+        const libres = await prisma.mesa.findMany({ where: { estado: 'libre' } });
+        for (const mesa of libres) {
+            // Find open comandas for this 'libre' table
+            const hanging = await prisma.comanda.findMany({
+                where: { mesaId: mesa.id, estado: { notIn: ['anulada', 'cerrada'] } }
+            });
+            for (const com of hanging) {
+                console.log(`[CLEANUP] Anulando comanda fantasma ID ${com.id} en Mesa ${mesa.numero} (está libre)`);
+                await prisma.comanda.update({ where: { id: com.id }, data: { estado: 'anulada' } });
+
+                // Anular detalles vivos
+                await prisma.detalleComanda.updateMany({
+                    where: { comandaId: com.id, estado: { notIn: ['anulado', 'entregado'] } },
+                    data: { estado: 'anulado' }
+                });
+            }
+        }
+        console.log("=== BOOT CLEANUP COMPLETE ===");
+    } catch (e) {
+        console.error("Boot Cleanup Error:", e);
+    }
+};
+
+app.listen(PORT, async () => {
+    await runBootCleanup();
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

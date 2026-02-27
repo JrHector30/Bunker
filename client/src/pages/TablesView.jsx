@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer } from 'lucide-react';
 import { numberToLetters } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 const TablesView = () => {
+    const { user } = useAuth();
     const [tables, setTables] = useState([]);
     const [selectedTableId, setSelectedTableId] = useState(null);
     const [modalType, setModalType] = useState(null); // 'view' | 'pre-check'
@@ -58,6 +60,13 @@ const TablesView = () => {
 
     const handleOpenModal = (e, table, type) => {
         e.stopPropagation();
+
+        // HOTFIX: Si la mesa no tiene comandas activas válidas, forzamos la recarga al servidor para limpiar caché
+        if (!table.comandas || table.comandas.length === 0) {
+            fetchTables();
+            alert("Sincronizando mesa con el servidor...");
+        }
+
         setSelectedTableId(table.id);
         setModalType(type);
         setShowTransferMode(false); // Reset
@@ -121,12 +130,12 @@ const TablesView = () => {
         } catch (error) { console.error(error); }
     };
 
-    const markAsDelivered = async (detailId) => {
+    const updateItemStatus = async (detailId, newState) => {
         try {
             await fetch(`/api/orders/details/${detailId}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ estado: 'entregado' })
+                body: JSON.stringify({ estado: newState })
             });
             fetchTables();
         } catch (error) { console.error(error); }
@@ -171,11 +180,12 @@ const TablesView = () => {
                 existing.detailIds.push(detail.id);
             } else {
                 grouped.push({
-                    key, platoId: detail.platoId, nombre: detail.plato.nombre,
-                    precio: detail.plato.precio, estado: detail.estado, cantidad: detail.cantidad,
+                    key, platoId: detail.platoId, nombre: detail.plato?.nombre || 'Desconocido',
+                    precio: detail.plato?.precio || 0, estado: detail.estado, cantidad: detail.cantidad,
                     detailIds: [detail.id],
                     observacion: detail.observacion,
-                    cocineroNombre: cookName
+                    cocineroNombre: cookName,
+                    enviarCocina: detail.plato?.categoria?.enviarCocina ?? true // default to true
                 });
             }
         });
@@ -264,33 +274,28 @@ const TablesView = () => {
                                     <tbody>
                                         {groupedItems.map((item) => (
                                             <tr key={item.key} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
-                                                <td style={{ padding: 10 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                                        {modalType === 'view' ? (
-                                                            <>
-                                                                <button className="glass-button" style={{ width: 20, height: 20, padding: 0, borderRadius: '50%' }} onClick={() => updateQuantity(item.detailIds[0], item.cantidad, -1)}>
-                                                                    <Minus size={12} />
-                                                                </button>
-                                                                <span style={{ fontWeight: 'bold' }}>{item.cantidad}</span>
-                                                                <button className="glass-button" style={{ width: 20, height: 20, padding: 0, borderRadius: '50%' }} onClick={() => updateQuantity(item.detailIds[0], item.cantidad, 1)}>
-                                                                    <Plus size={12} />
-                                                                </button>
-                                                            </>
-                                                        ) : (
-                                                            <span style={{ fontWeight: 'bold' }}>{item.cantidad}</span>
-                                                        )}
-                                                    </div>
+                                                <td style={{ padding: 10, verticalAlign: 'top' }}>
+                                                    <span style={{
+                                                        fontFamily: '"Lexend Peta", sans-serif',
+                                                        fontWeight: 'bold',
+                                                        fontSize: '1.2rem',
+                                                        color: 'var(--primary)'
+                                                    }}>
+                                                        {item.cantidad}x
+                                                    </span>
                                                 </td>
                                                 <td style={{ padding: 10 }}>
-                                                    <div>{item.nombre}</div>
+                                                    <div style={{ fontFamily: '"Lexend Peta", sans-serif', fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-main)' }}>
+                                                        {item.nombre}
+                                                    </div>
                                                     {item.observacion && (
-                                                        <div style={{ fontSize: '0.85rem', color: 'var(--warning)', marginTop: 2 }}>
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--warning)', marginTop: 4, fontStyle: 'italic' }}>
                                                             ⚠️ {item.observacion}
                                                         </div>
                                                     )}
                                                     {item.cocineroNombre && (
-                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2, fontStyle: 'italic' }}>
-                                                            👨‍🍳 {item.cocineroNombre}
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <ChefHat size={12} /> {item.cocineroNombre}
                                                         </div>
                                                     )}
                                                 </td>
@@ -312,9 +317,18 @@ const TablesView = () => {
                                                                 <button
                                                                     className="glass-button primary"
                                                                     style={{ padding: '4px 8px', fontSize: '0.8rem' }}
-                                                                    onClick={() => { item.detailIds.forEach(id => markAsDelivered(id)); }}
+                                                                    onClick={() => { item.detailIds.forEach(id => updateItemStatus(id, 'entregado')); }}
                                                                 >
                                                                     Entregar
+                                                                </button>
+                                                            ) : (!item.enviarCocina && item.estado === 'pendiente') ? (
+                                                                <button
+                                                                    className="glass-button"
+                                                                    style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'var(--success)', color: 'white', borderColor: 'transparent' }}
+                                                                    onClick={() => { item.detailIds.forEach(id => updateItemStatus(id, 'listo')); }}
+                                                                    title="Marcar bebida/producto como Listo inmediatamente"
+                                                                >
+                                                                    ✓ Listo
                                                                 </button>
                                                             ) : (
                                                                 <button
@@ -360,7 +374,7 @@ const TablesView = () => {
                                                 const res = await fetch(`/api/orders/${comandaId}/cancel`, {
                                                     method: 'PUT',
                                                     headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ motivo, usuarioResponsable: "Mozo/Admin" })
+                                                    body: JSON.stringify({ motivo, usuarioResponsable: "Mozo/Admin", usuarioId: user.id })
                                                 });
                                                 if (res.ok) {
                                                     alert("Pedido anulado y mesa liberada.");
@@ -390,7 +404,7 @@ const TablesView = () => {
                         </div>
                     )}
                 </div>
-            </div>
+            </div >
         );
     };
 

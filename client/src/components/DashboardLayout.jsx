@@ -45,13 +45,19 @@ const DashboardLayout = () => {
         <div className="app-container">
             {/* Mobile Header (Visible only on mobile) */}
             <div className="mobile-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                     <button className="glass-button" style={{ padding: 8 }} onClick={() => setMobileOpen(true)}>
-                        <Menu size={20} />
+                        <Menu size={24} />
                     </button>
+                </div>
+
+                {/* Centered Logo */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 2, gap: 8 }}>
+                    <img src="/iconCG-32x32.png" alt="Logo" style={{ width: 24, height: 24, objectFit: 'contain' }} />
                     <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>ComandaGo</h2>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, justifyContent: 'flex-end' }}>
                     <div className="badge" style={{ background: 'var(--item-hover)', fontSize: '0.7rem' }}>{user?.rol}</div>
                     {user?.foto && <img src={user.foto} style={{ width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--primary)' }} />}
                 </div>
@@ -69,9 +75,12 @@ const DashboardLayout = () => {
             >
                 {/* Mobile Close Button */}
                 <div className="mobile-sidebar-header" style={{ display: 'none', justifyContent: 'space-between', alignItems: 'center', padding: '0 0 20px 0' }}>
-                    <h2 style={{ margin: 0, color: 'var(--primary)' }}>ComandaGo</h2>
-                    <button className="glass-button" style={{ padding: 5 }} onClick={() => setMobileOpen(false)}>
-                        <X size={20} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <img src="/iconCG-32x32.png" alt="Logo" style={{ width: 24, height: 24, objectFit: 'contain' }} />
+                        <h2 style={{ margin: 0, color: 'var(--primary)' }}>ComandaGo</h2>
+                    </div>
+                    <button className="glass-button" style={{ padding: 8, color: 'var(--danger)', borderColor: 'transparent' }} onClick={() => setMobileOpen(false)}>
+                        <X size={28} />
                     </button>
                 </div>
 
@@ -195,7 +204,7 @@ const DashboardLayout = () => {
                         )}
                     </div>
 
-                    <button onClick={handleLogout} className="glass-button" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'center', gap: 10, background: 'rgba(255,50,50,0.1)', color: '#ff6b6b', borderColor: '#ff6b6b', padding: collapsed ? 10 : '10px 20px' }}>
+                    <button onClick={handleLogout} className="glass-button" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#121212', color: '#ffffff', borderColor: '#222', padding: collapsed ? 10 : '12px 20px', borderRadius: 12 }}>
                         <LogOut size={16} /> {!collapsed && "Salir"}
                     </button>
                 </div>

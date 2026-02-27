@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend+Peta:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Montserrat:wght@300;400;500;600&display=swap');
+
 :root {
   /* DEFAULT: CARBONO (OLED BLACK) - Fallback for everything */
   --bg-primary: #000000;
@@ -32,18 +35,19 @@
 }
 
 /* THEME CLASSES */
+/* DUEL PANEL UPDATE: The Theme Color is aggressive on the Sidebar */
 
 .theme-green {
   --bg-primary: #05100b;
-  /* Deep Green Black */
   --bg-secondary: #0a1f16;
   --bg-surface: #0f2b1f;
   --glass-border: rgba(255, 255, 255, 0.15);
   --accent: #00704A;
-  /* Starbucks Green */
   --primary: #00704A;
   --primary-hover: #005c3d;
   --text-main: #ffffff;
+
+  --sidebar-bg: #00704A !important;
 }
 
 .theme-red {
@@ -51,12 +55,17 @@
   --bg-secondary: #2d0a0a;
   --bg-surface: #2d0a0a;
   --glass-border: rgba(240, 84, 79, 0.3);
-  --accent: #ff4d4d;
+  --accent: #121212;
+  /* Charcoal for High-End contrast */
   --primary: #F0544F;
+  /* Deep Charcoal Branding for Red Theme */
+  --sidebar-branding-color: #121212 !important;
   --text-main: #ffebeb;
   --text-muted: #d19a9a;
   --input-bg: rgba(50, 10, 10, 0.5);
   --table-header-bg: rgba(240, 84, 79, 0.1);
+
+  --sidebar-bg: #F0544F !important;
 }
 
 .theme-blue {
@@ -206,15 +215,14 @@
   --text-muted: #64748b !important;
   --text-inverse: #ffffff !important;
 
-  /* Sidebar SPECIFIC overrides (Must remain Dark) */
-  --sidebar-bg: #000000 !important;
+  /* Sidebar SPECIFIC overrides (Must remain Theme Colored) */
   --sidebar-text: #ffffff !important;
-  --sidebar-muted: rgba(255, 255, 255, 0.6) !important;
-  --sidebar-border: rgba(255, 255, 255, 0.15) !important;
+  --sidebar-muted: rgba(255, 255, 255, 0.8) !important;
+  --sidebar-border: rgba(255, 255, 255, 0.2) !important;
 
   /* Adjust borders for light mode visibility in content */
   --glass-border: rgba(0, 0, 0, 0.1) !important;
-  --table-header-bg: rgba(0, 0, 0, 0.05) !important;
+  --table-header-bg: var(--primary) !important;
   --table-row-border: rgba(0, 0, 0, 0.1) !important;
   --item-hover: rgba(0, 0, 0, 0.05) !important;
 
@@ -257,6 +265,34 @@
   /* Keep primary buttons white text basically always */
   background: var(--primary) !important;
   /* Use the THEME's primary color */
+}
+
+/* Make headers text white in light mode so they are readable against the primary color */
+.mode-light th,
+.mode-light .table-responsive thead tr {
+  color: white !important;
+}
+
+/* User wants borders thicker in Light Mode on desktop, respecting the theme color */
+@media (min-width: 769px) {
+  .mode-light {
+    --glass-border: var(--primary) !important;
+    --table-row-border: var(--primary) !important;
+  }
+
+  .mode-light .glass-panel,
+  .mode-light .glass-button,
+  .mode-light .glass-input,
+  .mode-light td,
+  .mode-light th {
+    border-width: 1.5px !important;
+  }
+
+  .mode-light .recipe-table td,
+  .mode-light .recipe-table th,
+  .mode-light .recipe-table .glass-input {
+    border-width: 2.5px !important;
+  }
 }
 
 /* Modals */
@@ -329,8 +365,18 @@ html {
   background: var(--primary);
   border-color: var(--primary);
   color: white;
-  /* Always white on primary usually looks best, or calculate contrast */
   font-weight: 700;
+}
+
+/* Sidebar Active State for Dual-Panel */
+.sidebar .glass-button.active {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  border-left: 4px solid var(--sidebar-branding-color, #121212) !important;
+  border-top: 1px solid transparent;
+  border-right: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  border-radius: 0 8px 8px 0;
 }
 
 [data-theme="light"] .glass-button.primary {
@@ -360,6 +406,28 @@ html {
   box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2);
 }
 
+/* Cinematic Fade-In for dynamic elements */
+@keyframes fadeInCard {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeInCard 0.4s ease-out forwards;
+}
+
+/* === Custom Scrollbars Removed per User Request === */
+::-webkit-scrollbar {
+  display: none !important;
+}
+
 /* Layout Utilities */
 .app-container {
   display: flex;
@@ -373,9 +441,13 @@ html {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border-right: 1px solid var(--sidebar-border);
-  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border) !important;
+  background: var(--sidebar-bg) !important;
+  /* Force Brand Color */
   color: var(--sidebar-text);
+  /* Glassmorphism over the solid color */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   transition: width 0.6s ease-in-out, padding 0.6s ease-in-out, background 0.3s, color 0.3s;
   overflow: visible;
   /* Allows toggle button to overlap if needed, or tooltip */
@@ -412,8 +484,8 @@ html {
   font-family: 'Lexend Peta', sans-serif;
   font-style: italic;
   font-weight: 700;
-  color: #DB2A40;
-  /* Flash Red */
+  color: var(--sidebar-branding-color, var(--primary));
+  /* Dynamic branding color */
   white-space: nowrap;
   display: inline-block;
   vertical-align: middle;
@@ -432,7 +504,7 @@ html {
 
 /* Sidebar Components */
 .sidebar-logo {
-  color: var(--primary);
+  color: var(--sidebar-branding-color, var(--primary));
   margin-bottom: 5px;
   font-size: 1.5rem;
   cursor: pointer;
@@ -544,56 +616,7 @@ h2 {
   display: none;
 }
 
-@media (max-width: 768px) {
-  .app-container {
-    flex-direction: column;
-  }
 
-  .sidebar {
-    width: 100%;
-    flex-direction: row;
-    padding: 10px;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--glass-border);
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .sidebar nav {
-    display: none;
-  }
-
-  .sidebar.mobile-open nav {
-    display: flex;
-    position: absolute;
-    top: 60px;
-    left: 0;
-    right: 0;
-    background: var(--bg-dark);
-    z-index: 100;
-    padding: 20px;
-    border-bottom: 1px solid var(--glass-border);
-  }
-
-  .main-content {
-    padding: 15px;
-  }
-
-  .order-layout {
-    grid-template-columns: 1fr;
-    height: auto;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .mobile-nav-toggle {
-    display: block;
-    background: none;
-    border: none;
-    color: var(--text-main);
-  }
-}
 
 /* Status Badges */
 .badge {
@@ -636,12 +659,10 @@ h2 {
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -939,31 +960,29 @@ h2 {
   .sidebar {
     position: fixed;
     top: 0;
-    left: 0;
+    left: -100%;
     bottom: 0;
     width: 280px;
-    /* Drawer Width */
-    background: var(--bg-surface);
-    /* Solid background for drawer */
-    z-index: 999;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
+    /* Maintain theme color with high z-index */
+    background: var(--sidebar-bg);
+    z-index: 1000;
+    transition: left 0.3s ease-in-out;
     border-right: 1px solid var(--glass-border);
     padding: 20px;
     height: 100vh;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 5px 0 15px rgba(0, 0, 0, 0.6);
     display: flex;
     flex-direction: column;
   }
 
   /* Show sidebar when open */
   .sidebar.mobile-open {
-    transform: translateX(0);
+    left: 0;
   }
 
   /* Hide Desktop Header inside drawer on mobile, Show Mobile Header w/ Close */
   .desktop-sidebar-header {
-    display: none;
+    display: none !important;
   }
 
   .mobile-sidebar-header {
@@ -972,19 +991,19 @@ h2 {
   }
 
   .sidebar nav {
-    display: flex;
-    /* Always flex inside the drawer */
+    display: flex !important;
+    flex-direction: column;
+    gap: 20px !important;
+    /* Espaciado tactil */
   }
 
   .main-content {
     padding: 15px;
     margin-left: 0;
-    /* No margin */
     width: 100%;
     margin-top: 0;
   }
 
-  /* Mobile UX Improvements */
   /* Force 1 column on mobile for responsive grids */
   .responsive-grid {
     grid-template-columns: 1fr !important;

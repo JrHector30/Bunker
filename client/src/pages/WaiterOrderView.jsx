@@ -165,13 +165,14 @@ const WaiterOrderView = () => {
                 {/* Categories */}
                 <div style={{ paddingBottom: 5 }}>
                     <div className="text-muted" style={{ marginBottom: 10, fontSize: '0.9rem' }}>CATEGORÍAS</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 15, maxHeight: 200, overflowY: 'auto' }}>
+                    <div style={{ display: 'grid', gridTemplateRows: 'repeat(2, 1fr)', gridAutoFlow: 'column', gridAutoColumns: 'minmax(140px, 1fr)', gap: 15, overflowX: 'auto', overflowY: 'hidden', paddingBottom: 10, scrollSnapType: 'x mandatory' }}>
                         <div
                             className={`glass-panel category-card ${selectedCategoryId === null ? 'active' : ''}`}
                             style={{
                                 background: selectedCategoryId === null ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
                                 cursor: 'pointer', padding: 15, display: 'flex', flexDirection: 'column', gap: 5,
-                                transition: 'all 0.2s', border: '1px solid rgba(255,255,255,0.1)'
+                                transition: 'all 0.2s', border: '1px solid rgba(255,255,255,0.1)', scrollSnapAlign: 'start',
+                                height: '100%'
                             }}
                             onClick={() => setSelectedCategoryId(null)}
                         >
@@ -188,7 +189,8 @@ const WaiterOrderView = () => {
                                     background: selectedCategoryId === cat.id ? 'var(--primary)' : cat.color,
                                     color: 'var(--text-main)',
                                     cursor: 'pointer', padding: 15, display: 'flex', flexDirection: 'column', gap: 5,
-                                    transition: 'all 0.2s', border: 'none'
+                                    transition: 'all 0.2s', border: 'none', scrollSnapAlign: 'start',
+                                    height: '100%'
                                 }}
                                 onClick={() => setSelectedCategoryId(cat.id)}
                             >
@@ -201,17 +203,20 @@ const WaiterOrderView = () => {
                 </div>
 
                 {/* Products */}
-                <div style={{ flex: 1, overflowY: 'auto', paddingRight: 5 }}>
+                <div style={{ flex: 1, overflowY: 'auto', paddingRight: 5, scrollSnapType: 'y proximity' }}>
                     <div className="text-muted" style={{ marginBottom: 10, fontSize: '0.9rem' }}>
                         {selectedCategoryId ? categories.find(c => c.id === selectedCategoryId)?.nombre : 'TODOS LOS PRODUCTOS'}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 15 }}>
-                        {filteredProducts.map(product => {
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gridAutoRows: '240px', gap: 15 }}>
+                        {filteredProducts.map((product, index) => {
                             const qty = getProductQtyInCart(product.id);
+                            // Add a slight staggered delay to the fade-in based on index
+                            const animationDelay = `${index * 0.03}s`;
+
                             return (
-                                <div key={product.id} className="glass-panel" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', border: qty > 0 ? '1px solid var(--primary)' : 'none' }}>
-                                    <div style={{ height: 100, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                <div key={product.id} className="glass-panel fade-in" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', border: qty > 0 ? '1px solid var(--primary)' : 'none', animationDelay, scrollSnapAlign: 'start', height: '100%' }}>
+                                    <div style={{ height: 100, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
                                         {product.imagen ? (
                                             <img src={product.imagen} alt={product.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
@@ -312,7 +317,8 @@ const WaiterOrderView = () => {
                     </div>
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Scrollable Cart List */}
+                <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 5 }}>
                     {cart.length === 0 ? (
                         <div style={{ textAlign: 'center', color: '#888', marginTop: 50, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
                             <div style={{ fontSize: '3rem', opacity: 0.2 }}>🍽️</div>
@@ -374,7 +380,8 @@ const WaiterOrderView = () => {
                     )}
                 </div>
 
-                <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                {/* Sticky Footer */}
+                <div style={{ position: 'sticky', bottom: 0, background: 'var(--bg-surface)', marginTop: 20, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.1)', zIndex: 10 }}>
                     <div className="text-muted" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                         <span>Subtotal</span>
                         <span>S/. {cart.reduce((sum, i) => sum + (i.precio * i.cantidad), 0).toFixed(2)}</span>
