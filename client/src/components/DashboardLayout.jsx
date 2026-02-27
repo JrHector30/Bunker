@@ -150,8 +150,8 @@ const DashboardLayout = () => {
                             <NavLink to="/admin/categories" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Categorías">
                                 <img src={iconCategoria} alt="Categorías" style={iconStyle} className="module-icon-svg" /> {!collapsed && <span>Categorías</span>}
                             </NavLink>
-                            <NavLink to="/admin/inventory" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Almacén">
-                                <BookOpen size={20} /> {!collapsed && <span>Almacén</span>}
+                            <NavLink to="/admin/inventory" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Logística">
+                                <BookOpen size={20} /> {!collapsed && <span>Logística</span>}
                             </NavLink>
                         </>
                     )}

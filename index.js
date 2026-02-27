@@ -854,11 +854,107 @@ app.delete('/api/staff/stats/daily', async (req, res) => {
     }
 });
 
-// Delete specific order detail
+// Delete specific order detail (with auto-liberation)
 app.delete('/api/orders/details/:id', async (req, res) => {
     const { id } = req.params;
-    await prisma.detalleComanda.delete({ where: { id: parseInt(id) } });
-    res.json({ message: "Item deleted" });
+    try {
+        const detail = await prisma.detalleComanda.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!detail) {
+            return res.status(404).json({ error: "Detalle no encontrado" });
+        }
+
+        await prisma.detalleComanda.delete({
+            where: { id: parseInt(id) }
+        });
+
+        // AUTO-LIBERATION LOGIC
+        const remainingDetails = await prisma.detalleComanda.count({
+            where: { comandaId: detail.comandaId }
+        });
+
+        if (remainingDetails === 0) {
+            const comanda = await prisma.comanda.findUnique({
+                where: { id: detail.comandaId }
+            });
+            if (comanda) {
+                await prisma.comanda.update({
+                    where: { id: comanda.id },
+                    data: { estado: 'anulada' }
+                });
+                await prisma.mesa.update({
+                    where: { id: comanda.mesaId },
+                    data: { estado: 'libre' }
+                });
+            }
+        }
+
+        res.json({ success: true, remaining: remainingDetails, message: remainingDetails === 0 ? "Comanda vacía: Mesa liberada." : "Item eliminado." });
+    } catch (e) {
+        console.error("Error deleting item:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ANULAR COMANDA COMPLETAMENTE
+app.put('/api/orders/:id/cancel', async (req, res) => {
+    const { id } = req.params;
+    const { usuarioResponsable, motivo } = req.body;
+
+    try {
+        const orderId = parseInt(id);
+
+        // 1. Get current order & details to calculate total
+        const comanda = await prisma.comanda.findUnique({
+            where: { id: orderId },
+            include: {
+                detalles: {
+                    include: { plato: true }
+                },
+                mesa: true
+            }
+        });
+
+        if (!comanda) return res.status(404).json({ error: "Comanda no encontrada" });
+        if (comanda.estado === 'cerrada') return res.status(400).json({ error: "No se puede anular una comanda ya pagada/cerrada." });
+
+        const totalAnulado = comanda.detalles.reduce((sum, d) => sum + (d.cantidad * d.plato.precio), 0);
+
+        // 2. Transacción para asegurar la anulación completa
+        const result = await prisma.$transaction(async (tx) => {
+            // Log en auditoría
+            const log = await tx.pedidoCancelado.create({
+                data: {
+                    comandaId: comanda.id,
+                    mesa: comanda.mesa.numero,
+                    usuarioResponsable: usuarioResponsable || "Sistema",
+                    motivo: motivo || "Anulación directa",
+                    totalAnulado: totalAnulado
+                }
+            });
+
+            // Actualizar Comanda a 'anulada'
+            await tx.comanda.update({
+                where: { id: comanda.id },
+                data: { estado: 'anulada' }
+            });
+
+            // Liberar Mesa
+            await tx.mesa.update({
+                where: { id: comanda.mesaId },
+                data: { estado: 'libre' }
+            });
+
+            return log;
+        });
+
+        res.json({ success: true, log: result });
+    } catch (e) {
+        console.error("Error cancelling order:", e);
+        res.status(500).json({ error: "Error al anular pedido: " + e.message });
+    }
 });
 
 // Deprecated specific route, keeping for backward compat if needed (aliasing to generic PUT)
@@ -908,6 +1004,41 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
             where: { id: parseInt(mesaId) },
             data: { estado: 'libre' }
         });
+
+        // 3. EXPLOSIÓN DE INSUMOS (Deducción de Stock)
+        const platosVendidos = order.detalles;
+        for (const detalle of platosVendidos) {
+            // Obtener receta de cada plato vendido
+            const receta = await prisma.recetaInsumo.findMany({
+                where: { platoId: detalle.platoId }
+            });
+
+            // Descontar cada insumo consumido
+            for (const ingrediente of receta) {
+                const cantidadConsumida = ingrediente.cantidad * detalle.cantidad;
+
+                // Actualizar stock del insumo decrementándolo
+                await prisma.insumo.update({
+                    where: { id: ingrediente.insumoId },
+                    data: {
+                        stock: {
+                            decrement: cantidadConsumida
+                        }
+                    }
+                });
+
+                // Registrar en Kardex (MovimientoInsumo)
+                await prisma.movimientoInsumo.create({
+                    data: {
+                        insumoId: ingrediente.insumoId,
+                        tipoMovimiento: 'VENTA',
+                        cantidad: cantidadConsumida, // se guarda como valor absoluto
+                        motivo: `Descuento automático por Venta de Plato ID: ${detalle.platoId} (Comanda ID: ${order.id})`,
+                        usuarioId: order.usuarioId // Registramos el mozo/usuario que cerró/creó la comanda
+                    }
+                });
+            }
+        }
 
         res.json({ ...closedOrder, total, message: "Ticket generated" });
     } catch (error) {
@@ -1389,13 +1520,230 @@ app.get('/api/staff/stats', async (req, res) => {
 
         res.json({ waiters: waitersStats, cooks: cooksStats });
 
+        res.json({ waiters: waitersStats, cooks: cooksStats });
+
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: "Error fetching staff stats" });
     }
 });
 
+// 10. Logistics & Recipes (NEW)
+app.get('/api/insumos', async (req, res) => {
+    try {
+        const insumos = await prisma.insumo.findMany({ where: { deleted: false } });
+        res.json(insumos);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/insumos', async (req, res) => {
+    const { nombre, precioCompra, unidadMedida, stock } = req.body;
+    try {
+        const insumo = await prisma.insumo.create({
+            data: {
+                nombre,
+                precioCompra: parseFloat(precioCompra),
+                unidadMedida,
+                stock: parseFloat(stock || 0)
+            }
+        });
+        res.json(insumo);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+app.put('/api/insumos/:id', async (req, res) => {
+    const { id } = req.params;
+    const { nombre, precioCompra, unidadMedida, stock, activo } = req.body;
+    try {
+        const updateData = {};
+        if (nombre) updateData.nombre = nombre;
+        if (precioCompra !== undefined) updateData.precioCompra = parseFloat(precioCompra);
+        if (unidadMedida) updateData.unidadMedida = unidadMedida;
+        if (stock !== undefined) updateData.stock = parseFloat(stock);
+        if (activo !== undefined) updateData.activo = activo;
+
+        const insumo = await prisma.insumo.update({
+            where: { id: parseInt(id) },
+            data: updateData
+        });
+        res.json(insumo);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+app.delete('/api/insumos/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await prisma.insumo.update({
+            where: { id: parseInt(id) },
+            data: { deleted: true, activo: false }
+        });
+        res.json({ message: "Insumo eliminado." });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Obtener receta de un plato
+app.get('/api/recetas/:platoId', async (req, res) => {
+    const { platoId } = req.params;
+    try {
+        const receta = await prisma.recetaInsumo.findMany({
+            where: { platoId: parseInt(platoId) },
+            include: { insumo: true }
+        });
+        res.json(receta);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Actualizar receta de un plato (Reemplazo completo)
+app.post('/api/recetas/:platoId', async (req, res) => {
+    const { platoId } = req.params;
+    const { ingredientes } = req.body; // Array de { insumoId, cantidad }
+
+    try {
+        // Ejecutar en transacción
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Eliminar receta anterior
+            await tx.recetaInsumo.deleteMany({
+                where: { platoId: parseInt(platoId) }
+            });
+
+            // 2. Insertar nuevos ingredientes si los hay
+            if (ingredientes && ingredientes.length > 0) {
+                const data = ingredientes.map(ing => ({
+                    platoId: parseInt(platoId),
+                    insumoId: parseInt(ing.insumoId),
+                    cantidad: parseFloat(ing.cantidad)
+                }));
+                await tx.recetaInsumo.createMany({ data });
+            }
+
+            // 3. Recalcular costo de producción
+            const nuevaReceta = await tx.recetaInsumo.findMany({
+                where: { platoId: parseInt(platoId) },
+                include: { insumo: true }
+            });
+
+            let costoProduccion = 0;
+            nuevaReceta.forEach(item => {
+                costoProduccion += (item.insumo.precioCompra * item.cantidad);
+            });
+
+            // 4. Actualizar costo y margen en el Plato
+            const plato = await tx.plato.findUnique({ where: { id: parseInt(platoId) } });
+
+            // Calculamos el margen bruto de ganancia: (Precio Venta - Costo Producción)
+            // Podríamos guardarlo como valor o porcentaje. Aquí lo guardamos como número absoluto.
+            const margenGanancia = plato.precio - costoProduccion;
+
+            const platoActualizado = await tx.plato.update({
+                where: { id: parseInt(platoId) },
+                data: {
+                    costoProduccion: costoProduccion,
+                    margenGanancia: margenGanancia
+                }
+            });
+
+            return { receta: nuevaReceta, costoProduccion, margenGanancia };
+        });
+
+        res.json(result);
+    } catch (e) {
+        console.error("Error updating recipe:", e);
+        res.status(500).json({ error: "Error al actualizar la receta: " + e.message });
+    }
+});
+
 // Start server
+
+// ==========================================
+// 10. Kardex (Movimiento Insumos)
+// ==========================================
+
+// Obtener historial del Kardex (opcionalmente filtrado por insumo)
+app.get('/api/kardex', async (req, res) => {
+    try {
+        const { insumoId } = req.query;
+        let whereClause = {};
+        if (insumoId) {
+            whereClause.insumoId = parseInt(insumoId);
+        }
+
+        const movimientos = await prisma.movimientoInsumo.findMany({
+            where: whereClause,
+            include: {
+                insumo: true,
+                usuario: true
+            },
+            orderBy: {
+                fecha: 'desc'
+            }
+        });
+
+        res.json(movimientos);
+    } catch (e) {
+        console.error("Error fetching kardex:", e);
+        res.status(500).json({ error: "Error fetching kardex: " + e.message });
+    }
+});
+
+// Registrar nuevo movimiento manual en el Kardex (COMPRA, MERMA, TRANSFERENCIA, AJUSTE)
+app.post('/api/kardex', async (req, res) => {
+    const { insumoId, tipoMovimiento, cantidad, motivo, usuarioId } = req.body;
+
+    try {
+        const result = await prisma.$transaction(async (tx) => {
+            const qtyStr = parseFloat(cantidad);
+
+            // 1. Crear el registro del movimiento
+            const movimiento = await tx.movimientoInsumo.create({
+                data: {
+                    insumoId: parseInt(insumoId),
+                    tipoMovimiento,
+                    cantidad: qtyStr,
+                    motivo,
+                    usuarioId: parseInt(usuarioId)
+                }
+            });
+
+            // 2. Afectar el stock real del insumo correspondiente
+            // COMPRA, AJUSTE_POSITIVO -> Incrementan
+            // MERMA, VENTA, TRANSFERENCIA, AJUSTE_NEGATIVO -> Decrementan
+            const incrementEvents = ['COMPRA', 'AJUSTE_POSITIVO'];
+            const decrementEvents = ['VENTA', 'MERMA', 'TRANSFERENCIA', 'AJUSTE_NEGATIVO'];
+
+            let updateData = {};
+            if (incrementEvents.includes(tipoMovimiento)) {
+                updateData = { stock: { increment: qtyStr } };
+            } else if (decrementEvents.includes(tipoMovimiento)) {
+                updateData = { stock: { decrement: qtyStr } };
+            } else {
+                updateData = { stock: { increment: qtyStr } }; // Default o Ajuste neto
+            }
+
+            const inusmoModificado = await tx.insumo.update({
+                where: { id: parseInt(insumoId) },
+                data: updateData
+            });
+
+            return { movimiento, nuevoStock: inusmoModificado.stock };
+        });
+
+        res.json(result);
+    } catch (e) {
+        console.error("Error creating kardex entry:", e);
+        res.status(500).json({ error: "Error creating kardex entry: " + e.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

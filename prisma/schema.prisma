@@ -15,7 +15,8 @@ model User {
   password  String
   foto      String?   // URL to profile photo
   comandas  Comanda[]
-  detallesCocina DetalleComanda[] @relation("CocineroDetalle")
+  detallesCocina DetalleComanda[] @relation("Cocinero")
+  movimientosInsumo MovimientoInsumo[]
 }
 
 model Mesa {
@@ -51,6 +52,9 @@ model Plato {
   deleted         Boolean          @default(false)
   fechaCreacion   DateTime         @default(now())
   ultimaModificacion DateTime      @updatedAt
+  costoProduccion Float            @default(0)
+  margenGanancia  Float            @default(0)
+  receta          RecetaInsumo[]
   detalles        DetalleComanda[]
 }
 
@@ -95,7 +99,54 @@ model DetalleComanda {
   estado    String  @default("pendiente") // pendiente, preparando, listo
   observacion String?
   cocineroId Int?
-  cocinero   User?   @relation("CocineroDetalle", fields: [cocineroId], references: [id])
+  cocinero   User?   @relation("Cocinero", fields: [cocineroId], references: [id])
   fechaPreparacion DateTime?
   fechaListo       DateTime?
 }
+
+model Insumo {
+  id              Int              @id @default(autoincrement())
+  nombre          String           @unique
+  precioCompra    Float            // Precio unitario bruto
+  unidadMedida    String           // ej. kg, gr, L, ud
+  stock           Float            @default(0)
+  activo          Boolean          @default(true)
+  deleted         Boolean          @default(false)
+  recetas         RecetaInsumo[]
+  movimientos     MovimientoInsumo[]
+}
+
+model RecetaInsumo {
+  id        Int    @id @default(autoincrement())
+  platoId   Int
+  plato     Plato  @relation(fields: [platoId], references: [id], onDelete: Cascade)
+  insumoId  Int
+  insumo    Insumo @relation(fields: [insumoId], references: [id])
+  cantidad  Float  // Cantidad consumida de la unidadMedida del Insumo
+
+  @@unique([platoId, insumoId])
+}
+
+model MovimientoInsumo {
+  id              Int      @id @default(autoincrement())
+  insumoId        Int
+  tipoMovimiento  String   // 'COMPRA', 'VENTA', 'TRANSFERENCIA', 'MERMA', 'AJUSTE'
+  cantidad        Float
+  motivo          String?
+  usuarioId       Int
+  fecha           DateTime @default(now())
+  
+  insumo          Insumo   @relation(fields: [insumoId], references: [id])
+  usuario         User     @relation(fields: [usuarioId], references: [id])
+}
+
+model PedidoCancelado {
+  id                 Int      @id @default(autoincrement())
+  comandaId          Int
+  mesa               String
+  usuarioResponsable String
+  motivo             String?
+  totalAnulado       Float
+  fecha              DateTime @default(now())
+}
+

@@ -90,13 +90,43 @@ const CashierView = () => {
                                 ))}
                             </div>
 
-                            <button
-                                className="glass-button primary"
-                                style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: 10 }}
-                                onClick={() => handleOpenPayment(table, activeOrder)}
-                            >
-                                <Printer size={18} /> Cerrar Cuenta & Imprimir
-                            </button>
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <button
+                                    className="glass-button"
+                                    style={{ background: 'rgba(255, 50, 50, 0.1)', color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0 15px' }}
+                                    onClick={async () => {
+                                        const motivo = prompt("Ingrese el motivo de la anulación total:");
+                                        if (motivo === null) return;
+
+                                        try {
+                                            const res = await fetch(`/api/orders/${activeOrder.id}/cancel`, {
+                                                method: 'PUT',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ motivo, usuarioResponsable: "Caja/Admin" })
+                                            });
+                                            if (res.ok) {
+                                                alert("Pedido anulado y mesa liberada.");
+                                                fetchTables();
+                                            } else {
+                                                const err = await res.json();
+                                                alert("Error: " + err.error);
+                                            }
+                                        } catch (e) {
+                                            console.error(e);
+                                        }
+                                    }}
+                                    title="Anular Pedido Total"
+                                >
+                                    <span style={{ fontWeight: 'bold' }}>X</span>
+                                </button>
+                                <button
+                                    className="glass-button primary"
+                                    style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 10 }}
+                                    onClick={() => handleOpenPayment(table, activeOrder)}
+                                >
+                                    <Printer size={18} /> Cerrar Cuenta & Imprimir
+                                </button>
+                            </div>
                         </div>
                     );
                 })}

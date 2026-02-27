@@ -343,7 +343,42 @@ const TablesView = () => {
                                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
                                     Total: S/. {calculateTotal(groupedItems).toFixed(2)}
                                 </div>
-                            ) : <div></div>}
+                            ) : (
+                                <div>
+                                    <button
+                                        className="glass-button"
+                                        style={{ background: 'var(--danger)', color: 'white', borderColor: 'transparent', fontWeight: 'bold' }}
+                                        onClick={async () => {
+                                            const table = tables.find(t => t.id === selectedTableId);
+                                            const comandaId = table?.comandas?.[0]?.id;
+                                            if (!comandaId) return;
+
+                                            const motivo = prompt("Ingrese el motivo de la anulación total:");
+                                            if (motivo === null) return;
+
+                                            try {
+                                                const res = await fetch(`/api/orders/${comandaId}/cancel`, {
+                                                    method: 'PUT',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ motivo, usuarioResponsable: "Mozo/Admin" })
+                                                });
+                                                if (res.ok) {
+                                                    alert("Pedido anulado y mesa liberada.");
+                                                    closeModal();
+                                                    fetchTables();
+                                                } else {
+                                                    const err = await res.json();
+                                                    alert("Error: " + err.error);
+                                                }
+                                            } catch (e) {
+                                                console.error(e);
+                                            }
+                                        }}
+                                    >
+                                        Anular Pedido Total
+                                    </button>
+                                </div>
+                            )}
                             <div style={{ display: 'flex', gap: 10, marginLeft: 'auto' }}>
                                 <button className="glass-button" onClick={closeModal}>Cerrar</button>
                                 {modalType === 'pre-check' && (
