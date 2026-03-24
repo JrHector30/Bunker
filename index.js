@@ -652,21 +652,26 @@ app.post('/api/tables/transfer', async (req, res) => {
             return res.status(400).json({ error: 'La mesa de destino debe estar libre.' });
         }
 
-        // Find active comanda for source table
-        const activeComanda = await prisma.comanda.findFirst({
+        // Find ALL active comandas for source table (including ghosts)
+        const activeComandas = await prisma.comanda.findMany({
             where: { mesaId: parseInt(fromTableId), estado: { in: ['pendiente', 'enviada', 'preparando', 'lista', 'entregada'] } } // Any active state
         });
 
-        if (!activeComanda) {
+        if (activeComandas.length === 0) {
             return res.status(400).json({ error: 'Mesa de origen sin pedido activo.' });
         }
 
-        // Transaction: Update Comanda -> Update Old Table -> Update New Table
-        await prisma.$transaction([
+        // Prepare updates for all active comandas
+        const updates = activeComandas.map(comanda =>
             prisma.comanda.update({
-                where: { id: activeComanda.id },
+                where: { id: comanda.id },
                 data: { mesaId: parseInt(toTableId) }
-            }),
+            })
+        );
+
+        // Transaction: Update Comandas -> Update Old Table -> Update New Table
+        await prisma.$transaction([
+            ...updates,
             prisma.mesa.update({
                 where: { id: parseInt(fromTableId) },
                 data: { estado: 'libre' }
@@ -1035,12 +1040,29 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
     const { paymentMethod, docType, totalReceived, tip, observation, email } = req.body;
 
     try {
-        const order = await prisma.comanda.findFirst({
-            where: { mesaId: parseInt(mesaId), estado: { not: 'cerrada' } },
-            include: { detalles: { include: { plato: true } } }
+        // Find ALL active orders for this table
+        const activeOrders = await prisma.comanda.findMany({
+            where: { mesaId: parseInt(mesaId), estado: { notIn: ['cerrada', 'anulada'] } },
+            include: { detalles: { include: { plato: true } } },
+            orderBy: { id: 'asc' } // The oldest is usually the valid one, but we'll take the first one found with items if any, or just the first.
         });
 
-        if (!order) return res.status(404).json({ error: "No active order" });
+        if (activeOrders.length === 0) return res.status(404).json({ error: "No active order" });
+
+        // Let's assume the principal order is the first one or the one with the most items.
+        // Usually, the one we want to close is the first one in the list.
+        const order = activeOrders[0];
+
+        // If there are ghost orders (more than 1 active order), anulate the others immediately
+        if (activeOrders.length > 1) {
+            for (let i = 1; i < activeOrders.length; i++) {
+                await prisma.comanda.update({
+                    where: { id: activeOrders[i].id },
+                    data: { estado: 'anulada' }
+                });
+                console.log(`Auto-Healed during Checkout: Cancelled ghost comanda ${activeOrders[i].id} on Mesa ${mesaId}`);
+            }
+        }
 
         // Calculate total
         const total = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
@@ -1337,14 +1359,19 @@ app.post('/api/cashier/toggle', async (req, res) => {
         } else {
             // CLOSE EXISTING SHIFT
             // 1. Validate Pending Orders
-            const pendingOrdersCount = await prisma.comanda.count({
-                where: { estado: { notIn: ['cerrada', 'anulada'] } }
+            // Find all active orders
+            const activeOrders = await prisma.comanda.findMany({
+                where: { estado: { notIn: ['cerrada', 'anulada'] } },
+                include: { detalles: { where: { estado: { notIn: ['anulado'] } } } }
             });
 
-            if (pendingOrdersCount > 0) {
+            // Check if any of these active orders actually have active items
+            const ordersWithItemsCount = activeOrders.filter(order => order.detalles.length > 0).length;
+
+            if (ordersWithItemsCount > 0) {
                 return res.status(400).json({
-                    error: "No se puede cerrar caja: Hay mesas con pagos pendientes.",
-                    pendingCount: pendingOrdersCount
+                    error: "No se puede cerrar caja: Hay mesas con pagos o pedidos pendientes.",
+                    pendingCount: ordersWithItemsCount
                 });
             }
 
@@ -1604,15 +1631,40 @@ app.get('/api/insumos', async (req, res) => {
     }
 });
 
+app.get('/api/insumos/alertas', async (req, res) => {
+    try {
+        const insumos = await prisma.insumo.findMany({
+            where: {
+                deleted: false,
+                notificarAlerta: true,
+                stock: { lte: prisma.insumo.fields.stockMinimo } // Valid Prisma 5+ comparison
+            },
+            select: { id: true, nombre: true, stock: true, stockMinimo: true, unidadMedida: true }
+        });
+        res.json(insumos);
+    } catch (e) {
+        // Fallback for earlier Prisma versions if needed
+        try {
+            const allAlerta = await prisma.insumo.findMany({ where: { deleted: false, notificarAlerta: true } });
+            const filtered = allAlerta.filter(i => i.stock <= i.stockMinimo);
+            res.json(filtered.map(i => ({ id: i.id, nombre: i.nombre, stock: i.stock, stockMinimo: i.stockMinimo, unidadMedida: i.unidadMedida })));
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    }
+});
+
 app.post('/api/insumos', async (req, res) => {
-    const { nombre, precioCompra, unidadMedida, stock } = req.body;
+    const { nombre, precioCompra, unidadMedida, stock, stockMinimo, notificarAlerta } = req.body;
     try {
         const insumo = await prisma.insumo.create({
             data: {
                 nombre,
                 precioCompra: parseFloat(precioCompra),
                 unidadMedida,
-                stock: parseFloat(stock || 0)
+                stock: parseFloat(stock || 0),
+                stockMinimo: parseFloat(stockMinimo || 0),
+                notificarAlerta: notificarAlerta || false
             }
         });
         res.json(insumo);
@@ -1623,13 +1675,15 @@ app.post('/api/insumos', async (req, res) => {
 
 app.put('/api/insumos/:id', async (req, res) => {
     const { id } = req.params;
-    const { nombre, precioCompra, unidadMedida, stock, activo } = req.body;
+    const { nombre, precioCompra, unidadMedida, stock, stockMinimo, notificarAlerta, activo } = req.body;
     try {
         const updateData = {};
         if (nombre) updateData.nombre = nombre;
         if (precioCompra !== undefined) updateData.precioCompra = parseFloat(precioCompra);
         if (unidadMedida) updateData.unidadMedida = unidadMedida;
         if (stock !== undefined) updateData.stock = parseFloat(stock);
+        if (stockMinimo !== undefined) updateData.stockMinimo = parseFloat(stockMinimo);
+        if (notificarAlerta !== undefined) updateData.notificarAlerta = notificarAlerta;
         if (activo !== undefined) updateData.activo = activo;
 
         const insumo = await prisma.insumo.update({

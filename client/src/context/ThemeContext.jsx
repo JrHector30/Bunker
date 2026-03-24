@@ -4,7 +4,7 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
     // Theme references COLOR (carbon, blue, red)
-    const validThemes = ['theme-green', 'theme-blue', 'theme-red', 'theme-carbon'];
+    const validThemes = ['theme-green', 'theme-blue', 'theme-red', 'theme-carbon', 'theme-minimalist', 'theme-noche-azulada'];
     const storedTheme = localStorage.getItem('app-theme');
     // If stored theme is valid use it, otherwise default to theme-green
     const initialTheme = (storedTheme && validThemes.includes(storedTheme)) ? storedTheme : 'theme-green';
@@ -15,12 +15,15 @@ export const ThemeProvider = ({ children }) => {
     // Default to dark as per original design
     const [mode, setMode] = useState(localStorage.getItem('app-mode') || 'dark');
 
+    // Show Alerts state
+    const [showAlerts, setShowAlerts] = useState(localStorage.getItem('app-show-alerts') !== 'false');
+
     useEffect(() => {
         const root = document.documentElement;
 
         // Remove all potential theme/mode classes
         // Remove all potential theme/mode classes
-        root.classList.remove('theme-carbon', 'theme-green', 'theme-red', 'theme-blue');
+        root.classList.remove(...validThemes);
         root.classList.remove('mode-dark', 'mode-light'); // If we decide to use classes for both
 
         // Add current theme and mode
@@ -30,7 +33,8 @@ export const ThemeProvider = ({ children }) => {
         // Persist
         localStorage.setItem('app-theme', theme);
         localStorage.setItem('app-mode', mode);
-    }, [theme, mode]);
+        localStorage.setItem('app-show-alerts', showAlerts);
+    }, [theme, mode, showAlerts]);
 
     const changeTheme = (newTheme) => {
         setTheme(newTheme);
@@ -47,7 +51,7 @@ export const ThemeProvider = ({ children }) => {
     };
 
     return (
-        <ThemeContext.Provider value={{ theme, mode, changeTheme, toggleMode, toggleTheme }}>
+        <ThemeContext.Provider value={{ theme, mode, changeTheme, toggleMode, toggleTheme, showAlerts, setShowAlerts }}>
             {children}
         </ThemeContext.Provider>
     );

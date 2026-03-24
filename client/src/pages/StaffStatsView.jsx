@@ -60,7 +60,7 @@ const StaffStatsView = () => {
         const waiterRows = stats.waiters.map(w => [
             w.nombre,
             w.totalTables,
-            `S/. ${w.totalSales.toFixed(2)}`
+            `S/. ${parseFloat(Number(w.totalSales).toFixed(2))}`
         ]);
 
         autoTable(doc, {
@@ -78,7 +78,7 @@ const StaffStatsView = () => {
         const cookRows = stats.cooks.map(c => [
             c.nombre,
             c.totalDishes,
-            c.avgTimeMin > 0 ? `${c.avgTimeMin.toFixed(1)} min` : '-'
+            c.avgTimeMin > 0 ? `${parseFloat(Number(c.avgTimeMin).toFixed(2))} min` : '-'
         ]);
 
         autoTable(doc, {
@@ -151,7 +151,7 @@ const StaffStatsView = () => {
             <div className="responsive-grid" style={{ marginBottom: 30, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
                 <div className="glass-panel" style={{ padding: 20, textAlign: 'center' }}>
                     <h3 className="text-muted" style={{ margin: 0 }}>Venta Total</h3>
-                    <h1 style={{ color: 'var(--success)', margin: '10px 0' }}>S/. {totalSales.toFixed(2)}</h1>
+                    <h1 style={{ color: 'var(--success)', margin: '10px 0' }}>S/. {parseFloat(Number(totalSales).toFixed(2))}</h1>
                 </div>
                 <div className="glass-panel" style={{ padding: 20, textAlign: 'center' }}>
                     <h3 className="text-muted" style={{ margin: 0 }}>Pedidos Atendidos</h3>
@@ -177,7 +177,7 @@ const StaffStatsView = () => {
                                 <YAxis stroke="var(--text-muted)" />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#333', borderColor: '#555', color: '#fff' }}
-                                    formatter={(value) => [`S/. ${value.toFixed(2)}`, 'Ventas']}
+                                    formatter={(value) => [`S/. ${parseFloat(Number(value).toFixed(2))}`, 'Ventas']}
                                 />
                                 <Bar dataKey="totalSales" name="Ventas" radius={[5, 5, 0, 0]}>
                                     {waiterData.map((entry, index) => (
@@ -251,7 +251,7 @@ const StaffStatsView = () => {
                                             <td>{w.nombre}</td>
                                             <td style={{ textAlign: 'center' }}>{w.totalTables}</td>
                                             <td style={{ textAlign: 'right', color: 'var(--success)', fontWeight: 'bold' }}>
-                                                S/. {w.totalSales.toFixed(2)}
+                                                S/. {parseFloat(Number(w.totalSales).toFixed(2))}
                                             </td>
                                         </tr>
                                     ))
@@ -286,7 +286,7 @@ const StaffStatsView = () => {
                                             <td>{c.nombre}</td>
                                             <td style={{ textAlign: 'center' }}>{c.totalDishes}</td>
                                             <td style={{ textAlign: 'center' }}>
-                                                {c.avgTimeMin > 0 ? `${c.avgTimeMin.toFixed(1)} min` : '-'}
+                                                {c.avgTimeMin > 0 ? `${parseFloat(Number(c.avgTimeMin).toFixed(2))} min` : '-'}
                                             </td>
                                         </tr>
                                     ))

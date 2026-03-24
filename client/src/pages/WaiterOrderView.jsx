@@ -21,6 +21,7 @@ const WaiterOrderView = () => {
     const [selectedCategoryId, setSelectedCategoryId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [infoModalProduct, setInfoModalProduct] = useState(null);
+    const [mobileCartOpen, setMobileCartOpen] = useState(false); // NEW STATE FOR MOBILE CART
 
     useEffect(() => {
         const fetchData = async () => {
@@ -138,6 +139,8 @@ const WaiterOrderView = () => {
         // Sum of all lines for this product
         return cart.filter(p => p.platoId === prodId).reduce((sum, item) => sum + item.cantidad, 0);
     };
+
+    const totalItemsInCart = cart.reduce((sum, item) => sum + item.cantidad, 0);
 
     return (
         <div className="order-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', height: '100vh', gap: 20, padding: 20 }}>
@@ -305,13 +308,18 @@ const WaiterOrderView = () => {
 
             </div>
 
-            {/* RIGHT SIDE: CART */}
-            <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', padding: 20, height: '100%' }}>
+            {/* RIGHT SIDE: CART (Desktop side-panel, Mobile bottom-drawer) */}
+            <div className={`glass-panel order-cart-panel ${mobileCartOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', padding: 20, height: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                     <div>
-                        <h2>Mesa {tableInfo.numero} - {tableInfo.comensales} Personas</h2>
+                        <h2>Mesa {tableInfo.numero} - {tableInfo.comensales} Pax</h2>
                         <span className="text-muted">{user?.nombre || 'Mozo'}</span>
                     </div>
+                    {/* Mobile Only Close Button for Cart Drawer */}
+                    <button className="glass-button mobile-cart-close" style={{ height: 40, width: 40, padding: 0, display: 'none', alignItems: 'center', justifyContent: 'center' }} onClick={() => setMobileCartOpen(false)}>
+                        <X size={20} />
+                    </button>
+                    {/* Desktop dummy icon */}
                     <div className="glass-button" style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                         <span style={{ fontSize: '1.2rem' }}>📝</span>
                     </div>
@@ -401,9 +409,41 @@ const WaiterOrderView = () => {
                     </button>
                 </div>
             </div>
+
+            {/* FLOATING ACTION BUTTON FOR MOBILE (Hidden on desktop) */}
+            <button
+                className="mobile-cart-fab"
+                onClick={() => setMobileCartOpen(true)}
+            >
+                <div style={{ position: 'relative' }}>
+                    <FileText size={24} />
+                    {totalItemsInCart > 0 && (
+                        <span style={{
+                            position: 'absolute', top: -8, right: -12, background: 'var(--bg-surface)', color: 'var(--text-main)', 
+                            fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '10px', padding: '2px 6px', border: '1px solid var(--glass-border)'
+                        }}>
+                            {totalItemsInCart}
+                        </span>
+                    )}
+                </div>
+            </button>
+
+            {/* Overlay for Cart Modal on Mobile */}
+            {mobileCartOpen && (
+                 <div
+                     className="sidebar-overlay"
+                     onClick={() => setMobileCartOpen(false)}
+                     style={{
+                         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                         background: 'rgba(0,0,0,0.5)', zIndex: 1035, /* Below the drawer (1040), above the rest */
+                         backdropFilter: 'blur(2px)'
+                     }}
+                 />
+            )}
+
             {/* INFO MODAL */}
             {infoModalProduct && (
-                <div className="modal-overlay" onClick={() => setInfoModalProduct(null)}>
+                <div className="modal-overlay" onClick={() => setInfoModalProduct(null)} style={{ zIndex: 1100 }}> {/* highest z-index */}
                     <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
                         <div className="modal-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
                             <h2 style={{ fontSize: '1.2rem' }}>Detalle del Producto</h2>
@@ -442,3 +482,4 @@ const WaiterOrderView = () => {
 };
 
 export default WaiterOrderView;
+

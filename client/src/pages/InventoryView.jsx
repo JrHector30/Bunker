@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck } from 'lucide-react';
-
+import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 const InventoryView = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('platos'); // 'platos', 'insumos', 'recetario'
@@ -15,6 +15,8 @@ const InventoryView = () => {
     // UI States
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
+    const [kardexDateFilter, setKardexDateFilter] = useState('');
+    const [kardexCurrentPage, setKardexCurrentPage] = useState(1);
 
     useEffect(() => {
         fetchData();
@@ -153,15 +155,15 @@ const InventoryView = () => {
     // --- TAB 2: INSUMOS ---
     const [isInsumoModalOpen, setIsInsumoModalOpen] = useState(false);
     const [editingInsumo, setEditingInsumo] = useState(null);
-    const [insumoForm, setInsumoForm] = useState({ nombre: '', precioCompra: '', unidadMedida: 'kg', stock: '' });
+    const [insumoForm, setInsumoForm] = useState({ nombre: '', precioCompra: '', unidadMedida: 'kg', stock: '', stockMinimo: '', notificarAlerta: false });
 
     const handleOpenInsumoModal = (insumo = null) => {
         if (insumo) {
             setEditingInsumo(insumo);
-            setInsumoForm({ nombre: insumo.nombre, precioCompra: insumo.precioCompra, unidadMedida: insumo.unidadMedida, stock: insumo.stock });
+            setInsumoForm({ nombre: insumo.nombre, precioCompra: insumo.precioCompra, unidadMedida: insumo.unidadMedida, stock: insumo.stock, stockMinimo: insumo.stockMinimo || '', notificarAlerta: insumo.notificarAlerta || false });
         } else {
             setEditingInsumo(null);
-            setInsumoForm({ nombre: '', precioCompra: '', unidadMedida: 'kg', stock: '' });
+            setInsumoForm({ nombre: '', precioCompra: '', unidadMedida: 'kg', stock: '', stockMinimo: '', notificarAlerta: false });
         }
         setIsInsumoModalOpen(true);
     };
@@ -358,9 +360,18 @@ const InventoryView = () => {
                                 const stockPct = Math.min(100, Math.max(0, (insumo.stock / 100) * 100)); // Demo ratio against 100 units
                                 return (
                                     <tr key={insumo.id} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
-                                        <td style={{ padding: 15, fontWeight: 'bold' }}>{insumo.nombre}</td>
-                                        <td style={{ padding: 15 }}>S/. {insumo.precioCompra.toFixed(2)} / {insumo.unidadMedida}</td>
-                                        <td style={{ padding: 15 }}>{insumo.stock.toFixed(2)} {insumo.unidadMedida}</td>
+                                        <td style={{ padding: 15, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            {insumo.nombre}
+                                            {insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo && (
+                                                <span style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center' }} title={`Stock crítico (Mínimo: ${insumo.stockMinimo})`}>
+                                                    <AlertTriangle size={16} />
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td style={{ padding: 15 }}>S/. {parseFloat(Number(insumo.precioCompra).toFixed(2))} / {insumo.unidadMedida}</td>
+                                        <td style={{ padding: 15, color: (insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo) ? 'var(--warning)' : 'inherit', fontWeight: (insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo) ? 'bold' : 'normal' }}>
+                                            {parseFloat(Number(insumo.stock).toFixed(2))} {insumo.unidadMedida}
+                                        </td>
                                         <td style={{ padding: 15 }}>
                                             <div style={{ height: 10, width: 150, background: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
                                                 <div style={{ height: '100%', width: `${stockPct}%`, background: stockPct < 20 ? 'var(--danger)' : 'var(--primary)', transition: 'width 0.3s' }} />
@@ -515,10 +526,90 @@ const InventoryView = () => {
     };
 
     const renderKardexTab = () => {
+        // --- Pagination & Filtering Logic ---
+        const ITEMS_PER_PAGE = 50;
+
+        // Filter by Date
+        const filteredKardex = kardex.filter(mov => {
+            if (!kardexDateFilter) return true;
+            // Compare local YYYY-MM-DD
+            const movDate = new Date(mov.fecha);
+            const movYear = movDate.getFullYear();
+            const movMonth = String(movDate.getMonth() + 1).padStart(2, '0');
+            const movDay = String(movDate.getDate()).padStart(2, '0');
+            const movDateStr = `${movYear}-${movMonth}-${movDay}`;
+            return movDateStr === kardexDateFilter;
+        });
+
+        // Pagination
+        const totalPages = Math.ceil(filteredKardex.length / ITEMS_PER_PAGE) || 1;
+        const currentData = filteredKardex.slice(
+            (kardexCurrentPage - 1) * ITEMS_PER_PAGE,
+            kardexCurrentPage * ITEMS_PER_PAGE
+        );
+
+        const handlePrevPage = () => setKardexCurrentPage(p => Math.max(1, p - 1));
+        const handleNextPage = () => setKardexCurrentPage(p => Math.min(totalPages, p + 1));
+        const handleDateFilterChange = (e) => {
+            setKardexDateFilter(e.target.value);
+            setKardexCurrentPage(1); // Reset to page 1 on filter
+        };
+        const handleClearDateFilter = () => {
+            setKardexDateFilter('');
+            setKardexCurrentPage(1);
+        };
+
+        const handleExportExcel = () => {
+            if (filteredKardex.length === 0) {
+                alert("No hay datos para exportar en el rango seleccionado.");
+                return;
+            }
+
+            const exportData = filteredKardex.map(mov => {
+                const isPositive = ['COMPRA', 'AJUSTE_POSITIVO'].includes(mov.tipoMovimiento);
+                const sign = isPositive ? '+' : '-';
+                return {
+                    "Fecha y Hora": new Date(mov.fecha).toLocaleString(),
+                    "Insumo": mov.insumo?.nombre || '-',
+                    "Tipo": mov.tipoMovimiento,
+                    "Cantidad": `${sign}${mov.cantidad} ${mov.insumo?.unidadMedida || ''}`,
+                    "Usuario": mov.usuario?.nombre || 'General / Sistema',
+                    "Motivo": mov.motivo || '-'
+                };
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Kardex");
+
+            const dateStr = kardexDateFilter || 'General';
+            XLSX.writeFile(workbook, `Reporte_Kardex_${dateStr}.xlsx`);
+        };
+
         return (
             <div className="fade-in">
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-                    <h2>Historial de Movimientos</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+                        <h2 style={{ margin: 0 }}>Historial de Movimientos</h2>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.05)', padding: '5px 10px', borderRadius: 8, border: '1px solid var(--glass-border)' }}>
+                            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Filtrar por Fecha:</span>
+                            <input
+                                type="date"
+                                className="glass-input"
+                                style={{ padding: '4px 8px', fontSize: '0.9rem' }}
+                                value={kardexDateFilter}
+                                onChange={handleDateFilterChange}
+                            />
+                            {kardexDateFilter && (
+                                <button className="glass-button" onClick={handleClearDateFilter} style={{ padding: 4, border: 'none' }} title="Limpiar filtro">
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
+                        <button className="glass-button" onClick={handleExportExcel} style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', padding: '6px 15px', color: 'var(--success)' }}>
+                            <Download size={18} /> Exportar Excel
+                        </button>
+                    </div>
                     <button className="glass-button secondary" onClick={() => setIsKardexModalOpen(true)}>
                         <Plus size={18} /> Nuevo Movimiento Manual
                     </button>
@@ -532,13 +623,18 @@ const InventoryView = () => {
                                 <th style={{ padding: 15 }}>Insumo</th>
                                 <th style={{ padding: 15 }}>Tipo</th>
                                 <th style={{ padding: 15 }}>Cantidad</th>
+                                <th style={{ padding: 15 }}>Usuario</th>
                                 <th style={{ padding: 15 }}>Motivo / Info</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {kardex.length === 0 ? (
-                                <tr><td colSpan="5" style={{ padding: 20, textAlign: 'center' }}>No hay movimientos registrados.</td></tr>
-                            ) : kardex.map(mov => {
+                            {currentData.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>
+                                        {kardexDateFilter ? 'No se registraron movimientos en este periodo.' : 'No hay movimientos registrados.'}
+                                    </td>
+                                </tr>
+                            ) : currentData.map(mov => {
                                 const isPositive = ['COMPRA', 'AJUSTE_POSITIVO'].includes(mov.tipoMovimiento);
                                 const color = isPositive ? 'var(--success)' : (mov.tipoMovimiento === 'VENTA' ? 'var(--primary)' : 'var(--danger)');
                                 return (
@@ -553,12 +649,24 @@ const InventoryView = () => {
                                         <td style={{ padding: 15, color: color, fontWeight: 'bold' }}>
                                             {isPositive ? '+' : '-'}{mov.cantidad} {mov.insumo?.unidadMedida}
                                         </td>
+                                        <td style={{ padding: 15, color: 'rgba(255,255,255,0.8)' }}>
+                                            {mov.usuario?.nombre || 'General / Sistema'}
+                                        </td>
                                         <td style={{ padding: 15, fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>{mov.motivo || '-'}</td>
                                     </tr>
                                 );
                             })}
                         </tbody>
                     </table>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div style={{ padding: 15, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 15, borderTop: '1px solid var(--table-row-border)' }}>
+                            <button className="glass-button" disabled={kardexCurrentPage === 1} onClick={handlePrevPage}>Anterior</button>
+                            <span style={{ fontSize: '0.9rem' }}>Página {kardexCurrentPage} de {totalPages}</span>
+                            <button className="glass-button" disabled={kardexCurrentPage === totalPages} onClick={handleNextPage}>Siguiente</button>
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -795,11 +903,22 @@ const InventoryView = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div>
-                                <label>Stock Física en Bodega</label>
-                                <input type="number" step="0.01" className="glass-input" value={insumoForm.stock} onChange={e => setInsumoForm({ ...insumoForm, stock: e.target.value })} required />
-                                <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 5 }}>Expresado en la Medida Lógica seleccionada.</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                                <div>
+                                    <label>Stock Física en Bodega</label>
+                                    <input type="number" step="0.01" className="glass-input" value={insumoForm.stock} onChange={e => setInsumoForm({ ...insumoForm, stock: e.target.value })} required />
+                                    <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 5 }}>Medida Actual.</p>
+                                </div>
+                                <div>
+                                    <label>Stock Mínimo (Alerta)</label>
+                                    <input type="number" step="0.01" className="glass-input" value={insumoForm.stockMinimo} onChange={e => setInsumoForm({ ...insumoForm, stockMinimo: e.target.value })} />
+                                    <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 5 }}>Nivel de escasez.</p>
+                                </div>
                             </div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 0' }}>
+                                <input type="checkbox" checked={insumoForm.notificarAlerta} onChange={e => setInsumoForm({ ...insumoForm, notificarAlerta: e.target.checked })} style={{ width: 18, height: 18, accentColor: 'var(--primary)' }} />
+                                Activar Alerta de Escasez en Dashboard
+                            </label>
                             <div className="modal-footer" style={{ border: 'none', padding: 0, marginTop: 10 }}>
                                 <button type="submit" className="glass-button primary" style={{ width: '100%' }}><Save size={18} /> Guardar Insumo</button>
                             </div>

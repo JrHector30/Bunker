@@ -159,7 +159,7 @@ const CategoriesView = () => {
                     <button className="glass-button" onClick={() => navigate('/')} style={{ padding: 8 }}>
                         <ArrowLeft size={20} />
                     </button>
-                    <h1>Gestión de Categorías</h1>
+                    <h1 className="high-end-title" style={{ margin: 0 }}>Gestión de Categorías</h1>
                 </div>
                 <button className="glass-button primary" onClick={() => handleOpenModal()}>
                     <Plus size={20} /> Nueva Categoría

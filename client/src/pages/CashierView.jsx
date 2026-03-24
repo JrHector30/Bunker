@@ -48,7 +48,7 @@ const CashierView = () => {
                 <button className="glass-button" onClick={() => navigate('/')} style={{ padding: 8 }}>
                     <ArrowLeft size={20} />
                 </button>
-                <h1>Módulo de Caja</h1>
+                <h1 className="high-end-title" style={{ margin: 0 }}>Módulo de Caja</h1>
             </div>
 
             {/* 1. Panel de Arqueo (Top) */}

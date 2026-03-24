@@ -111,6 +111,8 @@ model Insumo {
   precioCompra    Float            // Precio unitario bruto
   unidadMedida    String           // ej. kg, gr, L, ud
   stock           Float            @default(0)
+  stockMinimo     Float            @default(0)
+  notificarAlerta Boolean          @default(false)
   activo          Boolean          @default(true)
   deleted         Boolean          @default(false)
   recetas         RecetaInsumo[]

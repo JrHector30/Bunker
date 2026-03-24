@@ -40,7 +40,15 @@ const TablesView = () => {
         fetch('/api/tables')
             .then(res => res.json())
             .then(data => {
-                setTables(data);
+                if (Array.isArray(data)) {
+                    // Filtrar mesas 100 y 101, y limpiar cualquier elemento nulo o undefinido
+                    const filteredData = data.filter(t => t && t.numero !== '100' && t.numero !== '101');
+                    // Asegurar orden numérico correcto
+                    filteredData.sort((a, b) => parseInt(a.numero, 10) - parseInt(b.numero, 10));
+                    setTables(filteredData);
+                } else {
+                    setTables([]);
+                }
             });
     };
 
@@ -479,7 +487,7 @@ const TablesView = () => {
 
     return (
         <div>
-            <h1>Salón Principal</h1>
+            <h1 className="high-end-title" style={{ marginBottom: 20 }}>Salón Principal</h1>
             <div className="responsive-grid">
                 {tables.map(table => (
                     <div

@@ -103,7 +103,7 @@ const ItemCard = React.memo(({ item, actionButton }) => (
 const KitchenView = () => {
     const { user } = useAuth();
     const [queue, setQueue] = useState([]);
-    const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+    const [isAudioEnabled, setIsAudioEnabled] = useState(true);
     const prevPendingCountReq = React.useRef(0);
 
     const fetchQueue = () => {
@@ -153,8 +153,8 @@ const KitchenView = () => {
 
     return (
         <div style={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h1 style={{ margin: 0 }}>Flujo de Cocina (Por Plato)</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                <h1 className="high-end-title" style={{ margin: 0 }}>Flujo de Cocina (Por Plato)</h1>
                 <button
                     className={`glass-button ${isAudioEnabled ? 'primary' : ''}`}
                     onClick={() => setIsAudioEnabled(!isAudioEnabled)}
@@ -162,7 +162,7 @@ const KitchenView = () => {
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 20 }}
                 >
                     {isAudioEnabled ? <Volume2 size={20} /> : <VolumeX size={20} className="text-muted" />}
-                    <span>{isAudioEnabled ? 'Sonido Activado' : 'Sonido Mutado'}</span>
+                    <span>{isAudioEnabled ? 'Sonido Activado' : 'Sonido Muteado'}</span>
                 </button>
             </div>
 

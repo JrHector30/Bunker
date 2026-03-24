@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, X } from 'lucide-react';
+import logoMinimalista from '../assets/logo_minimalist.png';
 
 const LoginPage = () => {
     const [selectedUser, setSelectedUser] = useState(null);
@@ -88,23 +89,15 @@ const LoginPage = () => {
         }}>
 
             {/* LADO IZQUIERDO: Branding */}
-            <div style={{ flex: 1, backgroundColor: '#050505', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRight: '1px solid rgba(255,255,255,0.02)' }}>
-                {/* Subtle Glows */}
-                <div style={{ position: 'absolute', top: '10%', left: '10%', width: 300, height: 300, background: 'rgba(240, 84, 79, 0.05)', filter: 'blur(100px)', borderRadius: '50%' }}></div>
-
+            <div style={{ flex: 1, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRight: '1px solid rgba(0,0,0,0.05)' }}>
                 <div style={{ textAlign: 'center', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div style={{ width: 140, height: 165, background: 'linear-gradient(145deg, #1a1a1a, #0d0d0d)', borderRadius: 20, display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 30, boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        {/* Placeholder Logo Outline */}
-                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}>
-                            <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
-                            <path d="M7 2v20" />
-                            <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
-                        </svg>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 30 }}>
+                        <img src={logoMinimalista} alt="Logo" style={{ width: 100, height: 100, objectFit: 'contain' }} />
                     </div>
-                    <h1 style={{ fontFamily: '"Montserrat", sans-serif', fontWeight: 300, fontSize: '2.5rem', letterSpacing: '8px', margin: 0, textTransform: 'uppercase', color: '#ebebeb' }}>
-                        ComandaGo
+                    <h1 style={{ fontFamily: '"Montserrat", sans-serif', fontWeight: 300, fontSize: '2.5rem', letterSpacing: '8px', margin: 0, textTransform: 'uppercase', color: '#000000' }}>
+                        COMANDAGO
                     </h1>
-                    <p style={{ marginTop: 15, fontSize: '0.9rem', color: '#666', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 400 }}>
+                    <p style={{ marginTop: 15, fontSize: '0.9rem', color: '#555555', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 400, fontFamily: '"Inter", sans-serif' }}>
                         High-End Restaurant OS
                     </p>
                 </div>

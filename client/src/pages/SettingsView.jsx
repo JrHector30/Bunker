@@ -1,11 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, Moon, Sun, Zap, Palette } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const SettingsView = () => {
-    const { theme, changeTheme } = useTheme();
+    const { theme, changeTheme, showAlerts, setShowAlerts } = useTheme();
     const navigate = useNavigate();
+
+    // Local state to handle Settings unsaved changes
+    const [localShowAlerts, setLocalShowAlerts] = useState(showAlerts);
+    const hasChanges = localShowAlerts !== showAlerts;
+
+    useEffect(() => {
+        // Sync local state if global context changes externally
+        setLocalShowAlerts(showAlerts);
+    }, [showAlerts]);
+
+    const handleSave = () => {
+        setShowAlerts(localShowAlerts);
+        // Confirmation is implicit as buttons will fade out
+    };
+
+    const handleCancel = () => {
+        setLocalShowAlerts(showAlerts); // Revert to context state
+    };
 
     const themes = [
         {
@@ -31,6 +49,14 @@ const SettingsView = () => {
             icon: <Palette size={24} />,
             color: '#1a0505',
             border: '#F0544F'
+        },
+        {
+            id: 'theme-minimalist',
+            name: 'Minimalist',
+            description: 'Código de autor. Blanco y negro de alta gama.',
+            icon: <Terminal size={24} />,
+            color: '#111111',
+            border: '#222222'
         }
     ];
 
@@ -111,6 +137,84 @@ const SettingsView = () => {
                     ))}
                 </div>
             </section>
+
+            <section className="glass-panel" style={{ padding: 30, marginTop: 30 }}>
+                <h2 style={{ marginBottom: 20 }}>Preferencias de Interfaz</h2>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 20px', background: 'rgba(0,0,0,0.1)', borderRadius: 12, border: '1px solid var(--glass-border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Bell size={20} color="var(--primary)" />
+                        </div>
+                        <div>
+                            <h3 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>Mostrar Alertas de Stock</h3>
+                            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Muestra un panel lateral cuando detecta insumos agotándose.</p>
+                        </div>
+                    </div>
+
+                    {/* Smooth Toggle Switch */}
+                    <div
+                        onClick={() => setLocalShowAlerts(!localShowAlerts)}
+                        style={{
+                            width: 50,
+                            height: 28,
+                            borderRadius: 14,
+                            background: localShowAlerts ? 'var(--primary)' : 'rgba(255,255,255,0.2)',
+                            cursor: 'pointer',
+                            position: 'relative',
+                            transition: 'background 0.3s ease'
+                        }}
+                    >
+                        <div style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            background: '#fff',
+                            position: 'absolute',
+                            top: 2,
+                            left: localShowAlerts ? 24 : 2,
+                            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                        }} />
+                    </div>
+                </div>
+            </section>
+
+            {/* Floating Action Bar (Fades in if there are unsaved changes) */}
+            <div style={{
+                position: 'fixed',
+                bottom: hasChanges ? 30 : -100,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                opacity: hasChanges ? 1 : 0,
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                background: 'var(--panel-bg)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: '1px solid var(--glass-border)',
+                padding: '15px 25px',
+                borderRadius: 50,
+                display: 'flex',
+                gap: 15,
+                boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                pointerEvents: hasChanges ? 'auto' : 'none',
+                zIndex: 1000
+            }}>
+                <button
+                    className="glass-button"
+                    onClick={handleCancel}
+                    style={{ borderColor: 'transparent', color: 'var(--text-muted)' }}
+                >
+                    <X size={18} /> Cancelar
+                </button>
+                <button
+                    className="glass-button primary"
+                    onClick={handleSave}
+                    style={{ background: 'var(--primary)', borderColor: 'var(--primary)' }}
+                >
+                    <Save size={18} /> Guardar Cambios
+                </button>
+            </div>
         </div>
     );
 };

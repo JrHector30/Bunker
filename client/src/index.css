@@ -68,7 +68,7 @@
   --sidebar-bg: #F0544F !important;
 }
 
-.theme-blue {
+.theme-blue, .theme-noche-azulada {
   --bg-primary: #020617;
   --bg-secondary: #0f172a;
   --bg-surface: #1e293b;
@@ -78,48 +78,70 @@
   --primary-hover: #2563eb;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --text-muted: #94a3b8;
+  --sidebar-bg: #1e3a8a !important;
+  --sidebar-text: #ffffff !important;
 }
 
 /* Minimalist Theme Variables */
-/* Default to "Paper-White" (Light) look if mode is not specified, but usually mode class is present */
+/* Default to "Paper-White" (Light) look */
 .theme-minimalist {
   --bg-primary: #ffffff;
   --bg-secondary: #ffffff;
   --bg-surface: #ffffff;
   --glass-border: #000000;
-  --accent: #000000;
+  /* Black borders for light mode */
+  --accent: #dc2626;
   --primary: #000000;
+  /* Primary actions in black for mono look */
   --primary-hover: #333333;
   --text-main: #000000;
-  --text-muted: #333333;
+  --text-muted: #666666;
 
-  /* Sidebar Specifics - Always Black */
+  /* Sidebar Specifics - strict black */
   --sidebar-bg: #000000;
   --sidebar-text: #ffffff;
-  --sidebar-muted: #cccccc;
-  --sidebar-border: #ffffff;
+  --sidebar-muted: #888888;
+  --sidebar-border: #111111;
 
-  --item-hover: #f0f0f0;
+  --item-hover: #f5f5f5;
   --input-bg: #ffffff;
   --input-text: #000000;
+
+  --topbar-bg: #ffffff;
+  --topbar-text: #000000;
 }
 
 /* Minimalist Dark Mode - Inverted (Black Content) */
 .mode-dark.theme-minimalist {
-  --bg-primary: #000000;
-  --bg-secondary: #000000;
-  --bg-surface: #000000;
-  --glass-border: #ffffff;
-  --accent: #ffffff;
+  --bg-primary: #121212;
+  --bg-secondary: #1a1a1a;
+  --bg-surface: #1e1e1e;
+  --glass-border: #444444;
+  --accent: #dc2626;
   --primary: #ffffff;
   --primary-hover: #cccccc;
   --text-main: #ffffff;
-  --text-muted: #cccccc;
-  --item-hover: #222222;
-  --input-bg: #000000;
+  --text-muted: #aaaaaa;
+  --item-hover: #2a2a2a;
+  --input-bg: #1e1e1e;
   --input-text: #ffffff;
-  /* Sidebar remains black */
+  --sidebar-bg: #000000 !important;
+  --sidebar-text: #ffffff;
+  --sidebar-muted: #888888;
+  --sidebar-border: #111111;
+  --topbar-bg: #000000;
+  --topbar-text: #ffffff;
+}
+
+/* DARK MODE THEME OVERRIDES FOR SIDEBAR CONSISTENCY */
+.mode-dark.theme-green {
+  --sidebar-bg: #0a1f16 !important; /* Verde oscuro profundo */
+}
+.mode-dark.theme-blue, .mode-dark.theme-noche-azulada {
+  --sidebar-bg: #0f172a !important; /* Azul suficientemente oscuro */
+}
+.mode-dark.theme-red {
+  --sidebar-bg: #121212 !important; /* Carbón oscuro con acentos */
 }
 
 /* Minimalist Light Mode - Paper White (White Content) */
@@ -128,41 +150,42 @@
 
 /* Sidebar Items Styling in Minimalist Theme */
 
-/* Active Item: White Bg, Black Text, White Border */
-.theme-minimalist .glass-button.active {
+/* Active Item: White Bg, Black Text, No Border */
+.theme-minimalist aside .glass-button.active {
   background: #ffffff !important;
   color: #000000 !important;
-  border: 1px solid #ffffff !important;
+  border: none !important;
+  border-radius: 80px !important;
 }
 
 /* Active Icon: Black */
-.theme-minimalist .glass-button.active .module-icon-svg {
-  filter: none !important;
-  /* Original Black (if source is black) or verify source color */
-  /* If source SVG is black, no filter needed to be black. */
-  /* If source SVG is colored, we need to force black. */
+.theme-minimalist aside .glass-button.active .module-icon-svg {
   filter: brightness(0) !important;
 }
 
-.theme-minimalist .glass-button.active svg {
+.theme-minimalist aside .glass-button.active svg {
   color: #000000 !important;
 }
 
-/* Inactive Items: Transparent/Black Bg, White Text, White Border */
-.theme-minimalist .glass-button:not(.active) {
-  background: transparent !important;
+/* Inactive Items: Transparent Bg, White Text, No Border */
+.theme-minimalist aside .glass-button:not(.active) {
+  background: #3d3d3db5 !important;
   color: #ffffff !important;
-  border: 1px solid #ffffff !important;
+  border: none !important;
 }
 
 /* Inactive Icon: White */
-.theme-minimalist .glass-button:not(.active) .module-icon-svg {
+.theme-minimalist aside .glass-button:not(.active) .module-icon-svg {
   filter: brightness(0) invert(1) !important;
-  /* Force White */
 }
 
-.theme-minimalist .glass-button:not(.active) svg {
+.theme-minimalist aside .glass-button:not(.active) svg {
   color: #ffffff !important;
+}
+
+/* General button state outside sidebar if needed */
+.theme-minimalist .main-content .glass-button {
+  border: 1px solid var(--glass-border) !important;
 }
 
 /* Global Borders in Minimalist Theme */
@@ -313,7 +336,7 @@
 
 body {
   margin: 0;
-  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: var(--bg-primary);
   /* CHANGED: Use variable to allow override */
   color: var(--text-main);
@@ -329,12 +352,10 @@ html {
 /* Glassmorphism Utilities */
 .glass-panel {
   background: var(--bg-secondary);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  /* More visible border */
-  border-radius: 20px;
-  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: none;
+  /* Removed heavy shadows */
   transition: background 0.3s, border-color 0.3s;
 }
 
@@ -352,7 +373,7 @@ html {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .glass-button:hover {
@@ -368,15 +389,33 @@ html {
   font-weight: 700;
 }
 
-/* Sidebar Active State for Dual-Panel */
+/* Sidebar Active State Globally */
 .sidebar .glass-button.active {
-  background: rgba(255, 255, 255, 0.2) !important;
-  color: #ffffff !important;
-  border-left: 4px solid var(--sidebar-branding-color, #121212) !important;
-  border-top: 1px solid transparent;
-  border-right: 1px solid transparent;
-  border-bottom: 1px solid transparent;
-  border-radius: 0 8px 8px 0;
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border: none !important;
+  border-radius: 80px !important;
+  margin-left: 8px !important;
+  margin-right: 8px !important;
+  width: calc(100% - 16px) !important;
+}
+
+/* Fix for Collapsed Sidebar Icon squishing (reset margins and width) */
+.sidebar.collapsed .glass-button.active {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100% !important;
+}
+.sidebar .glass-button.active .module-icon-svg {
+  filter: brightness(0) !important;
+}
+.sidebar .glass-button.active svg {
+  color: #000000 !important;
+}
+
+/* Hover Effect for non-active module in Dark Mode */
+.mode-dark .sidebar .glass-button:not(.active):hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 [data-theme="light"] .glass-button.primary {
@@ -481,11 +520,12 @@ html {
 }
 
 .speed-type-text {
-  font-family: 'Lexend Peta', sans-serif;
-  font-style: italic;
-  font-weight: 700;
-  color: var(--sidebar-branding-color, var(--primary));
-  /* Dynamic branding color */
+  font-family: 'Montserrat', sans-serif;
+  font-style: normal;
+  font-weight: 300;
+  letter-spacing: 2px;
+  color: #000000;
+  /* Removed dynamic branding color to force black */
   white-space: nowrap;
   display: inline-block;
   vertical-align: middle;
@@ -556,17 +596,19 @@ html {
 .mode-light .sidebar .glass-button {
   color: var(--sidebar-text);
   border-color: var(--sidebar-border);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 118, 253, 0);
 }
 
 .mode-light .sidebar .glass-button:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* Hover icons in light mode remain white per user request, only active state turns them black */
+
 .mode-light .sidebar .glass-button.active,
 .mode-light .sidebar .glass-button.primary {
-  background: var(--primary) !important;
-  color: white !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
   border-color: var(--primary) !important;
 }
 
@@ -602,6 +644,34 @@ h2 {
 
 .text-muted {
   color: var(--text-muted);
+}
+
+/* High-End Typography Class for Major Headers */
+.high-end-title {
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 300;
+  color: var(--text-main) !important;
+  background-color: transparent !important;
+  padding: 0;
+  display: inline-block;
+  margin-bottom: 25px;
+  letter-spacing: 1px;
+}
+
+/* Monochromatic Table overrides for the minimalist theme */
+.theme-minimalist table {
+  border-collapse: collapse;
+}
+
+.theme-minimalist table th {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  font-family: 'Roboto Mono', monospace;
+  border-bottom: 2px solid var(--glass-border);
+}
+
+.theme-minimalist table td {
+  border-bottom: 1px solid var(--glass-border);
 }
 
 /* Responsive Utilities */
@@ -684,11 +754,12 @@ h2 {
 }
 
 .speed-type-text {
-  font-family: 'Lexend Peta', sans-serif;
-  font-style: italic;
-  font-weight: 700;
-  color: #DB2A40;
-  /* Flash Red */
+  font-family: 'Montserrat', sans-serif;
+  font-style: normal;
+  font-weight: 300;
+  letter-spacing: 2px;
+  color: #000000;
+  /* Force Black */
   white-space: nowrap;
   animation: speedType 0.4s steps(40, end) forwards;
   /* Fast typing effect */
@@ -1109,3 +1180,103 @@ h2 {
   font-weight: bold;
   animation: blink-red 2s infinite;
 }
+
+/* =========================================================
+   MOBILE RESPONSIVENESS (iPhone / Android)
+   Mandatory isolation: max-width 1024px 
+   ========================================================= */
+@media (max-width: 1024px) {
+  /* 1. Header and Layout Optimizations */
+  .topbar {
+    height: 40px !important;
+    padding: 0 10px !important;
+  }
+  
+  .topbar h2 {
+    font-size: 1rem !important; /* Reduce 'Roboto Mono' text */
+    letter-spacing: 2px !important;
+  }
+  
+  /* Force mobile menu toggle to display */
+  .mobile-nav-toggle {
+    display: flex !important;
+  }
+
+  /* 2. Sidebar Drawer (Already partially implemented, reinforcing isolated rules) */
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: -100% !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    z-index: 1050 !important; /* Above topbar and content */
+    width: 280px !important;
+    transition: left 0.3s ease-in-out !important;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.6) !important;
+  }
+
+  .sidebar.mobile-open {
+    left: 0 !important;
+  }
+
+  /* 3. WaiterOrderView - Mobile Grid & Cart Drawer */
+  .order-layout {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  /* Make left-side (menu) take full width */
+  .order-layout > div:first-child {
+    width: 100% !important;
+    padding-bottom: 80px !important; /* Space for FAB */
+  }
+
+  /* Cart Drawer Logic */
+  .order-cart-panel {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 85vh !important;
+    background: var(--bg-surface) !important;
+    z-index: 1040 !important; /* Under Sidebar, over Menu */
+    transform: translateY(100%) !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border-radius: 20px 20px 0 0 !important;
+    box-shadow: 0 -5px 25px rgba(0,0,0,0.5) !important;
+    padding-bottom: env(safe-area-inset-bottom) !important; /* iOS Safe Area */
+  }
+
+  .order-cart-panel.open {
+    transform: translateY(0) !important;
+  }
+
+  /* Floating Action Button for Mobile Cart */
+  .mobile-cart-fab {
+    display: flex !important;
+    position: fixed !important;
+    bottom: calc(20px + env(safe-area-inset-bottom)) !important; /* iOS Safe Area */
+    right: 20px !important;
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important;
+    background: var(--primary) !important;
+    color: #fff !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
+    z-index: 1030 !important;
+    border: none !important;
+  }
+}
+
+/* Hide FAB natively on Desktop */
+@media (min-width: 1025px) {
+  .mobile-cart-fab {
+    display: none !important;
+  }
+  .mobile-cart-close {
+    display: none !important;
+  }
+}
