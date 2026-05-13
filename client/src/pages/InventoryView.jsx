@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useAuth } from '../context/AuthContext';
 const InventoryView = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('platos'); // 'platos', 'insumos', 'recetario'
 
     // Data States
@@ -40,6 +42,7 @@ const InventoryView = () => {
         const res = await fetch('/api/insumos');
         const data = await res.json();
         setInsumos(data);
+        window.dispatchEvent(new Event('insumos-updated'));
     };
 
     const fetchKardex = async () => {
@@ -170,9 +173,18 @@ const InventoryView = () => {
 
     const handleSubmitInsumo = async (e) => {
         e.preventDefault();
+        
+        // Redondear valores numéricos a 2 decimales antes de enviar
+        const payload = {
+            ...insumoForm,
+            precioCompra: parseFloat(parseFloat(insumoForm.precioCompra).toFixed(2)),
+            stock: parseFloat(parseFloat(insumoForm.stock).toFixed(2)),
+            stockMinimo: insumoForm.stockMinimo ? parseFloat(parseFloat(insumoForm.stockMinimo).toFixed(2)) : null
+        };
+        
         const url = editingInsumo ? `/api/insumos/${editingInsumo.id}` : '/api/insumos';
         const method = editingInsumo ? 'PUT' : 'POST';
-        await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(insumoForm) });
+        await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         setIsInsumoModalOpen(false);
         fetchInsumos();
     };
@@ -368,9 +380,9 @@ const InventoryView = () => {
                                                 </span>
                                             )}
                                         </td>
-                                        <td style={{ padding: 15 }}>S/. {parseFloat(Number(insumo.precioCompra).toFixed(2))} / {insumo.unidadMedida}</td>
+                                        <td style={{ padding: 15 }}>S/. {Number(insumo.precioCompra).toFixed(2)} / {insumo.unidadMedida}</td>
                                         <td style={{ padding: 15, color: (insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo) ? 'var(--warning)' : 'inherit', fontWeight: (insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo) ? 'bold' : 'normal' }}>
-                                            {parseFloat(Number(insumo.stock).toFixed(2))} {insumo.unidadMedida}
+                                            {Number(insumo.stock).toFixed(2)} {insumo.unidadMedida}
                                         </td>
                                         <td style={{ padding: 15 }}>
                                             <div style={{ height: 10, width: 150, background: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
@@ -507,9 +519,15 @@ const InventoryView = () => {
 
     const handleSaveKardexManual = async (e) => {
         e.preventDefault();
+
+        // Validar que el usuario esté autenticado
+        if (!user || !user.id) {
+            alert("❌ Error: Usuario no autenticado");
+            return;
+        }
+
         try {
-            const userId = 1; // Assuming admin/manager ID 1 for now (if not using auth context yet)
-            const payload = { ...kardexForm, usuarioId: userId };
+            const payload = { ...kardexForm, usuarioId: user.id };
             const res = await fetch('/api/kardex', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -520,9 +538,9 @@ const InventoryView = () => {
                 fetchInsumos();
                 setKardexForm({ insumoId: '', tipoMovimiento: 'MERMA', cantidad: '', motivo: '' });
             } else {
-                alert("Error al guardar movimiento");
+                alert("❌ Error al guardar movimiento");
             }
-        } catch (error) { alert("Error de conexión"); }
+        } catch (error) { alert("❌ Error de conexión"); }
     };
 
     const renderKardexTab = () => {
@@ -680,6 +698,12 @@ const InventoryView = () => {
     };
 
     const handleApplyAudit = async () => {
+        // Validar que el usuario esté autenticado
+        if (!user || !user.id) {
+            alert("❌ Error: Usuario no autenticado");
+            return;
+        }
+
         if (!confirm("¿Desea aplicar estos ajustes de conciliación? Se generarán movimientos de AJUSTE en el Kardex y el stock se actualizará.")) return;
 
         try {
@@ -702,16 +726,16 @@ const InventoryView = () => {
                         tipoMovimiento,
                         cantidad: Math.abs(diferencia),
                         motivo,
-                        usuarioId: 1 // Admin
+                        usuarioId: user.id
                     })
                 });
             });
 
             await Promise.all(promises.filter(p => p !== null));
-            alert("Conciliación aplicada exitosamente.");
+            alert("✅ Conciliación aplicada exitosamente.");
             setAuditData({});
             fetchInsumos();
-        } catch (e) { alert("Error al conciliar."); }
+        } catch (e) { alert("❌ Error al conciliar."); }
     };
 
     const renderAuditoriaTab = () => {
@@ -906,17 +930,38 @@ const InventoryView = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
                                 <div>
                                     <label>Stock Física en Bodega</label>
-                                    <input type="number" step="0.01" className="glass-input" value={insumoForm.stock} onChange={e => setInsumoForm({ ...insumoForm, stock: e.target.value })} required />
+                                    <input 
+                                        type="number" 
+                                        step="0.01" 
+                                        className="glass-input" 
+                                        value={insumoForm.stock} 
+                                        onChange={e => {
+                                            const value = e.target.value;
+                                            if (value.includes('.')) {
+                                                const parts = value.split('.');
+                                                if (parts[1] && parts[1].length > 2) return;
+                                            }
+                                            setInsumoForm({ ...insumoForm, stock: value });
+                                        }}
+                                        onBlur={e => {
+                                            const rounded = parseFloat(e.target.value).toFixed(2);
+                                            setInsumoForm({ ...insumoForm, stock: isNaN(rounded) ? '' : rounded });
+                                        }}
+                                        required 
+                                    />
                                     <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 5 }}>Medida Actual.</p>
                                 </div>
                                 <div>
                                     <label>Stock Mínimo (Alerta)</label>
-                                    <input type="number" step="0.01" className="glass-input" value={insumoForm.stockMinimo} onChange={e => setInsumoForm({ ...insumoForm, stockMinimo: e.target.value })} />
+                                    <input type="number" step="0.01" className="glass-input" value={insumoForm.stockMinimo} onChange={e => {
+                                        const val = e.target.value;
+                                        setInsumoForm({ ...insumoForm, stockMinimo: val, notificarAlerta: (val && String(val).trim() !== '') ? insumoForm.notificarAlerta : false });
+                                    }} />
                                     <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 5 }}>Nivel de escasez.</p>
                                 </div>
                             </div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 0' }}>
-                                <input type="checkbox" checked={insumoForm.notificarAlerta} onChange={e => setInsumoForm({ ...insumoForm, notificarAlerta: e.target.checked })} style={{ width: 18, height: 18, accentColor: 'var(--primary)' }} />
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: (!insumoForm.stockMinimo || String(insumoForm.stockMinimo).trim() === '') ? 'not-allowed' : 'pointer', padding: '10px 0', opacity: (!insumoForm.stockMinimo || String(insumoForm.stockMinimo).trim() === '') ? 0.5 : 1 }}>
+                                <input type="checkbox" checked={insumoForm.notificarAlerta} disabled={!insumoForm.stockMinimo || String(insumoForm.stockMinimo).trim() === ''} onChange={e => setInsumoForm({ ...insumoForm, notificarAlerta: e.target.checked })} style={{ width: 18, height: 18, accentColor: 'var(--primary)', cursor: 'inherit' }} />
                                 Activar Alerta de Escasez en Dashboard
                             </label>
                             <div className="modal-footer" style={{ border: 'none', padding: 0, marginTop: 10 }}>

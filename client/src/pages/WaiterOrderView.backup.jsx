@@ -143,183 +143,6 @@ const WaiterOrderView = () => {
     const totalItemsInCart = cart.reduce((sum, item) => sum + item.cantidad, 0);
 
     return (
-        <React.Fragment>
-            <style>{`
-                /* Optimización Móvil - Vista Tomar Pedido */
-                @media (max-width: 768px) {
-                    /* Layout Principal */
-                    .order-layout {
-                        display: flex !important;
-                        flex-direction: column !important;
-                        height: 100svh !important;
-                        padding: 10px !important;
-                        padding-bottom: env(safe-area-inset-bottom) !important;
-                        overflow-x: hidden !important; 
-                        width: 100vw !important;
-                        box-sizing: border-box !important;
-                    }
-
-                    /* 1. Categorías Adaptativas (Lista Vertical Estricta) */
-                    .mobile-category-grid {
-                        display: grid !important;
-                        grid-template-columns: 1fr !important; /* Estricta columna única */
-                        grid-auto-flow: row !important; /* Flujo solo de arriba a abajo */
-                        grid-auto-columns: auto !important;
-                        grid-auto-rows: auto !important;
-                        grid-template-rows: auto !important;
-                        max-height: 250px !important;
-                        overflow-y: auto !important;
-                        overflow-x: hidden !important;
-                        padding-right: 8px !important;
-                        gap: 10px !important;
-                        scroll-snap-type: none !important; /* Desactivar forzados */
-                    }
-                    .mobile-category-item {
-                        display: flex !important;
-                        flex-direction: row !important;
-                        align-items: center !important;
-                        justify-content: flex-start !important;
-                        height: auto !important;
-                        padding: 12px 15px !important;
-                        width: 100% !important;
-                        box-sizing: border-box !important;
-                        scroll-snap-align: none !important;
-                    }
-                    .mobile-category-item > span:first-child {
-                        font-size: 1.2rem !important;
-                        margin-right: 15px !important;
-                    }
-                    .mobile-category-item > span:nth-child(2) {
-                        flex: 1 !important;
-                        text-align: left !important;
-                    }
-                    
-                    /* 2. Cuadrícula de Productos Compacta (Formato Lista de Fila) */
-                    .mobile-product-grid {
-                        display: grid !important;
-                        grid-template-columns: 1fr !important; /* Estricta columna única */
-                        grid-auto-rows: auto !important;
-                        gap: 8px !important;
-                        overflow-x: hidden !important;
-                    }
-                    .mobile-product-card {
-                        display: flex !important;
-                        flex-direction: row !important; /* Tarjeta en Fila Horizontal */
-                        height: auto !important;
-                        min-height: 75px !important;
-                        align-items: center !important;
-                        padding: 8px 10px !important;
-                        box-sizing: border-box !important;
-                        scroll-snap-align: none !important;
-                    }
-                    .product-image-container {
-                        width: 60px !important;
-                        height: 60px !important;
-                        border-radius: 8px !important;
-                        flex-shrink: 0 !important;
-                        overflow: hidden !important;
-                    }
-                    
-                    /* Body (Center + Right) */
-                    .product-body {
-                        flex-direction: row !important; /* Layout para acomodar Centro y Derecha */
-                        align-items: center !important;
-                        padding: 0 0 0 12px !important;
-                        gap: 10px !important;
-                    }
-                    .product-info-wrapper {
-                        flex: 1 !important; /* Centro absorbe el espacio extra */
-                        justify-content: center !important;
-                        gap: 2px !important;
-                        min-width: 0 !important; /* previene desbordes */
-                    }
-                    .product-name {
-                        font-size: 0.95rem !important;
-                        font-weight: 700 !important;
-                        margin-bottom: 0px !important;
-                        line-height: 1.2 !important;
-                        white-space: nowrap !important;
-                        overflow: hidden !important;
-                        text-overflow: ellipsis !important;
-                    }
-                    .product-price {
-                        font-size: 0.85rem !important;
-                        color: var(--success) !important;
-                    }
-                    /* Container for actions in mobile needs to be tight on the right side */
-                    .product-actions-wrap {
-                        padding-top: 0 !important;
-                        margin-top: 0 !important;
-                        flex-shrink: 0 !important;
-                    }
-
-                    /* 3. Botones Perfect Circles y Layout Inferior */
-                    .mobile-product-card .glass-button {
-                        width: 38px !important;
-                        height: 38px !important;
-                        min-width: 38px !important;
-                        max-width: 38px !important;
-                        aspect-ratio: 1/1 !important;
-                        border-radius: 50% !important;
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
-                        flex-shrink: 0 !important; /* CLAVE NO OVALARSE */
-                    }
-                    
-                    /* Asegurar alineación milimétrica del bloque de cantidad */
-                    .quantity-controls {
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important; /* Force tight fit horizontally */
-                        gap: 10px !important;
-                    }
-                    
-                    .quantity-number {
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        text-align: center !important;
-                        vertical-align: middle !important;
-                        line-height: 1 !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        width: 30px !important; /* FLOTANTE ESTRICTO CENTRADO */
-                        min-width: 30px !important;
-                        font-size: 1.1rem !important;
-                    }
-                    
-                    /* Ocultar botones de Info demasiado invasivos */
-                    .mobile-product-card .info-btn {
-                        display: none !important;
-                    }
-                    
-                    /* 4. Panel Inferior Safe Area y Botón Neon */
-                    .order-cart-panel.open {
-                        padding-bottom: env(safe-area-inset-bottom) !important;
-                    }
-
-                    /* Botón Neon Glow (Confirmar Pedido) */
-                    .order-cart-panel .glass-button.primary {
-                        border-radius: 50px !important;
-                        box-shadow: 0 0 15px var(--primary) !important;
-                        border: 1px solid var(--primary) !important;
-                        font-family: inherit !important;
-                    }
-
-                    /* Quitar width forzado en desktop y permitir fluidez en Search */
-                    .search-container {
-                        width: 100% !important;
-                        max-width: calc(100% - 30px) !important;
-                        margin: 0 auto !important;
-                        box-sizing: border-box !important;
-                        padding: 0 !important;
-                        flex-shrink: 1 !important;
-                    }
-                }
-            `}</style>
         <div className="order-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', height: 'calc(100vh - 110px)', gap: 20, padding: 20, boxSizing: 'border-box' }}>
 
             {/* LEFT SIDE: MENU */}
@@ -345,9 +168,9 @@ const WaiterOrderView = () => {
                 {/* Categories */}
                 <div style={{ paddingBottom: 5 }}>
                     <div className="text-muted" style={{ marginBottom: 10, fontSize: '0.9rem' }}>CATEGORÍAS</div>
-                    <div className="mobile-category-grid" style={{ display: 'grid', gridTemplateRows: 'repeat(2, 1fr)', gridAutoFlow: 'column', gridAutoColumns: 'minmax(140px, 1fr)', gap: 15, overflowX: 'auto', overflowY: 'hidden', paddingBottom: 10, scrollSnapType: 'x mandatory' }}>
+                    <div style={{ display: 'grid', gridTemplateRows: 'repeat(2, 1fr)', gridAutoFlow: 'column', gridAutoColumns: 'minmax(140px, 1fr)', gap: 15, overflowX: 'auto', overflowY: 'hidden', paddingBottom: 10, scrollSnapType: 'x mandatory' }}>
                         <div
-                            className={`glass-panel category-card mobile-category-item ${selectedCategoryId === null ? 'active' : ''}`}
+                            className={`glass-panel category-card ${selectedCategoryId === null ? 'active' : ''}`}
                             style={{
                                 background: selectedCategoryId === null ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
                                 cursor: 'pointer', padding: 15, display: 'flex', flexDirection: 'column', gap: 5,
@@ -364,7 +187,7 @@ const WaiterOrderView = () => {
                         {categories.map(cat => (
                             <div
                                 key={cat.id}
-                                className={`glass-panel category-card mobile-category-item ${selectedCategoryId === cat.id ? 'active' : ''}`}
+                                className={`glass-panel category-card ${selectedCategoryId === cat.id ? 'active' : ''}`}
                                 style={{
                                     background: selectedCategoryId === cat.id ? 'var(--primary)' : cat.color,
                                     color: 'var(--text-main)',
@@ -388,15 +211,15 @@ const WaiterOrderView = () => {
                         {selectedCategoryId ? categories.find(c => c.id === selectedCategoryId)?.nombre : 'TODOS LOS PRODUCTOS'}
                     </div>
 
-                    <div className="mobile-product-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gridAutoRows: '210px', gap: 15 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gridAutoRows: '210px', gap: 15 }}>
                         {filteredProducts.map((product, index) => {
                             const qty = getProductQtyInCart(product.id);
                             // Add a slight staggered delay to the fade-in based on index
                             const animationDelay = `${index * 0.03}s`;
 
                             return (
-                                <div key={product.id} className="glass-panel fade-in mobile-product-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', border: qty > 0 ? '1px solid var(--primary)' : 'none', animationDelay, scrollSnapAlign: 'start', height: '100%' }}>
-                                    <div className="product-image-container" style={{ height: 100, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
+                                <div key={product.id} className="glass-panel fade-in" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', border: qty > 0 ? '1px solid var(--primary)' : 'none', animationDelay, scrollSnapAlign: 'start', height: '100%' }}>
+                                    <div style={{ height: 100, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
                                         {product.imagen ? (
                                             <img src={product.imagen} alt={product.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
@@ -404,7 +227,6 @@ const WaiterOrderView = () => {
                                         )}
                                         {/* INFO BUTTON (Forced Visibility) */}
                                         <button
-                                            className="info-btn"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setInfoModalProduct(product);
@@ -430,15 +252,13 @@ const WaiterOrderView = () => {
                                             <Info size={16} strokeWidth={3} />
                                         </button>
                                     </div>
-                                    <div className="product-body" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
-                                        <div className="product-info-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
-                                            <div className="product-name" style={{ fontWeight: 600, fontSize: '0.95rem' }}>{product.nombre}</div>
-                                            <div className="product-price" style={{ color: 'var(--success)', fontWeight: 'bold' }}>S/. {product.precio.toFixed(2)}</div>
-                                        </div>
+                                    <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{product.nombre}</div>
+                                        <div style={{ color: 'var(--success)', fontWeight: 'bold' }}>S/. {product.precio.toFixed(2)}</div>
 
-                                        <div className="product-actions-wrap" style={{ marginTop: 'auto', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ marginTop: 'auto', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                             {qty > 0 ? (
-                                                <div className="quantity-controls" style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.1)', borderRadius: 20, padding: 2 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.1)', borderRadius: 20, padding: 2 }}>
                                                     {/* Note: In split logic, generic +/- affects the first generic line. 
                                                         For simplicity, the menu buttons just add/remove from the generic pool. 
                                                     */}
@@ -464,7 +284,7 @@ const WaiterOrderView = () => {
                                                     >
                                                         <Minus size={14} />
                                                     </button>
-                                                    <span className="quantity-number" style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{qty}</span>
+                                                    <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{qty}</span>
                                                     <button
                                                         className="glass-button"
                                                         style={{ width: 24, height: 24, padding: 0, borderRadius: '50%' }}
@@ -517,13 +337,13 @@ const WaiterOrderView = () => {
                             <div key={item.tempId} style={{ display: 'flex', flexDirection: 'column', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <button className="glass-button" style={{ width: 24, height: 24, padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} onClick={() => {
+                                        <div style={{ display: 'flex', gap: 5 }}>
+                                            <button className="glass-button" style={{ width: 20, height: 20, padding: 0, borderRadius: '50%' }} onClick={() => {
                                                 if (item.cantidad === 1) removeFromCart(item.tempId);
                                                 else updateQuantity(item.tempId, -1);
                                             }}><Minus size={12} /></button>
-                                            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', minWidth: 20, textAlign: 'center', lineHeight: 1 }}>{item.cantidad}</span>
-                                            <button className="glass-button" style={{ width: 24, height: 24, padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} onClick={() => updateQuantity(item.tempId, 1)}><Plus size={12} /></button>
+                                            <span style={{ fontWeight: 'bold', minWidth: 20, textAlign: 'center' }}>{item.cantidad}</span>
+                                            <button className="glass-button" style={{ width: 20, height: 20, padding: 0, borderRadius: '50%' }} onClick={() => updateQuantity(item.tempId, 1)}><Plus size={12} /></button>
                                         </div>
                                         <div>
                                             <div style={{ fontWeight: 500 }}>{item.nombre}</div>
@@ -658,7 +478,6 @@ const WaiterOrderView = () => {
                 </div>
             )}
         </div>
-        </React.Fragment>
     );
 };
 

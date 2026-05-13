@@ -11,6 +11,9 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
+// Helper: Redondear a 2 decimales para evitar errores de precisión flotante
+const round2 = (num) => Math.round((parseFloat(num) + Number.EPSILON) * 100) / 100;
+
 // GLOBAL STATE for Simulation Metrics
 // (Removed statsStartTime as per new logic)
 
@@ -988,9 +991,10 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
                     for (const ingrediente of receta) {
                         const cantidadConsumida = ingrediente.cantidad * detalle.cantidad;
 
+                        const insu = await tx.insumo.findUnique({ where: { id: ingrediente.insumoId } });
                         await tx.insumo.update({
                             where: { id: ingrediente.insumoId },
-                            data: { stock: { decrement: cantidadConsumida } }
+                            data: { stock: round2(insu.stock - cantidadConsumida) }
                         });
 
                         await tx.movimientoInsumo.create({
@@ -1105,13 +1109,12 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
             for (const ingrediente of receta) {
                 const cantidadConsumida = ingrediente.cantidad * detalle.cantidad;
 
-                // Actualizar stock del insumo decrementándolo
+                // Actualizar stock del insumo garantizando 2 decimales
+                const insumo = await prisma.insumo.findUnique({ where: { id: ingrediente.insumoId } });
                 await prisma.insumo.update({
                     where: { id: ingrediente.insumoId },
                     data: {
-                        stock: {
-                            decrement: cantidadConsumida
-                        }
+                        stock: round2(insumo.stock - cantidadConsumida)
                     }
                 });
 
@@ -1660,10 +1663,10 @@ app.post('/api/insumos', async (req, res) => {
         const insumo = await prisma.insumo.create({
             data: {
                 nombre,
-                precioCompra: parseFloat(precioCompra),
+                precioCompra: round2(precioCompra),
                 unidadMedida,
-                stock: parseFloat(stock || 0),
-                stockMinimo: parseFloat(stockMinimo || 0),
+                stock: round2(stock || 0),
+                stockMinimo: stockMinimo ? round2(stockMinimo) : null,
                 notificarAlerta: notificarAlerta || false
             }
         });
@@ -1679,10 +1682,10 @@ app.put('/api/insumos/:id', async (req, res) => {
     try {
         const updateData = {};
         if (nombre) updateData.nombre = nombre;
-        if (precioCompra !== undefined) updateData.precioCompra = parseFloat(precioCompra);
+        if (precioCompra !== undefined) updateData.precioCompra = round2(precioCompra || 0);
         if (unidadMedida) updateData.unidadMedida = unidadMedida;
-        if (stock !== undefined) updateData.stock = parseFloat(stock);
-        if (stockMinimo !== undefined) updateData.stockMinimo = parseFloat(stockMinimo);
+        if (stock !== undefined) updateData.stock = round2(stock || 0);
+        if (stockMinimo !== undefined) updateData.stockMinimo = stockMinimo ? round2(stockMinimo) : null;
         if (notificarAlerta !== undefined) updateData.notificarAlerta = notificarAlerta;
         if (activo !== undefined) updateData.activo = activo;
 
@@ -1835,23 +1838,22 @@ app.post('/api/kardex', async (req, res) => {
             });
 
             // 2. Afectar el stock real del insumo correspondiente
-            // COMPRA, AJUSTE_POSITIVO -> Incrementan
-            // MERMA, VENTA, TRANSFERENCIA, AJUSTE_NEGATIVO -> Decrementan
+            const insumoActual = await tx.insumo.findUnique({ where: { id: parseInt(insumoId) } });
             const incrementEvents = ['COMPRA', 'AJUSTE_POSITIVO'];
             const decrementEvents = ['VENTA', 'MERMA', 'TRANSFERENCIA', 'AJUSTE_NEGATIVO'];
 
-            let updateData = {};
+            let nuevoStock = insumoActual.stock;
             if (incrementEvents.includes(tipoMovimiento)) {
-                updateData = { stock: { increment: qtyStr } };
+                nuevoStock = round2(insumoActual.stock + qtyStr);
             } else if (decrementEvents.includes(tipoMovimiento)) {
-                updateData = { stock: { decrement: qtyStr } };
+                nuevoStock = round2(insumoActual.stock - qtyStr);
             } else {
-                updateData = { stock: { increment: qtyStr } }; // Default o Ajuste neto
+                nuevoStock = round2(insumoActual.stock + qtyStr); // Default o Ajuste neto
             }
 
             const inusmoModificado = await tx.insumo.update({
                 where: { id: parseInt(insumoId) },
-                data: updateData
+                data: { stock: nuevoStock }
             });
 
             return { movimiento, nuevoStock: inusmoModificado.stock };
@@ -1865,6 +1867,49 @@ app.post('/api/kardex', async (req, res) => {
 });
 
 app.get('/api/ping', (req, res) => res.json({ status: 'OK_UPDATED' }));
+
+// GET /api/permisos - Obtener todos los permisos
+app.get('/api/permisos', async (req, res) => {
+    try {
+        const permisos = await prisma.permisoModulo.findMany({
+            orderBy: [{ rol: 'asc' }, { modulo: 'asc' }]
+        });
+        res.json(permisos);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /api/permisos/:rol - Obtener permisos de un rol específico
+app.get('/api/permisos/:rol', async (req, res) => {
+    try {
+        const { rol } = req.params;
+        const permisos = await prisma.permisoModulo.findMany({
+            where: { rol }
+        });
+        res.json(permisos);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// PUT /api/permisos/:rol/:modulo - Actualizar permiso específico
+app.put('/api/permisos/:rol/:modulo', async (req, res) => {
+    try {
+        const { rol, modulo } = req.params;
+        const { habilitado } = req.body;
+        
+        const permiso = await prisma.permisoModulo.upsert({
+            where: { rol_modulo: { rol, modulo } },
+            update: { habilitado },
+            create: { rol, modulo, habilitado }
+        });
+        
+        res.json(permiso);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 // --- SERVER START & BOOT CLEANUP ---
 const runBootCleanup = async () => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, X, Eye, EyeOff } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 import logoMinimalista from '../assets/logo_minimalist.png';
 
 const LoginPage = () => {
@@ -9,7 +9,6 @@ const LoginPage = () => {
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [showPin, setShowPin] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
 
@@ -82,57 +81,15 @@ const LoginPage = () => {
 
 
     return (
-        <React.Fragment>
-            <style>{`
-                /* 1. Aislamiento de Estilos (Media Query) */
-                @media (max-width: 1024px) {
-                    /* 2. Gestión de Pantalla: 100svh y safe areas */
-                    .mobile-login-container {
-                        flex-direction: column !important;
-                        height: auto !important;
-                        min-height: 100svh !important;
-                        overflow-y: auto !important;
-                        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
-                        display: flex !important;
-                    }
-                    .mobile-left-panel {
-                        min-height: 250px !important;
-                        flex: none !important;
-                        border-right: none !important;
-                        border-bottom: 1px solid rgba(0,0,0,0.05) !important;
-                    }
-                    /* Contenedor desplazable y action button visible */
-                    .mobile-right-panel {
-                        flex: 1 !important;
-                        padding: 30px 20px 80px 20px !important;
-                        justify-content: flex-start !important;
-                        border-left: none !important;
-                    }
-                    /* Layout Adaptativo: botón de 'INGRESAR' al 90% */
-                    .mobile-btn-login {
-                        width: 90% !important;
-                        margin: 0 auto !important;
-                        display: block !important;
-                    }
-                    /* 3. Optimización de Interacción Táctil y Prevención de Zoom */
-                    input, select, textarea {
-                        font-size: 16px !important;
-                    }
-                    /* Touch Targets: Incrementa el padding interno a un mínimo de 12-14px */
-                    .mobile-touch-target {
-                        padding: 14px 20px !important;
-                    }
-                }
-            `}</style>
-            <div className="mobile-login-container" style={{
-                display: 'flex', height: '100vh', width: '100vw', background: '#050505',
-                fontFamily: '"Inter", sans-serif', color: '#fff', overflow: 'hidden',
-                opacity: isExiting ? 0 : 1, transform: isExiting ? 'scale(0.95)' : 'scale(1)',
-                transition: 'opacity 0.5s ease-out, transform 0.5s ease-out'
-            }}>
+        <div style={{
+            display: 'flex', height: '100vh', width: '100vw', background: '#050505',
+            fontFamily: '"Inter", sans-serif', color: '#fff', overflow: 'hidden',
+            opacity: isExiting ? 0 : 1, transform: isExiting ? 'scale(0.95)' : 'scale(1)',
+            transition: 'opacity 0.5s ease-out, transform 0.5s ease-out'
+        }}>
 
-                {/* LADO IZQUIERDO: Branding */}
-                <div className="mobile-left-panel" style={{ flex: 1, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRight: '1px solid rgba(0,0,0,0.05)' }}>
+            {/* LADO IZQUIERDO: Branding */}
+            <div style={{ flex: 1, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRight: '1px solid rgba(0,0,0,0.05)' }}>
                 <div style={{ textAlign: 'center', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 30 }}>
                         <img src={logoMinimalista} alt="Logo" style={{ width: 100, height: 100, objectFit: 'contain' }} />
@@ -147,7 +104,7 @@ const LoginPage = () => {
             </div>
 
             {/* LADO DERECHO: Acceso */}
-            <div className="mobile-right-panel" style={{ flex: 1, backgroundColor: '#121212', borderLeft: '1px solid #222222', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: 40, position: 'relative', zIndex: 2 }}>
+            <div style={{ flex: 1, backgroundColor: '#121212', borderLeft: '1px solid #222222', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: 40, position: 'relative', zIndex: 2 }}>
                 <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', position: 'relative' }}>
 
                     <h2 style={{ fontFamily: '"Montserrat", sans-serif', fontWeight: 400, fontSize: '1.4rem', color: 'var(--primary)', marginBottom: 40, textAlign: 'center', letterSpacing: '1px' }}>
@@ -161,7 +118,6 @@ const LoginPage = () => {
                     {/* SELECTOR DE USUARIO (DROPDOWN) */}
                     <div className="user-selector" ref={dropdownRef} style={{ position: 'relative', marginBottom: 40 }}>
                         <div
-                            className="mobile-touch-target"
                             style={{ background: '#181818', padding: '16px 20px', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', border: '1px solid #2a2a2a', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', transition: 'background 0.3s' }}
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         >
@@ -215,25 +171,16 @@ const LoginPage = () => {
                     </p>
 
                     {/* PIN INDICATORS */}
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginBottom: 40, minHeight: '14px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginBottom: 40 }}>
                         {[...Array(6)].map((_, i) => (
-                            showPin && i < pin.length ? (
-                                <div key={i} style={{
-                                    width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    color: 'var(--primary)', fontSize: '1.2rem', fontWeight: '600', fontFamily: '"Inter", sans-serif'
-                                }}>
-                                    {pin[i]}
-                                </div>
-                            ) : (
-                                <div key={i} style={{
-                                    width: 14,
-                                    height: 14,
-                                    borderRadius: '50%',
-                                    background: i < pin.length ? 'var(--primary)' : '#2a2a2a',
-                                    transition: 'background 0.2s',
-                                    boxShadow: i < pin.length ? '0 0 10px rgba(240, 84, 79, 0.4)' : 'none'
-                                }} />
-                            )
+                            <div key={i} style={{
+                                width: 14,
+                                height: 14,
+                                borderRadius: '50%',
+                                background: i < pin.length ? 'var(--primary)' : '#2a2a2a',
+                                transition: 'background 0.2s',
+                                boxShadow: i < pin.length ? '0 0 10px rgba(240, 84, 79, 0.4)' : 'none'
+                            }} />
                         ))}
                     </div>
 
@@ -258,20 +205,7 @@ const LoginPage = () => {
                                 {num}
                             </button>
                         ))}
-                        {/* BUTTON: DEL (IZQUIERDA) */}
-                        <button
-                            onClick={handlePinDelete}
-                            style={{
-                                background: 'transparent', border: 'none', color: '#888', display: 'flex', justifyContent: 'center', alignItems: 'center',
-                                padding: '20px 0', cursor: 'pointer', borderRadius: 16, transition: 'background 0.2s, color 0.2s'
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#fff'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
-                        >
-                            <X size={24} strokeWidth={1.5} />
-                        </button>
-                        
-                        {/* BUTTON: 0 (CENTRO) */}
+                        <div style={{ padding: '20px 0' }}></div> {/* Empty space */}
                         <button
                             onClick={() => handlePinPress('0')}
                             style={{
@@ -286,10 +220,8 @@ const LoginPage = () => {
                         >
                             0
                         </button>
-                        
-                        {/* BUTTON: MOSTRAR/OCULTAR CONTRASEÑA (DERECHA) */}
                         <button
-                            onClick={() => setShowPin(!showPin)}
+                            onClick={handlePinDelete}
                             style={{
                                 background: 'transparent', border: 'none', color: '#888', display: 'flex', justifyContent: 'center', alignItems: 'center',
                                 padding: '20px 0', cursor: 'pointer', borderRadius: 16, transition: 'background 0.2s, color 0.2s'
@@ -297,13 +229,12 @@ const LoginPage = () => {
                             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#fff'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
                         >
-                            {showPin ? <EyeOff size={24} strokeWidth={1.5} /> : <Eye size={24} strokeWidth={1.5} />}
+                            <X size={24} strokeWidth={1.5} />
                         </button>
                     </div>
 
                     {/* ACTION BUTTON */}
                     <button
-                        className="mobile-btn-login"
                         onClick={handleLogin}
                         disabled={pin.length < 6}
                         style={{
@@ -321,13 +252,12 @@ const LoginPage = () => {
                             letterSpacing: '1px'
                         }}
                     >
-                        Ingresar
+                        Iniciar Turno
                     </button>
 
                 </div>
             </div>
         </div>
-        </React.Fragment>
     );
 };
 

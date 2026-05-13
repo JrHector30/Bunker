@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import PermissionsConfig from '../components/PermissionsConfig';
 
 const SettingsView = () => {
+    const { user } = useAuth();
     const { theme, changeTheme, showAlerts, setShowAlerts } = useTheme();
     const navigate = useNavigate();
 
@@ -72,6 +75,8 @@ const SettingsView = () => {
                 </div>
             </div>
 
+            {user?.rol === 'admin' && <PermissionsConfig />}
+
             <section className="glass-panel" style={{ padding: 30 }}>
                 <h2 style={{ marginBottom: 20 }}>Temas y Apariencia</h2>
 
@@ -119,12 +124,11 @@ const SettingsView = () => {
                             </p>
 
                             {theme === t.id && (
-                                <div style={{
+                                <div className="text-on-primary" style={{
                                     position: 'absolute',
                                     top: 10,
                                     right: 10,
                                     background: 'var(--primary)',
-                                    color: 'white',
                                     padding: '2px 8px',
                                     borderRadius: 10,
                                     fontSize: '0.7rem',

@@ -153,3 +153,13 @@ model PedidoCancelado {
   fecha              DateTime @default(now())
 }
 
+model PermisoModulo {
+  id          Int      @id @default(autoincrement())
+  rol         String   // 'mozo', 'cocina', 'caja', 'admin'
+  modulo      String   // 'mesas', 'cocina', 'caja', 'logistica', 'reportes', 'usuarios'
+  habilitado  Boolean  @default(true)
+  
+  @@unique([rol, modulo])
+  @@map("permisos_modulos")
+}
+

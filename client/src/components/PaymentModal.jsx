@@ -72,8 +72,8 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
             <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 900, width: '95%' }}>
                 {/* Header */}
                 <div className="modal-header" style={{ borderBottom: 'none', background: 'var(--primary)', margin: '-25px -25px 20px -25px', padding: 20 }}>
-                    <h2 style={{ color: 'white', margin: 0 }}>Tipo de Pago - Mesa {order.tableNumero}</h2>
-                    <button className="glass-button" style={{ border: 'none', color: 'white', padding: 0 }} onClick={onClose}>
+                    <h2 className="text-on-primary" style={{ margin: 0 }}>Tipo de Pago - Mesa {order.tableNumero}</h2>
+                    <button className="glass-button text-on-primary" style={{ border: 'none', padding: 0 }} onClick={onClose}>
                         <X size={24} />
                     </button>
                 </div>

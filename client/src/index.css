@@ -51,15 +51,15 @@
 }
 
 .theme-red {
-  --bg-primary: #1a0505;
-  --bg-secondary: #2d0a0a;
-  --bg-surface: #2d0a0a;
+  --bg-primary: #0a0a0a; /* Oscuro */
+  --bg-secondary: #121212; /* Ligeramente más claro para páneles */
+  --bg-surface: #121212;
   --glass-border: rgba(240, 84, 79, 0.3);
   --accent: #121212;
   /* Charcoal for High-End contrast */
   --primary: #F0544F;
   /* Deep Charcoal Branding for Red Theme */
-  --sidebar-branding-color: #121212 !important;
+  --sidebar-branding-color: #F0544F !important;
   --text-main: #ffebeb;
   --text-muted: #d19a9a;
   --input-bg: rgba(50, 10, 10, 0.5);
@@ -141,7 +141,7 @@
   --sidebar-bg: #0f172a !important; /* Azul suficientemente oscuro */
 }
 .mode-dark.theme-red {
-  --sidebar-bg: #121212 !important; /* Carbón oscuro con acentos */
+  --sidebar-bg: #1a0505 !important; /* Rojo oscuro (antiguo fondo principal) */
 }
 
 /* Minimalist Light Mode - Paper White (White Content) */
@@ -149,6 +149,13 @@
 
 
 /* Sidebar Items Styling in Minimalist Theme */
+
+/* Fix Category Active text in Waiter Menu */
+.theme-minimalist .category-card.active,
+.theme-minimalist .category-card.active .text-muted {
+  color: var(--bg-primary) !important;
+  opacity: 1 !important;
+}
 
 /* Active Item: White Bg, Black Text, No Border */
 .theme-minimalist aside .glass-button.active {
@@ -204,6 +211,20 @@
   border: 1px solid var(--glass-border) !important;
   background: var(--input-bg) !important;
   color: var(--input-text) !important;
+}
+
+.theme-minimalist .search-input {
+  border: none !important;
+  background: transparent !important;
+}
+
+
+/* Ensure any element explicitly built with var(--primary) background adapts text color in Minimalist theme */
+.text-on-primary {
+  color: #ffffff; /* Default for normal themes */
+}
+.theme-minimalist .text-on-primary {
+  color: var(--bg-primary) !important;
 }
 
 /* Tables */
@@ -1238,7 +1259,7 @@ h2 {
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    height: 85vh !important;
+    height: 83vh !important;
     background: var(--bg-surface) !important;
     z-index: 1040 !important; /* Under Sidebar, over Menu */
     transform: translateY(100%) !important;
