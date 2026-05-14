@@ -1155,28 +1155,53 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
                 estado: 'cerrada',
                 fecha: { gte: startDate, lte: endDate }
             },
-            include: { detalles: { include: { plato: true } }, usuario: true } // Include Waiter info
+            include: { detalles: { include: { plato: true } }, usuario: true, mesa: true } // Include Waiter and Mesa info
         });
 
-        const salesData = sales.map(order => ({
-            id: order.id,
-            hora: order.fecha,
-            items: order.detalles.map(d => ({
-                cantidad: d.cantidad,
-                descripcion: d.plato.nombre,
-                precio: d.plato.precio,
-                total: d.cantidad * d.plato.precio
-            })),
-            total: order.detalles.reduce((s, d) => s + (d.cantidad * d.plato.precio), 0),
-            metodo: order.metodoPago,
-            doc: order.tipoDocumento,
-            mozo: order.usuario?.nombre || 'General' // Waiter Name
-        }));
+        let totalPropinas = 0;
+        let propinasPorMozo = {};
+
+        const salesData = sales.map(order => {
+            const subtotal = order.detalles.reduce((s, d) => s + (d.cantidad * d.plato.precio), 0);
+            const propina = order.propina || 0;
+            totalPropinas += propina;
+
+            if (propina > 0 && order.usuario) {
+                const mozoId = order.usuario.id;
+                if (!propinasPorMozo[mozoId]) {
+                    propinasPorMozo[mozoId] = {
+                        id: mozoId,
+                        nombre: order.usuario.nombre,
+                        propinas: 0
+                    };
+                }
+                propinasPorMozo[mozoId].propinas += propina;
+            }
+
+            return {
+                id: order.id,
+                hora: order.fecha,
+                items: order.detalles.map(d => ({
+                    cantidad: d.cantidad,
+                    descripcion: d.plato.nombre,
+                    precio: d.plato.precio,
+                    total: d.cantidad * d.plato.precio
+                })),
+                total: subtotal,
+                propina: propina,
+                metodo: order.metodoPago,
+                doc: order.tipoDocumento,
+                mozo: order.usuario?.nombre || 'General', // Waiter Name
+                mesa: order.mesa?.numero || 'Barra'
+            };
+        });
 
         res.json({
             ...arq,
             ventas: salesData,
-            totalBruto: salesData.reduce((acc, s) => acc + s.total, 0)
+            totalBruto: salesData.reduce((acc, s) => acc + s.total, 0) + totalPropinas,
+            totalPropinas,
+            propinasPorMozo: Object.values(propinasPorMozo)
         });
 
     } catch (e) {
@@ -1224,11 +1249,14 @@ app.get('/api/cashier/balance', async (req, res) => {
                     lte: endDate
                 }
             },
-            include: { detalles: { include: { plato: true } } }
+            include: { detalles: { include: { plato: true } }, usuario: true }
         });
 
         // Calculate Totals
         let totalBruto = 0;
+        let totalPropinas = 0;
+        let propinasPorMozo = {};
+
         let incomeDetails = {
             efectivo: 0,
             tarjeta: 0,
@@ -1237,17 +1265,39 @@ app.get('/api/cashier/balance', async (req, res) => {
         };
 
         sales.forEach(order => {
-            const orderTotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0) + (order.propina || 0);
+            const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+            const propina = order.propina || 0;
+            const orderTotal = subtotal + propina;
+
             totalBruto += orderTotal;
+            totalPropinas += propina;
+
+            // Acumular propinas por mozo
+            if (propina > 0 && order.usuario) {
+                const mozoId = order.usuario.id;
+                const mozoNombre = order.usuario.nombre;
+
+                if (!propinasPorMozo[mozoId]) {
+                    propinasPorMozo[mozoId] = {
+                        id: mozoId,
+                        nombre: mozoNombre,
+                        propinas: 0
+                    };
+                }
+                propinasPorMozo[mozoId].propinas += propina;
+            }
 
             const method = order.metodoPago?.toLowerCase() || 'efectivo';
 
-            if (method.includes('izipay')) incomeDetails.izipay += orderTotal;
-            else if (method.includes('yape') || method.includes('plin')) incomeDetails.yape += orderTotal;
-            else if (method.includes('tarjeta')) incomeDetails.tarjeta += orderTotal;
-            else if (incomeDetails[method] !== undefined) incomeDetails[method] += orderTotal;
-            else incomeDetails.efectivo += orderTotal;
+            if (method.includes('izipay')) incomeDetails.izipay += subtotal;
+            else if (method.includes('yape') || method.includes('plin')) incomeDetails.yape += subtotal;
+            else if (method.includes('tarjeta')) incomeDetails.tarjeta += subtotal;
+            else if (incomeDetails[method] !== undefined) incomeDetails[method] += subtotal;
+            else incomeDetails.efectivo += subtotal;
         });
+
+        // Convertir objeto a array para frontend
+        const desglosePropinas = Object.values(propinasPorMozo);
 
         // Calculate Locked/Pending Amounts (Only relevant if Open, but let's calculate anyway for info)
         const openOrders = await prisma.comanda.findMany({
@@ -1287,6 +1337,8 @@ app.get('/api/cashier/balance', async (req, res) => {
             ingresos: incomeDetails,
             totalCaja,
             totalBruto,
+            totalPropinas,
+            propinasPorMozo: desglosePropinas,
             totalPendiente,
             ventas: ventasDetalladas
         });
@@ -1440,22 +1492,42 @@ app.get('/api/cashier/history', async (req, res) => {
                     estado: 'cerrada',
                     fecha: { gte: startDate, lte: endDate }
                 },
-                include: { detalles: { include: { plato: true } } }
+                include: { detalles: { include: { plato: true } }, usuario: true }
             });
 
             let totalBruto = 0;
+            let totalPropinas = 0;
+            let propinasPorMozo = {};
             let incomeDetails = { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0 };
 
             sales.forEach(order => {
-                const orderTotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0) + (order.propina || 0);
+                const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+                const propina = order.propina || 0;
+                const orderTotal = subtotal + propina;
+
                 totalBruto += orderTotal;
+                totalPropinas += propina;
+
+                // Acumular propinas por mozo
+                if (propina > 0 && order.usuario) {
+                    const mozoId = order.usuario.id;
+                    if (!propinasPorMozo[mozoId]) {
+                        propinasPorMozo[mozoId] = {
+                            id: mozoId,
+                            nombre: order.usuario.nombre,
+                            propinas: 0
+                        };
+                    }
+                    propinasPorMozo[mozoId].propinas += propina;
+                }
+
                 const method = order.metodoPago?.toLowerCase() || 'efectivo';
 
-                if (method.includes('izipay')) incomeDetails.izipay += orderTotal;
-                else if (method.includes('yape') || method.includes('plin')) incomeDetails.yape += orderTotal;
-                else if (method.includes('tarjeta')) incomeDetails.tarjeta += orderTotal;
-                else if (incomeDetails[method] !== undefined) incomeDetails[method] += orderTotal;
-                else incomeDetails.efectivo += orderTotal;
+                if (method.includes('izipay')) incomeDetails.izipay += subtotal;
+                else if (method.includes('yape') || method.includes('plin')) incomeDetails.yape += subtotal;
+                else if (method.includes('tarjeta')) incomeDetails.tarjeta += subtotal;
+                else if (incomeDetails[method] !== undefined) incomeDetails[method] += subtotal;
+                else incomeDetails.efectivo += subtotal;
             });
 
             // Pending (only relevant if open, but can calculate snapshot if needed)
@@ -1482,6 +1554,8 @@ app.get('/api/cashier/history', async (req, res) => {
                 ingresos: incomeDetails,
                 totalCaja,
                 totalBruto,
+                totalPropinas,
+                propinasPorMozo: Object.values(propinasPorMozo),
                 totalPendiente
             };
         }));

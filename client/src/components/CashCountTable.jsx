@@ -90,74 +90,152 @@ const CashCountTable = ({ onStatusChange }) => {
 
     // PDF GENERATION LOGIC
     const generatePDF = async () => {
-        // Determine what to print. 
-        // If "currentStatus" is active, prioritize that? 
-        // Or if the user wants a report for a specific filtered day?
-        // REQUIREMENT: "Arqueo de Caja". Usually means the current closing report.
-        // We'll use 'currentStatus' (which contains all info for the latest/active session).
+        let targetId = null;
 
-        if (!currentStatus) return;
+        // Si hay una fecha filtrada y resultados en el historial, tomamos el primero de esa fecha
+        if (filterDate && history?.data?.length > 0) {
+            targetId = history.data[0].id;
+        } else if (currentStatus) {
+            targetId = currentStatus.id;
+        }
+
+        if (!targetId) {
+            alert("No hay datos de arqueo disponibles para descargar.");
+            return;
+        }
+        
         setIsGenerating(true);
 
         try {
-            // Fetch fresh details just in case (optional, but using currentStatus should suffice if it has 'ventas')
-            // Actually, currentStatus from /api/cashier/balance ALREADY has 'ventas' with simple structure.
-            // But we need 'Mozo' which might be missing in the simple 'ventas' map in backend (let's check).
-            // The backend update I just did was for /api/cashier/arqueo/:id.
-            // Let's use THAT to be safe and get specific full details including Waiter.
-
-            const targetId = currentStatus.id;
             const res = await fetch(`/api/cashier/arqueo/${targetId}`);
             const fullData = await res.json();
 
             const doc = new jsPDF();
+            doc.setFont("helvetica");
 
             // HEADER
-            doc.setFontSize(18);
-            doc.text("ComandaGo - Arqueo de Caja", 14, 20);
-
-            doc.setFontSize(11);
-            doc.setTextColor(100);
-            doc.text(`Fecha: ${formatDate(new Date())}`, 14, 28);
-            doc.text(`Estado: ${fullData.estado.toUpperCase()}`, 14, 34);
-
-            // SUMMARY SECTION
-            const startY = 45;
-            doc.setFillColor(240, 240, 240);
-            doc.rect(14, startY, 180, 25, 'F');
-
-            doc.setFontSize(12);
-            doc.setTextColor(0);
-            doc.text("Resumen Financiero", 18, startY + 8);
+            doc.setFontSize(22);
+            doc.setTextColor(13, 110, 253); // ComandaGo Blue
+            doc.setFont("helvetica", "bold");
+            doc.text("ComandaGo", 14, 20);
+            
+            doc.setFontSize(14);
+            doc.setTextColor(40, 40, 40);
+            doc.text("Reporte: Arqueo de Caja", 14, 28);
 
             doc.setFontSize(10);
-            doc.text(`Total Ventas: S/. ${fullData.totalBruto?.toFixed(2) || '0.00'}`, 18, startY + 18);
-            doc.text(`Efectivo: S/. ${(fullData.ingresos?.efectivo || 0).toFixed(2)}`, 80, startY + 18);
-            doc.text(`Tarjetas: S/. ${(fullData.ingresos?.tarjeta || 0).toFixed(2)}`, 130, startY + 18);
-            doc.text(`Egresos: S/. ${(fullData.egresos || 0).toFixed(2)}`, 18, startY + 28); // If added later
+            doc.setTextColor(100);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Fecha del Turno: ${formatDate(fullData.fechaInicio, false)}`, 14, 35);
+            doc.text(`Turno ID: #${fullData.id} - Estado: ${fullData.estado.toUpperCase()}`, 14, 40);
+            doc.text(`Usuario: ${fullData.usuario?.nombre || 'Administrador'}`, 14, 45);
 
-            // DETAILS TABLE
+            // FINANCIAL SUMMARY (Grid)
+            let startY = 50;
+            doc.setFillColor(248, 249, 250);
+            doc.setDrawColor(220, 220, 220);
+            doc.rect(14, startY, 180, 22, 'FD');
+
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text("Total Ventas", 20, startY + 8);
+            doc.text("Total Propinas", 80, startY + 8);
+            doc.text("Saldo Final (Caja)", 140, startY + 8);
+
+            const ingresosEfectivo = fullData.ventas?.filter(v => (v.metodo || 'efectivo').toLowerCase() === 'efectivo').reduce((sum, v) => sum + v.total, 0) || 0;
+            const saldoFinal = currentStatus && currentStatus.id === fullData.id 
+                ? currentStatus.totalCaja 
+                : ((fullData.inicio || fullData.montoInicial || 0) + ingresosEfectivo);
+
+            doc.setFontSize(12);
+            doc.setTextColor(40, 40, 40);
+            doc.setFont("helvetica", "bold");
+            doc.text(`S/. ${(fullData.totalBruto || 0).toFixed(2)}`, 20, startY + 16);
+            doc.text(`S/. ${(fullData.totalPropinas || 0).toFixed(2)}`, 80, startY + 16);
+            doc.text(`S/. ${(saldoFinal || 0).toFixed(2)}`, 140, startY + 16);
+
+            doc.setFont("helvetica", "normal");
+
+            // SECCIÓN DE EGRESOS
+            startY += 32;
+            doc.setFontSize(12);
+            doc.setTextColor(13, 110, 253);
+            doc.setFont("helvetica", "bold");
+            doc.text("Egresos Registrados", 14, startY);
+
+            const egresosRows = fullData.egresosList && fullData.egresosList.length > 0 
+                ? fullData.egresosList.map(e => [e.motivo, `S/. ${e.monto.toFixed(2)}`]) 
+                : [["Sin egresos en este turno", "-"]];
+
+            autoTable(doc, {
+                startY: startY + 5,
+                head: [['Motivo', 'Monto']],
+                body: egresosRows,
+                theme: 'grid',
+                headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+                styles: { font: 'helvetica', fontSize: 9 },
+            });
+
+            // TABLA DE PEDIDOS
+            let currentY = doc.lastAutoTable.finalY + 15;
+            doc.setFontSize(12);
+            doc.setTextColor(13, 110, 253);
+            doc.setFont("helvetica", "bold");
+            doc.text("Detalle de Pedidos", 14, currentY);
+
             const tableRows = fullData.ventas?.map(v => [
-                formatDate(v.hora, true).split(' ')[1], // Time only
-                v.items.map(i => `${i.cantidad}x ${i.descripcion}`).join(', '), // Order summary
+                v.mesa || 'Barra',
                 v.mozo || 'General',
-                v.metodo || 'Efectivo',
-                `S/. ${v.total.toFixed(2)}`
+                `S/. ${v.total.toFixed(2)}`,
+                v.propina > 0 ? `S/. ${v.propina.toFixed(2)}` : '-'
             ]) || [];
 
             autoTable(doc, {
-                startY: startY + 35,
-                head: [['Hora', 'Pedido', 'Mozo', 'Método', 'Monto']],
+                startY: currentY + 5,
+                head: [['Mesa', 'Mozo', 'Monto', 'Propina']],
                 body: tableRows,
                 theme: 'grid',
-                headStyles: { fillColor: [40, 40, 40], textColor: 255 },
-                styles: { fontSize: 9 },
+                headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+                styles: { font: 'helvetica', fontSize: 9 },
                 columnStyles: {
-                    0: { cellWidth: 20 },
-                    1: { cellWidth: 80 },
-                    4: { halign: 'right' }
+                    2: { halign: 'right' },
+                    3: { halign: 'right' }
                 }
             });
+
+            // NUEVA SECCIÓN: PROPINAS
+            currentY = doc.lastAutoTable.finalY + 15;
+            doc.setFontSize(12);
+            doc.setTextColor(13, 110, 253);
+            doc.setFont("helvetica", "bold");
+            doc.text("Desglose de Propinas", 14, currentY);
+
+            if (fullData.propinasPorMozo && fullData.propinasPorMozo.length > 0) {
+                const propinasRows = fullData.propinasPorMozo.map(m => [
+                    m.nombre,
+                    `S/. ${m.propinas.toFixed(2)}`
+                ]);
+
+                autoTable(doc, {
+                    startY: currentY + 5,
+                    head: [['Mozo', 'Total Propinas']],
+                    body: propinasRows,
+                    theme: 'grid',
+                    headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+                    styles: { font: 'helvetica', fontSize: 9 },
+                });
+                
+                currentY = doc.lastAutoTable.finalY + 10;
+                doc.setFontSize(11);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont("helvetica", "bold");
+                doc.text(`Total Propinas Recaudadas: S/. ${fullData.totalPropinas.toFixed(2)}`, 14, currentY);
+            } else {
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.setFont("helvetica", "normal");
+                doc.text("No se registraron propinas en este turno.", 14, currentY + 8);
+            }
 
             // Save
             const dateStr = new Date().toISOString().split('T')[0];
@@ -337,6 +415,8 @@ const CashCountTable = ({ onStatusChange }) => {
                             <th>Inicio</th>
                             <th>Egreso</th>
                             <th>Ingreso (Detalle)</th>
+                            <th>Propinas</th>
+                            <th>Detalle Propinas</th>
                             <th>Total en Caja</th>
                             <th>Total en Bruto</th>
                             <th>Pendiente</th>
@@ -344,7 +424,7 @@ const CashCountTable = ({ onStatusChange }) => {
                     </thead>
                     <tbody>
                         {history.data.length === 0 ? (
-                            <tr><td colSpan="8" className="text-center text-muted">No se encontraron registros.</td></tr>
+                            <tr><td colSpan="10" className="text-center text-muted">No se encontraron registros.</td></tr>
                         ) : (
                             history.data.map(item => (
                                 <tr key={item.id} style={{ opacity: item.estado === 'cerrado' ? 0.8 : 1 }}>
@@ -370,6 +450,22 @@ const CashCountTable = ({ onStatusChange }) => {
                                             <span>Yape: {item.ingresos.yape.toFixed(2)}</span>
                                             <span>Izi: {item.ingresos.izipay.toFixed(2)}</span>
                                         </div>
+                                    </td>
+                                    <td style={{ color: 'var(--warning)', fontWeight: 'bold' }}>
+                                        S/. {(item.totalPropinas || 0).toFixed(2)}
+                                    </td>
+                                    <td>
+                                        {item.propinasPorMozo && item.propinasPorMozo.length > 0 ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                                {item.propinasPorMozo.map(mozo => (
+                                                    <div key={mozo.id} style={{ fontSize: '0.8rem', padding: '2px 6px', background: 'rgba(255,193,7,0.1)', borderRadius: 4 }}>
+                                                        <strong>{mozo.nombre}:</strong> S/. {mozo.propinas.toFixed(2)}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Sin propinas</span>
+                                        )}
                                     </td>
                                     <td style={{ fontWeight: 'bold', color: 'var(--success)' }}>S/. {item.totalCaja.toFixed(2)}</td>
                                     <td style={{ fontWeight: 'bold' }}>S/. {item.totalBruto.toFixed(2)}</td>
