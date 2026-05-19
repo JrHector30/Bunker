@@ -1972,13 +1972,13 @@ app.put('/api/permisos/:rol/:modulo', async (req, res) => {
     try {
         const { rol, modulo } = req.params;
         const { habilitado } = req.body;
-        
+
         const permiso = await prisma.permisoModulo.upsert({
             where: { rol_modulo: { rol, modulo } },
             update: { habilitado },
             create: { rol, modulo, habilitado }
         });
-        
+
         res.json(permiso);
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -2013,7 +2013,13 @@ const runBootCleanup = async () => {
     }
 };
 
-app.listen(PORT, async () => {
-    await runBootCleanup();
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+// Condicionar el app.listen para que SOLO se ejecute en desarrollo local
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`🚀 Servidor backend corriendo en http://localhost:${PORT}`);
+    });
+}
+
+// EXPORTACIÓN CRÍTICA PARA EL ENTORNO SERVERLESS DE VERCEL
+module.exports = app;

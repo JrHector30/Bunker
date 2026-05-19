@@ -18,13 +18,10 @@ const LoginPage = () => {
     const [isExiting, setIsExiting] = useState(false);
 
     useEffect(() => {
-        // 🌟 Detecta dinámicamente si estás en localhost o en la URL de Vercel
-        const API_URL = window.location.hostname === 'localhost' ? '' : window.location.origin;
-
-        fetch(`${API_URL}/api/users`)
+        // Llamada relativa directa que funciona en local y producción
+        fetch('/api/users')
             .then(res => res.json())
             .then(data => {
-                // Map 'user' to 'usuario' from DB and add initial
                 const mapped = data.map(u => ({
                     ...u,
                     initial: u.nombre ? u.nombre.charAt(0).toUpperCase() : '?',
