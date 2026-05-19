@@ -19,13 +19,8 @@
             "dest": "index.js"
         },
         {
-            "src": "/assets/(.*)",
-            "dest": "/client/dist/assets/$1"
-        },
-        {
             "src": "/(.*)",
-            "dest": "/client/dist/$1",
-            "check": true
+            "dest": "/client/$1"
         }
     ]
 }
