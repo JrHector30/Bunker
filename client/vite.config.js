@@ -25,7 +25,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../public',
+    outDir: 'dist', // 🌟 Cambiado al estándar 'dist' dentro de la carpeta client
     emptyOutDir: true
   }
 })
