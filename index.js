@@ -22,11 +22,17 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY || 'mock-key', // Use dummy key to prevent crash if missing
 });
 
-// Ensure uploads directory exists
+// Ensure uploads directory exists (Read-only in Vercel production)
 const uploadDir = path.join(__dirname, 'public', 'uploads', 'productos');
 const uploadUsersDir = path.join(__dirname, 'public', 'uploads', 'usuarios');
-fs.ensureDirSync(uploadDir);
-fs.ensureDirSync(uploadUsersDir);
+if (process.env.NODE_ENV !== 'production') {
+    try {
+        fs.ensureDirSync(uploadDir);
+        fs.ensureDirSync(uploadUsersDir);
+    } catch (e) {
+        console.warn('Could not create upload dirs. Ignored in Serverless environment.', e.message);
+    }
+}
 
 // Configure Multer
 const storage = multer.diskStorage({
@@ -52,8 +58,13 @@ app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 // 1. Users (Auth placeholder)
 app.get('/api/users', async (req, res) => {
-    const users = await prisma.user.findMany();
-    res.json(users);
+    try {
+        const users = await prisma.user.findMany();
+        res.json(users);
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        res.status(500).json({ error: 'A server error occurred while fetching users.', details: error.message });
+    }
 });
 
 app.post('/api/users', async (req, res) => {
