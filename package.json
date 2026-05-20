@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "prisma:generate": "prisma generate",
-    "vercel-build": "prisma generate"
+    "vercel-build": "prisma generate && npm run build:client",
+    "build:client": "cd client && npm install && npm run build"
   },
   "keywords": [],
   "author": "",

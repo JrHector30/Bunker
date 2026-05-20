@@ -48,6 +48,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
+// Servir archivos estáticos del frontend de React en producción
+app.use(express.static(path.join(__dirname, 'client', 'dist')));
+
 // --- ROUTES ---
 
 // 1. Users (Auth placeholder)
@@ -2012,6 +2015,11 @@ const runBootCleanup = async () => {
         console.error("Boot Cleanup Error:", e);
     }
 };
+
+// Rutas Catch-all para que React Router controle las URLs en frontend (e.g. /login)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
+});
 
 // Condicionar el app.listen para que SOLO se ejecute en desarrollo local
 if (process.env.NODE_ENV !== 'production') {
