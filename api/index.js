@@ -54,6 +54,23 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
+// Placeholder dinámico para Vercel Serverless (Sin disco persistente)
+app.get('/uploads/:type/:file', (req, res) => {
+    const { type, file } = req.params;
+    const filePath = path.join(__dirname, '..', 'public', 'uploads', type, file);
+    
+    if (require('fs').existsSync(filePath)) {
+        return res.sendFile(filePath);
+    }
+    
+    res.setHeader('Content-Type', 'image/svg+xml');
+    if (type === 'usuarios') {
+        res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>`);
+    } else {
+        res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`);
+    }
+});
+
 // --- ROUTES ---
 
 // 1. Users (Auth placeholder)
@@ -230,16 +247,20 @@ app.delete('/api/categories/:id', async (req, res) => {
 
 // 4. Products (Modified)
 app.get('/api/products', async (req, res) => {
-    const { categoriaId } = req.query;
-    const where = { deleted: false }; // Base filter
-    if (categoriaId) where.categoriaId = parseInt(categoriaId);
-    // show filtered products
+    try {
+        const { categoriaId } = req.query;
+        const where = { deleted: false }; // Base filter
+        if (categoriaId) where.categoriaId = parseInt(categoriaId);
 
-    const products = await prisma.plato.findMany({
-        where,
-        include: { categoria: true }
-    });
-    res.json(products);
+        const products = await prisma.plato.findMany({
+            where,
+            include: { categoria: true }
+        });
+        res.json(products);
+    } catch (e) {
+        console.error("Error fetching products:", e);
+        res.status(500).json([]);
+    }
 });
 
 app.post('/api/products', async (req, res) => {
@@ -532,7 +553,8 @@ app.get('/api/tables', async (req, res) => {
         }
         res.json(tables);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error("Error fetching tables:", e);
+        res.status(500).json([]);
     }
 });
 
@@ -1216,8 +1238,13 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
         });
 
     } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: "Error fetching details" });
+        console.error("Error fetching arqueo details:", e);
+        res.status(500).json({
+            ventas: [],
+            totalBruto: 0,
+            totalPropinas: 0,
+            propinasPorMozo: []
+        });
     }
 });
 
@@ -1355,8 +1382,19 @@ app.get('/api/cashier/balance', async (req, res) => {
         });
 
     } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: "Error fetching balance" });
+        console.error("Error fetching balance:", e);
+        res.status(500).json({
+            estado: 'cerrado',
+            inicio: 0,
+            egresos: 0,
+            ingresos: { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0 },
+            totalCaja: 0,
+            totalBruto: 0,
+            totalPropinas: 0,
+            propinasPorMozo: [],
+            totalPendiente: 0,
+            ventas: []
+        });
     }
 });
 
@@ -1715,7 +1753,8 @@ app.get('/api/insumos', async (req, res) => {
         const insumos = await prisma.insumo.findMany({ where: { deleted: false } });
         res.json(insumos);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error("Error fetching insumos:", e);
+        res.status(500).json([]);
     }
 });
 
@@ -1807,7 +1846,8 @@ app.get('/api/recetas/:platoId', async (req, res) => {
         });
         res.json(receta);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error("Error fetching receta:", e);
+        res.status(500).json([]);
     }
 });
 
