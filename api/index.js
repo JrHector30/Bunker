@@ -42,8 +42,8 @@ const upload = multer({
 });
 
 app.use(cors({ origin: '*' }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ limit: '5mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
@@ -439,8 +439,8 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
     try {
         // Convert to WebP and resize in memory
         const buffer = await sharp(req.file.buffer)
-            .resize({ width: 800, withoutEnlargement: true })
-            .webp({ quality: 80 })
+            .resize({ width: 300, withoutEnlargement: true })
+            .webp({ quality: 60 })
             .toBuffer();
             
         const base64Data = `data:image/webp;base64,${buffer.toString('base64')}`;

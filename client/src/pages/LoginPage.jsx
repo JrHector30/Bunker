@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, X, Eye, EyeOff } from 'lucide-react';
 import logoMinimalista from '../assets/logo_minimalist.png';
+import { useCache } from '../hooks/useCache';
 
 const LoginPage = () => {
     const [selectedUser, setSelectedUser] = useState(null);
@@ -13,25 +14,23 @@ const LoginPage = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    // Dynamic Users from API
-    const [usersList, setUsersList] = useState([]);
+    // Dynamic Users from API Cache
+    const fetcher = () => fetch('/api/users').then(res => res.json()).then(data => {
+        return data.map(u => ({
+            ...u,
+            initial: u.nombre ? u.nombre.charAt(0).toUpperCase() : '?',
+            shift: u.rol === 'admin' ? 'Acceso 24/7' : (u.rol === 'mozo' ? '08:00 AM - 04:00 PM' : 'Turno Operativo')
+        }));
+    });
+    
+    const { data: usersList, mutate: fetchUsers } = useCache('users', fetcher, []);
     const [isExiting, setIsExiting] = useState(false);
 
     useEffect(() => {
-        // Llamada relativa directa que funciona en local y producción
-        fetch('/api/users')
-            .then(res => res.json())
-            .then(data => {
-                const mapped = data.map(u => ({
-                    ...u,
-                    initial: u.nombre ? u.nombre.charAt(0).toUpperCase() : '?',
-                    shift: u.rol === 'admin' ? 'Acceso 24/7' : (u.rol === 'mozo' ? '08:00 AM - 04:00 PM' : 'Turno Operativo')
-                }));
-                setUsersList(mapped);
-                if (mapped.length > 0) setSelectedUser(mapped[0]);
-            })
-            .catch(err => console.error("Error fetching users for login", err));
-    }, []);
+        if (!selectedUser && usersList && usersList.length > 0) {
+            setSelectedUser(usersList[0]);
+        }
+    }, [usersList]);
 
     const handleLogin = async (e) => {
         if (e) e.preventDefault();

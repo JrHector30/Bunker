@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Minus, Send, Trash2, ArrowLeft, Search, Image as ImageIcon, FileText, Info, X } from 'lucide-react';
+import { useCache } from '../hooks/useCache';
 
 const WaiterOrderView = () => {
     const { tableId } = useParams();
@@ -9,8 +10,12 @@ const WaiterOrderView = () => {
     const location = useLocation(); // For passed state (new table)
     const { user } = useAuth();
 
-    const [products, setProducts] = useState([]);
-    const [categories, setCategories] = useState([]);
+    // Cached Data
+    const productsFetcher = () => fetch('/api/products').then(res => res.json());
+    const categoriesFetcher = () => fetch('/api/categories').then(res => res.json());
+    
+    const { data: products, mutate: fetchProducts } = useCache('products', productsFetcher, []);
+    const { data: categories, mutate: fetchCategories } = useCache('categories', categoriesFetcher, []);
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -24,18 +29,9 @@ const WaiterOrderView = () => {
     const [mobileCartOpen, setMobileCartOpen] = useState(false); // NEW STATE FOR MOBILE CART
 
     useEffect(() => {
-        const fetchData = async () => {
-            const [prodRes, catRes, tableRes] = await Promise.all([
-                fetch('/api/products'),
-                fetch('/api/categories'),
-                fetch(`/api/tables`) // We fetch all to find ours, or specific if endpoint existed
-            ]);
-            const p = await prodRes.json();
-            const c = await catRes.json();
+        const fetchTableData = async () => {
+            const tableRes = await fetch(`/api/tables`);
             const tList = await tableRes.json();
-
-            setProducts(p);
-            setCategories(c);
 
             // Find current table info
             const currentTable = tList.find(t => t.id === parseInt(tableId));
@@ -48,7 +44,7 @@ const WaiterOrderView = () => {
                 });
             }
         };
-        fetchData();
+        fetchTableData();
     }, [tableId, location.state]);
 
     const addToCart = (product) => {
