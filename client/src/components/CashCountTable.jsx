@@ -2,53 +2,39 @@ import React, { useEffect, useState } from 'react';
 import { MoreVertical, FileText, X, AlertCircle, Trash, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useCache } from '../hooks/useCache';
 
 const CashCountTable = ({ onStatusChange }) => {
-    // State for Global Status (Header Button)
-    const [currentStatus, setCurrentStatus] = useState(null);
-
-    // State for History Table
-    const [history, setHistory] = useState({ data: [], meta: { page: 1, totalPages: 1 } });
     const [filterDate, setFilterDate] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+
+    const statusFetcher = () => fetch('/api/cashier/balance').then(res => res.json());
+    const { data: currentStatus, mutate: fetchStatus } = useCache('cashier_balance', statusFetcher, null);
+
+    useEffect(() => {
+        if (currentStatus && onStatusChange) {
+            onStatusChange(currentStatus.estado);
+        }
+    }, [currentStatus]);
+
+    const historyFetcher = () => {
+        let url = `/api/cashier/history?page=${currentPage}&limit=5`;
+        if (filterDate) url += `&date=${filterDate}`;
+        return fetch(url).then(res => res.json());
+    };
+    const historyKey = `cashier_history_${currentPage}_${filterDate}`;
+    const { data: history, mutate: fetchHistory } = useCache(historyKey, historyFetcher, { data: [], meta: { page: 1, totalPages: 1 } });
 
     // UI State
     const [menuOpen, setMenuOpen] = useState(false);
     const [paloteoOpen, setPaloteoOpen] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
 
-    // 1. Fetch Current Status
-    const fetchStatus = () => {
-        fetch('/api/cashier/balance')
-            .then(res => res.json())
-            .then(data => {
-                setCurrentStatus(data);
-                if (onStatusChange) onStatusChange(data.estado);
-            })
-            .catch(err => console.error("Error fetching status:", err));
-    };
-
-    // 2. Fetch History
-    const fetchHistory = (page = 1, date = '') => {
-        let url = `/api/cashier/history?page=${page}&limit=5`;
-        if (date) url += `&date=${date}`;
-
-        fetch(url)
-            .then(res => res.json())
-            .then(data => setHistory(data))
-            .catch(err => console.error("Error fetching history:", err));
-    };
-
     useEffect(() => {
-        fetchStatus();
-        fetchHistory(currentPage, filterDate);
-
-        const interval = setInterval(() => {
-            fetchStatus();
-        }, 10000);
-
+        // Poll status every 10 seconds
+        const interval = setInterval(fetchStatus, 10000);
         return () => clearInterval(interval);
-    }, [currentPage, filterDate]);
+    }, []);
 
     // Handle Shift Toggle
     const handleToggleShift = () => {

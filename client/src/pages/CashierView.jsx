@@ -4,24 +4,18 @@ import { Printer, ArrowLeft } from 'lucide-react';
 import PaymentModal from '../components/PaymentModal';
 import CashCountTable from '../components/CashCountTable';
 import { useAuth } from '../context/AuthContext';
+import { useCache } from '../hooks/useCache';
 
 const CashierView = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [openTables, setOpenTables] = useState([]);
+    const fetcher = () => fetch('/api/tables').then(res => res.json()).then(data => data.filter(t => t.estado === 'ocupada'));
+    const { data: openTables, mutate: fetchTables } = useCache('openTables', fetcher, []);
+
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
 
-    const fetchTables = () => {
-        fetch('/api/tables')
-            .then(res => res.json())
-            .then(data => {
-                setOpenTables(data.filter(t => t.estado === 'ocupada'));
-            });
-    };
-
     useEffect(() => {
-        fetchTables();
         const interval = setInterval(fetchTables, 5000);
         return () => clearInterval(interval);
     }, []);
