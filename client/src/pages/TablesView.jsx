@@ -3,10 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer } from 'lucide-react';
 import { numberToLetters } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
+import { useCache } from '../hooks/useCache';
 
 const TablesView = () => {
     const { user } = useAuth();
-    const [tables, setTables] = useState([]);
+    const fetcher = () => fetch('/api/tables')
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) {
+                // Filtrar mesas 100 y 101, y limpiar cualquier elemento nulo o undefinido
+                const filteredData = data.filter(t => t && t.numero !== '100' && t.numero !== '101');
+                // Asegurar orden numérico correcto
+                filteredData.sort((a, b) => parseInt(a.numero, 10) - parseInt(b.numero, 10));
+                return filteredData;
+            }
+            return [];
+        });
+
+    const { data: tables, mutate: fetchTables } = useCache('tables', fetcher, []);
+
     const [selectedTableId, setSelectedTableId] = useState(null);
     const [modalType, setModalType] = useState(null); // 'view' | 'pre-check'
     const [showTransferMode, setShowTransferMode] = useState(false);
@@ -15,6 +30,8 @@ const TablesView = () => {
     const [showDinersModal, setShowDinersModal] = useState(false);
     const [selectedFreeTable, setSelectedFreeTable] = useState(null);
     const [dinersCount, setDinersCount] = useState(2);
+    const [showTicket, setShowTicket] = useState(false); // Ticket modal state
+    const navigate = useNavigate();
 
     // Handlers
     const handleTableClick = (table) => {
@@ -31,29 +48,9 @@ const TablesView = () => {
         if (dinersCount < 1) return alert("Mínimo 1 comensal");
         setShowDinersModal(false);
         navigate(`/order/${selectedFreeTable.id}`, { state: { comensales: dinersCount } });
-    }; // New state
-    const [showTicket, setShowTicket] = useState(false); // Ticket modal state
-    const navigate = useNavigate();
-
-    // Data fetching function
-    const fetchTables = () => {
-        fetch('/api/tables')
-            .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data)) {
-                    // Filtrar mesas 100 y 101, y limpiar cualquier elemento nulo o undefinido
-                    const filteredData = data.filter(t => t && t.numero !== '100' && t.numero !== '101');
-                    // Asegurar orden numérico correcto
-                    filteredData.sort((a, b) => parseInt(a.numero, 10) - parseInt(b.numero, 10));
-                    setTables(filteredData);
-                } else {
-                    setTables([]);
-                }
-            });
     };
 
     useEffect(() => {
-        fetchTables();
         const interval = setInterval(fetchTables, 3000); // Poll every 3 seconds
         return () => clearInterval(interval);
     }, []);

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, Search, X, User, Save, Upload, ArrowLeft } from 'lucide-react';
+import { useCache } from '../hooks/useCache';
 
 const UsersView = () => {
     const navigate = useNavigate();
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const fetcher = () => fetch('/api/users').then(res => res.json());
+    const { data: users, loading, mutate: fetchUsers } = useCache('users', fetcher, []);
+
     const [searchTerm, setSearchTerm] = useState('');
 
     // Modal State
@@ -19,23 +21,6 @@ const UsersView = () => {
         foto: ''
     });
     const [previewImage, setPreviewImage] = useState(null);
-
-    const fetchUsers = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch('/api/users');
-            const data = await res.json();
-            setUsers(data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchUsers();
-    }, []);
 
     const handleOpenModal = (user = null) => {
         if (user) {

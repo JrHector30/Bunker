@@ -34,16 +34,8 @@ if (process.env.NODE_ENV !== 'production') {
     }
 }
 
-// Configure Multer
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-});
+// Configure Multer for Serverless (Memory Storage)
+const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB
@@ -444,39 +436,18 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
     try {
-        // Determine Destination
-        let targetDir = uploadDir; // default: productos
-        let relativeDir = '/uploads/productos';
+        // Convert to WebP and resize in memory
+        const buffer = await sharp(req.file.buffer)
+            .resize({ width: 800, withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toBuffer();
+            
+        const base64Data = `data:image/webp;base64,${buffer.toString('base64')}`;
 
-        if (req.query.type === 'user') {
-            targetDir = uploadUsersDir;
-            relativeDir = '/uploads/usuarios';
-        }
-
-        // Generate optimized filename
-        const filename = path.parse(req.file.filename).name + '.webp';
-        const finalPath = path.join(targetDir, filename);
-
-        // Process with Sharp
-        await sharp(req.file.path)
-            .resize({ width: 800, withoutEnlargement: true }) // Max width 800
-            .webp({ quality: 80 }) // Compress to WebP
-            .toFile(finalPath);
-
-        // Cleanup Original File
-        await fs.unlink(req.file.path);
-
-        // Return new URL
-        const fileUrl = `${relativeDir}/${filename}`;
-        res.json({ url: fileUrl });
-
+        res.json({ url: base64Data });
     } catch (error) {
-        console.error("Image processing error:", error);
-        // Try to cleanup temp file if it exists
-        if (req.file && await fs.pathExists(req.file.path)) {
-            await fs.unlink(req.file.path).catch(console.error);
-        }
-        res.status(500).json({ error: "Error processing image" });
+        console.error("Upload/Processing Error:", error);
+        res.status(500).json({ error: "Error processing upload" });
     }
 });
 

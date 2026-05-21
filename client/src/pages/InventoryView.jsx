@@ -3,16 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
+import { useCache } from '../hooks/useCache';
+
 const InventoryView = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('platos'); // 'platos', 'insumos', 'recetario'
 
-    // Data States
-    const [products, setProducts] = useState([]);
-    const [categories, setCategories] = useState([]);
-    const [insumos, setInsumos] = useState([]);
-    const [kardex, setKardex] = useState([]);
+    // Data States from Cache
+    const fetchProductsAPI = () => fetch('/api/products').then(res => res.json());
+    const fetchCategoriesAPI = () => fetch('/api/categories').then(res => res.json());
+    const fetchInsumosAPI = () => fetch('/api/insumos').then(res => res.json());
+    const fetchKardexAPI = () => fetch('/api/kardex').then(res => res.json());
+
+    const { data: products, mutate: refetchProducts } = useCache('products', fetchProductsAPI, []);
+    const { data: categories, mutate: refetchCategories } = useCache('categories', fetchCategoriesAPI, []);
+    const { data: insumos, mutate: refetchInsumos } = useCache('insumos', fetchInsumosAPI, []);
+    const { data: kardex, mutate: refetchKardex } = useCache('kardex', fetchKardexAPI, []);
 
     // UI States
     const [searchTerm, setSearchTerm] = useState('');
@@ -20,36 +27,31 @@ const InventoryView = () => {
     const [kardexDateFilter, setKardexDateFilter] = useState('');
     const [kardexCurrentPage, setKardexCurrentPage] = useState(1);
 
+    const fetchData = () => {
+        refetchProducts();
+        refetchCategories();
+    };
+
+    const fetchInsumos = () => {
+        refetchInsumos();
+        window.dispatchEvent(new Event('insumos-updated'));
+    };
+
+    const fetchKardex = () => {
+        refetchKardex();
+    };
+
+    useEffect(() => {
+        if (categories.length > 0 && formData.categoriaId === '') {
+            setFormData(prev => ({ ...prev, categoriaId: categories[0].id }));
+        }
+    }, [categories]);
+
     useEffect(() => {
         fetchData();
         fetchInsumos();
         if (activeTab === 'kardex') fetchKardex();
     }, [activeTab]);
-
-    const fetchData = async () => {
-        const [prodRes, catRes] = await Promise.all([
-            fetch('/api/products'),
-            fetch('/api/categories')
-        ]);
-        const p = await prodRes.json();
-        const c = await catRes.json();
-        setProducts(p);
-        setCategories(c);
-        if (c.length > 0 && formData.categoriaId === '') setFormData(prev => ({ ...prev, categoriaId: c[0].id }));
-    };
-
-    const fetchInsumos = async () => {
-        const res = await fetch('/api/insumos');
-        const data = await res.json();
-        setInsumos(data);
-        window.dispatchEvent(new Event('insumos-updated'));
-    };
-
-    const fetchKardex = async () => {
-        const res = await fetch('/api/kardex');
-        const data = await res.json();
-        setKardex(data);
-    };
 
     // --- SORTING LOGIC ---
     const handleSort = (key) => {

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash, Save, X, ChefHat, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft } from 'lucide-react';
+import { useCache } from '../hooks/useCache';
 
 const CategoriesView = () => {
     const navigate = useNavigate();
-    const [categories, setCategories] = useState([]);
+    const fetcher = () => fetch('/api/categories').then(res => res.json());
+    const { data: categories, mutate: fetchCategories } = useCache('categories', fetcher, []);
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
     const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
@@ -17,16 +20,6 @@ const CategoriesView = () => {
         activo: true,
         enviarCocina: true // Default True
     });
-
-    useEffect(() => {
-        fetchCategories();
-    }, []);
-
-    const fetchCategories = async () => {
-        const res = await fetch('/api/categories');
-        const data = await res.json();
-        setCategories(data);
-    };
 
     const handleOpenModal = (category = null) => {
         if (category) {
