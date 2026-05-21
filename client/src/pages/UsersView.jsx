@@ -165,6 +165,7 @@ const UsersView = () => {
 
             {/* Grid */}
             <div className="responsive-grid">
+                {filteredUsers.length === 0 && <p className="text-muted" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>No hay datos registrados o cargando...</p>}
                 {filteredUsers.map(user => (
                     <div key={user.id} className="glass-panel" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ height: 100, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>

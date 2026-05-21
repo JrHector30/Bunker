@@ -489,6 +489,7 @@ const TablesView = () => {
         <div>
             <h1 className="high-end-title" style={{ marginBottom: 20 }}>Salón Principal</h1>
             <div className="responsive-grid">
+                {tables.length === 0 && <p className="text-muted" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>No hay datos registrados o cargando...</p>}
                 {tables.map(table => (
                     <div
                         key={table.id}

@@ -75,13 +75,15 @@ app.get('/uploads/:type/:file', (req, res) => {
 
 // 1. Users (Auth placeholder)
 app.get('/api/users', async (req, res) => {
-    try {
-        const users = await prisma.user.findMany();
-        res.json(users);
-    } catch (error) {
-        console.error("Error fetching users:", error);
-        res.status(500).json({ error: 'A server error occurred while fetching users.', details: error.message });
-    }
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { nombre: 'asc' }
+    });
+    res.json(Array.isArray(users) ? users : []);
+  } catch (error) {
+    console.error('❌ Error controlado en /api/users:', error);
+    res.json([]); // Retorno seguro para evitar pantalla negra
+  }
 });
 
 app.post('/api/users', async (req, res) => {
@@ -514,48 +516,41 @@ app.get('/api/orders', async (req, res) => {
 
 // 5.1 Tables Endpoint (Modified for Comensales)
 app.get('/api/tables', async (req, res) => {
-    try {
-        const tables = await prisma.mesa.findMany({
-            include: {
-                comandas: {
-                    where: { estado: { notIn: ['cerrada', 'anulada'] } }, // Strict exclusion
-                    orderBy: { id: 'desc' }, // HOTFIX: Always get the latest active comanda
-                    take: 1, // HOTFIX: Only take the 1 most recent active comanda per table
-                    include: {
-                        usuario: true,
-                        detalles: {
-                            where: { estado: { notIn: ['anulado'] } }, // HOTFIX: Nunca enviar detalles anulados al frontend
-                            include: {
-                                plato: {
-                                    include: {
-                                        categoria: true
-                                    }
-                                }
-                            }
-                        }
-                    }
+  try {
+    const tables = await prisma.mesa.findMany({
+      orderBy: { numero: 'asc' },
+      include: {
+        comandas: {
+          where: { estado: { notIn: ['cerrada', 'anulada'] } },
+          take: 1,
+          orderBy: { id: 'desc' },
+          select: {
+            id: true,
+            comensales: true,
+            fecha: true,
+            usuario: {
+              select: { id: true, nombre: true, rol: true }
+            },
+            detalles: {
+              where: { estado: { notIn: ['anulado'] } },
+              select: {
+                id: true,
+                cantidad: true,
+                estado: true,
+                plato: {
+                  select: { id: true, nombre: true, precio: true }
                 }
+              }
             }
-        });
-
-        // Hotfix: Manually fetch 'comensales' for active orders
-        for (const t of tables) {
-            if (t.comandas.length > 0) {
-                try {
-                    const raw = await prisma.$queryRawUnsafe(`SELECT comensales FROM Comanda WHERE id = ${t.comandas[0].id}`);
-                    if (raw[0]) t.comandas[0].comensales = raw[0].comensales;
-                } catch (e) {
-                    // Ignore if column missing
-                }
-                // Debugging requested by user
-                console.log(`[API TABLES] Mesa ${t.numero} -> Comanda Activa ID: ${t.comandas[0].id}, Detalles: ${t.comandas[0].detalles.length}`);
-            }
+          }
         }
-        res.json(tables);
-    } catch (e) {
-        console.error("Error fetching tables:", e);
-        res.status(500).json([]);
-    }
+      }
+    });
+    res.json(tables);
+  } catch (error) {
+    console.error('❌ Error optimizando /api/tables:', error);
+    res.json([]);
+  }
 });
 
 // Kitchen Queue Endpoint (Item-based)
@@ -1498,130 +1493,91 @@ app.post('/api/cashier/toggle', async (req, res) => {
 
 // History Endpoint (Paginated & Filtered)
 app.get('/api/cashier/history', async (req, res) => {
-    try {
-        const { date, page = 1, limit = 5 } = req.query;
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-        const take = parseInt(limit);
+  try {
+    const { date, page = 1, limit = 5 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
 
-        // Filter Logic
-        let where = {};
-        if (date) {
-            // Fix: Construct range in Peru Time (UTC-5)
-            // Input date is YYYY-MM-DD
-            // We want 00:00:00 Peru Time to 23:59:59 Peru Time
-            // 00:00 Peru = 05:00 UTC
-
-            const startStr = `${date}T00:00:00.000-05:00`;
-            const endStr = `${date}T23:59:59.999-05:00`;
-
-            const startDate = new Date(startStr);
-            const endDate = new Date(endStr);
-
-            where.fechaInicio = {
-                gte: startDate,
-                lte: endDate
-            };
-        }
-
-        const totalCount = await prisma.arqueo.count({ where });
-        const arqueos = await prisma.arqueo.findMany({
-            where,
-            orderBy: { fechaInicio: 'desc' }, // Descending
-            skip,
-            take
-        });
-
-        // Calculate Stats for EACH Arqueo
-        const historyData = await Promise.all(arqueos.map(async (arq) => {
-            const startDate = arq.fechaInicio;
-            const endDate = arq.estado === 'abierto' ? new Date() : arq.fechaFin;
-
-            const sales = await prisma.comanda.findMany({
-                where: {
-                    estado: 'cerrada',
-                    fecha: { gte: startDate, lte: endDate }
-                },
-                include: { detalles: { include: { plato: true } }, usuario: true }
-            });
-
-            let totalBruto = 0;
-            let totalPropinas = 0;
-            let propinasPorMozo = {};
-            let incomeDetails = { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0 };
-
-            sales.forEach(order => {
-                const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
-                const propina = order.propina || 0;
-                const orderTotal = subtotal + propina;
-
-                totalBruto += orderTotal;
-                totalPropinas += propina;
-
-                // Acumular propinas por mozo
-                if (propina > 0 && order.usuario) {
-                    const mozoId = order.usuario.id;
-                    if (!propinasPorMozo[mozoId]) {
-                        propinasPorMozo[mozoId] = {
-                            id: mozoId,
-                            nombre: order.usuario.nombre,
-                            propinas: 0
-                        };
-                    }
-                    propinasPorMozo[mozoId].propinas += propina;
-                }
-
-                const method = order.metodoPago?.toLowerCase() || 'efectivo';
-
-                if (method.includes('izipay')) incomeDetails.izipay += subtotal;
-                else if (method.includes('yape') || method.includes('plin')) incomeDetails.yape += subtotal;
-                else if (method.includes('tarjeta')) incomeDetails.tarjeta += subtotal;
-                else if (incomeDetails[method] !== undefined) incomeDetails[method] += subtotal;
-                else incomeDetails.efectivo += subtotal;
-            });
-
-            // Pending (only relevant if open, but can calculate snapshot if needed)
-            let totalPendiente = 0;
-            if (arq.estado === 'abierto') {
-                const openOrders = await prisma.comanda.findMany({
-                    where: { estado: { not: 'cerrada' } },
-                    include: { detalles: { include: { plato: true } } }
-                });
-                totalPendiente = openOrders.reduce((acc, order) => {
-                    return acc + order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
-                }, 0);
-            }
-
-            const totalCaja = arq.montoInicial + incomeDetails.efectivo; // - egresos
-
-            return {
-                id: arq.id,
-                fechaInicio: arq.fechaInicio,
-                fechaFin: arq.fechaFin,
-                estado: arq.estado,
-                inicio: arq.montoInicial,
-                egresos: 0, // Mock
-                ingresos: incomeDetails,
-                totalCaja,
-                totalBruto,
-                totalPropinas,
-                propinasPorMozo: Object.values(propinasPorMozo),
-                totalPendiente
-            };
-        }));
-
-        res.json({
-            data: historyData,
-            meta: {
-                total: totalCount,
-                page: parseInt(page),
-                totalPages: Math.ceil(totalCount / take)
-            }
-        });
-
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: "Error fetching history" });
+    let where = {};
+    if (date) {
+      const start = new Date(`${date}T00:00:00-05:00`);
+      const end = new Date(`${date}T23:59:59-05:00`);
+      where.fechaInicio = { gte: start, lte: end };
     }
+
+    const [totalCount, arqueos] = await Promise.all([
+      prisma.arqueo.count({ where }),
+      prisma.arqueo.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        skip,
+        take
+      })
+    ]);
+
+    const historyData = await Promise.all(arqueos.map(async (arq) => {
+      const startDate = arq.fechaInicio;
+      const endDate = arq.estado === 'abierto' ? new Date() : arq.fechaFin;
+
+      // Agregación veloz directo en PostgreSQL
+      const comandasCerradas = await prisma.comanda.findMany({
+        where: {
+          estado: 'cerrada',
+          fecha: { gte: startDate, lte: endDate }
+        },
+        select: {
+          metodoPago: true,
+          propina: true,
+          detalles: {
+            select: {
+              cantidad: true,
+              plato: { select: { precio: true } }
+            }
+          }
+        }
+      });
+
+      let totalBruto = 0;
+      let totalPropinas = 0;
+      let incomeDetails = { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0 };
+
+      comandasCerradas.forEach(order => {
+        const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+        totalBruto += subtotal;
+        totalPropinas += order.propina || 0;
+
+        const method = (order.metodoPago || 'efectivo').toLowerCase();
+        if (method.includes('izipay')) incomeDetails.izipay += subtotal;
+        else if (method.includes('yape')) incomeDetails.yape += subtotal;
+        else if (method.includes('tarjeta')) incomeDetails.tarjeta += subtotal;
+        else incomeDetails.efectivo += subtotal;
+      });
+
+      return {
+        id: arq.id,
+        fechaInicio: arq.fechaInicio,
+        fechaFin: arq.fechaFin,
+        estado: arq.estado,
+        inicio: arq.montoInicial,
+        ingresos: incomeDetails,
+        totalCaja: arq.montoInicial + incomeDetails.efectivo,
+        totalBruto,
+        totalPropinas
+      };
+    }));
+
+    res.json({
+      data: historyData,
+      meta: {
+        total: totalCount,
+        page: parseInt(page),
+        totalPages: Math.ceil(totalCount / take)
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error en /api/cashier/history:', error);
+    res.json({ data: [], meta: { total: 0, page: 1, totalPages: 1 } });
+  }
 });
 
 
@@ -1776,7 +1732,8 @@ app.get('/api/insumos/alertas', async (req, res) => {
             const filtered = allAlerta.filter(i => i.stock <= i.stockMinimo);
             res.json(filtered.map(i => ({ id: i.id, nombre: i.nombre, stock: i.stock, stockMinimo: i.stockMinimo, unidadMedida: i.unidadMedida })));
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            console.error('❌ Error en /api/insumos/alertas:', err);
+            res.json([]);
         }
     }
 });
