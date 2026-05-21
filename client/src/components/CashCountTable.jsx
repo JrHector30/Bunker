@@ -23,18 +23,11 @@ const CashCountTable = ({ onStatusChange }) => {
         return fetch(url).then(res => res.json());
     };
     const historyKey = `cashier_history_${currentPage}_${filterDate}`;
-    const { data: history, loading: historyLoading, mutate: fetchHistory } = useCache(historyKey, historyFetcher, { data: [], meta: { page: 1, totalPages: 1 } });
-
-    // Smooth Pagination State
-    const [displayHistory, setDisplayHistory] = useState({ data: [], meta: { page: 1, totalPages: 1 } });
-    
-    useEffect(() => {
-        if (history && history.data && history.data.length > 0) {
-            setDisplayHistory(history);
-        } else if (history && history.data && history.data.length === 0 && !historyLoading) {
-            setDisplayHistory(history);
-        }
-    }, [history, historyLoading]);
+    const { data: history, loading: historyLoading, mutate: fetchHistory } = useCache(
+        historyKey, 
+        historyFetcher, 
+        { data: [], meta: { page: 1, totalPages: 1 } }
+    );
 
     // UI State
     const [menuOpen, setMenuOpen] = useState(false);
@@ -69,7 +62,8 @@ const CashCountTable = ({ onStatusChange }) => {
             })
             .then(() => {
                 fetchStatus();
-                fetchHistory(1, filterDate);
+                setCurrentPage(1);
+                fetchHistory();
             })
             .catch(err => alert(err.message));
     };
@@ -377,7 +371,7 @@ const CashCountTable = ({ onStatusChange }) => {
                             setCurrentPage(1);
                         }}
                     />
-                    <button className="glass-button" onClick={() => fetchHistory(currentPage, filterDate)}>Refrescar</button>
+                    <button className="glass-button" onClick={() => fetchHistory()}>Refrescar</button>
 
 
                     <div style={{ position: 'relative' }}>
@@ -419,13 +413,13 @@ const CashCountTable = ({ onStatusChange }) => {
                             <th>Pendiente</th>
                         </tr>
                     </thead>
-                    <tbody style={{ opacity: historyLoading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                        {historyLoading && displayHistory.data.length === 0 ? (
-                            <tr><td colSpan="10" className="text-center text-muted">Cargando registros...</td></tr>
-                        ) : displayHistory.data.length === 0 ? (
-                            <tr><td colSpan="10" className="text-center text-muted">No se encontraron registros.</td></tr>
+                    <tbody style={{ opacity: historyLoading ? 0.6 : 1, transition: 'opacity 0.1s' }}>
+                        {historyLoading && (!history || history.data.length === 0) ? (
+                            <tr><td colSpan="11" className="text-center text-muted" style={{ padding: '20px' }}>Cargando registros de caja...</td></tr>
+                        ) : !history || !history.data || history.data.length === 0 ? (
+                            <tr><td colSpan="11" className="text-center text-muted" style={{ padding: '20px' }}>No se encontraron registros.</td></tr>
                         ) : (
-                            displayHistory.data.map(item => (
+                            history.data.map(item => (
                                 <tr key={item.id} style={{ opacity: item.estado === 'cerrado' ? 0.8 : 1 }}>
                                     <td>{item.id}</td>
                                     <td>
@@ -477,7 +471,7 @@ const CashCountTable = ({ onStatusChange }) => {
             </div>
 
             {/* Pagination Controls */}
-            {displayHistory.meta.totalPages > 1 && (
+            {(history?.meta?.totalPages || 1) > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 15 }}>
                     <button
                         className="glass-button"
@@ -487,12 +481,12 @@ const CashCountTable = ({ onStatusChange }) => {
                         Anterior
                     </button>
                     <span style={{ alignSelf: 'center' }}>
-                        Página {currentPage} de {displayHistory.meta.totalPages}
+                        Página {currentPage} de {history?.meta?.totalPages || 1}
                     </span>
                     <button
                         className="glass-button"
-                        disabled={currentPage === displayHistory.meta.totalPages}
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, displayHistory.meta.totalPages))}
+                        disabled={currentPage === (history?.meta?.totalPages || 1)}
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, (history?.meta?.totalPages || 1)))}
                     >
                         Siguiente
                     </button>
