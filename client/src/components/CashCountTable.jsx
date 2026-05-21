@@ -164,7 +164,7 @@ const CashCountTable = ({ onStatusChange }) => {
             doc.text("Egresos Registrados", 14, startY);
 
             const egresosRows = fullData.egresosList && fullData.egresosList.length > 0 
-                ? fullData.egresosList.map(e => [e.motivo, `S/. ${e.monto.toFixed(2)}`]) 
+                ? fullData.egresosList.map(e => [e.motivo, `S/. ${(e.monto || 0).toFixed(2)}`]) 
                 : [["Sin egresos en este turno", "-"]];
 
             autoTable(doc, {
@@ -186,8 +186,8 @@ const CashCountTable = ({ onStatusChange }) => {
             const tableRows = fullData.ventas?.map(v => [
                 v.mesa || 'Barra',
                 v.mozo || 'General',
-                `S/. ${v.total.toFixed(2)}`,
-                v.propina > 0 ? `S/. ${v.propina.toFixed(2)}` : '-'
+                `S/. ${(v.total || 0).toFixed(2)}`,
+                v.propina > 0 ? `S/. ${(v.propina || 0).toFixed(2)}` : '-'
             ]) || [];
 
             autoTable(doc, {
@@ -213,7 +213,7 @@ const CashCountTable = ({ onStatusChange }) => {
             if (fullData.propinasPorMozo && fullData.propinasPorMozo.length > 0) {
                 const propinasRows = fullData.propinasPorMozo.map(m => [
                     m.nombre,
-                    `S/. ${m.propinas.toFixed(2)}`
+                    `S/. ${(m.propinas || 0).toFixed(2)}`
                 ]);
 
                 autoTable(doc, {
@@ -229,7 +229,7 @@ const CashCountTable = ({ onStatusChange }) => {
                 doc.setFontSize(11);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont("helvetica", "bold");
-                doc.text(`Total Propinas Recaudadas: S/. ${fullData.totalPropinas.toFixed(2)}`, 14, currentY);
+                doc.text(`Total Propinas Recaudadas: S/. ${(fullData.totalPropinas || 0).toFixed(2)}`, 14, currentY);
             } else {
                 doc.setFontSize(10);
                 doc.setTextColor(100, 100, 100);
@@ -439,16 +439,16 @@ const CashCountTable = ({ onStatusChange }) => {
                                             )}
                                         </div>
                                     </td>
-                                    <td>S/. {item.inicio.toFixed(2)}</td>
+                                    <td>S/. {(item.inicio || 0).toFixed(2)}</td>
                                     <td>
-                                        <div>Efec: S/. {item.egresos.toFixed(2)}</div>
+                                        <div>Efec: S/. {(item.egresos || 0).toFixed(2)}</div>
                                     </td>
                                     <td>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 10px', fontSize: '0.85em' }}>
-                                            <span>Efec: {item.ingresos.efectivo.toFixed(2)}</span>
-                                            <span>Tarj: {item.ingresos.tarjeta.toFixed(2)}</span>
-                                            <span>Yape: {item.ingresos.yape.toFixed(2)}</span>
-                                            <span>Izi: {item.ingresos.izipay.toFixed(2)}</span>
+                                            <span>Efec: {(item.ingresos?.efectivo || 0).toFixed(2)}</span>
+                                            <span>Tarj: {(item.ingresos?.tarjeta || 0).toFixed(2)}</span>
+                                            <span>Yape: {(item.ingresos?.yape || 0).toFixed(2)}</span>
+                                            <span>Izi: {(item.ingresos?.izipay || 0).toFixed(2)}</span>
                                         </div>
                                     </td>
                                     <td style={{ color: 'var(--warning)', fontWeight: 'bold' }}>
@@ -459,7 +459,7 @@ const CashCountTable = ({ onStatusChange }) => {
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                                 {item.propinasPorMozo.map(mozo => (
                                                     <div key={mozo.id} style={{ fontSize: '0.8rem', padding: '2px 6px', background: 'rgba(255,193,7,0.1)', borderRadius: 4 }}>
-                                                        <strong>{mozo.nombre}:</strong> S/. {mozo.propinas.toFixed(2)}
+                                                        <strong>{mozo.nombre}:</strong> S/. {(mozo.propinas || 0).toFixed(2)}
                                                     </div>
                                                 ))}
                                             </div>
@@ -467,9 +467,9 @@ const CashCountTable = ({ onStatusChange }) => {
                                             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Sin propinas</span>
                                         )}
                                     </td>
-                                    <td style={{ fontWeight: 'bold', color: 'var(--success)' }}>S/. {item.totalCaja.toFixed(2)}</td>
-                                    <td style={{ fontWeight: 'bold' }}>S/. {item.totalBruto.toFixed(2)}</td>
-                                    <td style={{ color: 'var(--warning)' }}>S/. {item.totalPendiente.toFixed(2)}</td>
+                                    <td style={{ fontWeight: 'bold', color: 'var(--success)' }}>S/. {(item.totalCaja || 0).toFixed(2)}</td>
+                                    <td style={{ fontWeight: 'bold' }}>S/. {(item.totalBruto || 0).toFixed(2)}</td>
+                                    <td style={{ color: 'var(--warning)' }}>S/. {(item.totalPendiente || 0).toFixed(2)}</td>
                                 </tr>
                             ))
                         )}
