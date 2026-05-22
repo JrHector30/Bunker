@@ -40,6 +40,11 @@ const CashCountTable = ({ onStatusChange }) => {
         return () => clearInterval(interval);
     }, []);
 
+    // NUEVO: Refrescar historial cuando cambia la página o filtro de fecha
+    useEffect(() => {
+        fetchHistory();
+    }, [currentPage, filterDate]);
+
     // Handle Shift Toggle
     const handleToggleShift = () => {
         if (!currentStatus) return;
