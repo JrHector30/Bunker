@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { MoreVertical, FileText, X, AlertCircle, Trash, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -8,7 +8,10 @@ const CashCountTable = ({ onStatusChange }) => {
     const [filterDate, setFilterDate] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
-    const statusFetcher = () => fetch('/api/cashier/balance').then(res => res.json());
+    const statusFetcher = useCallback(
+        () => fetch('/api/cashier/balance').then(res => res.json()),
+        []
+    );
     const { data: currentStatus, mutate: fetchStatus } = useCache('cashier_balance', statusFetcher, null);
 
     useEffect(() => {
@@ -17,11 +20,11 @@ const CashCountTable = ({ onStatusChange }) => {
         }
     }, [currentStatus]);
 
-    const historyFetcher = () => {
+    const historyFetcher = useCallback(() => {
         let url = `/api/cashier/history?page=${currentPage}&limit=5`;
         if (filterDate) url += `&date=${filterDate}`;
         return fetch(url).then(res => res.json());
-    };
+    }, [currentPage, filterDate]);
     const historyKey = `cashier_history_${currentPage}_${filterDate}`;
     const { data: history, loading: historyLoading, mutate: fetchHistory } = useCache(
         historyKey, 
@@ -34,9 +37,16 @@ const CashCountTable = ({ onStatusChange }) => {
     const [paloteoOpen, setPaloteoOpen] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
 
+    const statusIntervalRef = useRef(null);
+    useEffect(() => {
+        statusIntervalRef.current = fetchStatus;
+    });
+    
     useEffect(() => {
         // Poll status every 10 seconds
-        const interval = setInterval(fetchStatus, 10000);
+        const interval = setInterval(() => {
+            statusIntervalRef.current?.();
+        }, 10000);
         return () => clearInterval(interval);
     }, []);
 

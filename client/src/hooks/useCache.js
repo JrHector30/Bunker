@@ -1,9 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // Global cache object for fast memory retrieval
 const globalCache = {};
 
 export function useCache(key, fetcher, initialData = []) {
+    const fetcherRef = useRef(fetcher);
+    // Siempre actualizar el ref sin re-ejecutar effects
+    useEffect(() => { fetcherRef.current = fetcher; });
+
     const getCachedData = () => {
         if (globalCache[key]) return globalCache[key];
         
@@ -36,15 +40,14 @@ export function useCache(key, fetcher, initialData = []) {
         if (!globalCache[key] && !localStorage.getItem(key)) {
             setLoading(true);
             
-            // Fetch solo si no hay datos en cache
-            fetcher()
+            // Usar fetcherRef.current en lugar del fetcher del closure
+            fetcherRef.current()
                 .then(result => {
-                    if (isMounted) {
-                        const newString = JSON.stringify(result);
-                        globalCache[key] = result;
-                        localStorage.setItem(key, newString);
-                        setData(result);
-                    }
+                    if (!isMounted) return;
+                    const newString = JSON.stringify(result);
+                    globalCache[key] = result;
+                    localStorage.setItem(key, newString);
+                    setData(result);
                 })
                 .catch(error => console.error(`Cache fetch error for ${key}:`, error))
                 .finally(() => { if (isMounted) setLoading(false); });
@@ -53,14 +56,14 @@ export function useCache(key, fetcher, initialData = []) {
         }
 
         return () => { isMounted = false; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // SOLO 'key' como dependencia — fetcher está en ref
     }, [key]);
 
     // Manual mutate for forced refreshes (e.g. Refresh button)
-    const manualMutate = async () => {
+    const manualMutate = useRef(async () => {
         setLoading(!globalCache[key]);
         try {
-            const result = await fetcher();
+            const result = await fetcherRef.current();
             const newString = JSON.stringify(result);
             if (JSON.stringify(globalCache[key]) !== newString) {
                 globalCache[key] = result;
@@ -72,7 +75,8 @@ export function useCache(key, fetcher, initialData = []) {
         } finally {
             setLoading(false);
         }
-    };
+    });
 
-    return { data, loading, mutate: manualMutate };
+    // Retornar siempre la misma referencia de mutate
+    return { data, loading, mutate: manualMutate.current };
 }
