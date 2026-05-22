@@ -27,8 +27,8 @@ const CashCountTable = ({ onStatusChange }) => {
     }, [currentPage, filterDate]);
     const historyKey = `cashier_history_${currentPage}_${filterDate}`;
     const { data: history, loading: historyLoading, mutate: fetchHistory } = useCache(
-        historyKey, 
-        historyFetcher, 
+        historyKey,
+        historyFetcher,
         { data: [], meta: { page: 1, totalPages: 1 } }
     );
 
@@ -41,19 +41,14 @@ const CashCountTable = ({ onStatusChange }) => {
     useEffect(() => {
         statusIntervalRef.current = fetchStatus;
     });
-    
+
     useEffect(() => {
-        // Poll status every 10 seconds
+        // Poll estado cada 10 segundos
         const interval = setInterval(() => {
             statusIntervalRef.current?.();
         }, 10000);
         return () => clearInterval(interval);
     }, []);
-
-    // NUEVO: Refrescar historial cuando cambia la página o filtro de fecha
-    useEffect(() => {
-        fetchHistory();
-    }, [currentPage, filterDate]);
 
     // Handle Shift Toggle
     const handleToggleShift = () => {
@@ -109,7 +104,7 @@ const CashCountTable = ({ onStatusChange }) => {
             alert("No hay datos de arqueo disponibles para descargar.");
             return;
         }
-        
+
         setIsGenerating(true);
 
         try {
@@ -124,7 +119,7 @@ const CashCountTable = ({ onStatusChange }) => {
             doc.setTextColor(13, 110, 253); // ComandaGo Blue
             doc.setFont("helvetica", "bold");
             doc.text("ComandaGo", 14, 20);
-            
+
             doc.setFontSize(14);
             doc.setTextColor(40, 40, 40);
             doc.text("Reporte: Arqueo de Caja", 14, 28);
@@ -149,8 +144,8 @@ const CashCountTable = ({ onStatusChange }) => {
             doc.text("Saldo Final (Caja)", 140, startY + 8);
 
             const ingresosEfectivo = fullData.ventas?.filter(v => (v.metodo || 'efectivo').toLowerCase() === 'efectivo').reduce((sum, v) => sum + v.total, 0) || 0;
-            const saldoFinal = currentStatus && currentStatus.id === fullData.id 
-                ? currentStatus.totalCaja 
+            const saldoFinal = currentStatus && currentStatus.id === fullData.id
+                ? currentStatus.totalCaja
                 : ((fullData.inicio || fullData.montoInicial || 0) + ingresosEfectivo);
 
             doc.setFontSize(12);
@@ -169,8 +164,8 @@ const CashCountTable = ({ onStatusChange }) => {
             doc.setFont("helvetica", "bold");
             doc.text("Egresos Registrados", 14, startY);
 
-            const egresosRows = fullData.egresosList && fullData.egresosList.length > 0 
-                ? fullData.egresosList.map(e => [e.motivo, `S/. ${(e.monto || 0).toFixed(2)}`]) 
+            const egresosRows = fullData.egresosList && fullData.egresosList.length > 0
+                ? fullData.egresosList.map(e => [e.motivo, `S/. ${(e.monto || 0).toFixed(2)}`])
                 : [["Sin egresos en este turno", "-"]];
 
             autoTable(doc, {
@@ -230,7 +225,7 @@ const CashCountTable = ({ onStatusChange }) => {
                     headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
                     styles: { font: 'helvetica', fontSize: 9 },
                 });
-                
+
                 currentY = doc.lastAutoTable.finalY + 10;
                 doc.setFontSize(11);
                 doc.setTextColor(40, 40, 40);
