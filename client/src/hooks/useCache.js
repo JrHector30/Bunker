@@ -28,37 +28,31 @@ export function useCache(key, fetcher, initialData = []) {
     useEffect(() => {
         let isMounted = true;
         
-        // 1. Immediately hydrate with cached data for the new key (Zero-Latency Navigation)
+        // Solo cargar del cache, NO refrescar automáticamente
         const cached = getCachedData();
         setData(cached);
-        setLoading(!globalCache[key]);
+        
+        // Solo marcar loading si NO hay cache
+        if (!globalCache[key] && !localStorage.getItem(key)) {
+            setLoading(true);
+            
+            // Fetch solo si no hay datos en cache
+            fetcher()
+                .then(result => {
+                    if (isMounted) {
+                        const newString = JSON.stringify(result);
+                        globalCache[key] = result;
+                        localStorage.setItem(key, newString);
+                        setData(result);
+                    }
+                })
+                .catch(error => console.error(`Cache fetch error for ${key}:`, error))
+                .finally(() => { if (isMounted) setLoading(false); });
+        } else {
+            setLoading(false);
+        }
 
-        // 2. Revalidate in background
-        const mutateAsync = async () => {
-            try {
-                const result = await fetcher();
-                const newString = JSON.stringify(result);
-                
-                if (JSON.stringify(globalCache[key]) !== newString) {
-                    globalCache[key] = result;
-                    localStorage.setItem(key, newString);
-                }
-                
-                if (isMounted) {
-                    setData(result); // Always update state to ensure synchronization
-                }
-            } catch (error) {
-                console.error(`Cache fetch error for ${key}:`, error);
-            } finally {
-                if (isMounted) setLoading(false);
-            }
-        };
-
-        mutateAsync();
-
-        return () => {
-            isMounted = false;
-        };
+        return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [key]);
 
