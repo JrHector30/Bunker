@@ -59,24 +59,28 @@ export function useCache(key, fetcher, initialData = []) {
         // SOLO 'key' como dependencia — fetcher está en ref
     }, [key]);
 
+    const keyRef = useRef(key);
+    useEffect(() => { keyRef.current = key; }, [key]);
+
     // Manual mutate for forced refreshes (e.g. Refresh button)
-    const manualMutate = useRef(async () => {
-        setLoading(!globalCache[key]);
+    const manualMutate = useCallback(async () => {
+        const currentKey = keyRef.current;
+        setLoading(!globalCache[currentKey]);
         try {
             const result = await fetcherRef.current();
             const newString = JSON.stringify(result);
-            if (JSON.stringify(globalCache[key]) !== newString) {
-                globalCache[key] = result;
-                localStorage.setItem(key, newString);
+            if (JSON.stringify(globalCache[currentKey]) !== newString) {
+                globalCache[currentKey] = result;
+                localStorage.setItem(currentKey, newString);
             }
             setData(result);
         } catch (error) {
-            console.error(`Cache fetch error for ${key}:`, error);
+            console.error(`Cache fetch error for ${currentKey}:`, error);
         } finally {
             setLoading(false);
         }
-    });
+    }, []);
 
     // Retornar siempre la misma referencia de mutate
-    return { data, loading, mutate: manualMutate.current };
+    return { data, loading, mutate: manualMutate };
 }
