@@ -1395,9 +1395,10 @@ app.delete('/api/admin/reset-simulation', async (req, res) => {
             }
         });
 
-        // 3. Reset SQLite Sequences (IDs)
-        // Note: For SQLite, we delete from sqlite_sequence
-        await prisma.$executeRawUnsafe(`DELETE FROM sqlite_sequence WHERE name IN ('DetalleComanda', 'Comanda', 'Arqueo');`);
+        // 3. Reset PostgreSQL Sequences (IDs) for Supabase
+        await prisma.$executeRawUnsafe(`ALTER SEQUENCE "Arqueo_id_seq" RESTART WITH 1;`).catch(() => {});
+        await prisma.$executeRawUnsafe(`ALTER SEQUENCE "Comanda_id_seq" RESTART WITH 1;`).catch(() => {});
+        await prisma.$executeRawUnsafe(`ALTER SEQUENCE "DetalleComanda_id_seq" RESTART WITH 1;`).catch(() => {});
 
         // 4. Reset Tables Status
         await prisma.mesa.updateMany({ data: { estado: 'libre' } });
