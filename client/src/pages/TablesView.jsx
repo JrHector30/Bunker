@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer } from 'lucide-react';
+import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer, ChefHat } from 'lucide-react';
 import { numberToLetters } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';

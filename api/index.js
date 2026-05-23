@@ -498,6 +498,7 @@ app.get('/api/tables', async (req, res) => {
           orderBy: { id: 'desc' },
           select: {
             id: true,
+            estado: true,
             comensales: true,
             fecha: true,
             usuario: {
@@ -509,8 +510,17 @@ app.get('/api/tables', async (req, res) => {
                 id: true,
                 cantidad: true,
                 estado: true,
+                observacion: true,
+                cocinero: {
+                  select: { nombre: true }
+                },
                 plato: {
-                  select: { id: true, nombre: true, precio: true }
+                  select: { 
+                    id: true, 
+                    nombre: true, 
+                    precio: true,
+                    categoria: { select: { enviarCocina: true } }
+                  }
                 }
               }
             }
