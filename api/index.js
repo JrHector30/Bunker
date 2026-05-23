@@ -476,7 +476,7 @@ app.get('/api/orders', async (req, res) => {
     // Hotfix: Manually fetch 'comensales' since Prisma Client is outdated
     for (const order of orders) {
         try {
-            const raw = await prisma.$queryRawUnsafe(`SELECT comensales FROM Comanda WHERE id = ${order.id}`);
+            const raw = await prisma.$queryRawUnsafe(`SELECT comensales FROM "Comanda" WHERE id = ${order.id}`);
             if (raw[0]) order.comensales = raw[0].comensales;
         } catch (e) {
             console.error("Error fetching comensales raw:", e.message);
@@ -645,7 +645,7 @@ app.post('/api/orders', async (req, res) => {
     // HOTFIX: Manually save comensales using Raw Query (Bypasses outdated Prisma Client)
     if (req.body.comensales) {
         try {
-            await prisma.$executeRawUnsafe(`UPDATE Comanda SET comensales = ${parseInt(req.body.comensales)} WHERE id = ${order.id}`);
+            await prisma.$executeRawUnsafe(`UPDATE "Comanda" SET comensales = ${parseInt(req.body.comensales)} WHERE id = ${order.id}`);
             order.comensales = parseInt(req.body.comensales); // Update response object
         } catch (e) {
             console.error("Error saving comensales raw:", e.message);
@@ -1054,108 +1054,91 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
     const { paymentMethod, docType, totalReceived, tip, observation, email } = req.body;
 
     try {
-        // Find ALL active orders for this table
         const activeOrders = await prisma.comanda.findMany({
             where: { mesaId: parseInt(mesaId), estado: { notIn: ['cerrada', 'anulada'] } },
             include: { detalles: { include: { plato: true } } },
-            orderBy: { id: 'asc' } // The oldest is usually the valid one, but we'll take the first one found with items if any, or just the first.
+            orderBy: { id: 'asc' }
         });
 
-        if (activeOrders.length === 0) return res.status(404).json({ error: "No active order" });
+        if (activeOrders.length === 0)
+            return res.status(404).json({ error: "No active order" });
 
-        // Iniciamos la Transacción Atómica
-        const result = await prisma.$transaction(async (tx) => {
-            // Let's assume the principal order is the first one or the one with the most items.
-            const order = activeOrders[0];
+        const order = activeOrders[0];
+        const total = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
 
-            // If there are ghost orders, anulate the others immediately
-            if (activeOrders.length > 1) {
-                for (let i = 1; i < activeOrders.length; i++) {
-                    await tx.comanda.update({
-                        where: { id: activeOrders[i].id },
-                        data: { estado: 'anulada' }
-                    });
-                    console.log(`Auto-Healed during Checkout: Cancelled ghost comanda ${activeOrders[i].id} on Mesa ${mesaId}`);
-                }
-            }
-
-            // Calculate total
-            const total = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
-
-            // Close order with payment details
-            const closedOrder = await tx.comanda.update({
-                where: { id: order.id },
-                data: {
-                    estado: 'cerrada',
-                    metodoPago: paymentMethod || 'efectivo',
-                    tipoDocumento: docType || 'sin_comprobante',
-                    montoRecibido: parseFloat(totalReceived || 0),
-                    propina: parseFloat(tip || 0),
-                    observacion: observation || null,
-                    emailCliente: email || null
-                }
+        // Anular comandas fantasma
+        if (activeOrders.length > 1) {
+            await prisma.comanda.updateMany({
+                where: { id: { in: activeOrders.slice(1).map(o => o.id) } },
+                data: { estado: 'anulada' }
             });
+        }
 
-            // Set all active details to 'entregado'
-            await tx.detalleComanda.updateMany({
+        // 1. Cerrar comanda
+        const closedOrder = await prisma.comanda.update({
+            where: { id: order.id },
+            data: {
+                estado: 'cerrada',
+                metodoPago: paymentMethod || 'efectivo',
+                tipoDocumento: docType || 'sin_comprobante',
+                montoRecibido: parseFloat(totalReceived || 0),
+                propina: parseFloat(tip || 0),
+                observacion: observation || null,
+                emailCliente: email || null
+            }
+        });
+
+        // 2. Marcar detalles como entregados + liberar mesa (paralelo, no necesitan tx)
+        await Promise.all([
+            prisma.detalleComanda.updateMany({
                 where: { comandaId: order.id, estado: { notIn: ['anulado'] } },
                 data: { estado: 'entregado' }
-            });
-
-            // Free table
-            await tx.mesa.update({
+            }),
+            prisma.mesa.update({
                 where: { id: parseInt(mesaId) },
                 data: { estado: 'libre' }
+            })
+        ]);
+
+        // 3. Explosión de insumos (secuencial, sin transacción)
+        const platosActivos = order.detalles.filter(d => d.estado !== 'anulado');
+
+        for (const detalle of platosActivos) {
+            const receta = await prisma.recetaInsumo.findMany({
+                where: { platoId: detalle.platoId }
             });
+            if (!receta || receta.length === 0) continue;
 
-            // 3. EXPLOSIÓN DE INSUMOS (Deducción de Stock) con Tolerancia a Fallos
-            try {
-                const platosVendidos = order.detalles;
-                for (const detalle of platosVendidos) {
-                    if (detalle.estado === 'anulado') continue;
+            for (const ingrediente of receta) {
+                try {
+                    const cantidadConsumida = round2(ingrediente.cantidad * detalle.cantidad);
+                    const insumo = await prisma.insumo.findUnique({
+                        where: { id: ingrediente.insumoId }
+                    });
+                    if (!insumo) continue;
 
-                    const receta = await tx.recetaInsumo.findMany({
-                        where: { platoId: detalle.platoId }
+                    await prisma.insumo.update({
+                        where: { id: ingrediente.insumoId },
+                        data: { stock: round2(insumo.stock - cantidadConsumida) }
                     });
 
-                    if (!receta || receta.length === 0) continue;
-
-                    for (const ingrediente of receta) {
-                        const cantidadConsumida = round2(ingrediente.cantidad * detalle.cantidad);
-                        const insumo = await tx.insumo.findUnique({ where: { id: ingrediente.insumoId } });
-                        if (!insumo) continue; 
-                        
-                        const cantidadNegativa = Number((-1 * cantidadConsumida).toFixed(2));
-                        const stockFinal = Number((insumo.stock - cantidadConsumida).toFixed(2));
-
-                        await tx.insumo.update({
-                            where: { id: ingrediente.insumoId },
-                            data: { stock: stockFinal }
-                        });
-
-                        // Payload estricto sin ID para evitar P2002 Unique Constraint
-                        const safePayload = {
+                    await prisma.movimientoInsumo.create({
+                        data: {
                             insumoId: ingrediente.insumoId,
                             tipoMovimiento: 'VENTA',
-                            cantidad: cantidadNegativa,
-                            motivo: `Descuento automático por Venta de Plato ID: ${detalle.platoId} (Comanda ID: ${order.id})`,
-                            usuarioId: order.usuarioId 
-                        };
-
-                        await tx.movimientoInsumo.create({
-                            data: safePayload
-                        });
-                    }
+                            cantidad: round2(-1 * cantidadConsumida),
+                            motivo: `Venta automática Comanda ID: ${order.id} - Plato: ${detalle.plato.nombre}`,
+                            usuarioId: order.usuarioId
+                        }
+                    });
+                } catch (ingredienteError) {
+                    console.error(`[KARDEX] Error en insumo ${ingrediente.insumoId}:`, ingredienteError.message);
                 }
-            } catch (inventoryError) {
-                // Registramos el error pero NO tumbamos el cobro de caja (Tolerancia)
-                console.error(`[ALERTA INVENTARIO] Error en explosión de insumos para Comanda ${order.id}:`, inventoryError);
             }
+        }
 
-            return { closedOrder, total };
-        });
+        res.json({ ...closedOrder, total, message: "Ticket generated" });
 
-        res.json({ ...result.closedOrder, total: result.total, message: "Ticket generated" });
     } catch (error) {
         console.error("Error finalizing payment:", error);
         res.status(500).json({ error: "Error al registrar pago: " + error.message });
