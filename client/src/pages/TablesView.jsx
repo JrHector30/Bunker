@@ -183,16 +183,16 @@ const TablesView = () => {
         const grouped = [];
         rawDetalles.forEach(detail => {
             const cookName = detail.cocinero?.nombre || '';
-            const key = modalType === 'pre-check'
-                ? `${detail.platoId}-${detail.observacion || ''}`
-                : `${detail.platoId}-${detail.estado}-${detail.observacion || ''}-${cookName}`;
+            // La llave siempre debe ser detallada para preservar la integridad de los items
+            const platoIdReal = detail.plato?.id;
+            const key = `${platoIdReal}-${detail.estado}-${detail.observacion || ''}-${cookName}`;
             const existing = grouped.find(g => g.key === key);
             if (existing) {
                 existing.cantidad += detail.cantidad;
                 existing.detailIds.push(detail.id);
             } else {
                 grouped.push({
-                    key, platoId: detail.platoId, nombre: detail.plato?.nombre || 'Desconocido',
+                    key, platoId: platoIdReal, nombre: detail.plato?.nombre || 'Desconocido',
                     precio: detail.plato?.precio || 0, estado: detail.estado, cantidad: detail.cantidad,
                     detailIds: [detail.id],
                     observacion: detail.observacion,
@@ -213,6 +213,25 @@ const TablesView = () => {
         if (!selectedTable || !modalType) return null;
 
         const groupedItems = getGroupedDetails();
+
+        // NUEVA CONSOLIDACIÓN LIMPIA PARA PRE-CUENTA (Une Coca Colas con notas distintas en una sola fila)
+        const preCheckItems = [];
+        if (modalType === 'pre-check') {
+            groupedItems.forEach(item => {
+                const existing = preCheckItems.find(p => p.platoId === item.platoId);
+                if (existing) {
+                    existing.cantidad += item.cantidad;
+                } else {
+                    preCheckItems.push({
+                        platoId: item.platoId,
+                        nombre: item.nombre,
+                        precio: item.precio,
+                        cantidad: item.cantidad
+                    });
+                }
+            });
+        }
+
         const freeTables = tables.filter(t => t.estado === 'libre');
 
         return (
@@ -266,20 +285,38 @@ const TablesView = () => {
                         ) : (
                             groupedItems.length === 0 ? (
                                 <p className="text-muted">No hay items en el pedido.</p>
+                            ) : modalType === 'pre-check' ? (
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid var(--glass-border)', textAlign: 'left', color: 'var(--text-main)' }}>
+                                            <th style={{ padding: 10, textAlign: 'center' }}>Cant.</th>
+                                            <th style={{ padding: 10 }}>Producto</th>
+                                            <th style={{ padding: 10, textAlign: 'right' }}>P. Unit.</th>
+                                            <th style={{ padding: 10, textAlign: 'right' }}>Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {preCheckItems.map((item, index) => (
+                                            <tr key={index} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
+                                                <td style={{ padding: 10, textAlign: 'center', fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--primary)' }}>
+                                                    {item.cantidad}
+                                                </td>
+                                                <td style={{ padding: 10, fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-main)' }}>
+                                                    {item.nombre}
+                                                </td>
+                                                <td style={{ padding: 10, textAlign: 'right' }}>S/. {item.precio.toFixed(2)}</td>
+                                                <td style={{ padding: 10, textAlign: 'right' }}>S/. {(item.cantidad * item.precio).toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             ) : (
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--glass-border)', textAlign: 'left', color: 'var(--text-main)' }}>
                                             <th style={{ padding: 10 }}>Cant.</th>
                                             <th style={{ padding: 10 }}>Producto</th>
-                                            {modalType === 'pre-check' ? (
-                                                <>
-                                                    <th style={{ padding: 10, textAlign: 'right' }}>Precio</th>
-                                                    <th style={{ padding: 10, textAlign: 'right' }}>Subtotal</th>
-                                                </>
-                                            ) : (
-                                                <th style={{ padding: 10 }}>Estado</th>
-                                            )}
+                                            <th style={{ padding: 10 }}>Estado</th>
                                             <th style={{ padding: 10, textAlign: 'center' }}>Acción</th>
                                         </tr>
                                     </thead>
@@ -310,49 +347,38 @@ const TablesView = () => {
                                                         </div>
                                                     )}
                                                 </td>
-                                                {modalType === 'pre-check' && (
-                                                    <>
-                                                        <td style={{ padding: 10, textAlign: 'right' }}>S/. {item.precio.toFixed(2)}</td>
-                                                        <td style={{ padding: 10, textAlign: 'right' }}>S/. {(item.cantidad * item.precio).toFixed(2)}</td>
-                                                    </>
-                                                )}
-                                                {modalType === 'view' && (
-                                                    <td style={{ padding: 10 }}>
-                                                        {getItemStatusBadge(item.estado)}
-                                                    </td>
-                                                )}
+                                                <td style={{ padding: 10 }}>
+                                                    {getItemStatusBadge(item.estado)}
+                                                </td>
                                                 <td style={{ padding: 10, textAlign: 'center' }}>
-                                                    {modalType === 'view' && (
-                                                        <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
-                                                            {item.estado === 'lista' ? (
-                                                                <button
-                                                                    className="glass-button primary"
-                                                                    style={{ padding: '4px 8px', fontSize: '0.8rem' }}
-                                                                    onClick={() => { item.detailIds.forEach(id => updateItemStatus(id, 'entregado')); }}
-                                                                >
-                                                                    Entregar
-                                                                </button>
-                                                            ) : (!item.enviarCocina && (item.estado === 'pendiente' || item.estado === 'enviada')) ? (
-                                                                <button
-                                                                    className="glass-button"
-                                                                    style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'var(--success)', color: 'white', borderColor: 'transparent' }}
-                                                                    onClick={() => { item.detailIds.forEach(id => updateItemStatus(id, 'listo')); }}
-                                                                    title="Marcar bebida/producto como Listo inmediatamente"
-                                                                >
-                                                                    ✓ Listo
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    className="glass-button"
-                                                                    style={{ color: 'var(--danger)', padding: 5, borderColor: 'transparent' }}
-                                                                    onClick={() => deleteItem(item.detailIds[0])}
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    {modalType === 'pre-check' && <span className="text-muted">-</span>}
+                                                    <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
+                                                        {item.estado === 'lista' ? (
+                                                            <button
+                                                                className="glass-button primary"
+                                                                style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                                                                onClick={() => { item.detailIds.forEach(id => updateItemStatus(id, 'entregado')); }}
+                                                            >
+                                                                Entregar
+                                                            </button>
+                                                        ) : (!item.enviarCocina && (item.estado === 'pendiente' || item.estado === 'enviada')) ? (
+                                                            <button
+                                                                className="glass-button"
+                                                                style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'var(--success)', color: 'white', borderColor: 'transparent' }}
+                                                                onClick={() => { item.detailIds.forEach(id => updateItemStatus(id, 'listo')); }}
+                                                                title="Marcar bebida/producto como Listo inmediatamente"
+                                                            >
+                                                                ✓ Listo
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                className="glass-button"
+                                                                style={{ color: 'var(--danger)', padding: 5, borderColor: 'transparent' }}
+                                                                onClick={() => deleteItem(item.detailIds[0])}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
