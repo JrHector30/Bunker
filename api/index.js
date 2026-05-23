@@ -1063,85 +1063,99 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
 
         if (activeOrders.length === 0) return res.status(404).json({ error: "No active order" });
 
-        // Let's assume the principal order is the first one or the one with the most items.
-        // Usually, the one we want to close is the first one in the list.
-        const order = activeOrders[0];
+        // Iniciamos la Transacción Atómica
+        const result = await prisma.$transaction(async (tx) => {
+            // Let's assume the principal order is the first one or the one with the most items.
+            const order = activeOrders[0];
 
-        // If there are ghost orders (more than 1 active order), anulate the others immediately
-        if (activeOrders.length > 1) {
-            for (let i = 1; i < activeOrders.length; i++) {
-                await prisma.comanda.update({
-                    where: { id: activeOrders[i].id },
-                    data: { estado: 'anulada' }
-                });
-                console.log(`Auto-Healed during Checkout: Cancelled ghost comanda ${activeOrders[i].id} on Mesa ${mesaId}`);
+            // If there are ghost orders, anulate the others immediately
+            if (activeOrders.length > 1) {
+                for (let i = 1; i < activeOrders.length; i++) {
+                    await tx.comanda.update({
+                        where: { id: activeOrders[i].id },
+                        data: { estado: 'anulada' }
+                    });
+                    console.log(`Auto-Healed during Checkout: Cancelled ghost comanda ${activeOrders[i].id} on Mesa ${mesaId}`);
+                }
             }
-        }
 
-        // Calculate total
-        const total = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+            // Calculate total
+            const total = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
 
-        // Close order with payment details
-        const closedOrder = await prisma.comanda.update({
-            where: { id: order.id },
-            data: {
-                estado: 'cerrada',
-                metodoPago: paymentMethod || 'efectivo',
-                tipoDocumento: docType || 'sin_comprobante',
-                montoRecibido: parseFloat(totalReceived || 0),
-                propina: parseFloat(tip || 0),
-                observacion: observation || null,
-                emailCliente: email || null
-            }
-        });
-
-        // Set all active details to 'entregado' so they clear from the Kitchen KDS natively
-        await prisma.detalleComanda.updateMany({
-            where: { comandaId: order.id, estado: { notIn: ['anulado'] } },
-            data: { estado: 'entregado' }
-        });
-
-        // Free table
-        await prisma.mesa.update({
-            where: { id: parseInt(mesaId) },
-            data: { estado: 'libre' }
-        });
-
-        // 3. EXPLOSIÓN DE INSUMOS (Deducción de Stock)
-        const platosVendidos = order.detalles;
-        for (const detalle of platosVendidos) {
-            // Obtener receta de cada plato vendido
-            const receta = await prisma.recetaInsumo.findMany({
-                where: { platoId: detalle.platoId }
+            // Close order with payment details
+            const closedOrder = await tx.comanda.update({
+                where: { id: order.id },
+                data: {
+                    estado: 'cerrada',
+                    metodoPago: paymentMethod || 'efectivo',
+                    tipoDocumento: docType || 'sin_comprobante',
+                    montoRecibido: parseFloat(totalReceived || 0),
+                    propina: parseFloat(tip || 0),
+                    observacion: observation || null,
+                    emailCliente: email || null
+                }
             });
 
-            // Descontar cada insumo consumido
-            for (const ingrediente of receta) {
-                const cantidadConsumida = ingrediente.cantidad * detalle.cantidad;
+            // Set all active details to 'entregado'
+            await tx.detalleComanda.updateMany({
+                where: { comandaId: order.id, estado: { notIn: ['anulado'] } },
+                data: { estado: 'entregado' }
+            });
 
-                // Actualizar stock del insumo garantizando 2 decimales
-                const insumo = await prisma.insumo.findUnique({ where: { id: ingrediente.insumoId } });
-                await prisma.insumo.update({
-                    where: { id: ingrediente.insumoId },
-                    data: {
-                        stock: round2(insumo.stock - cantidadConsumida)
-                    }
-                });
+            // Free table
+            await tx.mesa.update({
+                where: { id: parseInt(mesaId) },
+                data: { estado: 'libre' }
+            });
 
-                // Registrar en Kardex (MovimientoInsumo)
-                await prisma.movimientoInsumo.create({
-                    data: {
-                        insumoId: ingrediente.insumoId,
-                        tipoMovimiento: 'VENTA',
-                        cantidad: cantidadConsumida, // se guarda como valor absoluto
-                        motivo: `Descuento automático por Venta de Plato ID: ${detalle.platoId} (Comanda ID: ${order.id})`,
-                        usuarioId: order.usuarioId // Registramos el mozo/usuario que cerró/creó la comanda
+            // 3. EXPLOSIÓN DE INSUMOS (Deducción de Stock) con Tolerancia a Fallos
+            try {
+                const platosVendidos = order.detalles;
+                for (const detalle of platosVendidos) {
+                    if (detalle.estado === 'anulado') continue;
+
+                    const receta = await tx.recetaInsumo.findMany({
+                        where: { platoId: detalle.platoId }
+                    });
+
+                    if (!receta || receta.length === 0) continue;
+
+                    for (const ingrediente of receta) {
+                        const cantidadConsumida = round2(ingrediente.cantidad * detalle.cantidad);
+                        const insumo = await tx.insumo.findUnique({ where: { id: ingrediente.insumoId } });
+                        if (!insumo) continue; 
+                        
+                        const cantidadNegativa = Number((-1 * cantidadConsumida).toFixed(2));
+                        const stockFinal = Number((insumo.stock - cantidadConsumida).toFixed(2));
+
+                        await tx.insumo.update({
+                            where: { id: ingrediente.insumoId },
+                            data: { stock: stockFinal }
+                        });
+
+                        // Payload estricto sin ID para evitar P2002 Unique Constraint
+                        const safePayload = {
+                            insumoId: ingrediente.insumoId,
+                            tipoMovimiento: 'VENTA',
+                            cantidad: cantidadNegativa,
+                            motivo: `Descuento automático por Venta de Plato ID: ${detalle.platoId} (Comanda ID: ${order.id})`,
+                            usuarioId: order.usuarioId 
+                        };
+
+                        await tx.movimientoInsumo.create({
+                            data: safePayload
+                        });
                     }
-                });
+                }
+            } catch (inventoryError) {
+                // Registramos el error pero NO tumbamos el cobro de caja (Tolerancia)
+                console.error(`[ALERTA INVENTARIO] Error en explosión de insumos para Comanda ${order.id}:`, inventoryError);
             }
-        }
 
-        res.json({ ...closedOrder, total, message: "Ticket generated" });
+            return { closedOrder, total };
+        });
+
+        res.json({ ...result.closedOrder, total: result.total, message: "Ticket generated" });
     } catch (error) {
         console.error("Error finalizing payment:", error);
         res.status(500).json({ error: "Error al registrar pago: " + error.message });
@@ -1885,35 +1899,46 @@ app.get('/api/kardex', async (req, res) => {
 
 // Registrar nuevo movimiento manual en el Kardex (COMPRA, MERMA, TRANSFERENCIA, AJUSTE)
 app.post('/api/kardex', async (req, res) => {
-    const { insumoId, tipoMovimiento, cantidad, motivo, usuarioId } = req.body;
+    // Desestructurar y excluir el 'id' si viniera heredado del frontend
+    const { id, insumoId, tipoMovimiento, cantidad, motivo, usuarioId, ...rest } = req.body;
 
     try {
         const result = await prisma.$transaction(async (tx) => {
-            const qtyStr = parseFloat(cantidad);
+            // Asegurar la persistencia de decimales en Insumos Manuales
+            const qtyRaw = Number(parseFloat(cantidad).toFixed(2));
+            const incrementEvents = ['COMPRA', 'AJUSTE_POSITIVO'];
+            const decrementEvents = ['VENTA', 'MERMA', 'TRANSFERENCIA', 'AJUSTE_NEGATIVO'];
 
-            // 1. Crear el registro del movimiento
+            // Determinar el valor exacto a registrar en Kardex (negativo para salidas)
+            let qtyKardex = qtyRaw;
+            if (decrementEvents.includes(tipoMovimiento)) {
+                qtyKardex = Number((-1 * qtyRaw).toFixed(2));
+            }
+
+            // Payload estricto sin ID para evitar P2002 Unique Constraint
+            const safePayload = {
+                insumoId: parseInt(insumoId),
+                tipoMovimiento,
+                cantidad: qtyKardex, // Guardar con el signo correcto
+                motivo,
+                usuarioId: parseInt(usuarioId)
+            };
+
+            // 1. Crear el registro del movimiento directamente
             const movimiento = await tx.movimientoInsumo.create({
-                data: {
-                    insumoId: parseInt(insumoId),
-                    tipoMovimiento,
-                    cantidad: qtyStr,
-                    motivo,
-                    usuarioId: parseInt(usuarioId)
-                }
+                data: safePayload
             });
 
             // 2. Afectar el stock real del insumo correspondiente
             const insumoActual = await tx.insumo.findUnique({ where: { id: parseInt(insumoId) } });
-            const incrementEvents = ['COMPRA', 'AJUSTE_POSITIVO'];
-            const decrementEvents = ['VENTA', 'MERMA', 'TRANSFERENCIA', 'AJUSTE_NEGATIVO'];
 
             let nuevoStock = insumoActual.stock;
             if (incrementEvents.includes(tipoMovimiento)) {
-                nuevoStock = round2(insumoActual.stock + qtyStr);
+                nuevoStock = Number((insumoActual.stock + qtyRaw).toFixed(2));
             } else if (decrementEvents.includes(tipoMovimiento)) {
-                nuevoStock = round2(insumoActual.stock - qtyStr);
+                nuevoStock = Number((insumoActual.stock - qtyRaw).toFixed(2));
             } else {
-                nuevoStock = round2(insumoActual.stock + qtyStr); // Default o Ajuste neto
+                nuevoStock = Number((insumoActual.stock + qtyRaw).toFixed(2));
             }
 
             const inusmoModificado = await tx.insumo.update({
