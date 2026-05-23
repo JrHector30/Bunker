@@ -37,7 +37,10 @@ const WaiterOrderView = () => {
             const currentTable = tList.find(t => t.id === parseInt(tableId));
             if (currentTable) {
                 // If occupied, use DB count. If free (new), use state or default.
-                const dbComensales = currentTable.comandas?.[0]?.comensales;
+                const comandaActiva = currentTable.comandas?.find(c => 
+                  c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase())
+                );
+                const dbComensales = comandaActiva?.comensales;
                 setTableInfo({
                     numero: currentTable.numero,
                     comensales: dbComensales || location.state?.comensales || 1

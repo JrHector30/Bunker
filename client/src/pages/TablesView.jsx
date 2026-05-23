@@ -171,8 +171,15 @@ const TablesView = () => {
     // --- GROUPING LOGIC ---
     const getGroupedDetails = () => {
         const selectedTable = tables.find(t => t.id === selectedTableId);
-        if (!selectedTable || !selectedTable.comandas?.[0]) return [];
-        const rawDetalles = selectedTable.comandas[0].detalles || [];
+        if (!selectedTable || !selectedTable.comandas) return [];
+        
+        // Buscar la comanda activa (cualquier estado que no sea cerrada ni anulada)
+        const comandaActiva = selectedTable.comandas.find(c => 
+          c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase())
+        );
+        if (!comandaActiva) return [];
+        
+        const rawDetalles = comandaActiva.detalles || [];
         const grouped = [];
         rawDetalles.forEach(detail => {
             const cookName = detail.cocinero?.nombre || '';
@@ -281,7 +288,6 @@ const TablesView = () => {
                                             <tr key={item.key} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
                                                 <td style={{ padding: 10, verticalAlign: 'top' }}>
                                                     <span style={{
-                                                        fontFamily: '"Lexend Peta", sans-serif',
                                                         fontWeight: 'bold',
                                                         fontSize: '1.2rem',
                                                         color: 'var(--primary)'
@@ -290,7 +296,7 @@ const TablesView = () => {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: 10 }}>
-                                                    <div style={{ fontFamily: '"Lexend Peta", sans-serif', fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-main)' }}>
+                                                    <div style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-main)' }}>
                                                         {item.nombre}
                                                     </div>
                                                     {item.observacion && (
@@ -326,7 +332,7 @@ const TablesView = () => {
                                                                 >
                                                                     Entregar
                                                                 </button>
-                                                            ) : (!item.enviarCocina && item.estado === 'pendiente') ? (
+                                                            ) : (!item.enviarCocina && (item.estado === 'pendiente' || item.estado === 'enviada')) ? (
                                                                 <button
                                                                     className="glass-button"
                                                                     style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'var(--success)', color: 'white', borderColor: 'transparent' }}
@@ -369,7 +375,10 @@ const TablesView = () => {
                                         style={{ background: 'var(--danger)', color: 'white', borderColor: 'transparent', fontWeight: 'bold' }}
                                         onClick={async () => {
                                             const table = tables.find(t => t.id === selectedTableId);
-                                            const comandaId = table?.comandas?.[0]?.id;
+                                            const comandaActiva = table?.comandas?.find(c => 
+                                              c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase())
+                                            );
+                                            const comandaId = comandaActiva?.id;
                                             if (!comandaId) return;
 
                                             const motivo = prompt("Ingrese el motivo de la anulación total:");
