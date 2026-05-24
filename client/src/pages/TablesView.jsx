@@ -45,6 +45,10 @@ const TablesView = () => {
     };
 
     const confirmDiners = () => {
+        if (Number.isNaN(dinersCount) || dinersCount === null || dinersCount === '') {
+            alert("Cantidad de comensales no válida");
+            return;
+        }
         if (dinersCount < 1) return alert("Mínimo 1 comensal");
         setShowDinersModal(false);
         navigate(`/order/${selectedFreeTable.id}`, { state: { comensales: dinersCount } });

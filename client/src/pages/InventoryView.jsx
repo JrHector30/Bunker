@@ -22,6 +22,7 @@ const InventoryView = () => {
     const { data: kardex, mutate: refetchKardex } = useCache('kardex', fetchKardexAPI, []);
 
     // UI States
+    const [formError, setFormError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
     const [kardexDateFilter, setKardexDateFilter] = useState('');
@@ -142,6 +143,16 @@ const InventoryView = () => {
 
     const handleSubmitProduct = async (e) => {
         e.preventDefault();
+        setFormError(null);
+
+        if (Number.isNaN(formData.precio) || formData.precio === null || formData.precio === '') {
+            setFormError("El precio debe ser un número válido.");
+            return;
+        }
+        if (Number.isNaN(formData.categoriaId) || formData.categoriaId === null || formData.categoriaId === '') {
+            setFormError("Debe seleccionar una categoría válida.");
+            return;
+        }
         let imageUrl = editingProduct ? editingProduct.imagen : null;
         if (formData.imageFile) {
             const uploadData = new FormData(); uploadData.append('image', formData.imageFile);
@@ -175,20 +186,53 @@ const InventoryView = () => {
 
     const handleSubmitInsumo = async (e) => {
         e.preventDefault();
-        
-        // Redondear valores numéricos a 2 decimales antes de enviar
+        setFormError(null);
+
+        if (Number.isNaN(insumoForm.precioCompra) || insumoForm.precioCompra === null || insumoForm.precioCompra === '') {
+            setFormError("El precio de compra debe ser un número válido.");
+            return;
+        }
+        if (Number.isNaN(insumoForm.stock) || insumoForm.stock === null || insumoForm.stock === '') {
+            setFormError("El stock debe ser un número válido.");
+            return;
+        }
+        if (insumoForm.stockMinimo !== '' && Number.isNaN(insumoForm.stockMinimo)) {
+            setFormError("El stock mínimo debe ser un número válido o estar vacío.");
+            return;
+        }
+
+        // CORRECCIÓN DE PAYLOAD: Mapeo limpio y seguro contra el schema.prisma
         const payload = {
-            ...insumoForm,
-            precioCompra: parseFloat(parseFloat(insumoForm.precioCompra).toFixed(2)),
-            stock: parseFloat(parseFloat(insumoForm.stock).toFixed(2)),
-            stockMinimo: insumoForm.stockMinimo ? parseFloat(parseFloat(insumoForm.stockMinimo).toFixed(2)) : null
+            nombre: String(insumoForm.nombre).trim(),
+            unidadMedida: insumoForm.unidadMedida,
+            precioCompra: Number(insumoForm.precioCompra) || 0,
+            stock: Number(insumoForm.stock) || 0,
+            // Si está vacío o nulo, pasamos 0 en lugar de null para evitar el choque con el NOT NULL de PostgreSQL
+            stockMinimo: (insumoForm.stockMinimo === '' || insumoForm.stockMinimo === null) ? 0 : Number(insumoForm.stockMinimo),
+            notificarAlerta: Boolean(insumoForm.notificarAlerta)
         };
         
         const url = editingInsumo ? `/api/insumos/${editingInsumo.id}` : '/api/insumos';
         const method = editingInsumo ? 'PUT' : 'POST';
-        await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        setIsInsumoModalOpen(false);
-        fetchInsumos();
+        
+        try {
+            const res = await fetch(url, { 
+                method, 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload) 
+            });
+
+            if (res.ok) {
+                setIsInsumoModalOpen(false);
+                fetchInsumos();
+            } else {
+                const errData = await res.json();
+                setFormError(errData.error || "Error controlado por el servidor (400).");
+            }
+        } catch (error) {
+            console.error(error);
+            setFormError("Error de conexión con el servidor.");
+        }
     };
 
     const handleDeleteInsumo = async (id) => {
@@ -235,7 +279,16 @@ const InventoryView = () => {
 
     const handleSaveRecipe = async () => {
         if (!selectedPlatoId) return;
-        const validIngredients = currentRecipe.filter(i => i.insumoId && parseFloat(i.cantidad) > 0);
+        setFormError(null);
+
+        // Validar NaNs en receta
+        const hasInvalidQty = currentRecipe.some(i => i.insumoId && (Number.isNaN(i.cantidad) || i.cantidad === null || i.cantidad === ''));
+        if (hasInvalidQty) {
+            alert("Error: Existen cantidades inválidas en la receta.");
+            return;
+        }
+
+        const validIngredients = currentRecipe.filter(i => i.insumoId && i.cantidad > 0);
 
         try {
             const res = await fetch(`/api/recetas/${selectedPlatoId}`, {
@@ -490,7 +543,7 @@ const InventoryView = () => {
                                                     </td>
                                                     <td style={{ padding: 15 }} className="text-muted">{insu ? insu.unidadMedida : '-'}</td>
                                                     <td style={{ padding: 15 }}>
-                                                        <input type="number" step="0.01" className="glass-input" style={{ width: 120 }} placeholder="0.00" value={item.cantidad} onChange={e => handleIngredientChange(index, 'cantidad', e.target.value)} />
+                                                        <input type="number" step="0.01" className="glass-input" style={{ width: 120 }} placeholder="0.00" value={Number.isNaN(item.cantidad) ? '' : item.cantidad} onChange={e => handleIngredientChange(index, 'cantidad', e.target.valueAsNumber)} />
                                                     </td>
                                                     <td style={{ padding: 15 }}>{insu ? `S/. ${subtotal.toFixed(2)}` : '-'}</td>
                                                     <td style={{ padding: 15 }}>
@@ -521,6 +574,16 @@ const InventoryView = () => {
 
     const handleSaveKardexManual = async (e) => {
         e.preventDefault();
+        setFormError(null);
+
+        if (Number.isNaN(kardexForm.cantidad) || kardexForm.cantidad === null || kardexForm.cantidad === '') {
+            setFormError("La cantidad debe ser un número válido.");
+            return;
+        }
+        if (Number.isNaN(kardexForm.insumoId) || kardexForm.insumoId === null || kardexForm.insumoId === '') {
+            setFormError("Debe seleccionar un insumo válido.");
+            return;
+        }
 
         // Validar que el usuario esté autenticado
         if (!user || !user.id) {
@@ -887,9 +950,10 @@ const InventoryView = () => {
                             </div>
                             <textarea className="glass-input" value={formData.descripcion} onChange={e => setFormData({ ...formData, descripcion: e.target.value })} />
 
+                            {formError && <div style={{ color: 'white', background: 'var(--danger)', padding: 10, borderRadius: 8, marginBottom: 15 }}>{formError}</div>}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-                                <div><label>Categoría</label><select className="glass-input" value={formData.categoriaId} onChange={e => setFormData({ ...formData, categoriaId: e.target.value })} required>{categories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
-                                <div><label>Precio (S/.)</label><input type="number" step="0.01" className="glass-input" value={formData.precio} onChange={e => setFormData({ ...formData, precio: e.target.value })} required /></div>
+                                <div><label>Categoría</label><select className="glass-input" value={formData.categoriaId} onChange={e => setFormData({ ...formData, categoriaId: Number(e.target.value) })} required>{categories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
+                                <div><label>Precio (S/.)</label><input type="number" step="0.01" className="glass-input" value={Number.isNaN(formData.precio) ? '' : formData.precio} onChange={e => setFormData({ ...formData, precio: e.target.valueAsNumber })} required /></div>
                             </div>
                             <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}><input type="checkbox" checked={formData.activo} onChange={e => setFormData({ ...formData, activo: e.target.checked })} /> Producto Activo</label>
                             <div className="modal-footer" style={{ border: 'none', padding: 0, marginTop: 10 }}>
@@ -909,6 +973,7 @@ const InventoryView = () => {
                             <button className="glass-button" onClick={() => setIsInsumoModalOpen(false)} style={{ padding: 5, border: 'none' }}><X size={24} /></button>
                         </div>
                         <form onSubmit={handleSubmitInsumo} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                            {formError && <div style={{ color: 'white', background: 'var(--danger)', padding: 10, borderRadius: 8, marginBottom: 15 }}>{formError}</div>}
                             <div>
                                 <label>Nombre del Insumo</label>
                                 <input type="text" className="glass-input" value={insumoForm.nombre} onChange={e => setInsumoForm({ ...insumoForm, nombre: e.target.value })} required />
@@ -916,7 +981,7 @@ const InventoryView = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
                                 <div>
                                     <label>Precio Compra Inicial (S/.)</label>
-                                    <input type="number" step="0.01" className="glass-input" value={insumoForm.precioCompra} onChange={e => setInsumoForm({ ...insumoForm, precioCompra: e.target.value })} required />
+                                    <input type="number" step="0.01" className="glass-input" value={Number.isNaN(insumoForm.precioCompra) ? '' : insumoForm.precioCompra} onChange={e => setInsumoForm({ ...insumoForm, precioCompra: e.target.valueAsNumber })} required />
                                 </div>
                                 <div>
                                     <label>Medida Lógica</label>
@@ -936,28 +1001,17 @@ const InventoryView = () => {
                                         type="number" 
                                         step="0.01" 
                                         className="glass-input" 
-                                        value={insumoForm.stock} 
-                                        onChange={e => {
-                                            const value = e.target.value;
-                                            if (value.includes('.')) {
-                                                const parts = value.split('.');
-                                                if (parts[1] && parts[1].length > 2) return;
-                                            }
-                                            setInsumoForm({ ...insumoForm, stock: value });
-                                        }}
-                                        onBlur={e => {
-                                            const rounded = parseFloat(e.target.value).toFixed(2);
-                                            setInsumoForm({ ...insumoForm, stock: isNaN(rounded) ? '' : rounded });
-                                        }}
+                                        value={Number.isNaN(insumoForm.stock) ? '' : insumoForm.stock} 
+                                        onChange={e => setInsumoForm({ ...insumoForm, stock: e.target.valueAsNumber })}
                                         required 
                                     />
                                     <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 5 }}>Medida Actual.</p>
                                 </div>
                                 <div>
                                     <label>Stock Mínimo (Alerta)</label>
-                                    <input type="number" step="0.01" className="glass-input" value={insumoForm.stockMinimo} onChange={e => {
-                                        const val = e.target.value;
-                                        setInsumoForm({ ...insumoForm, stockMinimo: val, notificarAlerta: (val && String(val).trim() !== '') ? insumoForm.notificarAlerta : false });
+                                    <input type="number" step="0.01" className="glass-input" value={Number.isNaN(insumoForm.stockMinimo) ? '' : insumoForm.stockMinimo} onChange={e => {
+                                        const val = e.target.valueAsNumber;
+                                        setInsumoForm({ ...insumoForm, stockMinimo: val, notificarAlerta: (!Number.isNaN(val) && val !== null) ? insumoForm.notificarAlerta : false });
                                     }} />
                                     <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 5 }}>Nivel de escasez.</p>
                                 </div>
@@ -983,9 +1037,10 @@ const InventoryView = () => {
                             <button className="glass-button" onClick={() => setIsKardexModalOpen(false)} style={{ padding: 5, border: 'none' }}><X size={24} /></button>
                         </div>
                         <form onSubmit={handleSaveKardexManual} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                            {formError && <div style={{ color: 'white', background: 'var(--danger)', padding: 10, borderRadius: 8 }}>{formError}</div>}
                             <div>
                                 <label>Insumo</label>
-                                <select className="glass-input" value={kardexForm.insumoId} onChange={e => setKardexForm({ ...kardexForm, insumoId: e.target.value })} required>
+                                <select className="glass-input" value={kardexForm.insumoId} onChange={e => setKardexForm({ ...kardexForm, insumoId: Number(e.target.value) })} required>
                                     <option value="">Seleccione un insumo...</option>
                                     {insumos.map(i => <option key={i.id} value={i.id}>{i.nombre} ({i.unidadMedida}) - Disp: {i.stock}</option>)}
                                 </select>
@@ -1001,7 +1056,7 @@ const InventoryView = () => {
                                 </div>
                                 <div>
                                     <label>Cantidad Afectada</label>
-                                    <input type="number" step="0.01" className="glass-input" value={kardexForm.cantidad} onChange={e => setKardexForm({ ...kardexForm, cantidad: e.target.value })} required />
+                                    <input type="number" step="0.01" className="glass-input" value={Number.isNaN(kardexForm.cantidad) ? '' : kardexForm.cantidad} onChange={e => setKardexForm({ ...kardexForm, cantidad: e.target.valueAsNumber })} required />
                                 </div>
                             </div>
                             <div>

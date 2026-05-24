@@ -36,6 +36,9 @@ const CashCountTable = ({ onStatusChange }) => {
     const [menuOpen, setMenuOpen] = useState(false);
     const [paloteoOpen, setPaloteoOpen] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [showInitialAmountModal, setShowInitialAmountModal] = useState(false);
+    const [initialAmount, setInitialAmount] = useState('');
+    const [formError, setFormError] = useState(null);
 
     const statusIntervalRef = useRef(null);
     useEffect(() => {
@@ -56,10 +59,24 @@ const CashCountTable = ({ onStatusChange }) => {
 
         if (currentStatus.estado === 'abierto') {
             if (!window.confirm("¿Estás seguro de cerrar caja? Asegúrate de que no haya cuentas pendientes.")) return;
+            executeToggle(0);
+        } else {
+            setInitialAmount('');
+            setFormError(null);
+            setShowInitialAmountModal(true);
         }
+    };
 
-        const montoInicial = currentStatus.estado === 'cerrado' ? parseFloat(prompt("Ingrese monto inicial:", "0.00") || 0) : 0;
+    const confirmOpenShift = (e) => {
+        e.preventDefault();
+        if (Number.isNaN(initialAmount) || initialAmount === null || initialAmount === '') {
+            setFormError("Monto inicial no válido.");
+            return;
+        }
+        executeToggle(Number(initialAmount));
+    };
 
+    const executeToggle = (montoInicial) => {
         fetch('/api/cashier/toggle', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -74,6 +91,7 @@ const CashCountTable = ({ onStatusChange }) => {
                 fetchStatus();
                 setCurrentPage(1);
                 fetchHistory();
+                setShowInitialAmountModal(false);
             })
             .catch(err => alert(err.message));
     };
@@ -504,6 +522,37 @@ const CashCountTable = ({ onStatusChange }) => {
             )}
 
             <PaloteoModal />
+
+            {/* Modal de Apertura de Caja */}
+            {showInitialAmountModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: 400 }}>
+                        <div className="modal-header">
+                            <h2>Apertura de Caja</h2>
+                            <button className="glass-button" onClick={() => setShowInitialAmountModal(false)} style={{ padding: 5, border: 'none' }}><X size={24} /></button>
+                        </div>
+                        <form onSubmit={confirmOpenShift} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                            {formError && <div style={{ color: 'white', background: 'var(--danger)', padding: 10, borderRadius: 8 }}>{formError}</div>}
+                            <div>
+                                <label>Ingrese monto inicial en Caja (S/.)</label>
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    className="glass-input" 
+                                    value={Number.isNaN(initialAmount) ? '' : initialAmount} 
+                                    onChange={e => setInitialAmount(e.target.valueAsNumber)} 
+                                    required 
+                                    autoFocus
+                                    style={{ fontSize: '1.5rem', textAlign: 'center', marginTop: 10 }}
+                                />
+                            </div>
+                            <div className="modal-footer" style={{ border: 'none', padding: 0, marginTop: 10 }}>
+                                <button type="submit" className="glass-button primary" style={{ width: '100%', fontSize: '1.1rem' }}>Abrir Caja</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

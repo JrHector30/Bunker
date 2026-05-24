@@ -12,7 +12,7 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
     const [cashGiven, setCashGiven] = useState('');
     const [hasTip, setHasTip] = useState(false);
     const [tipAmount, setTipAmount] = useState(0);
-    const [docType, setDocType] = useState('sin_comprobante');
+    const [docType, setDocType] = useState('boleta');
     const [observation, setObservation] = useState('');
     const [email, setEmail] = useState('');
 
@@ -20,7 +20,16 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
     const change = paymentMethod === 'efectivo' ? (Number(cashGiven) - finalTotal) : 0;
 
     const handleFinalize = async () => {
-        if (paymentMethod === 'efectivo' && Number(cashGiven) < finalTotal) {
+        if (paymentMethod === 'efectivo' && (Number.isNaN(cashGiven) || cashGiven === null || cashGiven === '')) {
+            alert('Monto en efectivo inválido.');
+            return;
+        }
+        if (hasTip && (Number.isNaN(tipAmount) || tipAmount === null || tipAmount === '')) {
+            alert('Monto de propina inválido.');
+            return;
+        }
+
+        if (paymentMethod === 'efectivo' && cashGiven < finalTotal) {
             alert('El monto recibido es menor al total.');
             return;
         }
@@ -156,8 +165,8 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                                     type="number"
                                     className="glass-input"
                                     placeholder="Monto"
-                                    value={tipAmount}
-                                    onChange={e => setTipAmount(e.target.value)}
+                                    value={Number.isNaN(tipAmount) ? '' : tipAmount}
+                                    onChange={e => setTipAmount(e.target.valueAsNumber)}
                                     style={{ padding: 8 }}
                                 />
                             )}
@@ -170,8 +179,8 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                                     <input
                                         type="number"
                                         className="glass-input"
-                                        value={cashGiven}
-                                        onChange={e => setCashGiven(e.target.value)}
+                                        value={Number.isNaN(cashGiven) ? '' : cashGiven}
+                                        onChange={e => setCashGiven(e.target.valueAsNumber)}
                                         placeholder="0.00"
                                     />
                                 </div>
