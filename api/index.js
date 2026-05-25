@@ -126,9 +126,12 @@ app.delete('/api/users/:id', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     const { usuario, password } = req.body;
     const user = await prisma.user.findFirst({
-        where: { usuario, password } // In prod, verify hash
+        where: { usuario } // In prod, verify hash
     });
     if (user) {
+        if (user.password !== password) {
+            return res.status(401).json({ error: "Contraseña incorrecta" });
+        }
         res.json(user);
     } else {
         res.status(401).json({ error: "Invalid credentials" });
