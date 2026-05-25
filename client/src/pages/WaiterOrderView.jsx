@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useNotification } from '../context/NotificationContext';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Minus, Send, Trash2, ArrowLeft, Search, Image as ImageIcon, FileText, Info, X } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 
 const WaiterOrderView = () => {
+    const { showToast } = useNotification();
     const { tableId } = useParams();
     const navigate = useNavigate();
     const location = useLocation(); // For passed state (new table)
@@ -117,11 +119,11 @@ const WaiterOrderView = () => {
                     }))
                 })
             });
-            alert('Pedido enviado a cocina!');
+            showToast('Pedido enviado a cocina!', 'success');
             navigate('/tables');
         } catch (error) {
             console.error(error);
-            alert('Error al enviar pedido');
+            showToast('Error al enviar pedido', 'error');
         } finally {
             setLoading(false);
         }
@@ -143,182 +145,7 @@ const WaiterOrderView = () => {
 
     return (
         <React.Fragment>
-            <style>{`
-                /* Optimización Móvil - Vista Tomar Pedido */
-                @media (max-width: 768px) {
-                    /* Layout Principal */
-                    .order-layout {
-                        display: flex !important;
-                        flex-direction: column !important;
-                        height: 100svh !important;
-                        padding: 10px !important;
-                        padding-bottom: env(safe-area-inset-bottom) !important;
-                        overflow-x: hidden !important; 
-                        width: 100vw !important;
-                        box-sizing: border-box !important;
-                    }
-
-                    /* 1. Categorías Adaptativas (Lista Vertical Estricta) */
-                    .mobile-category-grid {
-                        display: grid !important;
-                        grid-template-columns: 1fr !important; /* Estricta columna única */
-                        grid-auto-flow: row !important; /* Flujo solo de arriba a abajo */
-                        grid-auto-columns: auto !important;
-                        grid-auto-rows: auto !important;
-                        grid-template-rows: auto !important;
-                        max-height: 250px !important;
-                        overflow-y: auto !important;
-                        overflow-x: hidden !important;
-                        padding-right: 8px !important;
-                        gap: 10px !important;
-                        scroll-snap-type: none !important; /* Desactivar forzados */
-                    }
-                    .mobile-category-item {
-                        display: flex !important;
-                        flex-direction: row !important;
-                        align-items: center !important;
-                        justify-content: flex-start !important;
-                        height: auto !important;
-                        padding: 12px 15px !important;
-                        width: 100% !important;
-                        box-sizing: border-box !important;
-                        scroll-snap-align: none !important;
-                    }
-                    .mobile-category-item > span:first-child {
-                        font-size: 1.2rem !important;
-                        margin-right: 15px !important;
-                    }
-                    .mobile-category-item > span:nth-child(2) {
-                        flex: 1 !important;
-                        text-align: left !important;
-                    }
-                    
-                    /* 2. Cuadrícula de Productos Compacta (Formato Lista de Fila) */
-                    .mobile-product-grid {
-                        display: grid !important;
-                        grid-template-columns: 1fr !important; /* Estricta columna única */
-                        grid-auto-rows: auto !important;
-                        gap: 8px !important;
-                        overflow-x: hidden !important;
-                    }
-                    .mobile-product-card {
-                        display: flex !important;
-                        flex-direction: row !important; /* Tarjeta en Fila Horizontal */
-                        height: auto !important;
-                        min-height: 75px !important;
-                        align-items: center !important;
-                        padding: 8px 10px !important;
-                        box-sizing: border-box !important;
-                        scroll-snap-align: none !important;
-                    }
-                    .product-image-container {
-                        width: 60px !important;
-                        height: 60px !important;
-                        border-radius: 8px !important;
-                        flex-shrink: 0 !important;
-                        overflow: hidden !important;
-                    }
-                    
-                    /* Body (Center + Right) */
-                    .product-body {
-                        flex-direction: row !important; /* Layout para acomodar Centro y Derecha */
-                        align-items: center !important;
-                        padding: 0 0 0 12px !important;
-                        gap: 10px !important;
-                    }
-                    .product-info-wrapper {
-                        flex: 1 !important; /* Centro absorbe el espacio extra */
-                        justify-content: center !important;
-                        gap: 2px !important;
-                        min-width: 0 !important; /* previene desbordes */
-                    }
-                    .product-name {
-                        font-size: 0.95rem !important;
-                        font-weight: 700 !important;
-                        margin-bottom: 0px !important;
-                        line-height: 1.2 !important;
-                        white-space: nowrap !important;
-                        overflow: hidden !important;
-                        text-overflow: ellipsis !important;
-                    }
-                    .product-price {
-                        font-size: 0.85rem !important;
-                        color: var(--success) !important;
-                    }
-                    /* Container for actions in mobile needs to be tight on the right side */
-                    .product-actions-wrap {
-                        padding-top: 0 !important;
-                        margin-top: 0 !important;
-                        flex-shrink: 0 !important;
-                    }
-
-                    /* 3. Botones Perfect Circles y Layout Inferior */
-                    .mobile-product-card .glass-button {
-                        width: 38px !important;
-                        height: 38px !important;
-                        min-width: 38px !important;
-                        max-width: 38px !important;
-                        aspect-ratio: 1/1 !important;
-                        border-radius: 50% !important;
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
-                        flex-shrink: 0 !important; /* CLAVE NO OVALARSE */
-                    }
-                    
-                    /* Asegurar alineación milimétrica del bloque de cantidad */
-                    .quantity-controls {
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important; /* Force tight fit horizontally */
-                        gap: 10px !important;
-                    }
-                    
-                    .quantity-number {
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        text-align: center !important;
-                        vertical-align: middle !important;
-                        line-height: 1 !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        width: 30px !important; /* FLOTANTE ESTRICTO CENTRADO */
-                        min-width: 30px !important;
-                        font-size: 1.1rem !important;
-                    }
-                    
-                    /* Ocultar botones de Info demasiado invasivos */
-                    .mobile-product-card .info-btn {
-                        display: none !important;
-                    }
-                    
-                    /* 4. Panel Inferior Safe Area y Botón Neon */
-                    .order-cart-panel.open {
-                        padding-bottom: env(safe-area-inset-bottom) !important;
-                    }
-
-                    /* Botón Neon Glow (Confirmar Pedido) */
-                    .order-cart-panel .glass-button.primary {
-                        border-radius: 50px !important;
-                        box-shadow: 0 0 15px var(--primary) !important;
-                        border: 1px solid var(--primary) !important;
-                        font-family: inherit !important;
-                    }
-
-                    /* Quitar width forzado en desktop y permitir fluidez en Search */
-                    .search-container {
-                        width: 100% !important;
-                        max-width: calc(100% - 30px) !important;
-                        margin: 0 auto !important;
-                        box-sizing: border-box !important;
-                        padding: 0 !important;
-                        flex-shrink: 1 !important;
-                    }
-                }
-            `}</style>
+            
         <div className="order-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', height: 'calc(100vh - 110px)', gap: 20, padding: 20, boxSizing: 'border-box' }}>
 
             {/* LEFT SIDE: MENU */}

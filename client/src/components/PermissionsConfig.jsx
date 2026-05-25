@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNotification } from '../context/NotificationContext';
 import { Save, Shield } from 'lucide-react';
 
 const PermissionsConfig = () => {
+    const { showToast } = useNotification();
     const [permisos, setPermisos] = useState([]);
     const [hasChanges, setHasChanges] = useState(false);
 
@@ -62,10 +64,10 @@ const PermissionsConfig = () => {
                 );
             
             await Promise.all(promises);
-            alert('✅ Permisos actualizados correctamente');
+            showToast('✅ Permisos actualizados correctamente', 'success');
             setHasChanges(false);
         } catch (error) {
-            alert('❌ Error al guardar permisos');
+            showToast('❌ Error al guardar permisos', 'error');
         }
     };
 

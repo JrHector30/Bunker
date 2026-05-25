@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { NotificationProvider } from './context/NotificationContext';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/DashboardLayout';
 import TablesView from './pages/TablesView';
@@ -43,10 +44,11 @@ function App() {
   return (
     <Router>
       <ThemeProvider>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<HomeRedirect />} />
+        <NotificationProvider>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/" element={<HomeRedirect />} />
 
             <Route element={<DashboardLayout />}>
 
@@ -117,7 +119,8 @@ function App() {
 
             </Route>
           </Routes>
-        </AuthProvider>
+          </AuthProvider>
+        </NotificationProvider>
       </ThemeProvider>
     </Router>
   );

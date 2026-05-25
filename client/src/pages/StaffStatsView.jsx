@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNotification } from '../context/NotificationContext';
 import { ArrowLeft, Trash, User, ChefHat, Calendar, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,6 +10,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const StaffStatsView = () => {
+    const { showToast } = useNotification();
     const navigate = useNavigate();
     const [stats, setStats] = useState({ waiters: [], cooks: [] });
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -34,13 +36,13 @@ const StaffStatsView = () => {
             const res = await fetch(`/api/staff/stats/daily?date=${date}`, { method: 'DELETE' });
             const data = await res.json();
             if (res.ok) {
-                alert(data.message);
+                showToast(data.message, 'error');
                 fetchStats();
             } else {
-                alert("Error: " + data.error);
+                showToast("Error: " + data.error, 'error');
             }
         } catch (e) {
-            alert("Error de conexión");
+            showToast("Error de conexión", 'error');
         }
     };
 

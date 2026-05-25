@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash, Save, X, ChefHat, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 
 const CategoriesView = () => {
+    const { showToast } = useNotification();
     const navigate = useNavigate();
     const fetcher = () => fetch('/api/categories').then(res => res.json());
     const { data: categories, mutate: fetchCategories } = useCache('categories', fetcher, []);
@@ -57,7 +59,7 @@ const CategoriesView = () => {
                 fetchCategories(); // Sync with server
             } else {
                 const err = await res.json();
-                alert(err.error);
+                showToast(err.error, 'error');
             }
         } catch (error) {
             console.error(error);
@@ -83,7 +85,7 @@ const CategoriesView = () => {
                 setIsModalOpen(false);
                 fetchCategories();
             } else {
-                alert('Error al guardar categoría');
+                showToast('Error al guardar categoría', 'error');
             }
         } catch (error) {
             console.error(error);

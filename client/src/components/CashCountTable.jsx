@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useNotification } from '../context/NotificationContext';
 import { MoreVertical, FileText, X, AlertCircle, Trash, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useCache } from '../hooks/useCache';
 
 const CashCountTable = ({ onStatusChange }) => {
+    const { showToast } = useNotification();
     const [filterDate, setFilterDate] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -93,7 +95,7 @@ const CashCountTable = ({ onStatusChange }) => {
                 fetchHistory();
                 setShowInitialAmountModal(false);
             })
-            .catch(err => alert(err.message));
+            .catch(err => showToast(err.message, 'error'));
     };
 
     // Date Formatter
@@ -119,7 +121,7 @@ const CashCountTable = ({ onStatusChange }) => {
         }
 
         if (!targetId) {
-            alert("No hay datos de arqueo disponibles para descargar.");
+            showToast("No hay datos de arqueo disponibles para descargar.", 'error');
             return;
         }
 
@@ -262,7 +264,7 @@ const CashCountTable = ({ onStatusChange }) => {
 
         } catch (e) {
             console.error(e);
-            alert("Error generando PDF");
+            showToast("Error generando PDF", 'error');
         } finally {
             setIsGenerating(false);
         }
@@ -349,15 +351,15 @@ const CashCountTable = ({ onStatusChange }) => {
                                     try {
                                         const res = await fetch('/api/admin/reset-simulation', { method: 'DELETE' });
                                         if (res.ok) {
-                                            alert("Simulación reiniciada correctamente.");
+                                            showToast("Simulación reiniciada correctamente.", 'success');
                                             fetchStatus();
                                             fetchHistory(1, filterDate);
                                         } else {
                                             const err = await res.json();
-                                            alert("Error: " + err.error);
+                                            showToast("Error: " + err.error, 'error');
                                         }
                                     } catch (e) {
-                                        alert("Error de conexión");
+                                        showToast("Error de conexión", 'error');
                                     }
                                 }}
                                 className="glass-button"

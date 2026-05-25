@@ -65,24 +65,7 @@ const DashboardLayout = () => {
 
     return (
         <React.Fragment>
-            <style>{`
-                @media (max-width: 768px) {
-                    .sidebar.mobile-open {
-                        height: 100dvh !important;
-                        max-height: 100dvh !important;
-                        overflow-y: auto !important;
-                        display: flex !important;
-                        flex-direction: column !important;
-                        padding-bottom: 40px !important;
-                    }
-                    /* Asegurar que los contenedores inferiores fluyan y no se anclen al fondo rompiendo el scroll */
-                    .sidebar.mobile-open > div:last-child {
-                        position: relative !important;
-                        bottom: auto !important;
-                        margin-bottom: 40px !important;
-                    }
-                }
-            `}</style>
+            
         <div className="app-container" style={{ flexDirection: 'column' }}>
 
             {/* TOP BAR - Siempre visible */}

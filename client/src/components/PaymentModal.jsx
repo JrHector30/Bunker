@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNotification } from '../context/NotificationContext';
 import { Banknote, CreditCard, Smartphone, CheckSquare, X, AlertCircle } from 'lucide-react';
 
 const PaymentModal = ({ order, onClose, onSuccess }) => {
+    const { showToast } = useNotification();
     const totalOrder = order.detalles.reduce((sum, d) => sum + (d.cantidad * d.plato.precio), 0);
     const taxRate = 0.18;
     const subTotal = totalOrder / (1 + taxRate);
@@ -21,16 +23,16 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
 
     const handleFinalize = async () => {
         if (paymentMethod === 'efectivo' && (Number.isNaN(cashGiven) || cashGiven === null || cashGiven === '')) {
-            alert('Monto en efectivo inválido.');
+            showToast('Monto en efectivo inválido.', 'error');
             return;
         }
         if (hasTip && (Number.isNaN(tipAmount) || tipAmount === null || tipAmount === '')) {
-            alert('Monto de propina inválido.');
+            showToast('Monto de propina inválido.', 'error');
             return;
         }
 
         if (paymentMethod === 'efectivo' && cashGiven < finalTotal) {
-            alert('El monto recibido es menor al total.');
+            showToast('El monto recibido es menor al total.', 'error');
             return;
         }
 
@@ -50,14 +52,14 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                 });
 
                 if (res.ok) {
-                    alert('Pago registrado correctamente.');
+                    showToast('Pago registrado correctamente.', 'success');
                     onSuccess();
                 } else {
-                    alert('Error al registrar pago.');
+                    showToast('Error al registrar pago.', 'error');
                 }
             } catch (e) {
                 console.error(e);
-                alert('Error de conexión');
+                showToast('Error de conexión', 'error');
             }
         }
     };

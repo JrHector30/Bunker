@@ -88,8 +88,7 @@ const HomeView = () => {
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', 
-        gap: '20px',
-        '@media (max-width: 1024px)': { gridTemplateColumns: '1fr' }
+        gap: '20px'
       }} className="charts-grid-wrapper">
 
         {/* BAR CHART */}
@@ -140,13 +139,7 @@ const HomeView = () => {
 
       </div>
 
-      <style>{`
-        @media (max-width: 1024px) {
-          .charts-grid-wrapper {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
+      
     </div>
   );
 };

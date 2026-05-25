@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer, ChefHat } from 'lucide-react';
 import { numberToLetters } from '../utils/formatters';
@@ -6,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 
 const TablesView = () => {
+    const { showToast } = useNotification();
     const { user } = useAuth();
     const fetcher = () => fetch('/api/tables')
         .then(res => res.json())
@@ -46,10 +48,10 @@ const TablesView = () => {
 
     const confirmDiners = () => {
         if (Number.isNaN(dinersCount) || dinersCount === null || dinersCount === '') {
-            alert("Cantidad de comensales no válida");
+            showToast("Cantidad de comensales no válida", 'error');
             return;
         }
-        if (dinersCount < 1) return alert("Mínimo 1 comensal");
+        if (dinersCount < 1) return showToast("Mínimo 1 comensal", 'info');
         setShowDinersModal(false);
         navigate(`/order/${selectedFreeTable.id}`, { state: { comensales: dinersCount } });
     };
@@ -73,7 +75,7 @@ const TablesView = () => {
         // HOTFIX: Si la mesa no tiene comandas activas válidas, forzamos la recarga al servidor para limpiar caché
         if (!table.comandas || table.comandas.length === 0) {
             fetchTables();
-            alert("Sincronizando mesa con el servidor...");
+            showToast("Sincronizando mesa con el servidor...", 'info');
         }
 
         setSelectedTableId(table.id);
@@ -99,16 +101,16 @@ const TablesView = () => {
             });
 
             if (res.ok) {
-                alert('Mesa trasladada con éxito');
+                showToast('Mesa trasladada con éxito', 'success');
                 closeModal();
                 fetchTables();
             } else {
                 const err = await res.json();
-                alert('Error: ' + err.error);
+                showToast('Error: ' + err.error, 'error');
             }
         } catch (error) {
             console.error(error);
-            alert('Error de conexión');
+            showToast('Error de conexión', 'error');
         }
     };
 
@@ -421,12 +423,12 @@ const TablesView = () => {
                                                     body: JSON.stringify({ motivo, usuarioResponsable: "Mozo/Admin", usuarioId: user.id })
                                                 });
                                                 if (res.ok) {
-                                                    alert("Pedido anulado y mesa liberada.");
+                                                    showToast("Pedido anulado y mesa liberada.", 'success');
                                                     closeModal();
                                                     fetchTables();
                                                 } else {
                                                     const err = await res.json();
-                                                    alert("Error: " + err.error);
+                                                    showToast("Error: " + err.error, 'error');
                                                 }
                                             } catch (e) {
                                                 console.error(e);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -6,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 
 const InventoryView = () => {
+    const { showToast } = useNotification();
     const navigate = useNavigate();
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('platos'); // 'platos', 'insumos', 'recetario'
@@ -98,7 +100,7 @@ const InventoryView = () => {
     });
 
     const handleGenerateDescription = async () => {
-        if (!formData.nombre) { alert("Por favor, ingrese un nombre primero."); return; }
+        if (!formData.nombre) { showToast("Por favor, ingrese un nombre primero.", 'info'); return; }
         setIsGenerating(true);
         try {
             const categoryName = categories.find(c => c.id == formData.categoriaId)?.nombre || '';
@@ -109,7 +111,7 @@ const InventoryView = () => {
             const data = await res.json();
             if (data.description) setFormData(prev => ({ ...prev, descripcion: data.description }));
         } catch (error) {
-            console.error("AI Generation failed", error); alert("Error generando descripción");
+            console.error("AI Generation failed", error); showToast("Error generando descripción", 'error');
         } finally { setIsGenerating(false); }
     };
 
@@ -159,7 +161,7 @@ const InventoryView = () => {
             try {
                 const res = await fetch('/api/upload', { method: 'POST', body: uploadData });
                 imageUrl = (await res.json()).url;
-            } catch (error) { alert('Falló la subida de imagen'); return; }
+            } catch (error) { showToast('Falló la subida de imagen', 'error'); return; }
         }
         const payload = { ...formData, imagen: imageUrl };
         const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
@@ -284,7 +286,7 @@ const InventoryView = () => {
         // Validar NaNs en receta
         const hasInvalidQty = currentRecipe.some(i => i.insumoId && (Number.isNaN(i.cantidad) || i.cantidad === null || i.cantidad === ''));
         if (hasInvalidQty) {
-            alert("Error: Existen cantidades inválidas en la receta.");
+            showToast("Error: Existen cantidades inválidas en la receta.", 'error');
             return;
         }
 
@@ -297,12 +299,12 @@ const InventoryView = () => {
             });
 
             if (res.ok) {
-                alert('Receta guardada. Costos actualizados.');
+                showToast('Receta guardada. Costos actualizados.', 'success');
                 fetchData(); // refresh product list for new cost
             } else {
-                alert('Error al guardar receta.');
+                showToast('Error al guardar receta.', 'error');
             }
-        } catch (e) { alert('Error de red al guardar receta.'); }
+        } catch (e) { showToast('Error de red al guardar receta.', 'error'); }
     };
 
     // --- RENDER HELPERS ---
@@ -587,7 +589,7 @@ const InventoryView = () => {
 
         // Validar que el usuario esté autenticado
         if (!user || !user.id) {
-            alert("❌ Error: Usuario no autenticado");
+            showToast("❌ Error: Usuario no autenticado", 'error');
             return;
         }
 
@@ -603,9 +605,9 @@ const InventoryView = () => {
                 fetchInsumos();
                 setKardexForm({ insumoId: '', tipoMovimiento: 'MERMA', cantidad: '', motivo: '' });
             } else {
-                alert("❌ Error al guardar movimiento");
+                showToast("❌ Error al guardar movimiento", 'error');
             }
-        } catch (error) { alert("❌ Error de conexión"); }
+        } catch (error) { showToast("❌ Error de conexión", 'error'); }
     };
 
     const renderKardexTab = () => {
@@ -644,7 +646,7 @@ const InventoryView = () => {
 
         const handleExportExcel = () => {
             if (filteredKardex.length === 0) {
-                alert("No hay datos para exportar en el rango seleccionado.");
+                showToast("No hay datos para exportar en el rango seleccionado.", 'error');
                 return;
             }
 
@@ -765,7 +767,7 @@ const InventoryView = () => {
     const handleApplyAudit = async () => {
         // Validar que el usuario esté autenticado
         if (!user || !user.id) {
-            alert("❌ Error: Usuario no autenticado");
+            showToast("❌ Error: Usuario no autenticado", 'error');
             return;
         }
 
@@ -797,10 +799,10 @@ const InventoryView = () => {
             });
 
             await Promise.all(promises.filter(p => p !== null));
-            alert("✅ Conciliación aplicada exitosamente.");
+            showToast("✅ Conciliación aplicada exitosamente.", 'success');
             setAuditData({});
             fetchInsumos();
-        } catch (e) { alert("❌ Error al conciliar."); }
+        } catch (e) { showToast("❌ Error al conciliar.", 'error'); }
     };
 
     const renderAuditoriaTab = () => {

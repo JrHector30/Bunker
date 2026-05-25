@@ -82,47 +82,7 @@ const LoginPage = () => {
 
     return (
         <React.Fragment>
-            <style>{`
-                /* 1. Aislamiento de Estilos (Media Query) */
-                @media (max-width: 1024px) {
-                    /* 2. Gestión de Pantalla: 100svh y safe areas */
-                    .mobile-login-container {
-                        flex-direction: column !important;
-                        height: auto !important;
-                        min-height: 100svh !important;
-                        overflow-y: auto !important;
-                        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
-                        display: flex !important;
-                    }
-                    .mobile-left-panel {
-                        min-height: 250px !important;
-                        flex: none !important;
-                        border-right: none !important;
-                        border-bottom: 1px solid rgba(0,0,0,0.05) !important;
-                    }
-                    /* Contenedor desplazable y action button visible */
-                    .mobile-right-panel {
-                        flex: 1 !important;
-                        padding: 30px 20px 80px 20px !important;
-                        justify-content: flex-start !important;
-                        border-left: none !important;
-                    }
-                    /* Layout Adaptativo: botón de 'INGRESAR' al 90% */
-                    .mobile-btn-login {
-                        width: 90% !important;
-                        margin: 0 auto !important;
-                        display: block !important;
-                    }
-                    /* 3. Optimización de Interacción Táctil y Prevención de Zoom */
-                    input, select, textarea {
-                        font-size: 16px !important;
-                    }
-                    /* Touch Targets: Incrementa el padding interno a un mínimo de 12-14px */
-                    .mobile-touch-target {
-                        padding: 14px 20px !important;
-                    }
-                }
-            `}</style>
+            
             <div className="mobile-login-container" style={{
                 display: 'flex', height: '100vh', width: '100vw', background: '#050505',
                 fontFamily: '"Inter", sans-serif', color: '#fff', overflow: 'hidden',

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft } from 'lucide-react';
 import PaymentModal from '../components/PaymentModal';
@@ -7,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 
 const CashierView = () => {
+    const { showToast } = useNotification();
     const { user } = useAuth();
     const navigate = useNavigate();
     const fetcher = () => fetch('/api/tables').then(res => res.json()).then(data => data.filter(t => t.estado === 'ocupada'));
@@ -24,7 +26,7 @@ const CashierView = () => {
 
     const handleOpenPayment = (table, order) => {
         if (shiftStatus !== 'abierto') {
-            alert("Debe ABRIR CAJA antes de cobrar.");
+            showToast("Debe ABRIR CAJA antes de cobrar.", 'error');
             return;
         }
         setSelectedOrder({ ...order, tableNumero: table.numero, tableId: table.id });
@@ -101,11 +103,11 @@ const CashierView = () => {
                                                 body: JSON.stringify({ motivo, usuarioResponsable: "Caja/Admin", usuarioId: user.id })
                                             });
                                             if (res.ok) {
-                                                alert("Pedido anulado y mesa liberada.");
+                                                showToast("Pedido anulado y mesa liberada.", 'success');
                                                 fetchTables();
                                             } else {
                                                 const err = await res.json();
-                                                alert("Error: " + err.error);
+                                                showToast("Error: " + err.error, 'error');
                                             }
                                         } catch (e) {
                                             console.error(e);

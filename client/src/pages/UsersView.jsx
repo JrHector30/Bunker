@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, Search, X, User, Save, Upload, ArrowLeft } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 
 const UsersView = () => {
+    const { showToast } = useNotification();
     const navigate = useNavigate();
     const fetcher = () => fetch('/api/users').then(res => res.json());
     const { data: users, loading, mutate: fetchUsers } = useCache('users', fetcher, []);
@@ -65,7 +67,7 @@ const UsersView = () => {
             }
         } catch (error) {
             console.error('Error uploading image:', error);
-            alert('Error al subir imagen');
+            showToast('Error al subir imagen', 'error');
         }
     };
 
@@ -89,7 +91,7 @@ const UsersView = () => {
                 setShowModal(false);
             } else {
                 const err = await res.json();
-                alert('Error: ' + err.error);
+                showToast('Error: ' + err.error, 'error');
             }
         } catch (error) {
             console.error(error);
