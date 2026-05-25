@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { Banknote, CreditCard, Smartphone, CheckSquare, X, AlertCircle } from 'lucide-react';
 
 const PaymentModal = ({ order, onClose, onSuccess }) => {
+    const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const totalOrder = order.detalles.reduce((sum, d) => sum + (d.cantidad * d.plato.precio), 0);
     const taxRate = 0.18;
@@ -36,7 +38,7 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
             return;
         }
 
-        if (confirm(`¿Finalizar cobro por S/. ${finalTotal.toFixed(2)}?`)) {
+        if (await showConfirmation(`¿Finalizar cobro por S/. ${finalTotal.toFixed(2, { type: 'warning' })}?`)) {
             try {
                 const res = await fetch(`/api/checkout/${order.mesaId || order.tableId || order.id}`, {
                     method: 'POST',

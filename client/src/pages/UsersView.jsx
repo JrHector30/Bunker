@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, Search, X, User, Save, Upload, ArrowLeft } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 
 const UsersView = () => {
+    const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const navigate = useNavigate();
     const fetcher = () => fetch('/api/users').then(res => res.json());
@@ -87,6 +89,7 @@ const UsersView = () => {
             });
 
             if (res.ok) {
+                showToast('Usuario guardado exitosamente', 'success');
                 fetchUsers();
                 setShowModal(false);
             } else {
@@ -99,7 +102,7 @@ const UsersView = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('¿Seguro de eliminar este usuario?')) return;
+        if (!await showConfirmation('¿Seguro de eliminar este usuario?', { type: 'danger' })) return;
         try {
             await fetch(`/api/users/${id}`, { method: 'DELETE' });
             fetchUsers();

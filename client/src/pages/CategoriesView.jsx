@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash, Save, X, ChefHat, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 
 const CategoriesView = () => {
+    const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const navigate = useNavigate();
     const fetcher = () => fetch('/api/categories').then(res => res.json());
@@ -47,7 +49,7 @@ const CategoriesView = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('¿Estás seguro? Se eliminará la categoría y TODOS los productos dentro de ella. Esta acción no se puede deshacer.')) return;
+        if (!await showConfirmation('¿Estás seguro? Se eliminará la categoría y TODOS los productos dentro de ella. Esta acción no se puede deshacer.', { type: 'danger' })) return;
 
         try {
             const res = await fetch(`/api/categories/${id}`, {
@@ -82,6 +84,7 @@ const CategoriesView = () => {
             });
 
             if (res.ok) {
+                showToast('Categoría guardada exitosamente', 'success');
                 setIsModalOpen(false);
                 fetchCategories();
             } else {

@@ -1545,3 +1545,37 @@ h2 {
                     }
                 }
             
+/* Clase de Entrada: Desliza de derecha a izquierda */
+.global-toast.enter-animation {
+    animation: toastSlideIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Clase de Salida: Se retira hacia la derecha de forma suave */
+.global-toast.exit-animation {
+    animation: toastSlideOut 0.35s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+}
+
+/* Fotogramas de Entrada */
+@keyframes toastSlideIn {
+    from {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Fotogramas de Salida (Se desliza hacia el borde derecho desapareciendo) */
+@keyframes toastSlideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+}
+

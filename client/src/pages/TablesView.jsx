@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer, ChefHat } from 'lucide-react';
@@ -7,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 
 const TablesView = () => {
+    const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const { user } = useAuth();
     const fetcher = () => fetch('/api/tables')
@@ -46,7 +48,7 @@ const TablesView = () => {
         }
     };
 
-    const confirmDiners = () => {
+    const confirmDiners = async () => {
         if (Number.isNaN(dinersCount) || dinersCount === null || dinersCount === '') {
             showToast("Cantidad de comensales no válida", 'error');
             return;
@@ -91,7 +93,7 @@ const TablesView = () => {
 
     // --- Helper Functions for API ---
     const handleTransfer = async (targetTableId) => {
-        if (!confirm(`¿Trasladar pedido a la Mesa ${targetTableId}?`)) return; // ID is mostly internal, but useful for debug. Ideally use number.
+        if (!await showConfirmation(`¿Trasladar pedido a la Mesa ${targetTableId}?`, { type: 'warning' })) return; // ID is mostly internal, but useful for debug. Ideally use number.
 
         try {
             const res = await fetch('/api/tables/transfer', {
@@ -119,7 +121,7 @@ const TablesView = () => {
         const newQty = currentQty + delta;
         try {
             if (newQty <= 0) {
-                if (confirm('¿Eliminar este item del pedido?')) {
+                if (await showConfirmation('¿Eliminar este item del pedido?', { type: 'danger' })) {
                     await fetch(`/api/orders/details/${detailId}`, { method: 'DELETE' });
                 }
             } else {
@@ -134,7 +136,7 @@ const TablesView = () => {
     };
 
     const deleteItem = async (detailId) => {
-        if (!confirm('¿Eliminar este item definitivamente?')) return;
+        if (!await showConfirmation('¿Eliminar este item definitivamente?', { type: 'danger' })) return;
         try {
             await fetch(`/api/orders/details/${detailId}`, { method: 'DELETE' });
             fetchTables();

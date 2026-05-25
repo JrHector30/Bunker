@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { MoreVertical, FileText, X, AlertCircle, Trash, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
@@ -6,6 +7,7 @@ import autoTable from 'jspdf-autotable';
 import { useCache } from '../hooks/useCache';
 
 const CashCountTable = ({ onStatusChange }) => {
+    const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const [filterDate, setFilterDate] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -56,11 +58,11 @@ const CashCountTable = ({ onStatusChange }) => {
     }, []);
 
     // Handle Shift Toggle
-    const handleToggleShift = () => {
+    const handleToggleShift = async () => {
         if (!currentStatus) return;
 
         if (currentStatus.estado === 'abierto') {
-            if (!window.confirm("¿Estás seguro de cerrar caja? Asegúrate de que no haya cuentas pendientes.")) return;
+            if (!await showConfirmation("¿Estás seguro de cerrar caja? Asegúrate de que no haya cuentas pendientes.", { type: 'danger' })) return;
             executeToggle(0);
         } else {
             setInitialAmount('');
@@ -69,7 +71,7 @@ const CashCountTable = ({ onStatusChange }) => {
         }
     };
 
-    const confirmOpenShift = (e) => {
+    const confirmOpenShift = async (e) => {
         e.preventDefault();
         if (Number.isNaN(initialAmount) || initialAmount === null || initialAmount === '') {
             setFormError("Monto inicial no válido.");
@@ -346,7 +348,7 @@ const CashCountTable = ({ onStatusChange }) => {
                             {/* Reset Button */}
                             <button
                                 onClick={async () => {
-                                    if (!window.confirm("⚠️ ¿ESTÁS SEGURO?\n\nEsto eliminará TODO el historial de ventas y reiniciará los contadores a 1.\n\nÚsalo solo para limpiar datos de prueba.")) return;
+                                    if (!await showConfirmation("⚠️ ¿ESTÁS SEGURO?\n\nEsto eliminará TODO el historial de ventas y reiniciará los contadores a 1.\n\nÚsalo solo para limpiar datos de prueba.", { type: 'danger' })) return;
 
                                     try {
                                         const res = await fetch('/api/admin/reset-simulation', { method: 'DELETE' });

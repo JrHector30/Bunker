@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download } from 'lucide-react';
@@ -7,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 
 const InventoryView = () => {
+    const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -138,7 +140,7 @@ const InventoryView = () => {
     };
 
     const handleDeleteProduct = async (id) => {
-        if (!confirm('¿Seguro que desea eliminar este producto?')) return;
+        if (!await showConfirmation('¿Seguro que desea eliminar este producto?', { type: 'danger' })) return;
         const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
         if (res.ok) fetchData();
     };
@@ -167,7 +169,7 @@ const InventoryView = () => {
         const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
         const method = editingProduct ? 'PUT' : 'POST';
         const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (res.ok) { setIsModalOpen(false); fetchData(); }
+        if (res.ok) { showToast('Plato guardado exitosamente', 'success'); setIsModalOpen(false); fetchData(); }
     };
 
     // --- TAB 2: INSUMOS ---
@@ -225,6 +227,7 @@ const InventoryView = () => {
             });
 
             if (res.ok) {
+                showToast('Insumo guardado exitosamente', 'success');
                 setIsInsumoModalOpen(false);
                 fetchInsumos();
             } else {
@@ -238,7 +241,7 @@ const InventoryView = () => {
     };
 
     const handleDeleteInsumo = async (id) => {
-        if (confirm('¿Seguro que desea eliminar este insumo?')) {
+        if (await showConfirmation('¿Seguro que desea eliminar este insumo?', { type: 'danger' })) {
             await fetch(`/api/insumos/${id}`, { method: 'DELETE' });
             fetchInsumos();
         }
@@ -771,7 +774,7 @@ const InventoryView = () => {
             return;
         }
 
-        if (!confirm("¿Desea aplicar estos ajustes de conciliación? Se generarán movimientos de AJUSTE en el Kardex y el stock se actualizará.")) return;
+        if (!await showConfirmation("¿Desea aplicar estos ajustes de conciliación? Se generarán movimientos de AJUSTE en el Kardex y el stock se actualizará.", { type: 'warning' })) return;
 
         try {
             const promises = Object.entries(auditData).map(async ([insumoId, stockReal]) => {

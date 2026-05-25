@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { ArrowLeft, Trash, User, ChefHat, Calendar, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +11,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const StaffStatsView = () => {
+    const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const navigate = useNavigate();
     const [stats, setStats] = useState({ waiters: [], cooks: [] });
@@ -30,7 +32,7 @@ const StaffStatsView = () => {
     }, [date]);
 
     const handleCleanDay = async () => {
-        if (!window.confirm(`⚠ PELIGRO:\n\n¿Estás seguro de ELIMINAR PERMANENTEMENTE todas las ventas del día ${date}?\n\nEsta acción NO se puede deshacer.`)) return;
+        if (!await showConfirmation(`⚠ PELIGRO:\n\n¿Estás seguro de ELIMINAR PERMANENTEMENTE todas las ventas del día ${date}?\n\nEsta acción NO se puede deshacer.`, { type: 'danger' })) return;
 
         try {
             const res = await fetch(`/api/staff/stats/daily?date=${date}`, { method: 'DELETE' });

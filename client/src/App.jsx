@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ConfirmationProvider } from './context/ConfirmationContext';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/DashboardLayout';
 import TablesView from './pages/TablesView';
@@ -45,8 +46,9 @@ function App() {
     <Router>
       <ThemeProvider>
         <NotificationProvider>
-          <AuthProvider>
-            <Routes>
+          <ConfirmationProvider>
+            <AuthProvider>
+              <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={<HomeRedirect />} />
 
@@ -120,6 +122,7 @@ function App() {
             </Route>
           </Routes>
           </AuthProvider>
+          </ConfirmationProvider>
         </NotificationProvider>
       </ThemeProvider>
     </Router>
