@@ -559,6 +559,15 @@ app.get('/api/kitchen/queue', async (req, res) => {
 });
 
 app.post('/api/orders', async (req, res) => {
+    // Validar estado de caja antes de permitir comandas
+    const cajaActiva = await prisma.arqueo.findFirst({
+        where: { estado: 'abierto' }
+    });
+
+    if (!cajaActiva) {
+        return res.status(400).json({ error: "Operación denegada. Se requiere la apertura de caja para iniciar comandas." });
+    }
+
     const { mesaId, usuarioId, detalles } = req.body;
 
     // Hotfix: Check if there are MULTIPLE active orders due to desyncs
@@ -935,7 +944,7 @@ app.delete('/api/orders/details/:id', async (req, res) => {
     }
 });
 
-// ANULAR COMANDA COMPLETAMENTE
+// ANULAR COMANDA COMPLETAMENTE (CORREGIDO)
 app.put('/api/orders/:id/cancel', async (req, res) => {
     const { id } = req.params;
     const { usuarioResponsable, motivo, usuarioId } = req.body;
@@ -943,7 +952,7 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
     try {
         const orderId = parseInt(id);
 
-        // 1. Get current order & details to calculate total
+        // 1. Obtener la comanda actual con sus detalles e insumos
         const comanda = await prisma.comanda.findUnique({
             where: { id: orderId },
             include: {
@@ -959,32 +968,33 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
 
         const totalAnulado = comanda.detalles.reduce((sum, d) => sum + (d.cantidad * d.plato.precio), 0);
 
-        // 2. Transacción para asegurar la anulación completa
+        // 2. Transacción atómica para asegurar consistencia
         const result = await prisma.$transaction(async (tx) => {
-            // Log en auditoría
+
+            // Registro blindado en Auditoría de Cancelados sin interferir con las llaves primarias
             const log = await tx.pedidoCancelado.create({
                 data: {
-                    comandaId: comanda.id,
-                    mesa: comanda.mesa.numero,
-                    usuarioResponsable: usuarioResponsable || "Sistema",
-                    motivo: motivo || "Anulación directa",
-                    totalAnulado: totalAnulado
+                    comandaId: parseInt(comanda.id),
+                    mesa: String(comanda.mesa.numero),
+                    usuarioResponsable: String(usuarioResponsable || "Mozo/Admin"),
+                    motivo: String(motivo || "Anulación directa"),
+                    totalAnulado: parseFloat(totalAnulado)
                 }
             });
 
-            // Actualizar Comanda a 'anulada'
+            // Actualizar estado de la Comanda principal a 'anulada'
             await tx.comanda.update({
                 where: { id: comanda.id },
                 data: { estado: 'anulada' }
             });
 
-            // Liberar Mesa
+            // Liberar la mesa para el salón
             await tx.mesa.update({
                 where: { id: comanda.mesaId },
                 data: { estado: 'libre' }
             });
 
-            // Eliminar detalles para no dejar rastro en estadísticas
+            // Procesar descarte de insumos y mermas por plato
             for (const detalle of comanda.detalles) {
                 let isMerma = false;
 
@@ -996,18 +1006,17 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
                 }
 
                 if (isMerma) {
-                    // Generar Merma en Kardex y descontar stock
                     const receta = await tx.recetaInsumo.findMany({
                         where: { platoId: detalle.platoId }
                     });
 
                     for (const ingrediente of receta) {
                         const cantidadConsumida = ingrediente.cantidad * detalle.cantidad;
-
                         const insu = await tx.insumo.findUnique({ where: { id: ingrediente.insumoId } });
+
                         await tx.insumo.update({
                             where: { id: ingrediente.insumoId },
-                            data: { stock: round2(insu.stock - cantidadConsumida) }
+                            data: { stock: Number((insu.stock - cantidadConsumida).toFixed(2)) } // Evita problemas de precisión de flotantes
                         });
 
                         await tx.movimientoInsumo.create({
@@ -1022,7 +1031,7 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
                     }
                 }
 
-                // FIX: Borrar el detalle LÓGICAMENTE para que no queden rastros en Kitchen KDS ni Stats pero se preserve en BD
+                // Actualizar estado del detalle a 'anulado' de forma lógica
                 await tx.detalleComanda.update({
                     where: { id: detalle.id },
                     data: { estado: 'anulado' }
@@ -1032,10 +1041,10 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
             return log;
         });
 
-        res.json({ success: true, log: result });
+        return res.status(200).json({ success: true, log: result });
     } catch (e) {
         console.error("Error cancelling order:", e);
-        res.status(500).json({ error: "Error al anular pedido: " + e.message });
+        return res.status(500).json({ error: "Error interno al procesar la anulación: " + e.message });
     }
 });
 

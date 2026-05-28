@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNotification } from '../context/NotificationContext';
+import { useConfirmation } from '../context/ConfirmationContext';
 import { useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft } from 'lucide-react';
 import PaymentModal from '../components/PaymentModal';
@@ -9,6 +10,7 @@ import { useCache } from '../hooks/useCache';
 
 const CashierView = () => {
     const { showToast } = useNotification();
+    const { showConfirmation } = useConfirmation();
     const { user } = useAuth();
     const navigate = useNavigate();
     const fetcher = () => fetch('/api/tables').then(res => res.json()).then(data => data.filter(t => t.estado === 'ocupada'));
@@ -93,8 +95,13 @@ const CashierView = () => {
                                     className="glass-button"
                                     style={{ background: 'rgba(255, 50, 50, 0.1)', color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0 15px' }}
                                     onClick={async () => {
-                                        const motivo = prompt("Ingrese el motivo de la anulación total:");
-                                        if (motivo === null) return;
+                                        const motivo = await showConfirmation({
+                                            title: "Motivo de Anulación",
+                                            message: "Por favor, detalle la razón por la cual se está cancelando la comanda total:",
+                                            inputType: "text",
+                                            type: "danger"
+                                        });
+                                        if (motivo === null || motivo.trim() === '') return;
 
                                         try {
                                             const res = await fetch(`/api/orders/${activeOrder.id}/cancel`, {

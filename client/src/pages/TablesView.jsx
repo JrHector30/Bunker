@@ -27,6 +27,23 @@ const TablesView = () => {
     const { data: tables, mutate: fetchTables } = useCache('tables', fetcher, []);
 
     const [selectedTableId, setSelectedTableId] = useState(null);
+    const [isCajaAbierta, setIsCajaAbierta] = useState(false);
+
+    // Ejecutar una sola consulta al montar el componente del salón
+    useEffect(() => {
+        const verificarCaja = async () => {
+            try {
+                const res = await fetch('/api/caja/status');
+                const currentStatus = await res.json();
+                // Validamos si la respuesta del backend dictamina que está abierto
+                setIsCajaAbierta(currentStatus && currentStatus.estado === 'abierto');
+            } catch (error) {
+                console.error("Error al inicializar control de caja:", error);
+                setIsCajaAbierta(false);
+            }
+        };
+        verificarCaja();
+    }, []); // Arreglo de dependencias vacío para que corra UNA sola vez
     const [modalType, setModalType] = useState(null); // 'view' | 'pre-check'
     const [showTransferMode, setShowTransferMode] = useState(false);
 
@@ -39,13 +56,22 @@ const TablesView = () => {
 
     // Handlers
     const handleTableClick = (table) => {
-        if (table.estado === 'libre') {
-            setSelectedFreeTable(table);
-            setDinersCount(2); // Default
-            setShowDinersModal(true);
-        } else {
+        // Si la mesa ya está ocupada o tiene ítems, permitimos ver la comanda pase lo que pase con la caja
+        if (table.estado === 'ocupada' || (table.comandas && table.comandas.length > 0)) {
             navigate(`/order/${table.id}`);
+            return;
         }
+
+        // 🛡️ CONTROL LOCAL INMEDIATO: Si está libre pero la caja está cerrada, disparamos el Toast y bloqueamos
+        if (!isCajaAbierta) {
+            showToast('Operación denegada. Se requiere la apertura de caja para iniciar comandas.', 'error');
+            return;
+        }
+
+        // Flujo ordinario si la caja está abierta
+        setSelectedFreeTable(table);
+        setDinersCount(2); // Default
+        setShowDinersModal(true);
     };
 
     const confirmDiners = async () => {
@@ -180,13 +206,13 @@ const TablesView = () => {
     const getGroupedDetails = () => {
         const selectedTable = tables.find(t => t.id === selectedTableId);
         if (!selectedTable || !selectedTable.comandas) return [];
-        
+
         // Buscar la comanda activa (cualquier estado que no sea cerrada ni anulada)
-        const comandaActiva = selectedTable.comandas.find(c => 
-          c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase())
+        const comandaActiva = selectedTable.comandas.find(c =>
+            c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase())
         );
         if (!comandaActiva) return [];
-        
+
         const rawDetalles = comandaActiva.detalles || [];
         const grouped = [];
         rawDetalles.forEach(detail => {
@@ -409,14 +435,20 @@ const TablesView = () => {
                                         style={{ background: 'var(--danger)', color: 'white', borderColor: 'transparent', fontWeight: 'bold' }}
                                         onClick={async () => {
                                             const table = tables.find(t => t.id === selectedTableId);
-                                            const comandaActiva = table?.comandas?.find(c => 
-                                              c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase())
+                                            const comandaActiva = table?.comandas?.find(c =>
+                                                c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase())
                                             );
                                             const comandaId = comandaActiva?.id;
                                             if (!comandaId) return;
 
-                                            const motivo = prompt("Ingrese el motivo de la anulación total:");
-                                            if (motivo === null) return;
+                                            const motivo = await showConfirmation({
+                                                title: "Motivo de Anulación",
+                                                message: "Por favor, detalle la razón por la cual se está cancelando la comanda total:",
+                                                inputType: "text",
+                                                type: "danger"
+                                            });
+                                            // Si cerró el modal o presionó cancelar, retornamos de forma segura
+                                            if (motivo === null || motivo.trim() === '') return;
 
                                             try {
                                                 const res = await fetch(`/api/orders/${comandaId}/cancel`, {
@@ -530,80 +562,89 @@ const TablesView = () => {
             <h1 className="high-end-title" style={{ marginBottom: 20 }}>Salón Principal</h1>
             <div className="responsive-grid">
                 {tables.length === 0 && <p className="text-muted" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>No hay datos registrados o cargando...</p>}
-                {tables.map(table => (
-                    <div
-                        key={table.id}
-                        className="glass-panel"
-                        style={{
-                            padding: 20,
-                            borderLeft: `5px solid var(--primary)`,
-                            position: 'relative',
-                            transition: 'transform 0.2s',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 10
-                        }}
-                    >
+                {tables.map(table => {
+                    const debaBloquear = table.estado === 'libre' && !isCajaAbierta;
+                    return (
                         <div
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                            key={table.id}
+                            className={`glass-panel ${debaBloquear ? 'mesa-deshabilitada' : ''}`}
                             onClick={() => handleTableClick(table)}
+                            style={{
+                                padding: 20,
+                                opacity: debaBloquear ? 0.4 : 1,
+                                cursor: debaBloquear ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.3s ease',
+                                borderLeft: `5px solid var(--primary)`,
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 10
+                            }}
                         >
-                            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-                                Mesa {table.numero}
-                            </div>
-                            <span className={`badge status-${table.estado}`}>{table.estado}</span>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span></span>
-                            {/* Waiter Badge */}
-                            {table.estado !== 'libre' && table.comandas?.[0]?.usuario && (
-                                <span style={{
-                                    fontSize: '0.75rem',
-                                    background: 'var(--bg-surface)',
-                                    color: 'var(--text-main)',
-                                    padding: '2px 8px',
-                                    borderRadius: 12,
-                                    border: '1px solid var(--glass-border)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 4
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                                    Mesa {table.numero}
+                                </div>
+                                <div className="badge" style={{
+                                    background: debaBloquear ? 'rgba(255,255,255,0.1)' : (table.estado === 'ocupada' ? 'var(--danger)' : 'rgba(16, 185, 129, 0.2)'),
+                                    color: debaBloquear ? '#9ca3af' : (table.estado === 'ocupada' ? '#fff' : '#10b981'),
+                                    border: debaBloquear ? '1px solid rgba(255,255,255,0.1)' : 'none'
                                 }}>
-                                    🤵 {table.comandas[0].usuario.nombre.split(' ')[0]}
-                                </span>
+                                    {debaBloquear ? 'CERRADA' : (table.estado === 'ocupada' ? 'OCUPADA' : 'LIBRE')}
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span></span>
+                                {/* Waiter Badge */}
+                                {table.estado !== 'libre' && table.comandas?.[0]?.usuario && (
+                                    <span style={{
+                                        fontSize: '0.75rem',
+                                        background: 'var(--bg-surface)',
+                                        color: 'var(--text-main)',
+                                        padding: '2px 8px',
+                                        borderRadius: 12,
+                                        border: '1px solid var(--glass-border)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 4
+                                    }}>
+                                        🤵 {table.comandas[0].usuario.nombre.split(' ')[0]}
+                                    </span>
+                                )}
+                            </div>
+
+                            {table.estado !== 'libre' && (
+                                <div style={{ marginTop: 15, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                                    <button
+                                        className="glass-button primary"
+                                        style={{ padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, fontSize: '0.8rem' }}
+                                        onClick={(e) => { e.stopPropagation(); navigate(`/order/${table.id}`); }}
+                                    >
+                                        <Plus size={18} />
+                                        Agregar
+                                    </button>
+                                    <button
+                                        className="glass-button"
+                                        style={{ padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, fontSize: '0.8rem' }}
+                                        onClick={(e) => handleOpenModal(e, table, 'view')}
+                                    >
+                                        <Eye size={18} />
+                                        Ver
+                                    </button>
+                                    <button
+                                        className="glass-button"
+                                        style={{ padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, fontSize: '0.8rem' }}
+                                        onClick={(e) => handleOpenModal(e, table, 'pre-check')}
+                                    >
+                                        <Calculator size={18} />
+                                        Pre-cuenta
+                                    </button>
+                                </div>
                             )}
                         </div>
-
-                        {table.estado !== 'libre' && (
-                            <div style={{ marginTop: 15, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                                <button
-                                    className="glass-button primary"
-                                    style={{ padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, fontSize: '0.8rem' }}
-                                    onClick={(e) => { e.stopPropagation(); navigate(`/order/${table.id}`); }}
-                                >
-                                    <Plus size={18} />
-                                    Agregar
-                                </button>
-                                <button
-                                    className="glass-button"
-                                    style={{ padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, fontSize: '0.8rem' }}
-                                    onClick={(e) => handleOpenModal(e, table, 'view')}
-                                >
-                                    <Eye size={18} />
-                                    Ver
-                                </button>
-                                <button
-                                    className="glass-button"
-                                    style={{ padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, fontSize: '0.8rem' }}
-                                    onClick={(e) => handleOpenModal(e, table, 'pre-check')}
-                                >
-                                    <Calculator size={18} />
-                                    Pre-cuenta
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {renderModalContent()}
