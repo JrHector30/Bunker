@@ -6,6 +6,7 @@ import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer, ChefH
 import { numberToLetters } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
+import { useCaja } from '../context/CajaContext';
 
 const TablesView = () => {
     const { showConfirmation } = useConfirmation();
@@ -27,23 +28,7 @@ const TablesView = () => {
     const { data: tables, mutate: fetchTables } = useCache('tables', fetcher, []);
 
     const [selectedTableId, setSelectedTableId] = useState(null);
-    const [isCajaAbierta, setIsCajaAbierta] = useState(false);
-
-    // Ejecutar una sola consulta al montar el componente del salón
-    useEffect(() => {
-        const verificarCaja = async () => {
-            try {
-                const res = await fetch('/api/caja/status');
-                const currentStatus = await res.json();
-                // Validamos si la respuesta del backend dictamina que está abierto
-                setIsCajaAbierta(currentStatus && currentStatus.estado === 'abierto');
-            } catch (error) {
-                console.error("Error al inicializar control de caja:", error);
-                setIsCajaAbierta(false);
-            }
-        };
-        verificarCaja();
-    }, []); // Arreglo de dependencias vacío para que corra UNA sola vez
+    const { isCajaAbierta } = useCaja();
     const [modalType, setModalType] = useState(null); // 'view' | 'pre-check'
     const [showTransferMode, setShowTransferMode] = useState(false);
 
@@ -556,6 +541,14 @@ const TablesView = () => {
             </div>
         );
     };
+
+    if (isCajaAbierta === null) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#fff' }}>
+                <p>Cargando distribución del salón...</p>
+            </div>
+        );
+    }
 
     return (
         <div>

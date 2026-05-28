@@ -5,10 +5,12 @@ import { MoreVertical, FileText, X, AlertCircle, Trash, Download } from 'lucide-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useCache } from '../hooks/useCache';
+import { useCaja } from '../context/CajaContext';
 
 const CashCountTable = ({ onStatusChange }) => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
+    const { refreshCajaStatus } = useCaja();
     const [filterDate, setFilterDate] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -91,11 +93,12 @@ const CashCountTable = ({ onStatusChange }) => {
                 if (!res.ok) throw new Error(body.error || "Error al cambiar estado");
                 return body;
             })
-            .then(() => {
+            .then(async () => {
                 fetchStatus();
                 setCurrentPage(1);
                 fetchHistory();
                 setShowInitialAmountModal(false);
+                await refreshCajaStatus();
             })
             .catch(err => showToast(err.message, 'error'));
     };
