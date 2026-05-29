@@ -494,7 +494,14 @@ app.get('/api/tables', async (req, res) => {
     try {
         const tables = await prisma.mesa.findMany({
             orderBy: { numero: 'asc' },
-            include: {
+            select: {
+                id: true,
+                numero: true,
+                capacidad: true,
+                estado: true,
+                posX: true,
+                posY: true,
+                forma: true,
                 comandas: {
                     where: { estado: { notIn: ['cerrada', 'anulada'] } },
                     take: 1,

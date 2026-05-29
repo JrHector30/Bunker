@@ -35,15 +35,19 @@ export const ConfirmationProvider = ({ children }) => {
 
     const handleConfirm = () => {
         if (confirmation) {
-            confirmation.resolve(confirmation.inputType === 'text' ? inputValue : true);
             setConfirmation(null);
+            setTimeout(() => {
+                confirmation.resolve(confirmation.inputType === 'text' ? inputValue : true);
+            }, 0);
         }
     };
 
     const handleCancel = () => {
         if (confirmation) {
-            confirmation.resolve(confirmation.inputType === 'text' ? null : false);
             setConfirmation(null);
+            setTimeout(() => {
+                confirmation.resolve(confirmation.inputType === 'text' ? null : false);
+            }, 0);
         }
     };
 

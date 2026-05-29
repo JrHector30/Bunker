@@ -38,6 +38,7 @@ const CashierView = () => {
     const handlePaymentSuccess = () => {
         setPaymentModalOpen(false);
         fetchTables();
+        window.dispatchEvent(new Event('refreshCashCount'));
     };
 
     return (

@@ -26,6 +26,9 @@ model Mesa {
   numero    String    @unique
   capacidad Int
   estado    String    @default("libre") // libre, ocupada, cerrada
+  posX      Float     @default(0)
+  posY      Float     @default(0)
+  forma     String    @default("cuadrada")
   comandas  Comanda[]
 }
 

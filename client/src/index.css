@@ -250,13 +250,14 @@
 .mode-light {
   /* Force light backgrounds for CONTENT */
   --bg-primary: #ffffff !important;
-  --bg-secondary: #f8fafc !important;
+  --bg-secondary: rgba(255, 255, 255, 0.90) !important;
+  --bg-card: rgba(255, 255, 255, 0.90) !important;
   /* Card background */
-  --bg-surface: #ffffff !important;
+  --bg-surface: rgba(255, 255, 255, 0.90) !important;
 
   /* Force dark text for CONTENT */
-  --text-main: #1a1a1a !important;
-  --text-muted: #64748b !important;
+  --text-main: #18181b !important;
+  --text-muted: #52525b !important;
   --text-inverse: #ffffff !important;
 
   /* Sidebar SPECIFIC overrides (Must remain Theme Colored) */
@@ -265,7 +266,7 @@
   --sidebar-border: rgba(255, 255, 255, 0.2) !important;
 
   /* Adjust borders for light mode visibility in content */
-  --glass-border: rgba(0, 0, 0, 0.1) !important;
+  --glass-border: rgba(0, 0, 0, 0.08) !important;
   --table-header-bg: var(--primary) !important;
   --table-row-border: rgba(0, 0, 0, 0.1) !important;
   --item-hover: rgba(0, 0, 0, 0.05) !important;
@@ -273,15 +274,38 @@
   /* Inputs need to be dark text on light background */
   --input-bg: rgba(0, 0, 0, 0.05) !important;
   --input-text: #000000 !important;
+  --mesa-bg: #ffffff !important;
+  --mesa-border-libre: #f3f4f6 !important;
+  --mesa-shadow-libre: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1) !important;
+  --mesa-shadow-ocupada: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+  --mesa-border-ocupada: #ffea00 !important;
+  
+  /* Badges para el estado de las mesas */
+  --badge-text-libre: #059669 !important;
+  --badge-bg-libre: #d1fae5 !important;
+  --badge-text-ocupada: #d97706 !important;
+  --badge-bg-ocupada: #fef3c7 !important;
+  --badge-text-cerrada: #4b5563 !important;
+  --badge-bg-cerrada: #f3f4f6 !important;
 }
 
-/* Ensure glass panels look right in light mode */
+.mode-light .salon-contenedor {
+  background-color: #93939385;
+  background-image: 
+    linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+}
+
 /* Ensure glass panels look right in light mode */
 .mode-light .glass-panel {
   /* background: removed to allow inline styles; uses --bg-secondary by default via base .glass-panel rule */
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--primary) !important;
-  /* Force colored border in light mode */
+  border: 1px solid var(--glass-border) !important;
+}
+
+.mode-light .modal-overlay {
+  background: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(8px);
 }
 
 .mode-light .glass-input::placeholder {
@@ -806,6 +830,8 @@ h2 {
 
 .modal-content {
   background: var(--bg-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--text-main);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
@@ -1579,3 +1605,73 @@ h2 {
     }
 }
 
+
+/* -----------------------------------------------------------------
+   MAPA DE SALÃ“N - INFRAESTRUCTURA Y NEON GLOW (FASE 1)
+----------------------------------------------------------------- */
+.salon-contenedor {
+  position: relative;
+  width: 100%;
+  min-height: 850px;
+  background-color: #0a0a0f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  overflow: hidden;
+}
+
+/* Base de Tarjeta de Mesa Absoluta */
+.mesa-mapa {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition: all 0.1s ease;
+  z-index: 10;
+  width: 140px;
+  min-height: 100px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(18, 18, 18, 0.7);
+  color: white;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* 1. Verde NeÃ³n (Libre y Caja Abierta) */
+.mesa-libre-neon {
+  border-color: #00ff88;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.2), inset 0 0 10px rgba(0, 255, 136, 0.05);
+}
+.mesa-libre-neon .badge-estado {
+  color: #00ff88;
+}
+
+/* 2. Amarillo NeÃ³n (Ocupada) */
+.mesa-ocupada-neon {
+  border-color: #ffea00;
+  box-shadow: 0 0 25px rgba(255, 234, 0, 0.45), inset 0 0 15px rgba(255, 234, 0, 0.1);
+}
+.mesa-ocupada-neon .badge-estado {
+  color: #ffea00;
+  font-weight: bold;
+}
+
+/* 3. Gris Apagado (Cerrada) */
+.mesa-apagada {
+  border-color: rgba(75, 85, 99, 0.3);
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.mesa-apagada .badge-estado {
+  color: #9ca3af;
+}

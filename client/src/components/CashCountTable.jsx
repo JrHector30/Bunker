@@ -56,8 +56,18 @@ const CashCountTable = ({ onStatusChange }) => {
         const interval = setInterval(() => {
             statusIntervalRef.current?.();
         }, 10000);
-        return () => clearInterval(interval);
-    }, []);
+        
+        const handleRefresh = () => {
+            fetchStatus();
+            fetchHistory();
+        };
+        window.addEventListener('refreshCashCount', handleRefresh);
+        
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('refreshCashCount', handleRefresh);
+        };
+    }, [fetchStatus, fetchHistory]);
 
     // Handle Shift Toggle
     const handleToggleShift = async () => {
@@ -152,7 +162,9 @@ const CashCountTable = ({ onStatusChange }) => {
             doc.setFontSize(10);
             doc.setTextColor(100);
             doc.setFont("helvetica", "normal");
-            doc.text(`Fecha del Turno: ${formatDate(fullData.fechaInicio, false)}`, 14, 35);
+            
+            const reportDate = filterDate ? formatDate(fullData.fechaInicio, false) : formatDate(new Date().toISOString(), false);
+            doc.text(`Fecha del Turno: ${reportDate}`, 14, 35);
             doc.text(`Turno ID: #${fullData.id} - Estado: ${fullData.estado.toUpperCase()}`, 14, 40);
             doc.text(`Usuario: ${fullData.usuario?.nombre || 'Administrador'}`, 14, 45);
 
@@ -406,7 +418,7 @@ const CashCountTable = ({ onStatusChange }) => {
                             setCurrentPage(1);
                         }}
                     />
-                    <button className="glass-button" onClick={() => fetchHistory()}>Refrescar</button>
+                    {/* Refresh auto-handled */}
 
 
                     <div style={{ position: 'relative' }}>

@@ -553,85 +553,164 @@ const TablesView = () => {
     return (
         <div>
             <h1 className="high-end-title" style={{ marginBottom: 20 }}>Salón Principal</h1>
-            <div className="responsive-grid">
-                {tables.length === 0 && <p className="text-muted" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>No hay datos registrados o cargando...</p>}
+            <div className="salon-contenedor">
+                {tables.length === 0 && <p className="text-muted" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', padding: '2rem' }}>No hay datos registrados o cargando...</p>}
                 {tables.map(table => {
                     const debaBloquear = table.estado === 'libre' && !isCajaAbierta;
+                    const comandaActiva = table.comandas?.find(c => c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase()));
+                    // Extraer la cantidad real de comensales desde la comanda activa en la BD (por defecto usa la capacidad si no hay orden)
+                    const totalComensales = table.estado === 'ocupada' && comandaActiva ? (comandaActiva.comensales || 2) : 0;
+                    
+                    // Cálculo de productos de barra pendientes (no enviados a cocina)
+                    const itemsBarraPendientes = comandaActiva?.detalles?.filter(d => 
+                        d.estado !== 'entregado' && 
+                        d.estado !== 'listo' && 
+                        d.estado !== 'anulado' && 
+                        d.plato?.categoria?.enviarCocina === false
+                    ).reduce((acc, curr) => acc + curr.cantidad, 0) || 0;
+
+                    let claseNeon = debaBloquear ? 'mesa-apagada' : (table.estado === 'ocupada' ? 'mesa-ocupada-neon' : 'mesa-libre-neon');
+                    
+                    let finalTop = table.posY !== undefined && table.posY !== null ? table.posY : 25;
+                    finalTop -= 10; // Aplicado a TODAS las mesas para mantener alineación
+
                     return (
                         <div
                             key={table.id}
-                            className={`glass-panel ${debaBloquear ? 'mesa-deshabilitada' : ''}`}
+                            className={`mesa-mapa ${claseNeon}`}
                             onClick={() => handleTableClick(table)}
                             style={{
-                                padding: 20,
-                                opacity: debaBloquear ? 0.4 : 1,
-                                cursor: debaBloquear ? 'not-allowed' : 'pointer',
-                                transition: 'all 0.3s ease',
-                                borderLeft: `5px solid var(--primary)`,
-                                position: 'relative',
+                                position: 'absolute',
+                                left: `${table.posX !== undefined && table.posX !== null ? table.posX : 15}%`,
+                                top: `${finalTop}%`,
+                                transform: 'translate(-50%, -50%)',
+                                width: '100px',
+                                height: '100px',
+                                background: 'var(--mesa-bg, rgba(15, 15, 20, 0.8))',
+                                backdropFilter: 'blur(10px)',
+                                borderRadius: '16px',
+                                padding: '12px',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: 10
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                
+                                // 🛡️ SOLUCIÓN BUG 1: Elevar el z-index si la mesa está ocupada para que sus botones floten encima de la fila inferior
+                                zIndex: table.estado === 'ocupada' ? 35 : 20, 
+                                
+                                transition: 'all 0.15s ease',
+                                boxShadow: debaBloquear 
+                                    ? 'var(--mesa-shadow-apagada, none)' 
+                                    : (table.estado === 'ocupada' ? 'var(--mesa-shadow-ocupada, 0 0 25px rgba(255, 234, 0, 0.35))' : 'var(--mesa-shadow-libre, 0 0 15px rgba(0, 255, 136, 0.15))'),
+                                border: debaBloquear
+                                    ? '1px solid var(--mesa-border-apagada, rgba(75, 85, 99, 0.4))'
+                                    : (table.estado === 'ocupada' ? '1px solid var(--mesa-border-ocupada, #ffea00)' : '1px solid var(--mesa-border-libre, #00ff88)'),
+                                opacity: debaBloquear ? 0.4 : 1,
+                                cursor: debaBloquear ? 'not-allowed' : 'pointer'
                             }}
                         >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-                                    Mesa {table.numero}
-                                </div>
-                                <div className="badge" style={{
-                                    background: debaBloquear ? 'rgba(255,255,255,0.1)' : (table.estado === 'ocupada' ? 'var(--danger)' : 'rgba(16, 185, 129, 0.2)'),
-                                    color: debaBloquear ? '#9ca3af' : (table.estado === 'ocupada' ? '#fff' : '#10b981'),
-                                    border: debaBloquear ? '1px solid rgba(255,255,255,0.1)' : 'none'
-                                }}>
-                                    {debaBloquear ? 'CERRADA' : (table.estado === 'ocupada' ? 'OCUPADA' : 'LIBRE')}
-                                </div>
+                            {/* 🛡️ Renderizado Geométrico de Sillas Dinámicas alrededor de la mesa */}
+                            {(() => {
+                                const count = table.estado === 'ocupada' ? totalComensales : table.capacidad;
+                                const chairColor = debaBloquear ? '#9ca3af' : (table.estado === 'ocupada' ? '#ffea00' : '#00ff88');
+                                
+                                if (!count || count <= 0) return null;
+
+                                return (
+                                    <div className="sillas-container" style={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0, pointerEvents: 'none' }}>
+                                        {Array.from({ length: count }).map((_, index) => {
+                                            // Calcular el ángulo de distribución matemática radial para colocar cada silla simétricamente
+                                            const angle = (index * (360 / count)) * (Math.PI / 180);
+                                            const radius = 62; // Distancia ajustada para la mesa más pequeña
+                                            const x = Math.cos(angle) * radius;
+                                            const y = Math.sin(angle) * radius;
+                                            const rotation = (index * (360 / count)) + 90;
+
+                                            return (
+                                                <div 
+                                                    key={index}
+                                                    className="silla-dinamica"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        width: '18px',
+                                                        height: '14px',
+                                                        borderRadius: '6px 6px 2px 2px',
+                                                        background: chairColor,
+                                                        borderBottom: '3px solid rgba(0,0,0,0.3)',
+                                                        boxShadow: debaBloquear ? 'none' : `0 0 8px ${chairColor}`,
+                                                        left: `calc(50% + ${x}px)`,
+                                                        top: `calc(50% + ${y}px)`,
+                                                        transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                                                        transition: 'all 0.3s ease'
+                                                    }}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Contenido ordinario de la mesa (Número, Badge, Mozo y Botones satélite) */}
+                            <div style={{ fontSize: '1.6rem', fontWeight: 'bold', marginBottom: 2, color: 'var(--text-main, #fff)' }}>
+                                {table.numero}
+                            </div>
+                            <div className="badge-estado" style={{ 
+                                fontSize: '0.65rem', 
+                                letterSpacing: 1, 
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                background: debaBloquear ? 'var(--badge-bg-cerrada, transparent)' : (table.estado === 'ocupada' ? 'var(--badge-bg-ocupada, transparent)' : 'var(--badge-bg-libre, transparent)'),
+                                color: debaBloquear ? 'var(--badge-text-cerrada, #9ca3af)' : (table.estado === 'ocupada' ? 'var(--badge-text-ocupada, #ffea00)' : 'var(--badge-text-libre, #00ff88)'),
+                                fontWeight: 'bold'
+                            }}>
+                                {debaBloquear ? 'CERRADA' : (table.estado === 'ocupada' ? 'OCUPADA' : 'LIBRE')}
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span></span>
-                                {/* Waiter Badge */}
-                                {table.estado !== 'libre' && table.comandas?.[0]?.usuario && (
-                                    <span style={{
-                                        fontSize: '0.75rem',
-                                        background: 'var(--bg-surface)',
-                                        color: 'var(--text-main)',
-                                        padding: '2px 8px',
-                                        borderRadius: 12,
-                                        border: '1px solid var(--glass-border)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 4
-                                    }}>
-                                        🤵 {table.comandas[0].usuario.nombre.split(' ')[0]}
-                                    </span>
-                                )}
+                            <div style={{ 
+                                fontSize: '0.65rem', 
+                                marginTop: 3, 
+                                color: 'var(--text-main, #fff)', 
+                                background: 'var(--item-hover, rgba(255,255,255,0.1))', 
+                                padding: '2px 6px', 
+                                borderRadius: 10,
+                                visibility: (table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? 'visible' : 'hidden'
+                            }}>
+                                🤵 {(table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? table.comandas[0].usuario.nombre.split(' ')[0] : 'Vacio'}
                             </div>
 
                             {table.estado !== 'libre' && (
-                                <div style={{ marginTop: 15, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                                    <button
-                                        className="glass-button primary"
-                                        style={{ padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, fontSize: '0.8rem' }}
-                                        onClick={(e) => { e.stopPropagation(); navigate(`/order/${table.id}`); }}
-                                    >
-                                        <Plus size={18} />
-                                        Agregar
+                                <div className="satelite-buttons" style={{ position: 'absolute', top: '110%', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 12, zIndex: 50 }}>
+                                    <button className="glass-button primary" style={{ padding: '12px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={(e) => { e.stopPropagation(); navigate(`/order/${table.id}`); }}>
+                                        <Plus size={24} />
                                     </button>
-                                    <button
-                                        className="glass-button"
-                                        style={{ padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, fontSize: '0.8rem' }}
-                                        onClick={(e) => handleOpenModal(e, table, 'view')}
-                                    >
-                                        <Eye size={18} />
-                                        Ver
+                                    <button className="glass-button" style={{ padding: '12px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }} onClick={(e) => handleOpenModal(e, table, 'view')}>
+                                        <Eye size={24} />
+                                        {itemsBarraPendientes > 0 && (
+                                            <span style={{
+                                                position: 'absolute',
+                                                top: -6,
+                                                right: -6,
+                                                background: '#ff0055',
+                                                color: 'white',
+                                                fontSize: '0.70rem',
+                                                fontWeight: 'bold',
+                                                width: '18px',
+                                                height: '18px',
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                borderRadius: '50%',
+                                                boxShadow: '0 0 12px #ff0055, inset 0 0 4px rgba(255,255,255,0.5)',
+                                                border: '1px solid rgba(255,255,255,0.2)',
+                                                zIndex: 60,
+                                                animation: 'pulse 2s infinite'
+                                            }}>
+                                                {itemsBarraPendientes}
+                                            </span>
+                                        )}
                                     </button>
-                                    <button
-                                        className="glass-button"
-                                        style={{ padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, fontSize: '0.8rem' }}
-                                        onClick={(e) => handleOpenModal(e, table, 'pre-check')}
-                                    >
-                                        <Calculator size={18} />
-                                        Pre-cuenta
+                                    <button className="glass-button" style={{ padding: '12px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={(e) => handleOpenModal(e, table, 'pre-check')}>
+                                        <Calculator size={24} />
                                     </button>
                                 </div>
                             )}
