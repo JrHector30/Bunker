@@ -16,12 +16,54 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
     const [cashGiven, setCashGiven] = useState('');
     const [hasTip, setHasTip] = useState(false);
     const [tipAmount, setTipAmount] = useState(0);
-    const [docType, setDocType] = useState('boleta');
+    const [docType, setDocType] = useState('sin_comprobante');
+    const [tipoComprobante, setTipoComprobante] = useState('ticket');
+    const [tipoDocumento, setTipoDocumento] = useState('dni');
+    const [documentoCliente, setDocumentoCliente] = useState('');
+    const [razonSocial, setRazonSocial] = useState('');
+    const [direccionFiscal, setDireccionFiscal] = useState('');
+    const [isValidating, setIsValidating] = useState(false);
     const [observation, setObservation] = useState('');
     const [email, setEmail] = useState('');
 
     const finalTotal = totalOrder + (hasTip ? Number(tipAmount) : 0);
     const change = paymentMethod === 'efectivo' ? (Number(cashGiven) - finalTotal) : 0;
+
+    const validateDocument = async () => {
+        if (!documentoCliente) return;
+        const type = tipoComprobante === 'factura' ? 'ruc' : tipoDocumento;
+        if (type === 'ruc' && documentoCliente.length !== 11) {
+            showToast('El RUC debe tener 11 dígitos', 'warning');
+            return;
+        }
+        if (type === 'dni' && documentoCliente.length !== 8) {
+            showToast('El DNI debe tener 8 dígitos', 'warning');
+            return;
+        }
+
+        setIsValidating(true);
+        try {
+            console.log('[FRONTEND] Iniciando validación:', type, documentoCliente);
+            const res = await fetch(`/api/facturacion/${type}/${documentoCliente}`);
+            console.log('[FRONTEND] Status respuesta:', res.status);
+            const data = await res.json();
+            console.log('[FRONTEND] Data recibida:', data);
+            
+            if (data.success) {
+                setRazonSocial(data.razonSocial);
+                setDireccionFiscal(data.direccion);
+                showToast('Documento validado correctamente', 'success');
+            } else {
+                showToast(data.error || 'No se encontró el documento', 'error');
+                setRazonSocial('');
+                setDireccionFiscal('');
+            }
+        } catch (e) {
+            showToast('Error validando documento', 'error');
+        } finally {
+            setIsValidating(false);
+        }
+    };
 
     const handleFinalize = async () => {
         if (paymentMethod === 'efectivo' && (Number.isNaN(cashGiven) || cashGiven === null || cashGiven === '')) {
@@ -38,6 +80,8 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
             return;
         }
 
+        const resolvedDocType = tipoComprobante === 'ticket' ? 'sin_comprobante' : tipoComprobante;
+
         if (await showConfirmation(`¿Finalizar cobro por S/. ${finalTotal.toFixed(2, { type: 'warning' })}?`)) {
             try {
                 const res = await fetch(`/api/checkout/${order.mesaId || order.tableId || order.id}`, {
@@ -45,11 +89,15 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         paymentMethod,
-                        docType,
+                        docType: resolvedDocType,
                         totalReceived: Number(cashGiven),
                         tip: hasTip ? Number(tipAmount) : 0,
                         observation,
-                        email
+                        email,
+                        tipoComprobante,
+                        documentoCliente: tipoComprobante !== 'ticket' ? documentoCliente : null,
+                        razonSocial: tipoComprobante !== 'ticket' ? razonSocial : null,
+                        direccionFiscal: tipoComprobante !== 'ticket' ? direccionFiscal : null
                     })
                 });
 
@@ -197,22 +245,57 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                     </div>
 
                     {/* COL 4: COMPROBANTE */}
-                    <div className="glass-panel" style={{ padding: 15 }}>
-                        <h3 style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: 10, marginBottom: 15 }}>Comprobante</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                                <input type="radio" name="doc" checked={docType === 'factura'} onChange={() => setDocType('factura')} />
-                                Factura
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                                <input type="radio" name="doc" checked={docType === 'boleta'} onChange={() => setDocType('boleta')} />
-                                Boleta
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                                <input type="radio" name="doc" checked={docType === 'sin_comprobante'} onChange={() => setDocType('sin_comprobante')} />
-                                S/C (Sin Comp.)
-                            </label>
+                    <div className="glass-panel" style={{ padding: 15, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <h3 style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: 10, marginBottom: 5 }}>Comprobante</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5 }}>
+                            <button className={`glass-button ${tipoComprobante === 'ticket' ? 'primary' : ''}`} onClick={() => setTipoComprobante('ticket')} style={{ padding: '8px 5px', fontSize: '0.85rem' }}>Ticket</button>
+                            <button className={`glass-button ${tipoComprobante === 'boleta' ? 'primary' : ''}`} onClick={() => setTipoComprobante('boleta')} style={{ padding: '8px 5px', fontSize: '0.85rem' }}>Boleta</button>
+                            <button className={`glass-button ${tipoComprobante === 'factura' ? 'primary' : ''}`} onClick={() => setTipoComprobante('factura')} style={{ padding: '8px 5px', fontSize: '0.85rem' }}>Factura</button>
                         </div>
+                        
+                        {tipoComprobante !== 'ticket' && (
+                            <div className="glass-panel" style={{ padding: 10, marginTop: 5, background: 'rgba(0,0,0,0.03)' }}>
+                                {tipoComprobante === 'boleta' && (
+                                    <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                                        <label style={{ cursor: 'pointer', fontSize: '0.85rem' }}><input type="radio" checked={tipoDocumento === 'dni'} onChange={() => setTipoDocumento('dni')} /> DNI</label>
+                                        <label style={{ cursor: 'pointer', fontSize: '0.85rem' }}><input type="radio" checked={tipoDocumento === 'ruc'} onChange={() => setTipoDocumento('ruc')} /> RUC</label>
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    <input 
+                                        type="text" 
+                                        className="glass-input" 
+                                        placeholder={`Ingrese ${(tipoComprobante === 'factura' || tipoDocumento === 'ruc') ? 'RUC' : 'DNI'}`}
+                                        maxLength={(tipoComprobante === 'factura' || tipoDocumento === 'ruc') ? 11 : 8}
+                                        value={documentoCliente}
+                                        onChange={e => setDocumentoCliente(e.target.value)}
+                                        style={{ width: '100%', padding: '10px', textAlign: 'center', letterSpacing: '2px', fontWeight: 'bold' }}
+                                    />
+                                    <button 
+                                        className="glass-button" 
+                                        onClick={validateDocument}
+                                        disabled={isValidating}
+                                        style={{ 
+                                            background: '#14b8a6', 
+                                            borderColor: '#14b8a6', 
+                                            color: '#fff', 
+                                            boxShadow: '0 0 10px rgba(20, 184, 166, 0.5)',
+                                            padding: '10px',
+                                            width: '100%',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        {isValidating ? 'Consultando...' : 'Validar Documento 🔍'}
+                                    </button>
+                                </div>
+                                {(razonSocial || direccionFiscal) && (
+                                    <div style={{ marginTop: 10, fontSize: '0.85rem', color: 'var(--text-muted)', animation: 'fadeIn 0.3s ease-out' }}>
+                                        <strong style={{ color: 'var(--text-main)' }}>{razonSocial}</strong><br />
+                                        <span>{direccionFiscal}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 

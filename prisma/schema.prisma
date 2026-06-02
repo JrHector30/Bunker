@@ -81,6 +81,11 @@ model Comanda {
   observacion   String?
   emailCliente  String?
   
+  tipoComprobante String? @default("ticket") @map("tipo_comprobante")
+  documentoCliente String? @map("documento_cliente")
+  razonSocial     String? @map("razon_social")
+  direccionFiscal String? @map("direccion_fiscal")
+  
   detalles  DetalleComanda[]
 }
 
