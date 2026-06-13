@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDown, X, Eye, EyeOff } from 'lucide-react';
 import logoMinimalista from '../assets/logo_minimalist.png';
 import { useCache } from '../hooks/useCache';
+import { BackButton } from '../components/ui/BackButton';
 
 const LoginPage = () => {
     const [selectedUser, setSelectedUser] = useState(null);
@@ -87,8 +88,13 @@ const LoginPage = () => {
                 display: 'flex', height: '100vh', width: '100vw', background: '#050505',
                 fontFamily: '"Inter", sans-serif', color: '#fff', overflow: 'hidden',
                 opacity: isExiting ? 0 : 1, transform: isExiting ? 'scale(0.95)' : 'scale(1)',
-                transition: 'opacity 0.5s ease-out, transform 0.5s ease-out'
+                transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
+                position: 'relative'
             }}>
+                {/* Botón Flotante de Regreso */}
+                <div className="absolute top-6 left-6 z-50">
+                    <BackButton />
+                </div>
 
                 {/* LADO IZQUIERDO: Branding */}
                 <div className="mobile-left-panel" style={{ flex: 1, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRight: '1px solid rgba(0,0,0,0.05)' }}>

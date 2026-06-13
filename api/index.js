@@ -1067,100 +1067,86 @@ app.put('/api/orders/details/:id/status', async (req, res) => {
 });
 
 // --- FACTURACION ELECTRONICA SIMULADA ---
+const axios = require('axios');
+
 app.get('/api/facturacion/ruc/:ruc', async (req, res) => {
     const { ruc } = req.params;
     if (!/^\d{11}$/.test(ruc)) return res.status(400).json({ error: "El RUC debe tener exactamente 11 dígitos" });
-    
+
+    const mockRuc = {
+        "20100017491": { razonSocial: "TELEFONICA DEL PERU S.A.A.", direccion: "AV. CARLOS VILLARAN NRO. 140 URB. SANTA CATALINA - LA VICTORIA" },
+        "20602467265": { razonSocial: "INVERSIONES GASTRONOMICAS PERU S.A.C.", direccion: "AV. LA MAR NRO. 450 - MIRAFLORES" },
+        "20131312355": { razonSocial: "SUPERMERCADOS PERUANOS S.A.", direccion: "AV. CARLOS IZAGUIRRE NRO. 275 - INDEPENDENCIA" }
+    };
+
     try {
-        const response = await fetch('https://apiperu.dev/api/ruc', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.APIS_PERU_TOKEN}`
-            },
-            body: JSON.stringify({ ruc })
-        });
-        const data = await response.json();
-        
-        console.log(`[API PERU RUC] Status: ${response.status}`);
-        console.log(`[API PERU RUC] Response:`, data);
-        
-        if (data.success === true) {
+        const { data } = await axios.post('https://apiperu.dev/api/ruc',
+            { ruc },
+            {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.APIS_PERU_TOKEN}`
+                },
+                timeout: 5000
+            }
+        );
+
+        if (data.success && data.data) {
             return res.json({
                 success: true,
                 razonSocial: data.data.nombre_o_razon_social,
                 direccion: data.data.direccion_completa
             });
         }
+
+        if (mockRuc[ruc]) return res.json({ success: true, ...mockRuc[ruc] });
+        return res.json({ success: false, error: "RUC no encontrado" });
+
     } catch (error) {
-        console.error("[API PERU RUC] Error fetching from APIPeru:", error);
+        if (mockRuc[ruc]) return res.json({ success: true, ...mockRuc[ruc] });
+        return res.json({ success: false, error: "Error al consultar SUNAT" });
     }
-    
-    // Fallback Mock
-    const mockRuc = {
-        "20100017491": { razonSocial: "TELEFONICA DEL PERU S.A.A.", direccion: "AV. CARLOS VILLARAN NRO. 140 URB. SANTA CATALINA - LA VICTORIA" },
-        "20602467265": { razonSocial: "INVERSIONES GASTRONOMICAS PERU S.A.C.", direccion: "AV. LA MAR NRO. 450 - MIRAFLORES" },
-        "20131312355": { razonSocial: "SUPERMERCADOS PERUANOS S.A.", direccion: "AV. CARLOS IZAGUIRRE NRO. 275 - INDEPENDENCIA" }
-    };
-    
-    if (mockRuc[ruc]) {
-        return res.json({ success: true, ...mockRuc[ruc] });
-    }
-    
-    res.json({
-        success: true,
-        razonSocial: "EMPRESA SIMULADA S.A.C.",
-        direccion: "AV. PRINCIPAL 123 - LIMA"
-    });
 });
 
 app.get('/api/facturacion/dni/:dni', async (req, res) => {
     const { dni } = req.params;
     if (!/^\d{8}$/.test(dni)) return res.status(400).json({ error: "El DNI debe tener exactamente 8 dígitos" });
-    
+
+    const mockDni = {
+        "12345678": { razonSocial: "JUAN CARLOS PEREZ LOPEZ", direccion: "AV. AREQUIPA NRO. 1200 - LINCE, LIMA" },
+        "87654321": { razonSocial: "MARIA ELENA TORRES QUISPE", direccion: "JR. HUANCAVELICA NRO. 540 - CERCADO DE LIMA" },
+        "11223344": { razonSocial: "CARLOS ALBERTO MENDOZA RIVAS", direccion: "AV. BRASIL NRO. 890 - JESUS MARIA, LIMA" }
+    };
+
     try {
-        const response = await fetch('https://apiperu.dev/api/dni', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.APIS_PERU_TOKEN}`
-            },
-            body: JSON.stringify({ dni })
-        });
-        const data = await response.json();
-        
-        console.log(`[API PERU DNI] Status: ${response.status}`);
-        console.log(`[API PERU DNI] Response:`, data);
-        
-        if (data.success === true) {
+        const { data } = await axios.post('https://apiperu.dev/api/dni',
+            { dni },
+            {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.APIS_PERU_TOKEN}`
+                },
+                timeout: 5000
+            }
+        );
+
+        if (data.success && data.data) {
             return res.json({
                 success: true,
                 razonSocial: data.data.nombre_completo || `${data.data.nombres} ${data.data.apellido_paterno} ${data.data.apellido_materno}`,
                 direccion: data.data.direccion_completa || "Dirección no especificada"
             });
         }
+
+        if (mockDni[dni]) return res.json({ success: true, ...mockDni[dni] });
+        return res.json({ success: false, error: "DNI no encontrado" });
+
     } catch (error) {
-        console.error("[API PERU DNI] Error fetching from APIPeru:", error);
+        if (mockDni[dni]) return res.json({ success: true, ...mockDni[dni] });
+        return res.json({ success: false, error: "Error al consultar RENIEC" });
     }
-    
-    // Fallback Mock
-    const mockDni = {
-        "12345678": { razonSocial: "JUAN CARLOS PEREZ LOPEZ", direccion: "AV. AREQUIPA NRO. 1200 - LINCE, LIMA" },
-        "87654321": { razonSocial: "MARIA ELENA TORRES QUISPE", direccion: "JR. HUANCAVELICA NRO. 540 - CERCADO DE LIMA" },
-        "11223344": { razonSocial: "CARLOS ALBERTO MENDOZA RIVAS", direccion: "AV. BRASIL NRO. 890 - JESUS MARIA, LIMA" }
-    };
-    
-    if (mockDni[dni]) {
-        return res.json({ success: true, ...mockDni[dni] });
-    }
-    
-    res.json({
-        success: true,
-        razonSocial: "CLIENTE SIMULADO GENERICO",
-        direccion: "DIRECCION SIMULADA 456 - LIMA"
-    });
 });
 
 // 6. Checkout (Updated)

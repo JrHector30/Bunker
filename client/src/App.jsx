@@ -17,6 +17,7 @@ import UsersView from './pages/UsersView';           // New
 import StaffStatsView from './pages/StaffStatsView'; // New
 import SettingsView from './pages/SettingsView';     // New
 import HomeView from './pages/HomeView';             // New
+import LandingView from './pages/LandingView';       // New
 
 
 
@@ -42,6 +43,12 @@ const HomeRedirect = () => {
   return <Navigate to="/home" />;
 }
 
+const RootRoute = () => {
+  const { user } = useAuth();
+  if (user) return <Navigate to="/home" />;
+  return <LandingView />;
+};
+
 function App() {
   return (
     <Router>
@@ -52,7 +59,8 @@ function App() {
               <AuthProvider>
               <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/" element={<HomeRedirect />} />
+              <Route path="/" element={<RootRoute />} />
+              <Route path="/app" element={<HomeRedirect />} />
 
             <Route element={<DashboardLayout />}>
 

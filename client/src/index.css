@@ -1,5 +1,76 @@
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(utilities);
 @import url('https://fonts.googleapis.com/css2?family=Lexend+Peta:wght@400;600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Montserrat:wght@300;400;500;600&display=swap');
+
+@layer theme, base, components, utilities;
+
+@layer base {
+
+  /* ==========================================
+     LANDING PAGE RESET (COMPENSATES FOR PREFLIGHT: FALSE)
+     ========================================== */
+  :where(.landing-root) {
+    font-family: 'Inter', sans-serif !important;
+  }
+
+  :where(.landing-root) a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  :where(.landing-root) a:hover {
+    text-decoration: none;
+  }
+
+  :where(.landing-root) button {
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    outline: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+
+  :where(.landing-root) h1,
+  :where(.landing-root) h2,
+  :where(.landing-root) h3,
+  :where(.landing-root) h4,
+  :where(.landing-root) h5,
+  :where(.landing-root) h6 {
+    font-size: inherit;
+    font-weight: inherit;
+    margin: 0;
+    padding: 0;
+  }
+
+  .landing-root h1.hero-title {
+    font-size: 2.5rem !important;
+  }
+
+  @media (min-width: 768px) {
+    .landing-root h1.hero-title {
+      font-size: 5rem !important;
+    }
+  }
+
+  .landing-root h2.section-title {
+    font-size: 2.25rem !important;
+  }
+
+  @media (min-width: 768px) {
+    .landing-root h2.section-title {
+      font-size: 3.5rem !important;
+    }
+  }
+}
 
 :root {
   /* DEFAULT: CARBONO (OLED BLACK) - Fallback for everything */
@@ -51,8 +122,10 @@
 }
 
 .theme-red {
-  --bg-primary: #0a0a0a; /* Oscuro */
-  --bg-secondary: #121212; /* Ligeramente más claro para páneles */
+  --bg-primary: #0a0a0a;
+  /* Oscuro */
+  --bg-secondary: #121212;
+  /* Ligeramente más claro para páneles */
   --bg-surface: #121212;
   --glass-border: rgba(240, 84, 79, 0.3);
   --accent: #121212;
@@ -68,7 +141,8 @@
   --sidebar-bg: #F0544F !important;
 }
 
-.theme-blue, .theme-noche-azulada {
+.theme-blue,
+.theme-noche-azulada {
   --bg-primary: #020617;
   --bg-secondary: #0f172a;
   --bg-surface: #1e293b;
@@ -135,13 +209,19 @@
 
 /* DARK MODE THEME OVERRIDES FOR SIDEBAR CONSISTENCY */
 .mode-dark.theme-green {
-  --sidebar-bg: #0a1f16 !important; /* Verde oscuro profundo */
+  --sidebar-bg: #0a1f16 !important;
+  /* Verde oscuro profundo */
 }
-.mode-dark.theme-blue, .mode-dark.theme-noche-azulada {
-  --sidebar-bg: #0f172a !important; /* Azul suficientemente oscuro */
+
+.mode-dark.theme-blue,
+.mode-dark.theme-noche-azulada {
+  --sidebar-bg: #0f172a !important;
+  /* Azul suficientemente oscuro */
 }
+
 .mode-dark.theme-red {
-  --sidebar-bg: #1a0505 !important; /* Rojo oscuro (antiguo fondo principal) */
+  --sidebar-bg: #1a0505 !important;
+  /* Rojo oscuro (antiguo fondo principal) */
 }
 
 /* Minimalist Light Mode - Paper White (White Content) */
@@ -221,8 +301,10 @@
 
 /* Ensure any element explicitly built with var(--primary) background adapts text color in Minimalist theme */
 .text-on-primary {
-  color: #ffffff; /* Default for normal themes */
+  color: #ffffff;
+  /* Default for normal themes */
 }
+
 .theme-minimalist .text-on-primary {
   color: var(--bg-primary) !important;
 }
@@ -279,7 +361,7 @@
   --mesa-shadow-libre: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1) !important;
   --mesa-shadow-ocupada: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
   --mesa-border-ocupada: #ffea00 !important;
-  
+
   /* Badges para el estado de las mesas */
   --badge-text-libre: #059669 !important;
   --badge-bg-libre: #d1fae5 !important;
@@ -291,7 +373,7 @@
 
 .mode-light .salon-contenedor {
   background-color: #93939385;
-  background-image: 
+  background-image:
     linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
 }
@@ -451,9 +533,11 @@ html {
   margin-right: 0 !important;
   width: 100% !important;
 }
+
 .sidebar .glass-button.active .module-icon-svg {
   filter: brightness(0) !important;
 }
+
 .sidebar .glass-button.active svg {
   color: #000000 !important;
 }
@@ -1014,22 +1098,25 @@ body {
   position: relative;
 }
 
-/* Typography */
-h1,
-h2,
-h3 {
-  margin: 0;
-  font-weight: 600;
-}
+@layer base {
 
-h1 {
-  font-size: 2rem;
-  margin-bottom: 20px;
-}
+  /* Typography */
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+    font-weight: 600;
+  }
 
-h2 {
-  font-size: 1.5rem;
-  margin-bottom: 15px;
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+  }
+
+  h2 {
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+  }
 }
 
 .text-muted {
@@ -1233,17 +1320,19 @@ h2 {
    Mandatory isolation: max-width 1024px 
    ========================================================= */
 @media (max-width: 1024px) {
+
   /* 1. Header and Layout Optimizations */
   .topbar {
     height: 40px !important;
     padding: 0 10px !important;
   }
-  
+
   .topbar h2 {
-    font-size: 1rem !important; /* Reduce 'Roboto Mono' text */
+    font-size: 1rem !important;
+    /* Reduce 'Roboto Mono' text */
     letter-spacing: 2px !important;
   }
-  
+
   /* Force mobile menu toggle to display */
   .mobile-nav-toggle {
     display: flex !important;
@@ -1256,10 +1345,11 @@ h2 {
     left: -100% !important;
     bottom: 0 !important;
     height: 100vh !important;
-    z-index: 1050 !important; /* Above topbar and content */
+    z-index: 1050 !important;
+    /* Above topbar and content */
     width: 280px !important;
     transition: left 0.3s ease-in-out !important;
-    box-shadow: 5px 0 15px rgba(0,0,0,0.6) !important;
+    box-shadow: 5px 0 15px rgba(0, 0, 0, 0.6) !important;
   }
 
   .sidebar.mobile-open {
@@ -1272,11 +1362,12 @@ h2 {
     height: auto !important;
     overflow: visible !important;
   }
-  
+
   /* Make left-side (menu) take full width */
-  .order-layout > div:first-child {
+  .order-layout>div:first-child {
     width: 100% !important;
-    padding-bottom: 80px !important; /* Space for FAB */
+    padding-bottom: 80px !important;
+    /* Space for FAB */
   }
 
   /* Cart Drawer Logic */
@@ -1287,12 +1378,14 @@ h2 {
     right: 0 !important;
     height: 83vh !important;
     background: var(--bg-surface) !important;
-    z-index: 1040 !important; /* Under Sidebar, over Menu */
+    z-index: 1040 !important;
+    /* Under Sidebar, over Menu */
     transform: translateY(100%) !important;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     border-radius: 20px 20px 0 0 !important;
-    box-shadow: 0 -5px 25px rgba(0,0,0,0.5) !important;
-    padding-bottom: env(safe-area-inset-bottom) !important; /* iOS Safe Area */
+    box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.5) !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+    /* iOS Safe Area */
   }
 
   .order-cart-panel.open {
@@ -1303,7 +1396,8 @@ h2 {
   .mobile-cart-fab {
     display: flex !important;
     position: fixed !important;
-    bottom: calc(20px + env(safe-area-inset-bottom)) !important; /* iOS Safe Area */
+    bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+    /* iOS Safe Area */
     right: 20px !important;
     width: 60px !important;
     height: 60px !important;
@@ -1312,7 +1406,7 @@ h2 {
     color: #fff !important;
     align-items: center !important;
     justify-content: center !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
     z-index: 1030 !important;
     border: none !important;
   }
@@ -1323,286 +1417,330 @@ h2 {
   .mobile-cart-fab {
     display: none !important;
   }
+
   .mobile-cart-close {
     display: none !important;
   }
 }
-@keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
 
 
-                /* Optimización Móvil - Vista Tomar Pedido */
-                @media (max-width: 768px) {
-                    /* Layout Principal */
-                    .order-layout {
-                        display: flex !important;
-                        flex-direction: column !important;
-                        height: 100svh !important;
-                        padding: 10px !important;
-                        padding-bottom: env(safe-area-inset-bottom) !important;
-                        overflow-x: hidden !important; 
-                        width: 100vw !important;
-                        box-sizing: border-box !important;
-                    }
+/* Optimización Móvil - Vista Tomar Pedido */
+@media (max-width: 768px) {
 
-                    /* 1. Categorías Adaptativas (Lista Vertical Estricta) */
-                    .mobile-category-grid {
-                        display: grid !important;
-                        grid-template-columns: 1fr !important; /* Estricta columna única */
-                        grid-auto-flow: row !important; /* Flujo solo de arriba a abajo */
-                        grid-auto-columns: auto !important;
-                        grid-auto-rows: auto !important;
-                        grid-template-rows: auto !important;
-                        max-height: 250px !important;
-                        overflow-y: auto !important;
-                        overflow-x: hidden !important;
-                        padding-right: 8px !important;
-                        gap: 10px !important;
-                        scroll-snap-type: none !important; /* Desactivar forzados */
-                    }
-                    .mobile-category-item {
-                        display: flex !important;
-                        flex-direction: row !important;
-                        align-items: center !important;
-                        justify-content: flex-start !important;
-                        height: auto !important;
-                        padding: 12px 15px !important;
-                        width: 100% !important;
-                        box-sizing: border-box !important;
-                        scroll-snap-align: none !important;
-                    }
-                    .mobile-category-item > span:first-child {
-                        font-size: 1.2rem !important;
-                        margin-right: 15px !important;
-                    }
-                    .mobile-category-item > span:nth-child(2) {
-                        flex: 1 !important;
-                        text-align: left !important;
-                    }
-                    
-                    /* 2. Cuadrícula de Productos Compacta (Formato Lista de Fila) */
-                    .mobile-product-grid {
-                        display: grid !important;
-                        grid-template-columns: 1fr !important; /* Estricta columna única */
-                        grid-auto-rows: auto !important;
-                        gap: 8px !important;
-                        overflow-x: hidden !important;
-                    }
-                    .mobile-product-card {
-                        display: flex !important;
-                        flex-direction: row !important; /* Tarjeta en Fila Horizontal */
-                        height: auto !important;
-                        min-height: 75px !important;
-                        align-items: center !important;
-                        padding: 8px 10px !important;
-                        box-sizing: border-box !important;
-                        scroll-snap-align: none !important;
-                    }
-                    .product-image-container {
-                        width: 60px !important;
-                        height: 60px !important;
-                        border-radius: 8px !important;
-                        flex-shrink: 0 !important;
-                        overflow: hidden !important;
-                    }
-                    
-                    /* Body (Center + Right) */
-                    .product-body {
-                        flex-direction: row !important; /* Layout para acomodar Centro y Derecha */
-                        align-items: center !important;
-                        padding: 0 0 0 12px !important;
-                        gap: 10px !important;
-                    }
-                    .product-info-wrapper {
-                        flex: 1 !important; /* Centro absorbe el espacio extra */
-                        justify-content: center !important;
-                        gap: 2px !important;
-                        min-width: 0 !important; /* previene desbordes */
-                    }
-                    .product-name {
-                        font-size: 0.95rem !important;
-                        font-weight: 700 !important;
-                        margin-bottom: 0px !important;
-                        line-height: 1.2 !important;
-                        white-space: nowrap !important;
-                        overflow: hidden !important;
-                        text-overflow: ellipsis !important;
-                    }
-                    .product-price {
-                        font-size: 0.85rem !important;
-                        color: var(--success) !important;
-                    }
-                    /* Container for actions in mobile needs to be tight on the right side */
-                    .product-actions-wrap {
-                        padding-top: 0 !important;
-                        margin-top: 0 !important;
-                        flex-shrink: 0 !important;
-                    }
+  /* Layout Principal */
+  .order-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100svh !important;
+    padding: 10px !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+    overflow-x: hidden !important;
+    width: 100vw !important;
+    box-sizing: border-box !important;
+  }
 
-                    /* 3. Botones Perfect Circles y Layout Inferior */
-                    .mobile-product-card .glass-button {
-                        width: 38px !important;
-                        height: 38px !important;
-                        min-width: 38px !important;
-                        max-width: 38px !important;
-                        aspect-ratio: 1/1 !important;
-                        border-radius: 50% !important;
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
-                        flex-shrink: 0 !important; /* CLAVE NO OVALARSE */
-                    }
-                    
-                    /* Asegurar alineación milimétrica del bloque de cantidad */
-                    .quantity-controls {
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important; /* Force tight fit horizontally */
-                        gap: 10px !important;
-                    }
-                    
-                    .quantity-number {
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        text-align: center !important;
-                        vertical-align: middle !important;
-                        line-height: 1 !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        width: 30px !important; /* FLOTANTE ESTRICTO CENTRADO */
-                        min-width: 30px !important;
-                        font-size: 1.1rem !important;
-                    }
-                    
-                    /* Ocultar botones de Info demasiado invasivos */
-                    .mobile-product-card .info-btn {
-                        display: none !important;
-                    }
-                    
-                    /* 4. Panel Inferior Safe Area y Botón Neon */
-                    .order-cart-panel.open {
-                        padding-bottom: env(safe-area-inset-bottom) !important;
-                    }
+  /* 1. Categorías Adaptativas (Lista Vertical Estricta) */
+  .mobile-category-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    /* Estricta columna única */
+    grid-auto-flow: row !important;
+    /* Flujo solo de arriba a abajo */
+    grid-auto-columns: auto !important;
+    grid-auto-rows: auto !important;
+    grid-template-rows: auto !important;
+    max-height: 250px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 8px !important;
+    gap: 10px !important;
+    scroll-snap-type: none !important;
+    /* Desactivar forzados */
+  }
 
-                    /* Botón Neon Glow (Confirmar Pedido) */
-                    .order-cart-panel .glass-button.primary {
-                        border-radius: 50px !important;
-                        box-shadow: 0 0 15px var(--primary) !important;
-                        border: 1px solid var(--primary) !important;
-                        font-family: inherit !important;
-                    }
+  .mobile-category-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    height: auto !important;
+    padding: 12px 15px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    scroll-snap-align: none !important;
+  }
 
-                    /* Quitar width forzado en desktop y permitir fluidez en Search */
-                    .search-container {
-                        width: 100% !important;
-                        max-width: calc(100% - 30px) !important;
-                        margin: 0 auto !important;
-                        box-sizing: border-box !important;
-                        padding: 0 !important;
-                        flex-shrink: 1 !important;
-                    }
-                }
-            
+  .mobile-category-item>span:first-child {
+    font-size: 1.2rem !important;
+    margin-right: 15px !important;
+  }
 
-        @media (max-width: 1024px) {
-          .charts-grid-wrapper {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      
+  .mobile-category-item>span:nth-child(2) {
+    flex: 1 !important;
+    text-align: left !important;
+  }
 
-                /* 1. Aislamiento de Estilos (Media Query) */
-                @media (max-width: 1024px) {
-                    /* 2. Gestión de Pantalla: 100svh y safe areas */
-                    .mobile-login-container {
-                        flex-direction: column !important;
-                        height: auto !important;
-                        min-height: 100svh !important;
-                        overflow-y: auto !important;
-                        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
-                        display: flex !important;
-                    }
-                    .mobile-left-panel {
-                        min-height: 250px !important;
-                        flex: none !important;
-                        border-right: none !important;
-                        border-bottom: 1px solid rgba(0,0,0,0.05) !important;
-                    }
-                    /* Contenedor desplazable y action button visible */
-                    .mobile-right-panel {
-                        flex: 1 !important;
-                        padding: 30px 20px 80px 20px !important;
-                        justify-content: flex-start !important;
-                        border-left: none !important;
-                    }
-                    /* Layout Adaptativo: botón de 'INGRESAR' al 90% */
-                    .mobile-btn-login {
-                        width: 90% !important;
-                        margin: 0 auto !important;
-                        display: block !important;
-                    }
-                    /* 3. Optimización de Interacción Táctil y Prevención de Zoom */
-                    input, select, textarea {
-                        font-size: 16px !important;
-                    }
-                    /* Touch Targets: Incrementa el padding interno a un mínimo de 12-14px */
-                    .mobile-touch-target {
-                        padding: 14px 20px !important;
-                    }
-                }
-            
+  /* 2. Cuadrícula de Productos Compacta (Formato Lista de Fila) */
+  .mobile-product-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    /* Estricta columna única */
+    grid-auto-rows: auto !important;
+    gap: 8px !important;
+    overflow-x: hidden !important;
+  }
 
-                @media (max-width: 768px) {
-                    .sidebar.mobile-open {
-                        height: 100dvh !important;
-                        max-height: 100dvh !important;
-                        overflow-y: auto !important;
-                        display: flex !important;
-                        flex-direction: column !important;
-                        padding-bottom: 40px !important;
-                    }
-                    /* Asegurar que los contenedores inferiores fluyan y no se anclen al fondo rompiendo el scroll */
-                    .sidebar.mobile-open > div:last-child {
-                        position: relative !important;
-                        bottom: auto !important;
-                        margin-bottom: 40px !important;
-                    }
-                }
-            
+  .mobile-product-card {
+    display: flex !important;
+    flex-direction: row !important;
+    /* Tarjeta en Fila Horizontal */
+    height: auto !important;
+    min-height: 75px !important;
+    align-items: center !important;
+    padding: 8px 10px !important;
+    box-sizing: border-box !important;
+    scroll-snap-align: none !important;
+  }
+
+  .product-image-container {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 8px !important;
+    flex-shrink: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Body (Center + Right) */
+  .product-body {
+    flex-direction: row !important;
+    /* Layout para acomodar Centro y Derecha */
+    align-items: center !important;
+    padding: 0 0 0 12px !important;
+    gap: 10px !important;
+  }
+
+  .product-info-wrapper {
+    flex: 1 !important;
+    /* Centro absorbe el espacio extra */
+    justify-content: center !important;
+    gap: 2px !important;
+    min-width: 0 !important;
+    /* previene desbordes */
+  }
+
+  .product-name {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .product-price {
+    font-size: 0.85rem !important;
+    color: var(--success) !important;
+  }
+
+  /* Container for actions in mobile needs to be tight on the right side */
+  .product-actions-wrap {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* 3. Botones Perfect Circles y Layout Inferior */
+  .mobile-product-card .glass-button {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+    aspect-ratio: 1/1 !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    /* CLAVE NO OVALARSE */
+  }
+
+  /* Asegurar alineación milimétrica del bloque de cantidad */
+  .quantity-controls {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    /* Force tight fit horizontally */
+    gap: 10px !important;
+  }
+
+  .quantity-number {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 30px !important;
+    /* FLOTANTE ESTRICTO CENTRADO */
+    min-width: 30px !important;
+    font-size: 1.1rem !important;
+  }
+
+  /* Ocultar botones de Info demasiado invasivos */
+  .mobile-product-card .info-btn {
+    display: none !important;
+  }
+
+  /* 4. Panel Inferior Safe Area y Botón Neon */
+  .order-cart-panel.open {
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+
+  /* Botón Neon Glow (Confirmar Pedido) */
+  .order-cart-panel .glass-button.primary {
+    border-radius: 50px !important;
+    box-shadow: 0 0 15px var(--primary) !important;
+    border: 1px solid var(--primary) !important;
+    font-family: inherit !important;
+  }
+
+  /* Quitar width forzado en desktop y permitir fluidez en Search */
+  .search-container {
+    width: 100% !important;
+    max-width: calc(100% - 30px) !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    flex-shrink: 1 !important;
+  }
+}
+
+
+@media (max-width: 1024px) {
+  .charts-grid-wrapper {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* 1. Aislamiento de Estilos (Media Query) */
+@media (max-width: 1024px) {
+
+  /* 2. Gestión de Pantalla: 100svh y safe areas */
+  .mobile-login-container {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100svh !important;
+    overflow-y: auto !important;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+    display: flex !important;
+  }
+
+  .mobile-left-panel {
+    min-height: 250px !important;
+    flex: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Contenedor desplazable y action button visible */
+  .mobile-right-panel {
+    flex: 1 !important;
+    padding: 30px 20px 80px 20px !important;
+    justify-content: flex-start !important;
+    border-left: none !important;
+  }
+
+  /* Layout Adaptativo: botón de 'INGRESAR' al 90% */
+  .mobile-btn-login {
+    width: 90% !important;
+    margin: 0 auto !important;
+    display: block !important;
+  }
+
+  /* 3. Optimización de Interacción Táctil y Prevención de Zoom */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Touch Targets: Incrementa el padding interno a un mínimo de 12-14px */
+  .mobile-touch-target {
+    padding: 14px 20px !important;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .sidebar.mobile-open {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding-bottom: 40px !important;
+  }
+
+  /* Asegurar que los contenedores inferiores fluyan y no se anclen al fondo rompiendo el scroll */
+  .sidebar.mobile-open>div:last-child {
+    position: relative !important;
+    bottom: auto !important;
+    margin-bottom: 40px !important;
+  }
+}
+
 /* Clase de Entrada: Desliza de derecha a izquierda */
 .global-toast.enter-animation {
-    animation: toastSlideIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: toastSlideIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 /* Clase de Salida: Se retira hacia la derecha de forma suave */
 .global-toast.exit-animation {
-    animation: toastSlideOut 0.35s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+  animation: toastSlideOut 0.35s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
 }
 
 /* Fotogramas de Entrada */
 @keyframes toastSlideIn {
-    from {
-        transform: translateX(120%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Fotogramas de Salida (Se desliza hacia el borde derecho desapareciendo) */
 @keyframes toastSlideOut {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(120%);
-        opacity: 0;
-    }
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateX(120%);
+    opacity: 0;
+  }
 }
 
 
@@ -1616,7 +1754,7 @@ h2 {
   background-color: #0a0a0f;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  background-image: 
+  background-image:
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 40px 40px;
@@ -1643,7 +1781,7 @@ h2 {
   color: white;
   text-align: center;
   cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* 1. Verde NeÃ³n (Libre y Caja Abierta) */
@@ -1651,6 +1789,7 @@ h2 {
   border-color: #00ff88;
   box-shadow: 0 0 15px rgba(0, 255, 136, 0.2), inset 0 0 10px rgba(0, 255, 136, 0.05);
 }
+
 .mesa-libre-neon .badge-estado {
   color: #00ff88;
 }
@@ -1660,6 +1799,7 @@ h2 {
   border-color: #ffea00;
   box-shadow: 0 0 25px rgba(255, 234, 0, 0.45), inset 0 0 15px rgba(255, 234, 0, 0.1);
 }
+
 .mesa-ocupada-neon .badge-estado {
   color: #ffea00;
   font-weight: bold;
@@ -1672,6 +1812,7 @@ h2 {
   cursor: not-allowed;
   box-shadow: none;
 }
+
 .mesa-apagada .badge-estado {
   color: #9ca3af;
 }
