@@ -5,14 +5,15 @@ import {
   ChevronDown, Check, Star, HelpCircle, Utensils,
   TrendingUp, Users, Printer, Store
 } from 'lucide-react';
+import RevealOnScroll from '../components/RevealOnScroll';
 
 // Componente reusable de Botón Premium
 const SaasButton = ({ variant = "default", className = "", children, ...props }) => {
-  const baseStyles = "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-all duration-200 focus:outline-none active:scale-95 text-sm h-11 px-5";
+  const baseStyles = "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-all duration-200 focus:outline-none active:scale-95 text-sm h-11 px-5 cursor-pointer";
   const variants = {
     default: "bg-white text-black hover:bg-gray-100",
-    ghost: "hover:bg-gray-900 text-gray-300 hover:text-white",
-    gradient: "bg-gradient-to-b from-teal-400 to-teal-600 text-white hover:shadow-[0_0_25px_rgba(20,184,166,0.4)] font-semibold border border-teal-400/20"
+    ghost: "bg-transparent text-gray-400 hover:text-white hover:bg-gray-900/40 border border-transparent",
+    gradient: "bg-gradient-to-r from-teal-400 to-teal-600 text-white hover:shadow-[0_0_25px_rgba(20,184,166,0.4)] font-semibold border border-teal-400/20 active:scale-95 transition-all"
   };
   return (
     <button className={`${baseStyles} ${variants[variant]} ${className}`} {...props}>
@@ -82,7 +83,7 @@ export default function LandingView() {
       {/* HEADER */}
       <header className="fixed top-0 w-full z-50 border-b border-gray-900/40 bg-[#060609]/70 backdrop-blur-md">
         <nav className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-lg font-bold tracking-tight cursor-pointer" onClick={() => navigate('/')}>
+          <div className="flex items-center gap-2 text-lg font-bold tracking-tight cursor-pointer hover:scale-105 transition-transform origin-left" onClick={() => navigate('/')}>
             <LayoutDashboard className="text-teal-400" size={22} />
             COMANDA<span className="text-teal-400">GO</span>
           </div>
@@ -102,7 +103,7 @@ export default function LandingView() {
         </nav>
 
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#060609] border-t border-gray-900 px-6 py-6 flex flex-col gap-4">
+          <div className="md:hidden bg-[#060609] border-t border-gray-900 px-6 py-6 flex flex-col gap-4 animate-fade-in fade-in">
             <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 py-1">Beneficios</a>
             <a href="#workflow" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 py-1">Estructura</a>
             <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 py-1">Precios</a>
@@ -116,49 +117,61 @@ export default function LandingView() {
 
       {/* HERO */}
       <section className="relative pt-36 pb-20 px-6 max-w-6xl mx-auto flex flex-col items-center text-center">
-        <aside className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gray-800 bg-gray-900/20 backdrop-blur-sm text-xs text-gray-400">
-          <span className="flex items-center gap-1 text-teal-400 font-medium">
-            <Sparkles size={12} /> Motor de salón interactivo en vivo
-          </span>
-          <span className="h-3 w-px bg-gray-800" />
-          <span className="text-gray-500">v2.0 Estabilizada</span>
-        </aside>
+        <RevealOnScroll variant="slide-down" delay={100}>
+          <aside className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gray-800 bg-gray-900/20 backdrop-blur-sm text-xs text-gray-400 animate-bounce">
+            <span className="flex items-center gap-1 text-teal-400 font-medium">
+              <Sparkles size={12} /> Motor de salón interactivo en vivo
+            </span>
+            <span className="h-3 w-px bg-gray-800" />
+            <span className="text-gray-500">v2.0 Estabilizada</span>
+          </aside>
+        </RevealOnScroll>
 
-        <h1 className="hero-title text-4xl md:text-7xl font-bold max-w-5xl leading-[1.1] mb-6 tracking-tight"
-          style={{ background: "linear-gradient(to bottom, #ffffff 30%, rgba(255, 255, 255, 0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-          Automatiza Tu Restaurante <br />Como Nunca Antes
-        </h1>
+        <RevealOnScroll variant="slide-up" delay={250}>
+          <h1 className="hero-title text-4xl md:text-7xl font-bold max-w-5xl leading-[1.1] mb-6 tracking-tight"
+            style={{ background: "linear-gradient(to bottom, #ffffff 30%, rgba(255, 255, 255, 0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+            Automatiza Tu Restaurante <br />Como Nunca Antes
+          </h1>
+        </RevealOnScroll>
 
-        <p className="text-sm md:text-base text-gray-400 max-w-2xl mb-10 leading-relaxed">
-          Puntos de venta fluidos, distribución de mesas absoluta con neón semántico y consultas automáticas de Sunat. Todo lo que tu negocio gastronómico necesita en una sola interfaz.
-        </p>
+        <RevealOnScroll variant="slide-up" delay={400}>
+          <p className="text-sm md:text-base text-gray-400 max-w-2xl mb-10 leading-relaxed">
+            Puntos de venta fluidos, distribución de mesas absoluta con neón semántico y consultas automáticas de Sunat. Todo lo que tu negocio gastronómico necesita en una sola interfaz.
+          </p>
+        </RevealOnScroll>
 
-        <div className="flex items-center gap-4 relative z-10 mb-20">
-          <SaasButton className="h-12 px-8 rounded-xl text-base" variant="gradient" onClick={() => navigate('/login')}>
-            Comenzar Prueba Gratis <ArrowRight className="ml-1" size={16} />
-          </SaasButton>
-        </div>
-
-        <div className="w-full max-w-5xl relative">
-          <div className="absolute left-1/2 w-[90%] h-[70%] pointer-events-none z-0 opacity-15 blur-[140px] top-[-10%] -translate-x-1/2 bg-teal-500 rounded-full" />
-          <div className="relative z-10 border border-gray-800/60 rounded-2xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.8)] bg-gray-950/60">
-            <img
-              src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80"
-              alt="Dashboard Preview"
-              className="w-full h-auto opacity-90 min-h-[380px] object-cover"
-            />
+        <RevealOnScroll variant="slide-up" delay={550}>
+          <div className="flex items-center gap-4 relative z-10 mb-20">
+            <SaasButton className="h-12 px-8 rounded-xl text-base" variant="gradient" onClick={() => navigate('/login')}>
+              Comenzar Prueba Gratis <ArrowRight className="ml-1" size={16} />
+            </SaasButton>
           </div>
-        </div>
+        </RevealOnScroll>
+
+        <RevealOnScroll variant="scale" delay={700} duration={1200}>
+          <div className="w-full max-w-5xl relative group">
+            <div className="absolute left-1/2 w-[90%] h-[70%] pointer-events-none z-0 opacity-15 blur-[140px] top-[-10%] -translate-x-1/2 bg-teal-500 rounded-full" />
+            <div className="relative z-10 border border-gray-800/60 rounded-2xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.8)] bg-gray-950/60 transition-transform duration-700 hover:scale-[1.01]">
+              <img
+                src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80"
+                alt="Dashboard Preview"
+                className="w-full h-auto opacity-90 min-h-[380px] object-cover"
+              />
+            </div>
+          </div>
+        </RevealOnScroll>
       </section>
 
       {/* STATS */}
       <section className="border-t border-gray-900/60 bg-black/40 py-12 px-6">
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {stats.map((s, i) => (
-            <div key={i}>
-              <div className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-1">{s.value}</div>
-              <div className="text-xs md:text-sm text-gray-500 font-medium tracking-wide uppercase">{s.label}</div>
-            </div>
+            <RevealOnScroll key={i} variant="slide-up" delay={i * 150}>
+              <div>
+                <div className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-1">{s.value}</div>
+                <div className="text-xs md:text-sm text-gray-500 font-medium tracking-wide uppercase">{s.label}</div>
+              </div>
+            </RevealOnScroll>
           ))}
         </div>
       </section>
@@ -166,18 +179,24 @@ export default function LandingView() {
       {/* FEATURES */}
       <section id="features" className="py-24 px-6 max-w-6xl mx-auto border-t border-gray-900/40">
         <div className="text-center mb-16">
-          <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mb-4">Funcionalidades potentes para equipos modernos</h2>
-          <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto">Todo lo necesario para automatizar, optimizar y expandir los procesos comerciales de tu salón sin fricciones técnicas.</p>
+          <RevealOnScroll variant="slide-up">
+            <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mb-4">Funcionalidades potentes para equipos modernos</h2>
+          </RevealOnScroll>
+          <RevealOnScroll variant="slide-up" delay={150}>
+            <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto">Todo lo necesario para automatizar, optimizar y expandir los procesos comerciales de tu salón sin fricciones técnicas.</p>
+          </RevealOnScroll>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {features.map((f, i) => (
-            <div key={i} className="p-6 rounded-xl border border-gray-900 bg-gray-950/30 backdrop-blur-xs transition-all duration-300 hover:border-gray-800 group">
-              <div className="w-10 h-10 rounded-lg bg-teal-500/5 border border-teal-500/10 flex items-center justify-center text-teal-400 mb-4 group-hover:bg-teal-500/10 transition-colors">
-                {f.icon}
+            <RevealOnScroll key={i} variant="slide-up" delay={i * 100}>
+              <div className="p-6 rounded-xl border border-gray-900 bg-gray-950/30 backdrop-blur-xs transition-all duration-300 hover:border-gray-800 hover:-translate-y-1 group min-h-[220px] md:h-[220px]">
+                <div className="w-10 h-10 rounded-lg bg-teal-500/5 border border-teal-500/10 flex items-center justify-center text-teal-400 mb-4 group-hover:bg-teal-500/20 transition-colors">
+                  {f.icon}
+                </div>
+                <h3 className="text-lg font-semibold mb-2 text-gray-200">{f.title}</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">{f.desc}</p>
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-200">{f.title}</h3>
-              <p className="text-sm text-gray-400 leading-relaxed">{f.desc}</p>
-            </div>
+            </RevealOnScroll>
           ))}
         </div>
       </section>
@@ -185,20 +204,24 @@ export default function LandingView() {
       {/* WORKFLOW */}
       <section id="workflow" className="py-24 px-6 bg-black/20 border-t border-gray-900/50">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div>
-            <span className="text-xs font-bold tracking-widest text-teal-400 uppercase">Flujo de Trabajo</span>
-            <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mt-2 mb-6 leading-tight">Control Operativo en Tres Pasos</h2>
-            <p className="text-gray-400 text-sm leading-relaxed mb-6">Diseñado con una lógica de blindaje transaccional. La interfaz guía al personal de forma intuitiva, eliminando descuidos administrativos y pérdidas en cuentas.</p>
-          </div>
+          <RevealOnScroll variant="slide-right">
+            <div>
+              <span className="text-xs font-bold tracking-widest text-teal-400 uppercase">Flujo de Trabajo</span>
+              <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mt-2 mb-6 leading-tight">Control Operativo en Tres Pasos</h2>
+              <p className="text-gray-400 text-sm leading-relaxed mb-6">Diseñado con una lógica de blindaje transaccional. La interfaz guía al personal de forma intuitiva, eliminando descuidos administrativos y pérdidas en cuentas.</p>
+            </div>
+          </RevealOnScroll>
           <div className="flex flex-col gap-6">
             {steps.map((s, i) => (
-              <div key={i} className="flex gap-4 p-5 rounded-xl border border-gray-900 bg-gray-950/20">
-                <div className="text-xl font-bold text-teal-500/40 mt-0.5">{s.num}</div>
-                <div>
-                  <h3 className="text-base font-semibold text-gray-200 mb-1">{s.title}</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">{s.desc}</p>
+              <RevealOnScroll key={i} variant="slide-left" delay={i * 150}>
+                <div className="flex gap-4 p-5 rounded-xl border border-gray-900 bg-gray-950/20">
+                  <div className="text-xl font-bold text-teal-500/40 mt-0.5">{s.num}</div>
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-200 mb-1">{s.title}</h3>
+                    <p className="text-sm text-gray-400 leading-relaxed">{s.desc}</p>
+                  </div>
                 </div>
-              </div>
+              </RevealOnScroll>
             ))}
           </div>
         </div>
@@ -207,44 +230,50 @@ export default function LandingView() {
       {/* PRICING */}
       <section id="pricing" className="py-24 px-6 max-w-6xl mx-auto border-t border-gray-900/40">
         <div className="text-center mb-12">
-          <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mb-4">Precios sencillos y transparentes</h2>
-          <p className="text-gray-400 text-sm max-w-xl mx-auto mb-8">Elige el plan ideal para tu salón. Escalabilidad garantizada a medida que tu negocio gastronómico crece.</p>
+          <RevealOnScroll variant="slide-up">
+            <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mb-4">Precios sencillos y transparentes</h2>
+          </RevealOnScroll>
+          <RevealOnScroll variant="slide-up" delay={150}>
+            <p className="text-gray-400 text-sm max-w-xl mx-auto mb-8">Elige el plan ideal para tu salón. Escalabilidad garantizada a medida que tu negocio gastronómico crece.</p>
+          </RevealOnScroll>
 
-          <div className="inline-flex items-center p-1 rounded-lg bg-gray-950 border border-gray-900">
-            <button className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${billingPeriod === 'monthly' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-white'}`} onClick={() => setBillingPeriod('monthly')}>Mensual</button>
-            <button className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${billingPeriod === 'yearly' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-white'}`} onClick={() => setBillingPeriod('yearly')}>Anual (Ahorro)</button>
-          </div>
+          <RevealOnScroll variant="fade" delay={200}>
+            <div className="inline-flex items-center p-1 rounded-lg bg-gray-950 border border-gray-900">
+              <button className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${billingPeriod === 'monthly' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-white'}`} onClick={() => setBillingPeriod('monthly')}>Mensual</button>
+              <button className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${billingPeriod === 'yearly' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-white'}`} onClick={() => setBillingPeriod('yearly')}>Anual (Ahorro)</button>
+            </div>
+          </RevealOnScroll>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch max-w-5xl mx-auto">
           {pricing[billingPeriod].map((p, i) => (
-            <div key={i} className={`p-8 rounded-2xl border flex flex-col justify-between relative transition-all duration-300 ${p.popular ? 'border-teal-500/50 bg-[#0a0f12] shadow-[0_0_30px_rgba(20,184,166,0.05)]' : 'border-gray-900 bg-gray-950/40'}`}>
-              {p.popular && <span className="absolute top-4 right-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Más Popular</span>}
-              <div>
-                <h3 className="text-lg font-bold text-gray-200 mb-2">{p.name}</h3>
-                <p className="text-xs text-gray-400 mb-6 leading-relaxed">{p.desc}</p>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-4xl font-extrabold tracking-tight text-white">{p.price}</span>
-                  <span className="text-xs text-gray-500">/ {billingPeriod === 'monthly' ? 'mes' : 'año'}</span>
+            <RevealOnScroll key={i} variant="slide-up" delay={i * 150} className="h-full">
+              <div className={`relative flex flex-col justify-between p-8 rounded-xl border transition-all duration-300 hover:-translate-y-2 h-full group ${p.popular ? 'border-teal-500/50 bg-[#060609]' : 'border-gray-900 hover:border-teal-500/50 bg-gray-950/20'}`}>
+                <div className={`absolute -inset-px rounded-xl bg-gradient-to-r from-teal-500/30 to-teal-600/30 blur-sm -z-10 transition-opacity duration-300 ${p.popular ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+                {p.popular && (
+                  <span className="absolute top-0 right-6 -translate-y-1/2 px-3 py-1 rounded-full text-[10px] font-semibold tracking-wider text-teal-400 uppercase bg-teal-950 border border-teal-500/30">Popular</span>
+                )}
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-2">{p.name}</h3>
+                  <p className="text-xs text-gray-400 mb-6">{p.desc}</p>
+                  <div className="flex items-baseline gap-1 mb-6">
+                    <span className="text-3xl font-extrabold text-white">{p.price}</span>
+                    <span className="text-xs text-gray-500">/ mes</span>
+                  </div>
+                  <ul className="flex flex-col gap-3 mb-8">
+                    {p.features.map((f, fi) => (
+                      <li key={fi} className="flex items-center gap-2 text-xs text-gray-300">
+                        <Check size={14} className="text-teal-400 flex-shrink-0" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <div className="h-px bg-gray-900 mb-6" />
-                <ul className="flex flex-col gap-3.5 mb-8">
-                  {p.features.map((f, fi) => (
-                    <li key={fi} className="flex items-start gap-2.5 text-xs text-gray-400 leading-tight">
-                      <Check className="text-teal-400 shrink-0 mt-0.5" size={14} />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
+                <SaasButton className="w-full justify-center" variant={p.popular ? 'gradient' : 'ghost'} onClick={() => navigate('/login')}>
+                  Comenzar Plan
+                </SaasButton>
               </div>
-              <SaasButton
-                className="w-full text-xs h-10 rounded-lg"
-                variant={p.popular ? "gradient" : "ghost"}
-                onClick={() => navigate('/login')}
-              >
-                Activar Plan
-              </SaasButton>
-            </div>
+            </RevealOnScroll>
           ))}
         </div>
       </section>
@@ -253,28 +282,34 @@ export default function LandingView() {
       <section className="py-24 px-6 bg-black/20 border-t border-gray-900/50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mb-4">Elegida por equipos de todo el mundo</h2>
-            <p className="text-gray-400 text-sm max-w-xl mx-auto">Descubre cómo los administradores y mozos han transformado el ritmo de su atención comercial.</p>
+            <RevealOnScroll variant="slide-up">
+              <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mb-4">Elegida por equipos de todo el mundo</h2>
+            </RevealOnScroll>
+            <RevealOnScroll variant="slide-up" delay={150}>
+              <p className="text-gray-400 text-sm max-w-xl mx-auto">Descubre cómo los administradores y mozos han transformado el ritmo de su atención comercial.</p>
+            </RevealOnScroll>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {testimonials.map((t, i) => (
-              <div key={i} className="p-6 rounded-xl border border-gray-900 bg-gray-950/20 flex flex-col justify-between">
-                <div>
-                  <div className="flex gap-0.5 mb-4 text-teal-400">
-                    {Array.from({ length: t.stars }).map((_, si) => <Star key={si} fill="currentColor" size={14} />)}
-                  </div>
-                  <p className="text-sm text-gray-400 leading-relaxed italic mb-6">"{t.text}"</p>
-                </div>
-                <div className="flex items-center gap-3 border-t border-gray-900/60 pt-4">
-                  <div className="w-8 h-8 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center font-bold text-xs text-teal-400 uppercase">
-                    {t.name.charAt(0)}
-                  </div>
+              <RevealOnScroll key={i} variant="slide-up" delay={i * 150}>
+                <div className="p-6 rounded-xl border border-gray-900 bg-gray-950/20 flex flex-col justify-between h-full">
                   <div>
-                    <h4 className="text-xs font-bold text-gray-200">{t.name}</h4>
-                    <p className="text-[11px] text-gray-500">{t.role}</p>
+                    <div className="flex gap-0.5 mb-4">
+                      {Array.from({ length: t.stars }).map((_, si) => <Star key={si} className="text-amber-400" fill="#fbbf24" stroke="#fbbf24" size={14} />)}
+                    </div>
+                    <p className="text-sm text-gray-300 leading-relaxed italic mb-6">"{t.text}"</p>
+                  </div>
+                  <div className="flex items-center gap-3 border-t border-gray-900/60 pt-4 mt-auto">
+                    <div className="w-8 h-8 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center font-bold text-xs text-teal-400 uppercase">
+                      {t.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-200">{t.name}</h4>
+                      <p className="text-[11px] text-gray-500">{t.role}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </RevealOnScroll>
             ))}
           </div>
         </div>
@@ -282,41 +317,51 @@ export default function LandingView() {
 
       {/* INTEGRATIONS */}
       <section className="py-20 px-6 max-w-5xl mx-auto border-t border-gray-900/40 text-center">
-        <h2 className="text-sm font-bold tracking-widest text-teal-500 uppercase mb-8">Tecnología de Infraestructura Líquida</h2>
-        <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 opacity-30 select-none grayscale">
-          {integrations.map((tech, i) => (
-            <span key={i} className="text-base md:text-lg font-bold tracking-wider text-gray-400 lowercase" style={{ fontStyle: 'italic' }}>
-              #{tech}
-            </span>
-          ))}
-        </div>
+        <RevealOnScroll variant="fade">
+          <h2 className="text-sm font-bold tracking-widest text-teal-500 uppercase mb-8">Tecnología de Infraestructura Líquida</h2>
+          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 select-none group">
+            {integrations.map((tech, i) => (
+              <span key={i} className="text-base md:text-lg font-bold tracking-wider text-gray-400 lowercase italic grayscale opacity-30 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500">
+                #{tech}
+              </span>
+            ))}
+          </div>
+        </RevealOnScroll>
       </section>
 
       {/* FAQ */}
       <section id="faq" className="py-24 px-6 bg-black/10 border-t border-gray-900/40">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="section-title text-3xl md:text-4xl font-bold tracking-tight mb-4">Preguntas Frecuentes</h2>
-            <p className="text-gray-400 text-sm">Resuelve tus dudas operativas sobre la pasarela técnica y las validaciones del sistema.</p>
+            <RevealOnScroll variant="slide-up">
+              <h2 className="section-title text-3xl md:text-4xl font-bold tracking-tight mb-4">Preguntas Frecuentes</h2>
+            </RevealOnScroll>
+            <RevealOnScroll variant="slide-up" delay={150}>
+              <p className="text-gray-400 text-sm">Resuelve tus dudas operativas sobre la pasarela técnica y las validaciones del sistema.</p>
+            </RevealOnScroll>
           </div>
           <div className="flex flex-col gap-3">
             {faqs.map((f, i) => {
               const isOpen = activeFaq === i;
               return (
-                <div key={i} className="rounded-xl border border-gray-900 bg-[#050508] overflow-hidden transition-colors duration-200">
-                  <button className="w-full p-5 flex items-center justify-between text-left font-medium text-sm md:text-base text-gray-200 hover:text-white" onClick={() => setActiveFaq(isOpen ? null : i)}>
-                    <span>{f.q}</span>
-                    <ChevronDown
-                      className={`text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180 text-teal-400' : ''}`}
-                      size={16}
-                    />
-                  </button>
-                  {isOpen && (
-                    <div className="px-5 pb-5 text-xs md:text-sm text-gray-400 leading-relaxed border-t border-gray-900/40 pt-3 bg-black/10">
-                      {f.a}
+                <RevealOnScroll key={i} variant="slide-up" delay={i * 100}>
+                  <div className="rounded-xl border border-gray-900 bg-[#050508] overflow-hidden transition-colors duration-200">
+                    <button className="w-full p-5 flex items-center justify-between text-left font-medium text-sm md:text-base text-gray-200 hover:text-white cursor-pointer" onClick={() => setActiveFaq(isOpen ? null : i)}>
+                      <span>{f.q}</span>
+                      <ChevronDown
+                        className={`text-gray-500 transition-transform duration-300 ${isOpen ? 'rotate-180 text-teal-400' : ''}`}
+                        size={16}
+                      />
+                    </button>
+                    <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                      <div className="overflow-hidden">
+                        <div className="px-5 pb-5 text-xs md:text-sm text-gray-400 leading-relaxed border-t border-gray-900/40 pt-3 bg-black/10">
+                          {f.a}
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                </RevealOnScroll>
               );
             })}
           </div>
@@ -325,24 +370,26 @@ export default function LandingView() {
 
       {/* CTA FINAL */}
       <section className="relative py-24 px-6 border-t border-gray-900/40 overflow-hidden text-center">
-        <div className="absolute left-1/2 w-[70%] h-[80%] pointer-events-none z-0 opacity-10 blur-[130px] bottom-[-20%] -translate-x-1/2 bg-teal-500 rounded-full" />
-        <div className="relative z-10 max-w-3xl mx-auto">
-          <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mb-4">¿Listo para transformar tu salón?</h2>
-          <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto mb-8">Únete a los restaurantes locales que ya operan sin parpadeos visuales ni descuadres de caja.</p>
-          <SaasButton className="h-12 px-8 rounded-xl text-base font-bold" variant="gradient" onClick={() => navigate('/login')}>
-            Ingresar al Sistema Ahora
-          </SaasButton>
-        </div>
+        <RevealOnScroll variant="scale" duration={1200}>
+          <div className="absolute left-1/2 w-[70%] h-[80%] pointer-events-none z-0 opacity-20 blur-[140px] bottom-[-20%] -translate-x-1/2 bg-teal-500 rounded-full" />
+          <div className="relative z-10 max-w-3xl mx-auto">
+            <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mb-4">¿Listo para transformar tu salón?</h2>
+            <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto mb-8">Únete a los restaurantes locales que ya operan sin parpadeos visuales ni descuadres de caja.</p>
+            <SaasButton className="h-12 px-8 rounded-xl text-base font-bold" variant="gradient" onClick={() => navigate('/login')}>
+              Ingresar al Sistema Ahora
+            </SaasButton>
+          </div>
+        </RevealOnScroll>
       </section>
 
       {/* FOOTER */}
       <footer className="border-t border-gray-900 bg-black/60 py-12 px-6 text-xs text-gray-500">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
           <div>
-            <div className="flex items-center justify-center md:justify-start gap-2 text-sm font-bold text-white tracking-tight mb-2">
+            <div className="flex items-center justify-center md:justify-start gap-2 text-sm font-bold text-white tracking-tight mb-2 hover:scale-105 transition-transform origin-left cursor-pointer" onClick={() => navigate('/')}>
               <LayoutDashboard className="text-teal-400" size={16} /> COMANDA<span className="text-teal-400">GO</span>
             </div>
-            <p className="leading-relaxed max-w-xs">Optimización transaccional de alta fidelidad para el control administrativo de locales gastronómicos.</p>
+            <p className="leading-relaxed max-w-xs">Optimización transaccional de alta fidelidad para el control administrative de locales gastronómicos.</p>
           </div>
           <div className="flex flex-col md:flex-row gap-6 md:gap-12">
             <div className="flex flex-col gap-2">
