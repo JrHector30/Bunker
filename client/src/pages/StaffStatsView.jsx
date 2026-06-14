@@ -19,6 +19,9 @@ const StaffStatsView = () => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(false);
     const [showCalendar, setShowCalendar] = useState(false);
+    const [displayMonth, setDisplayMonth] = useState(
+        date ? new Date(date + 'T12:00:00') : new Date()
+    );
     const calendarRef = useRef(null);
 
     useEffect(() => {
@@ -155,9 +158,12 @@ const StaffStatsView = () => {
                                             const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
                                             const dd = String(selectedDate.getDate()).padStart(2, '0');
                                             setDate(`${yyyy}-${mm}-${dd}`);
+                                            setDisplayMonth(selectedDate);
                                         }
                                         setShowCalendar(false);
                                     }}
+                                    month={displayMonth}
+                                    onMonthChange={setDisplayMonth}
                                 />
                             </div>
                         )}

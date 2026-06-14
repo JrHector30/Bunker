@@ -6,6 +6,7 @@ import {
   TrendingUp, Users, Printer, Store
 } from 'lucide-react';
 import RevealOnScroll from '../components/RevealOnScroll';
+import HeroCarousel from '../components/HeroCarousel';
 
 // Componente reusable de Botón Premium
 const SaasButton = ({ variant = "default", className = "", children, ...props }) => {
@@ -148,15 +149,11 @@ export default function LandingView() {
           </div>
         </RevealOnScroll>
 
-        <RevealOnScroll variant="scale" delay={700} duration={1200}>
+        <RevealOnScroll variant="scale" delay={700} duration={1200} className="w-full flex justify-center">
           <div className="w-full max-w-5xl relative group">
             <div className="absolute left-1/2 w-[90%] h-[70%] pointer-events-none z-0 opacity-15 blur-[140px] top-[-10%] -translate-x-1/2 bg-teal-500 rounded-full" />
             <div className="relative z-10 border border-gray-800/60 rounded-2xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.8)] bg-gray-950/60 transition-transform duration-700 hover:scale-[1.01]">
-              <img
-                src="/uploads/home/img1.png"
-                alt="Dashboard Preview"
-                className="w-full h-auto opacity-90 block"
-              />
+              <HeroCarousel />
             </div>
           </div>
         </RevealOnScroll>

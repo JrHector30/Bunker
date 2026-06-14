@@ -15,6 +15,9 @@ const CashCountTable = ({ onStatusChange }) => {
     const [filterDate, setFilterDate] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [showCalendar, setShowCalendar] = useState(false);
+    const [displayMonth, setDisplayMonth] = useState(
+        filterDate ? new Date(filterDate + 'T12:00:00') : new Date()
+    );
     const calendarRef = useRef(null);
 
     useEffect(() => {
@@ -436,6 +439,7 @@ const CashCountTable = ({ onStatusChange }) => {
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setFilterDate('');
+                                        setDisplayMonth(new Date());
                                         setCurrentPage(1);
                                     }}
                                 >
@@ -453,12 +457,16 @@ const CashCountTable = ({ onStatusChange }) => {
                                             const mm = String(date.getMonth() + 1).padStart(2, '0');
                                             const dd = String(date.getDate()).padStart(2, '0');
                                             setFilterDate(`${yyyy}-${mm}-${dd}`);
+                                            setDisplayMonth(date);
                                         } else {
                                             setFilterDate('');
+                                            setDisplayMonth(new Date());
                                         }
                                         setCurrentPage(1);
                                         setShowCalendar(false);
                                     }}
+                                    month={displayMonth}
+                                    onMonthChange={setDisplayMonth}
                                 />
                             </div>
                         )}

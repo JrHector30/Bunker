@@ -33,6 +33,9 @@ const InventoryView = () => {
     const [kardexDateFilter, setKardexDateFilter] = useState('');
     const [kardexCurrentPage, setKardexCurrentPage] = useState(1);
     const [showKardexCalendar, setShowKardexCalendar] = useState(false);
+    const [kardexDisplayMonth, setKardexDisplayMonth] = useState(
+        kardexDateFilter ? new Date(kardexDateFilter + 'T12:00:00') : new Date()
+    );
     const kardexCalendarRef = useRef(null);
 
     useEffect(() => {
@@ -657,6 +660,7 @@ const InventoryView = () => {
         };
         const handleClearDateFilter = () => {
             setKardexDateFilter('');
+            setKardexDisplayMonth(new Date());
             setKardexCurrentPage(1);
         };
 
@@ -723,12 +727,16 @@ const InventoryView = () => {
                                                 const mm = String(date.getMonth() + 1).padStart(2, '0');
                                                 const dd = String(date.getDate()).padStart(2, '0');
                                                 setKardexDateFilter(`${yyyy}-${mm}-${dd}`);
+                                                setKardexDisplayMonth(date);
                                             } else {
                                                 setKardexDateFilter('');
+                                                setKardexDisplayMonth(new Date());
                                             }
                                             setKardexCurrentPage(1);
                                             setShowKardexCalendar(false);
                                         }}
+                                        month={kardexDisplayMonth}
+                                        onMonthChange={setKardexDisplayMonth}
                                     />
                                 </div>
                             )}
