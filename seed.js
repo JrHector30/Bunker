@@ -15,10 +15,10 @@ async function main() {
     }
     // 1. Users
     const users = [
-        { nombre: 'Juan Pérez', usuario: 'juan', rol: 'mozo', password: '123', foto: '' },
-        { nombre: 'Carlos Chef', usuario: 'chef', rol: 'cocina', password: '123', foto: '' },
-        { nombre: 'Ana Cajera', usuario: 'ana', rol: 'caja', password: '123', foto: '' },
-        { nombre: 'Admin General', usuario: 'admin', rol: 'admin', password: '123', foto: '' },
+        { nombre: 'Juan Pérez', usuario: 'juan', rol: 'mozo', password: '555555', foto: '' },
+        { nombre: 'Carlos Chef', usuario: 'chef', rol: 'cocina', password: '555555', foto: '' },
+        { nombre: 'Ana Cajera', usuario: 'ana', rol: 'caja', password: '555555', foto: '' },
+        { nombre: 'Admin General', usuario: 'admin', rol: 'admin', password: '555555', foto: '' },
     ];
 
     for (const u of users) {

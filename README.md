@@ -11,7 +11,7 @@
 4. Abrir http://localhost:3000
 
 ## Usuarios de prueba
-- **Admin**: Admin / 123
-- **Mozo**: Juan / 123
-- **Cocina**: Chef / 123
-- **Caja**: Ana / 123
+- **Admin**: Admin / 555555
+- **Mozo**: Juan / 555555
+- **Cocina**: Chef / 555555
+- **Caja**: Ana / 555555

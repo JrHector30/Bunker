@@ -66,7 +66,7 @@ export default function LandingView() {
   const testimonials = [
     { name: "Carlos Mendoza", role: "Dueño de 'El Carbón & Sazón'", text: "El parpadeo que tenía mi sistema anterior volvía locos a mis mozos. Con el mapa interactivo de ComandaGo, el control de la sala es inmediato y fluido.", stars: 5 },
     { name: "Milagros Vega", role: "Administradora de 'Inversiones Gastronómicas'", text: "La validación automática de RUC nos ahorra minutos valiosos en caja. La arquitectura es limpia y visualmente está a otro nivel.", stars: 5 },
-    { name: "Héctor Madrid", role: "Lead Architect", text: "Diseñado bajo los estándares de alta fidelidad oscura. Rendimiento óptimo en renderizado reactivo y persistencia serverless.", stars: 5 }
+    { name: "Hector Madrid", role: "Lead Architect", text: "Diseñado bajo los estándares de alta fidelidad oscura. Rendimiento óptimo en renderizado reactivo y persistencia serverless.", stars: 5 }
   ];
 
   const faqs = [
@@ -153,9 +153,9 @@ export default function LandingView() {
             <div className="absolute left-1/2 w-[90%] h-[70%] pointer-events-none z-0 opacity-15 blur-[140px] top-[-10%] -translate-x-1/2 bg-teal-500 rounded-full" />
             <div className="relative z-10 border border-gray-800/60 rounded-2xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.8)] bg-gray-950/60 transition-transform duration-700 hover:scale-[1.01]">
               <img
-                src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80"
+                src="/uploads/home/img1.png"
                 alt="Dashboard Preview"
-                className="w-full h-auto opacity-90 min-h-[380px] object-cover"
+                className="w-full h-auto opacity-90 block"
               />
             </div>
           </div>
@@ -373,7 +373,7 @@ export default function LandingView() {
         <RevealOnScroll variant="scale" duration={1200}>
           <div className="absolute left-1/2 w-[70%] h-[80%] pointer-events-none z-0 opacity-20 blur-[140px] bottom-[-20%] -translate-x-1/2 bg-teal-500 rounded-full" />
           <div className="relative z-10 max-w-3xl mx-auto">
-            <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mb-4">¿Listo para transformar tu salón?</h2>
+            <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mb-4">¿Listo para transformar tu restaurante?</h2>
             <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto mb-8">Únete a los restaurantes locales que ya operan sin parpadeos visuales ni descuadres de caja.</p>
             <SaasButton className="h-12 px-8 rounded-xl text-base font-bold" variant="gradient" onClick={() => navigate('/login')}>
               Ingresar al Sistema Ahora
@@ -389,7 +389,7 @@ export default function LandingView() {
             <div className="flex items-center justify-center md:justify-start gap-2 text-sm font-bold text-white tracking-tight mb-2 hover:scale-105 transition-transform origin-left cursor-pointer" onClick={() => navigate('/')}>
               <LayoutDashboard className="text-teal-400" size={16} /> COMANDA<span className="text-teal-400">GO</span>
             </div>
-            <p className="leading-relaxed max-w-xs">Optimización transaccional de alta fidelidad para el control administrative de locales gastronómicos.</p>
+            <p className="leading-relaxed max-w-xs">Optimización transaccional de alta fidelidad para el control administrativo de locales gastronómicos.</p>
           </div>
           <div className="flex flex-col md:flex-row gap-6 md:gap-12">
             <div className="flex flex-col gap-2">

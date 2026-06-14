@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { ArrowLeft, Trash, User, ChefHat, Calendar, FileText } from 'lucide-react';
@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Calendar as DayPickerCalendar } from '../components/ui/Calendar';
 
 const StaffStatsView = () => {
     const { showConfirmation } = useConfirmation();
@@ -17,6 +18,18 @@ const StaffStatsView = () => {
     const [stats, setStats] = useState({ waiters: [], cooks: [] });
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(false);
+    const [showCalendar, setShowCalendar] = useState(false);
+    const calendarRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (calendarRef.current && !calendarRef.current.contains(e.target)) {
+                setShowCalendar(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const fetchStats = () => {
         setLoading(true);
@@ -122,14 +135,32 @@ const StaffStatsView = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <div className="glass-panel" style={{ padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Calendar size={18} />
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            style={{ background: 'transparent', border: 'none', color: 'inherit', fontFamily: 'inherit', fontSize: '1rem' }}
-                        />
+                    <div style={{ position: 'relative', zIndex: showCalendar ? 9999 : 1 }} ref={calendarRef}>
+                        <button
+                            type="button"
+                            className="glass-button"
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 15px' }}
+                            onClick={() => setShowCalendar(!showCalendar)}
+                        >
+                            <Calendar size={18} className="text-teal-400" />
+                            <span>{date ? date : "Seleccionar Fecha"}</span>
+                        </button>
+                        {showCalendar && (
+                            <div style={{ position: 'absolute', right: 0, top: 45, zIndex: 99999 }}>
+                                <DayPickerCalendar
+                                    selected={date ? new Date(date + 'T12:00:00') : undefined}
+                                    onSelect={(selectedDate) => {
+                                        if (selectedDate) {
+                                            const yyyy = selectedDate.getFullYear();
+                                            const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                                            const dd = String(selectedDate.getDate()).padStart(2, '0');
+                                            setDate(`${yyyy}-${mm}-${dd}`);
+                                        }
+                                        setShowCalendar(false);
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <button

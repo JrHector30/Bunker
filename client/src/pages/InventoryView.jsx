@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download } from 'lucide-react';
+import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as DayPickerCalendar } from '../components/ui/Calendar';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
@@ -31,6 +32,18 @@ const InventoryView = () => {
     const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
     const [kardexDateFilter, setKardexDateFilter] = useState('');
     const [kardexCurrentPage, setKardexCurrentPage] = useState(1);
+    const [showKardexCalendar, setShowKardexCalendar] = useState(false);
+    const kardexCalendarRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (kardexCalendarRef.current && !kardexCalendarRef.current.contains(e.target)) {
+                setShowKardexCalendar(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const fetchData = () => {
         refetchProducts();
@@ -679,19 +692,45 @@ const InventoryView = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
                         <h2 style={{ margin: 0 }}>Historial de Movimientos</h2>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.05)', padding: '5px 10px', borderRadius: 8, border: '1px solid var(--glass-border)' }}>
-                            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Filtrar por Fecha:</span>
-                            <input
-                                type="date"
-                                className="glass-input"
-                                style={{ padding: '4px 8px', fontSize: '0.9rem' }}
-                                value={kardexDateFilter}
-                                onChange={handleDateFilterChange}
-                            />
-                            {kardexDateFilter && (
-                                <button className="glass-button" onClick={handleClearDateFilter} style={{ padding: 4, border: 'none' }} title="Limpiar filtro">
-                                    <X size={16} />
-                                </button>
+                        <div style={{ position: 'relative', zIndex: showKardexCalendar ? 9999 : 1 }} ref={kardexCalendarRef}>
+                            <button
+                                type="button"
+                                className="glass-button"
+                                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 15px' }}
+                                onClick={() => setShowKardexCalendar(!showKardexCalendar)}
+                            >
+                                <CalendarIcon size={16} className="text-teal-400" />
+                                <span>{kardexDateFilter ? kardexDateFilter : "Filtrar por Fecha"}</span>
+                                {kardexDateFilter && (
+                                    <span 
+                                        style={{ marginLeft: 5, cursor: 'pointer', opacity: 0.6 }} 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleClearDateFilter();
+                                        }}
+                                    >
+                                        ✕
+                                    </span>
+                                )}
+                            </button>
+                            {showKardexCalendar && (
+                                <div style={{ position: 'absolute', left: 0, top: 40, zIndex: 99999 }}>
+                                    <DayPickerCalendar
+                                        selected={kardexDateFilter ? new Date(kardexDateFilter + 'T12:00:00') : undefined}
+                                        onSelect={(date) => {
+                                            if (date) {
+                                                const yyyy = date.getFullYear();
+                                                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                                                const dd = String(date.getDate()).padStart(2, '0');
+                                                setKardexDateFilter(`${yyyy}-${mm}-${dd}`);
+                                            } else {
+                                                setKardexDateFilter('');
+                                            }
+                                            setKardexCurrentPage(1);
+                                            setShowKardexCalendar(false);
+                                        }}
+                                    />
+                                </div>
                             )}
                         </div>
                         <button className="glass-button" onClick={handleExportExcel} style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', padding: '6px 15px', color: 'var(--success)' }}>

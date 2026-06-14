@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
-import { MoreVertical, FileText, X, AlertCircle, Trash, Download } from 'lucide-react';
+import { MoreVertical, FileText, X, AlertCircle, Trash, Download, Calendar as CalendarIcon } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useCache } from '../hooks/useCache';
 import { useCaja } from '../context/CajaContext';
+import { Calendar } from './ui/Calendar';
 
 const CashCountTable = ({ onStatusChange }) => {
     const { showConfirmation } = useConfirmation();
@@ -13,6 +14,18 @@ const CashCountTable = ({ onStatusChange }) => {
     const { refreshCajaStatus } = useCaja();
     const [filterDate, setFilterDate] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [showCalendar, setShowCalendar] = useState(false);
+    const calendarRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (calendarRef.current && !calendarRef.current.contains(e.target)) {
+                setShowCalendar(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const statusFetcher = useCallback(
         () => fetch('/api/cashier/balance').then(res => res.json()),
@@ -338,7 +351,7 @@ const CashCountTable = ({ onStatusChange }) => {
         <div className="glass-panel" style={{ padding: 20, marginBottom: 20, overflow: 'visible' }}>
 
             {/* Header: Title + Toggle Button + Filters */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, position: 'relative', zIndex: showCalendar ? 9999 : 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
                     <h2 style={{ margin: 0 }}>Arqueo de Caja</h2>
                     {currentStatus && (
@@ -408,16 +421,48 @@ const CashCountTable = ({ onStatusChange }) => {
                         {isGenerating ? '...' : ''}
                     </button>
 
-                    <input
-                        type="date"
-                        className="glass-input"
-                        style={{ padding: '5px 10px', width: 'auto' }}
-                        value={filterDate}
-                        onChange={(e) => {
-                            setFilterDate(e.target.value);
-                            setCurrentPage(1);
-                        }}
-                    />
+                    <div style={{ position: 'relative', zIndex: showCalendar ? 9999 : 1 }} ref={calendarRef}>
+                        <button
+                            type="button"
+                            className="glass-button"
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 15px' }}
+                            onClick={() => setShowCalendar(!showCalendar)}
+                        >
+                            <CalendarIcon size={16} className="text-teal-400" />
+                            <span>{filterDate ? filterDate : "Filtrar por Fecha"}</span>
+                            {filterDate && (
+                                <span 
+                                    style={{ marginLeft: 5, cursor: 'pointer', opacity: 0.6 }} 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setFilterDate('');
+                                        setCurrentPage(1);
+                                    }}
+                                >
+                                    ✕
+                                </span>
+                            )}
+                        </button>
+                        {showCalendar && (
+                            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 99999 }}>
+                                <Calendar
+                                    selected={filterDate ? new Date(filterDate + 'T12:00:00') : undefined}
+                                    onSelect={(date) => {
+                                        if (date) {
+                                            const yyyy = date.getFullYear();
+                                            const mm = String(date.getMonth() + 1).padStart(2, '0');
+                                            const dd = String(date.getDate()).padStart(2, '0');
+                                            setFilterDate(`${yyyy}-${mm}-${dd}`);
+                                        } else {
+                                            setFilterDate('');
+                                        }
+                                        setCurrentPage(1);
+                                        setShowCalendar(false);
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </div>
                     {/* Refresh auto-handled */}
 
 

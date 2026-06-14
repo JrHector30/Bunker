@@ -18,8 +18,7 @@ import StaffStatsView from './pages/StaffStatsView'; // New
 import SettingsView from './pages/SettingsView';     // New
 import HomeView from './pages/HomeView';             // New
 import LandingView from './pages/LandingView';       // New
-
-
+import NotFoundView from './views/NotFoundView';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, modulo }) => {
@@ -130,6 +129,7 @@ function App() {
 
 
             </Route>
+            <Route path="*" element={<NotFoundView />} />
           </Routes>
           </AuthProvider>
             </CajaProvider>

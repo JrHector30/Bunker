@@ -23,7 +23,7 @@ const LoginPage = () => {
             shift: u.rol === 'admin' ? 'Acceso 24/7' : (u.rol === 'mozo' ? '08:00 AM - 04:00 PM' : 'Turno Operativo')
         }));
     });
-    
+
     const { data: usersList, mutate: fetchUsers } = useCache('users', fetcher, []);
     const [isExiting, setIsExiting] = useState(false);
 
@@ -36,7 +36,7 @@ const LoginPage = () => {
     const handleLogin = async (e) => {
         if (e) e.preventDefault();
         if (!selectedUser) return setError('Seleccione un usuario.');
-        if (pin.length < 3) return setError('Ingrese un PIN válido.'); // Allowing shorter PINs since old was '123'
+        if (pin.length < 3) return setError('Ingrese un PIN válido.'); // Allowing shorter PINs since old was '555555'
 
         const res = await login(selectedUser.usuario, pin); // Backend uses 'usuario'
         if (res.success) {
@@ -83,7 +83,7 @@ const LoginPage = () => {
 
     return (
         <React.Fragment>
-            
+
             <div className="mobile-login-container" style={{
                 display: 'flex', height: '100vh', width: '100vw', background: '#050505',
                 fontFamily: '"Inter", sans-serif', color: '#fff', overflow: 'hidden',

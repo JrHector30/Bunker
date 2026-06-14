@@ -1,0 +1,32 @@
+/* ============================================
+   AISLAMIENTO DEL CALENDARIO (react-day-picker v9)
+   Anula CUALQUIER estilo global de table/th/td/tr
+   que la app aplique a tablas de Caja/Kardex/Inventario.
+   Agregar este bloque AL FINAL del CSS global,
+   después de los estilos de glass-panel/table-responsive.
+   ============================================ */
+
+.rdp-isolated,
+.rdp-isolated * {
+  all: revert;
+  box-sizing: border-box;
+}
+
+.rdp-isolated table,
+.rdp-isolated th,
+.rdp-isolated td,
+.rdp-isolated tr,
+.rdp-isolated thead,
+.rdp-isolated tbody {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: auto !important;
+  text-align: center !important;
+  font-weight: normal !important;
+}
+
+.rdp-isolated table {
+  border-collapse: collapse !important;
+}

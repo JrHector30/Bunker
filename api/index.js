@@ -160,20 +160,25 @@ app.put('/api/tables/:id/status', async (req, res) => {
 
 // 3. Categories (NEW)
 app.get('/api/categories', async (req, res) => {
-    const categories = await prisma.categoria.findMany({
-        where: { deleted: false }, // Filter Soft Deleted
-        orderBy: { orden: 'asc' },
-        include: {
-            _count: {
-                select: {
-                    platos: {
-                        where: { deleted: false }
+    try {
+        const categories = await prisma.categoria.findMany({
+            where: { deleted: false }, // Filter Soft Deleted
+            orderBy: { orden: 'asc' },
+            include: {
+                _count: {
+                    select: {
+                        platos: {
+                            where: { deleted: false }
+                        }
                     }
                 }
             }
-        }
-    });
-    res.json(categories);
+        });
+        res.json(categories);
+    } catch (error) {
+        console.error('❌ Error controlado en /api/categories:', error);
+        res.json([]); // Retorno seguro para evitar pantalla negra y crash del servidor
+    }
 });
 
 app.post('/api/categories', async (req, res) => {
