@@ -115,7 +115,7 @@ const KitchenView = () => {
 
     useEffect(() => {
         fetchQueue();
-        const interval = setInterval(fetchQueue, 5000);
+        const interval = setInterval(fetchQueue, 1500); // Poll every 1.5 seconds (down from 5s)
         return () => clearInterval(interval);
     }, []);
 
@@ -125,15 +125,35 @@ const KitchenView = () => {
             payload.cocineroId = user.id;
         }
 
+        // 1. Actualización optimista local
+        setQueue(prev => prev.map(item => {
+            if (item.id === itemId) {
+                const updatedItem = { ...item, estado: status };
+                if (status === 'preparando' && !options.preserveCook) {
+                    // Simular cocinero local para el badge
+                    updatedItem.cocinero = { id: user.id, nombre: user.nombre || 'Yo' };
+                    updatedItem.cocineroId = user.id;
+                }
+                return updatedItem;
+            }
+            return item;
+        }));
+
+        // 2. Confirmar con el servidor
         try {
-            await fetch(`/api/orders/details/${itemId}`, {
+            const res = await fetch(`/api/orders/details/${itemId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+            if (!res.ok) {
+                throw new Error("HTTP error " + res.status);
+            }
             fetchQueue();
         } catch (error) {
-            console.error("Error updating item", error);
+            console.error("Error updating item, reverting...", error);
+            // 3. Revertir si falla
+            fetchQueue(); // re-fetch real desde servidor
         }
     };
 

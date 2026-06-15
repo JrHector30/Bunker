@@ -195,7 +195,11 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                             </label>
                             <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                                 <input type="radio" name="method" checked={paymentMethod === 'yape'} onChange={() => setPaymentMethod('yape')} />
-                                <Smartphone size={18} /> Yape / Plin
+                                <Smartphone size={18} /> Yape
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                                <input type="radio" name="method" checked={paymentMethod === 'plin'} onChange={() => setPaymentMethod('plin')} />
+                                <Smartphone size={18} /> Plin
                             </label>
                             <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                                 <input type="radio" name="method" checked={paymentMethod === 'izipay'} onChange={() => setPaymentMethod('izipay')} />

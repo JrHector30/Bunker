@@ -1909,3 +1909,40 @@ body {
 .rdp-isolated .rdp-outside .rdp-day_button:hover {
   background-color: transparent !important;
 }
+
+/* ============================================
+   ESTILOS DE IMPRESIÓN (TICKETS DE COURIER)
+   ============================================ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Mostrar única y exclusivamente el ticket de impresión */
+  .print-ticket,
+  .print-ticket * {
+    visibility: visible;
+  }
+  
+  .print-ticket {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 350px !important;
+    max-width: 350px !important;
+    background: white !important;
+    color: black !important;
+    padding: 10px !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    font-family: 'Courier New', Courier, monospace !important;
+  }
+
+  /* Ocultar elementos que no deben imprimirse, como botones */
+  .no-print,
+  .no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}

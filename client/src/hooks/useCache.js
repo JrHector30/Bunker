@@ -32,31 +32,30 @@ export function useCache(key, fetcher, initialData = []) {
     useEffect(() => {
         let isMounted = true;
         
-        // Solo cargar del cache, NO refrescar automáticamente
+        // Cargar inmediatamente del cache
         const cached = getCachedData();
         setData(cached);
         
         // Solo marcar loading si NO hay cache
-        if (!globalCache[key] && !localStorage.getItem(key)) {
+        const hasCache = !!(globalCache[key] || localStorage.getItem(key));
+        if (!hasCache) {
             setLoading(true);
-            
-            // Usar fetcherRef.current en lugar del fetcher del closure
-            fetcherRef.current()
-                .then(result => {
-                    if (!isMounted) return;
-                    const newString = JSON.stringify(result);
-                    globalCache[key] = result;
-                    localStorage.setItem(key, newString);
-                    setData(result);
-                })
-                .catch(error => console.error(`Cache fetch error for ${key}:`, error))
-                .finally(() => { if (isMounted) setLoading(false); });
-        } else {
-            setLoading(false);
         }
+        
+        // Siempre refrescar en segundo plano al montar o cambiar la clave para tener datos frescos
+        fetcherRef.current()
+            .then(result => {
+                if (!isMounted) return;
+                const newString = JSON.stringify(result);
+                globalCache[key] = result;
+                localStorage.setItem(key, newString);
+                setData(result);
+            })
+            .catch(error => console.error(`Cache background fetch error for ${key}:`, error))
+            .finally(() => { if (isMounted) setLoading(false); });
 
         return () => { isMounted = false; };
-        // SOLO 'key' como dependencia — fetcher está en ref
+        // SOLO 'key' como dependencia — fetcher está en ref para estabilidad absoluta
     }, [key]);
 
     const keyRef = useRef(key);

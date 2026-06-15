@@ -97,6 +97,19 @@ model Arqueo {
   montoFinal   Float?
   estado       String    @default("abierto") // abierto, cerrado
   usuarioId    Int
+  movimientos  MovimientoCaja[]
+}
+
+model MovimientoCaja {
+  id              Int      @id @default(autoincrement())
+  arqueoId        Int
+  arqueo          Arqueo   @relation(fields: [arqueoId], references: [id], onDelete: Cascade)
+  tipo            String   // INGRESO, EGRESO
+  tipoComprobante String   // boleta, factura, recibo
+  concepto        String
+  observacion     String?
+  monto           Float
+  fecha           DateTime @default(now())
 }
 
 model DetalleComanda {

@@ -273,7 +273,7 @@ const LoginPage = () => {
                             disabled={pin.length < 6}
                             style={{
                                 background: pin.length >= 6 ? 'var(--primary)' : '#222',
-                                color: pin.length >= 6 ? '#fff' : '#555',
+                                color: pin.length >= 6 ? '#000000ff' : '#555',
                                 border: 'none',
                                 padding: '18px',
                                 borderRadius: 12,

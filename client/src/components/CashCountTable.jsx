@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
-import { MoreVertical, FileText, X, AlertCircle, Trash, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { MoreVertical, FileText, X, AlertCircle, Trash, Download, Calendar as CalendarIcon, Eye, EyeOff, PlusCircle, Printer } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useCache } from '../hooks/useCache';
@@ -19,6 +19,115 @@ const CashCountTable = ({ onStatusChange }) => {
         filterDate ? new Date(filterDate + 'T12:00:00') : new Date()
     );
     const calendarRef = useRef(null);
+
+    // Manual Cash Movement Modal & Expandable details states
+    const [showMovementModal, setShowMovementModal] = useState(false);
+    const [expandedDig, setExpandedDig] = useState({});
+
+    // Summary Modal States
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
+    const [summaryData, setSummaryData] = useState(null);
+    const [loadingSummary, setLoadingSummary] = useState(false);
+
+    const handleOpenSummaryModal = async () => {
+        let targetId = null;
+        if (filterDate && history?.data?.length > 0) {
+            targetId = history.data[0].id;
+        } else if (currentStatus) {
+            targetId = currentStatus.id;
+        }
+
+        if (!targetId) {
+            showToast("No hay datos de arqueo disponibles para la fecha seleccionada.", 'error');
+            return;
+        }
+
+        setLoadingSummary(true);
+        setShowSummaryModal(true);
+        try {
+            const res = await fetch(`/api/cashier/arqueo/${targetId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setSummaryData(data);
+            } else {
+                showToast("Error al obtener el resumen de caja.", 'error');
+                setShowSummaryModal(false);
+            }
+        } catch (err) {
+            showToast("Error de conexión al obtener el resumen.", 'error');
+            setShowSummaryModal(false);
+        } finally {
+            setLoadingSummary(false);
+        }
+    };
+
+    // Modal Form States
+    const [movTipo, setMovTipo] = useState('EGRESO');
+    const [movComprobante, setMovComprobante] = useState('recibo');
+    const [movConcepto, setMovConcepto] = useState('');
+    const [movObservacion, setMovObservacion] = useState('');
+    const [movMonto, setMovMonto] = useState('');
+    const [movError, setMovError] = useState('');
+    const [isSavingMov, setIsSavingMov] = useState(false);
+
+    const handleSaveMovement = async (e) => {
+        e.preventDefault();
+        setMovError('');
+
+        const numericMonto = parseFloat(movMonto);
+        if (Number.isNaN(numericMonto) || numericMonto <= 0) {
+            setMovError('El monto debe ser un número positivo.');
+            return;
+        }
+
+        if (!movConcepto.trim()) {
+            setMovError('El concepto es obligatorio.');
+            return;
+        }
+
+        // Limit validation for egresos
+        if (movTipo === 'EGRESO') {
+            const currentInicio = currentStatus?.inicio || 0;
+            if (numericMonto > currentInicio) {
+                setMovError(`Monto supera el rango permitido. El egreso no puede ser mayor que el monto actual en Inicio (S/. ${currentInicio.toFixed(2)})`);
+                return;
+            }
+        }
+
+        setIsSavingMov(true);
+        try {
+            const res = await fetch('/api/cashier/movimientos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tipo: movTipo,
+                    tipoComprobante: movComprobante,
+                    concepto: movConcepto,
+                    observacion: movObservacion,
+                    monto: numericMonto
+                })
+            });
+
+            if (res.ok) {
+                showToast('Movimiento registrado con éxito.', 'success');
+                setShowMovementModal(false);
+                // Reset form
+                setMovConcepto('');
+                setMovObservacion('');
+                setMovMonto('');
+                // Refresh data
+                fetchStatus();
+                fetchHistory();
+            } else {
+                const data = await res.json();
+                setMovError(data.error || 'Error al registrar el movimiento.');
+            }
+        } catch (err) {
+            setMovError('Error de conexión con el servidor.');
+        } finally {
+            setIsSavingMov(false);
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -72,13 +181,13 @@ const CashCountTable = ({ onStatusChange }) => {
         const interval = setInterval(() => {
             statusIntervalRef.current?.();
         }, 10000);
-        
+
         const handleRefresh = () => {
             fetchStatus();
             fetchHistory();
         };
         window.addEventListener('refreshCashCount', handleRefresh);
-        
+
         return () => {
             clearInterval(interval);
             window.removeEventListener('refreshCashCount', handleRefresh);
@@ -178,7 +287,7 @@ const CashCountTable = ({ onStatusChange }) => {
             doc.setFontSize(10);
             doc.setTextColor(100);
             doc.setFont("helvetica", "normal");
-            
+
             const reportDate = filterDate ? formatDate(fullData.fechaInicio, false) : formatDate(new Date().toISOString(), false);
             doc.text(`Fecha del Turno: ${reportDate}`, 14, 35);
             doc.text(`Turno ID: #${fullData.id} - Estado: ${fullData.estado.toUpperCase()}`, 14, 40);
@@ -196,10 +305,7 @@ const CashCountTable = ({ onStatusChange }) => {
             doc.text("Total Propinas", 80, startY + 8);
             doc.text("Saldo Final (Caja)", 140, startY + 8);
 
-            const ingresosEfectivo = fullData.ventas?.filter(v => (v.metodo || 'efectivo').toLowerCase() === 'efectivo').reduce((sum, v) => sum + v.total, 0) || 0;
-            const saldoFinal = currentStatus && currentStatus.id === fullData.id
-                ? currentStatus.totalCaja
-                : ((fullData.inicio || fullData.montoInicial || 0) + ingresosEfectivo);
+            const saldoFinal = fullData.totalCaja || 0;
 
             doc.setFontSize(12);
             doc.setTextColor(40, 40, 40);
@@ -210,54 +316,159 @@ const CashCountTable = ({ onStatusChange }) => {
 
             doc.setFont("helvetica", "normal");
 
-            // SECCIÓN DE EGRESOS
-            startY += 32;
+            const formatTime = (dateStr) => {
+                if (!dateStr) return '-';
+                const d = new Date(dateStr);
+                return d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+            };
+
+            // 1. FLOW HISTORY TABLE
+            let currentY = startY + 30;
             doc.setFontSize(12);
             doc.setTextColor(13, 110, 253);
             doc.setFont("helvetica", "bold");
-            doc.text("Egresos Registrados", 14, startY);
+            doc.text("Historial de Flujo de Caja (Inicio)", 14, currentY);
 
-            const egresosRows = fullData.egresosList && fullData.egresosList.length > 0
-                ? fullData.egresosList.map(e => [e.motivo, `S/. ${(e.monto || 0).toFixed(2)}`])
-                : [["Sin egresos en este turno", "-"]];
+            const flowHistoryRows = [];
+            flowHistoryRows.push([
+                formatTime(fullData.fechaInicio),
+                'Monto Inicial de Apertura',
+                '-',
+                `S/. ${fullData.montoInicial.toFixed(2)}`
+            ]);
 
-            autoTable(doc, {
-                startY: startY + 5,
-                head: [['Motivo', 'Monto']],
-                body: egresosRows,
-                theme: 'grid',
-                headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
-                styles: { font: 'helvetica', fontSize: 9 },
+            // Combine movements and calculate running starts
+            const sortedMovements = [...(fullData.movimientos || [])].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            let runningStart = fullData.montoInicial;
+
+            sortedMovements.forEach(m => {
+                if (m.tipo === 'INGRESO') {
+                    runningStart += m.monto;
+                    flowHistoryRows.push([
+                        formatTime(m.fecha),
+                        `Ingreso: ${m.concepto}`,
+                        `▲ S/. ${m.monto.toFixed(2)}`,
+                        `S/. ${runningStart.toFixed(2)}`
+                    ]);
+                } else if (m.tipo === 'EGRESO') {
+                    runningStart -= m.monto;
+                    flowHistoryRows.push([
+                        formatTime(m.fecha),
+                        `Egreso: ${m.concepto}`,
+                        `▼ S/. ${m.monto.toFixed(2)}`,
+                        `S/. ${runningStart.toFixed(2)}`
+                    ]);
+                }
             });
-
-            // TABLA DE PEDIDOS
-            let currentY = doc.lastAutoTable.finalY + 15;
-            doc.setFontSize(12);
-            doc.setTextColor(13, 110, 253);
-            doc.setFont("helvetica", "bold");
-            doc.text("Detalle de Pedidos", 14, currentY);
-
-            const tableRows = fullData.ventas?.map(v => [
-                v.mesa || 'Barra',
-                v.mozo || 'General',
-                `S/. ${(v.total || 0).toFixed(2)}`,
-                v.propina > 0 ? `S/. ${(v.propina || 0).toFixed(2)}` : '-'
-            ]) || [];
 
             autoTable(doc, {
                 startY: currentY + 5,
-                head: [['Mesa', 'Mozo', 'Monto', 'Propina']],
-                body: tableRows,
+                head: [['Hora', 'Descripción', 'Afectación', 'Saldo de Inicio']],
+                body: flowHistoryRows,
                 theme: 'grid',
                 headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
                 styles: { font: 'helvetica', fontSize: 9 },
                 columnStyles: {
-                    2: { halign: 'right' },
+                    2: { halign: 'center' },
                     3: { halign: 'right' }
+                },
+                didParseCell: function (data) {
+                    if (data.section === 'body' && data.column.index === 2) {
+                        const val = data.cell.raw;
+                        if (val.startsWith('▲')) {
+                            data.cell.styles.textColor = [40, 167, 69]; // green
+                        } else if (val.startsWith('▼')) {
+                            data.cell.styles.textColor = [220, 53, 69]; // red
+                        }
+                    }
                 }
             });
 
-            // NUEVA SECCIÓN: PROPINAS
+            // 2. INGRESOS TABLE
+            currentY = doc.lastAutoTable.finalY + 15;
+            doc.setFontSize(12);
+            doc.setTextColor(13, 110, 253);
+            doc.setFont("helvetica", "bold");
+            doc.text("Ingresos Registrados", 14, currentY);
+
+            const ingresosList = [];
+
+            // Add sales from comandas
+            (fullData.ventas || []).forEach(v => {
+                ingresosList.push({
+                    fecha: v.hora,
+                    hora: formatTime(v.hora),
+                    comprobante: (v.doc || 'ticket').toUpperCase(),
+                    concepto: `Venta Mesa ${v.mesa}`,
+                    observacion: `Pago: ${(v.metodo || 'EFECTIVO').toUpperCase()}${v.propina > 0 ? ` + Propina S/. ${v.propina.toFixed(2)}` : ''}`,
+                    monto: `S/. ${(v.total || 0).toFixed(2)}`
+                });
+            });
+
+            // Add manual incomes
+            (fullData.movimientos || []).filter(m => m.tipo === 'INGRESO').forEach(m => {
+                ingresosList.push({
+                    fecha: m.fecha,
+                    hora: formatTime(m.fecha),
+                    comprobante: m.tipoComprobante.toUpperCase(),
+                    concepto: m.concepto,
+                    observacion: `Manual${m.observacion ? `: ${m.observacion}` : ''}`,
+                    monto: `S/. ${(m.monto || 0).toFixed(2)}`
+                });
+            });
+
+            // Sort chronologically
+            ingresosList.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+            const ingresosRows = ingresosList.length > 0
+                ? ingresosList.map(i => [i.hora, i.comprobante, i.concepto, i.observacion, i.monto])
+                : [["-", "-", "Sin ingresos en este turno", "-", "-"]];
+
+            autoTable(doc, {
+                startY: currentY + 5,
+                head: [['Hora', 'Comprobante', 'Concepto', 'Observación', 'Monto']],
+                body: ingresosRows,
+                theme: 'grid',
+                headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+                styles: { font: 'helvetica', fontSize: 9 },
+                columnStyles: {
+                    4: { halign: 'right' }
+                }
+            });
+
+            // 3. EGRESOS TABLE
+            currentY = doc.lastAutoTable.finalY + 15;
+            doc.setFontSize(12);
+            doc.setTextColor(13, 110, 253);
+            doc.setFont("helvetica", "bold");
+            doc.text("Egresos Registrados", 14, currentY);
+
+            const egresosList = (fullData.movimientos || []).filter(m => m.tipo === 'EGRESO');
+            egresosList.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+            const egresosRows = egresosList.length > 0
+                ? egresosList.map(e => [
+                    formatTime(e.fecha),
+                    e.tipoComprobante.toUpperCase(),
+                    e.concepto,
+                    e.observacion || '-',
+                    `S/. ${(e.monto || 0).toFixed(2)}`
+                ])
+                : [["-", "-", "Sin egresos en este turno", "-", "-"]];
+
+            autoTable(doc, {
+                startY: currentY + 5,
+                head: [['Hora', 'Comprobante', 'Concepto', 'Observación', 'Monto']],
+                body: egresosRows,
+                theme: 'grid',
+                headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+                styles: { font: 'helvetica', fontSize: 9 },
+                columnStyles: {
+                    4: { halign: 'right' }
+                }
+            });
+
+            // 4. PROPINAS
             currentY = doc.lastAutoTable.finalY + 15;
             doc.setFontSize(12);
             doc.setTextColor(13, 110, 253);
@@ -412,6 +623,35 @@ const CashCountTable = ({ onStatusChange }) => {
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    {/* MOVIMIENTO REGISTRATION BUTTON */}
+                    <button
+                        type="button"
+                        className="glass-button primary"
+                        disabled={!currentStatus || currentStatus.estado !== 'abierto'}
+                        onClick={() => {
+                            setMovTipo('EGRESO');
+                            setMovComprobante('recibo');
+                            setMovConcepto('');
+                            setMovObservacion('');
+                            setMovMonto('');
+                            setMovError('');
+                            setShowMovementModal(true);
+                        }}
+                        title={currentStatus && currentStatus.estado === 'abierto' ? "Registrar Movimiento" : "Abra caja para registrar movimientos"}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            background: currentStatus && currentStatus.estado === 'abierto' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                            color: currentStatus && currentStatus.estado === 'abierto' ? 'black' : 'var(--text-muted)',
+                            fontWeight: 'bold',
+                            opacity: currentStatus && currentStatus.estado === 'abierto' ? 1 : 0.5,
+                            cursor: currentStatus && currentStatus.estado === 'abierto' ? 'pointer' : 'not-allowed'
+                        }}
+                    >
+                        <PlusCircle size={16} /> Movimiento
+                    </button>
+
                     {/* PDF DOWNLOAD BUTTON */}
                     <button
                         className="glass-button"
@@ -434,8 +674,8 @@ const CashCountTable = ({ onStatusChange }) => {
                             <CalendarIcon size={16} className="text-teal-400" />
                             <span>{filterDate ? filterDate : "Filtrar por Fecha"}</span>
                             {filterDate && (
-                                <span 
-                                    style={{ marginLeft: 5, cursor: 'pointer', opacity: 0.6 }} 
+                                <span
+                                    style={{ marginLeft: 5, cursor: 'pointer', opacity: 0.6 }}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setFilterDate('');
@@ -487,8 +727,34 @@ const CashCountTable = ({ onStatusChange }) => {
                                 <button className="glass-button" style={{ justifyContent: 'flex-start', border: 'none' }} onClick={() => { setPaloteoOpen(true); setMenuOpen(false); }}>
                                     Resumen / Paloteo (Actual)
                                 </button>
+                                <button className="glass-button" style={{ justifyContent: 'flex-start', border: 'none' }} onClick={() => { handleOpenSummaryModal(); setMenuOpen(false); }}>
+                                    Resumen de Caja
+                                </button>
                                 <button className="glass-button" style={{ justifyContent: 'flex-start', border: 'none' }} onClick={generatePDF}>
                                     Exportar PDF
+                                </button>
+                                <button
+                                    className="glass-button"
+                                    disabled={!currentStatus || currentStatus.estado !== 'abierto'}
+                                    style={{
+                                        justifyContent: 'flex-start',
+                                        border: 'none',
+                                        opacity: currentStatus && currentStatus.estado === 'abierto' ? 1 : 0.5,
+                                        cursor: currentStatus && currentStatus.estado === 'abierto' ? 'pointer' : 'not-allowed'
+                                    }}
+                                    onClick={() => {
+                                        if (!currentStatus || currentStatus.estado !== 'abierto') return;
+                                        setMovTipo('EGRESO');
+                                        setMovComprobante('recibo');
+                                        setMovConcepto('');
+                                        setMovObservacion('');
+                                        setMovMonto('');
+                                        setMovError('');
+                                        setShowMovementModal(true);
+                                        setMenuOpen(false);
+                                    }}
+                                >
+                                    Registrar Movimiento
                                 </button>
                             </div>
                         )}
@@ -507,7 +773,6 @@ const CashCountTable = ({ onStatusChange }) => {
                             <th>Egreso</th>
                             <th>Ingreso (Detalle)</th>
                             <th>Propinas</th>
-                            <th>Detalle Propinas</th>
                             <th>Total en Caja</th>
                             <th>Total en Bruto</th>
                             <th>Pendiente</th>
@@ -515,56 +780,62 @@ const CashCountTable = ({ onStatusChange }) => {
                     </thead>
                     <tbody style={{ opacity: historyLoading ? 0.6 : 1, transition: 'opacity 0.1s' }}>
                         {historyLoading && (!history || history.data.length === 0) ? (
-                            <tr><td colSpan="11" className="text-center text-muted" style={{ padding: '20px' }}>Cargando registros de caja...</td></tr>
+                            <tr><td colSpan="9" className="text-center text-muted" style={{ padding: '20px' }}>Cargando registros de caja...</td></tr>
                         ) : !history || !history.data || history.data.length === 0 ? (
-                            <tr><td colSpan="11" className="text-center text-muted" style={{ padding: '20px' }}>No se encontraron registros.</td></tr>
+                            <tr><td colSpan="9" className="text-center text-muted" style={{ padding: '20px' }}>No se encontraron registros.</td></tr>
                         ) : (
-                            history.data.map(item => (
-                                <tr key={item.id} style={{ opacity: item.estado === 'cerrado' ? 0.8 : 1 }}>
-                                    <td>{item.id}</td>
-                                    <td>
-                                        <div style={{ fontWeight: 'bold', color: item.estado === 'abierto' ? '#28a745' : 'var(--text-main)' }}>
-                                            Inicio: {formatDate(item.fechaInicio)}
-                                        </div>
-                                        <div className="text-muted" style={{ fontSize: '0.9em' }}>
-                                            Cierre: {item.estado === 'cerrado' ? formatDate(item.fechaFin) : (
-                                                <span style={{ color: '#28a745', fontWeight: 'bold' }}>EN CURSO</span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td>S/. {(item.inicio || 0).toFixed(2)}</td>
-                                    <td>
-                                        <div>Efec: S/. {(item.egresos || 0).toFixed(2)}</div>
-                                    </td>
-                                    <td>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 10px', fontSize: '0.85em' }}>
-                                            <span>Efec: {(item.ingresos?.efectivo || 0).toFixed(2)}</span>
-                                            <span>Tarj: {(item.ingresos?.tarjeta || 0).toFixed(2)}</span>
-                                            <span>Yape: {(item.ingresos?.yape || 0).toFixed(2)}</span>
-                                            <span>Izi: {(item.ingresos?.izipay || 0).toFixed(2)}</span>
-                                        </div>
-                                    </td>
-                                    <td style={{ color: 'var(--warning)', fontWeight: 'bold' }}>
-                                        S/. {(item.totalPropinas || 0).toFixed(2)}
-                                    </td>
-                                    <td>
-                                        {item.propinasPorMozo && item.propinasPorMozo.length > 0 ? (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                                {item.propinasPorMozo.map(mozo => (
-                                                    <div key={mozo.id} style={{ fontSize: '0.8rem', padding: '2px 6px', background: 'rgba(255,193,7,0.1)', borderRadius: 4 }}>
-                                                        <strong>{mozo.nombre}:</strong> S/. {(mozo.propinas || 0).toFixed(2)}
-                                                    </div>
-                                                ))}
+                            history.data.map(item => {
+                                const digitalSum = (item.ingresos?.yape || 0) + (item.ingresos?.izipay || 0) + (item.ingresos?.plin || 0);
+                                return (
+                                    <tr key={item.id} style={{ opacity: item.estado === 'cerrado' ? 0.8 : 1 }}>
+                                        <td>{item.id}</td>
+                                        <td>
+                                            <div style={{ fontWeight: 'bold', color: item.estado === 'abierto' ? '#28a745' : 'var(--text-main)' }}>
+                                                Inicio: {formatDate(item.fechaInicio)}
                                             </div>
-                                        ) : (
-                                            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Sin propinas</span>
-                                        )}
-                                    </td>
-                                    <td style={{ fontWeight: 'bold', color: 'var(--success)' }}>S/. {(item.totalCaja || 0).toFixed(2)}</td>
-                                    <td style={{ fontWeight: 'bold' }}>S/. {(item.totalBruto || 0).toFixed(2)}</td>
-                                    <td style={{ color: 'var(--warning)' }}>S/. {(item.totalPendiente || 0).toFixed(2)}</td>
-                                </tr>
-                            ))
+                                            <div className="text-muted" style={{ fontSize: '0.9em' }}>
+                                                Cierre: {item.estado === 'cerrado' ? formatDate(item.fechaFin) : (
+                                                    <span style={{ color: '#28a745', fontWeight: 'bold' }}>EN CURSO</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td>S/. {(item.inicio || 0).toFixed(2)}</td>
+                                        <td>
+                                            <div>Efec: S/. {(item.egresos || 0).toFixed(2)}</div>
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 10px', fontSize: '0.85em', alignItems: 'center' }}>
+                                                <span>Efec: {(item.ingresos?.efectivo || 0).toFixed(2)}</span>
+                                                <span>Tarj: {(item.ingresos?.tarjeta || 0).toFixed(2)}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <span>Dig: {digitalSum.toFixed(2)}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setExpandedDig(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                                                        style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center' }}
+                                                    >
+                                                        {expandedDig[item.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                    </button>
+                                                </div>
+                                                <span>Man: {(item.ingresos?.manual || 0).toFixed(2)}</span>
+                                            </div>
+                                            {expandedDig[item.id] && (
+                                                <div style={{ fontSize: '0.75em', borderTop: '1px solid var(--glass-border)', marginTop: 5, paddingTop: 5, paddingLeft: 10, display: 'flex', flexDirection: 'column', gap: 2, animation: 'fadeIn 0.2s ease' }}>
+                                                    <span>Yape: S/. {(item.ingresos?.yape || 0).toFixed(2)}</span>
+                                                    <span>Izi: S/. {(item.ingresos?.izipay || 0).toFixed(2)}</span>
+                                                    <span>Plin: S/. {(item.ingresos?.plin || 0).toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td style={{ color: 'var(--warning)', fontWeight: 'bold' }}>
+                                            S/. {(item.totalPropinas || 0).toFixed(2)}
+                                        </td>
+                                        <td style={{ fontWeight: 'bold', color: 'var(--success)' }}>S/. {(item.totalCaja || 0).toFixed(2)}</td>
+                                        <td style={{ fontWeight: 'bold' }}>S/. {(item.totalBruto || 0).toFixed(2)}</td>
+                                        <td style={{ color: 'var(--warning)' }}>S/. {(item.totalPendiente || 0).toFixed(2)}</td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>
@@ -607,13 +878,13 @@ const CashCountTable = ({ onStatusChange }) => {
                             {formError && <div style={{ color: 'white', background: 'var(--danger)', padding: 10, borderRadius: 8 }}>{formError}</div>}
                             <div>
                                 <label>Ingrese monto inicial en Caja (S/.)</label>
-                                <input 
-                                    type="number" 
-                                    step="0.01" 
-                                    className="glass-input" 
-                                    value={Number.isNaN(initialAmount) ? '' : initialAmount} 
-                                    onChange={e => setInitialAmount(e.target.valueAsNumber)} 
-                                    required 
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    className="glass-input"
+                                    value={Number.isNaN(initialAmount) ? '' : initialAmount}
+                                    onChange={e => setInitialAmount(e.target.valueAsNumber)}
+                                    required
                                     autoFocus
                                     style={{ fontSize: '1.5rem', textAlign: 'center', marginTop: 10 }}
                                 />
@@ -622,6 +893,198 @@ const CashCountTable = ({ onStatusChange }) => {
                                 <button type="submit" className="glass-button primary" style={{ width: '100%', fontSize: '1.1rem' }}>Abrir Caja</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Registro de Movimientos (Ingresos/Egresos) */}
+            {showMovementModal && (
+                <div className="modal-overlay" onClick={() => setShowMovementModal(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 450, width: '90%' }}>
+                        <div className="modal-header">
+                            <h2 style={{ margin: 0 }}>Registrar Movimiento</h2>
+                            <button className="glass-button" onClick={() => setShowMovementModal(false)} style={{ padding: 5, border: 'none' }}><X size={24} /></button>
+                        </div>
+                        <form onSubmit={handleSaveMovement} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                            {movError && (
+                                <div style={{ color: 'black', background: 'var(--danger)', padding: 10, borderRadius: 8, fontSize: '0.9rem' }}>
+                                    {movError}
+                                </div>
+                            )}
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: 5, fontWeight: 'bold' }}>Tipo de Movimiento</label>
+                                <select
+                                    className="glass-input"
+                                    value={movTipo}
+                                    onChange={e => setMovTipo(e.target.value)}
+                                    style={{ width: '100%', padding: '8px 10px' }}
+                                >
+                                    <option value="EGRESO">Egreso (Gasto/Salida)</option>
+                                    <option value="INGRESO">Ingreso (Entrada Manual)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: 5, fontWeight: 'bold' }}>Tipo de Comprobante</label>
+                                <select
+                                    className="glass-input"
+                                    value={movComprobante}
+                                    onChange={e => setMovComprobante(e.target.value)}
+                                    style={{ width: '100%', padding: '8px 10px' }}
+                                >
+                                    <option value="boleta">Boleta</option>
+                                    <option value="factura">Factura</option>
+                                    <option value="recibo">Recibo</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: 5, fontWeight: 'bold' }}>Concepto</label>
+                                <input
+                                    type="text"
+                                    className="glass-input"
+                                    placeholder="Ej. Compra de servilletas"
+                                    value={movConcepto}
+                                    onChange={e => setMovConcepto(e.target.value)}
+                                    required
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: 5, fontWeight: 'bold' }}>Observación (Opcional)</label>
+                                <input
+                                    type="text"
+                                    className="glass-input"
+                                    placeholder="Detalles adicionales"
+                                    value={movObservacion}
+                                    onChange={e => setMovObservacion(e.target.value)}
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: 5, fontWeight: 'bold' }}>Monto (S/.)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    className="glass-input"
+                                    placeholder="0.00"
+                                    value={movMonto}
+                                    onChange={e => setMovMonto(e.target.value)}
+                                    required
+                                    style={{ width: '100%', fontSize: '1.2rem', fontWeight: 'bold' }}
+                                />
+                            </div>
+
+                            <div className="modal-footer" style={{ border: 'none', padding: 0, marginTop: 10 }}>
+                                <button
+                                    type="submit"
+                                    className="glass-button primary"
+                                    disabled={isSavingMov}
+                                    style={{ width: '100%', fontSize: '1.1rem', background: 'var(--primary)', borderColor: 'transparent', opacity: isSavingMov ? 0.7 : 1 }}
+                                >
+                                    {isSavingMov ? 'Registrando...' : 'Registrar Movimiento'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Resumen de Caja */}
+            {showSummaryModal && (
+                <div className="modal-overlay" onClick={() => setShowSummaryModal(false)}>
+                    <div className="modal-content print-ticket" onClick={e => e.stopPropagation()} style={{ background: 'white', color: 'black', width: 350, fontFamily: '"Courier New", monospace', padding: 20 }}>
+                        {loadingSummary ? (
+                            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                                Cargando Resumen de Caja...
+                            </div>
+                        ) : !summaryData ? (
+                            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                                No se encontraron datos para el arqueo seleccionado.
+                            </div>
+                        ) : (
+                            <>
+                                <div style={{ textAlign: 'center', marginBottom: 15, borderBottom: '1px dashed black', paddingBottom: 10 }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>COMANDAGO</div>
+                                    <div>DEMO</div>
+                                    <div style={{ fontSize: '0.8rem' }}>Telf: 519123456789 / RUC: 10000000000</div>
+                                    <div style={{ fontSize: '0.8rem', marginTop: 5 }}>
+                                        Fecha: {new Date().toLocaleDateString('es-PE')} {new Date().toLocaleTimeString('es-PE', { hour12: false })}
+                                    </div>
+                                </div>
+
+                                <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: 10 }}>RESUMEN DE CAJA</div>
+
+                                <div style={{ fontSize: '0.9rem', marginBottom: 10 }}>
+                                    <div>Inicio: {formatDate(summaryData.fechaInicio)}</div>
+                                    {summaryData.fechaFin && (
+                                        <div>Cierre: {formatDate(summaryData.fechaFin)}</div>
+                                    )}
+                                    <div>Monto Inicio: S/. {(summaryData.montoInicial || 0).toFixed(2)}</div>
+                                </div>
+
+                                <div style={{ borderBottom: '1px dashed black', marginBottom: 5 }}></div>
+                                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 5 }}>VENTAS</div>
+                                <div style={{ fontSize: '0.9rem', marginBottom: 5 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Efectivo:</span>
+                                        <span>S/. {(summaryData.ingresos?.efectivo || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Tarjeta:</span>
+                                        <span>S/. {(summaryData.ingresos?.tarjeta || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Yape:</span>
+                                        <span>S/. {(summaryData.ingresos?.yape || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Plin:</span>
+                                        <span>S/. {(summaryData.ingresos?.plin || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Izi:</span>
+                                        <span>S/. {(summaryData.ingresos?.izipay || 0).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                                <div style={{ borderTop: '1px dashed black', paddingTop: 5, display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.05rem', marginBottom: 5 }}>
+                                    <span>Total:</span>
+                                    <span>S/. {((summaryData.ingresos?.efectivo || 0) + 
+                                                (summaryData.ingresos?.tarjeta || 0) + 
+                                                (summaryData.ingresos?.yape || 0) + 
+                                                (summaryData.ingresos?.plin || 0) + 
+                                                (summaryData.ingresos?.izipay || 0)).toFixed(2)}</span>
+                                </div>
+
+                                <div style={{ borderBottom: '1px dashed black', marginBottom: 5 }}></div>
+                                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 5 }}>RESUMEN EFECTIVO</div>
+                                <div style={{ fontSize: '0.9rem', marginBottom: 5 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Ingreso:</span>
+                                        <span>S/. {((summaryData.ingresos?.efectivo || 0) + (summaryData.ingresos?.manual || 0)).toFixed(2)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Egreso:</span>
+                                        <span>S/. {(summaryData.egresos || 0).toFixed(2)}</span>
+                                    </div>
+                                </div>
+
+                                <div style={{ textAlign: 'center', marginTop: 20, fontSize: '0.8rem', borderTop: '1px dashed black', paddingTop: 10 }}>
+                                    <div>RESUMEN DE CAJA</div>
+                                    <div>Generado por el sistema ComandaGo</div>
+                                    <div>Este documento no posee ningún valor fiscal!</div>
+                                </div>
+
+                                <div className="no-print" style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>
+                                    <button className="glass-button primary" onClick={() => window.print()} style={{ background: 'black', color: 'white' }}>
+                                        <Printer size={16} /> Imprimir
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

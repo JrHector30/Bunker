@@ -70,7 +70,8 @@ const TablesView = () => {
     };
 
     useEffect(() => {
-        const interval = setInterval(fetchTables, 3000); // Poll every 3 seconds
+        fetchTables(); // Fetch immediately on mount to bypass cache delay
+        const interval = setInterval(fetchTables, 1500); // Poll every 1.5 seconds (down from 3s)
         return () => clearInterval(interval);
     }, []);
 
@@ -156,7 +157,7 @@ const TablesView = () => {
 
     const updateItemStatus = async (detailId, newState) => {
         try {
-            await fetch(`/api/orders/details/${detailId}/status`, {
+            await fetch(`/api/orders/details/${detailId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ estado: newState })
@@ -484,7 +485,7 @@ const TablesView = () => {
 
         return (
             <div className="modal-overlay" onClick={() => setShowTicket(false)}>
-                <div className="modal-content" onClick={e => e.stopPropagation()} style={{ background: 'white', color: 'black', width: 350, fontFamily: '"Courier New", monospace', padding: 20 }}>
+                <div className="modal-content print-ticket" onClick={e => e.stopPropagation()} style={{ background: 'white', color: 'black', width: 350, fontFamily: '"Courier New", monospace', padding: 20 }}>
                     <div style={{ textAlign: 'center', marginBottom: 15, borderBottom: '1px dashed black', paddingBottom: 10 }}>
                         <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>COMANDAGO</div>
                         <div>DEMO</div>
@@ -532,7 +533,7 @@ const TablesView = () => {
                         <div>Este documento no posee ningún valor fiscal!</div>
                     </div>
 
-                    <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>
+                    <div className="no-print" style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>
                         <button className="glass-button primary" onClick={() => window.print()} style={{ background: 'black', color: 'white' }}>
                             <Printer size={16} /> Imprimir
                         </button>

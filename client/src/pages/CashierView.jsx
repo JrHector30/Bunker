@@ -20,7 +20,8 @@ const CashierView = () => {
     const [selectedOrder, setSelectedOrder] = useState(null);
 
     useEffect(() => {
-        const interval = setInterval(fetchTables, 5000);
+        fetchTables(); // Fetch immediately on mount to bypass cache delay
+        const interval = setInterval(fetchTables, 2000); // Poll every 2 seconds (down from 5s)
         return () => clearInterval(interval);
     }, []);
 

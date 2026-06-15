@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
@@ -50,8 +51,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 // Placeholder dinámico para Vercel Serverless (Sin disco persistente)
 app.get('/uploads/:type/:file', (req, res) => {
     const { type, file } = req.params;
-    const filePath = path.join(__dirname, '..', 'public', 'uploads', type, file);
+    
+    // 1. Check client/public/uploads folder first (active developer workspace)
+    let filePath = path.join(__dirname, '..', 'client', 'public', 'uploads', type, file);
+    if (require('fs').existsSync(filePath)) {
+        return res.sendFile(filePath);
+    }
 
+    // 2. Fallback: Check root public/uploads folder
+    filePath = path.join(__dirname, '..', 'public', 'uploads', type, file);
     if (require('fs').existsSync(filePath)) {
         return res.sendFile(filePath);
     }
@@ -609,7 +617,7 @@ app.post('/api/orders', async (req, res) => {
                 mesaId: parseInt(mesaId),
                 usuarioId: parseInt(usuarioId),
                 estado: 'enviada',
-                // comensales: parseInt(req.body.comensales || 1), // Temporarily disabled until server restart
+                comensales: parseInt(req.body.comensales || 1),
                 detalles: {
                     create: detalles.map(d => ({
                         platoId: d.platoId,
@@ -663,16 +671,6 @@ app.post('/api/orders', async (req, res) => {
                     }
                 });
             }
-        }
-    }
-
-    // HOTFIX: Manually save comensales using Raw Query (Bypasses outdated Prisma Client)
-    if (req.body.comensales) {
-        try {
-            await prisma.$executeRawUnsafe(`UPDATE "Comanda" SET comensales = ${parseInt(req.body.comensales)} WHERE id = ${order.id}`);
-            order.comensales = parseInt(req.body.comensales); // Update response object
-        } catch (e) {
-            console.error("Error saving comensales raw:", e.message);
         }
     }
 
@@ -1060,97 +1058,60 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
     }
 });
 
-// Deprecated specific route, keeping for backward compat if needed (aliasing to generic PUT)
-app.put('/api/orders/details/:id/status', async (req, res) => {
-    const { id } = req.params;
-    const { estado } = req.body;
-    const detail = await prisma.detalleComanda.update({
-        where: { id: parseInt(id) },
-        data: { estado }
-    });
-    res.json(detail);
-});
+
 
 // --- FACTURACION ELECTRONICA SIMULADA ---
-const axios = require('axios');
+app.get('/api/facturacion/:type/:documento', async (req, res) => {
+    const { type, documento } = req.params;
+    const token = process.env.APISPERU_TOKEN;
 
-app.get('/api/facturacion/ruc/:ruc', async (req, res) => {
-    const { ruc } = req.params;
-    if (!/^\d{11}$/.test(ruc)) return res.status(400).json({ error: "El RUC debe tener exactamente 11 dígitos" });
-
-    const mockRuc = {
-        "20100017491": { razonSocial: "TELEFONICA DEL PERU S.A.A.", direccion: "AV. CARLOS VILLARAN NRO. 140 URB. SANTA CATALINA - LA VICTORIA" },
-        "20602467265": { razonSocial: "INVERSIONES GASTRONOMICAS PERU S.A.C.", direccion: "AV. LA MAR NRO. 450 - MIRAFLORES" },
-        "20131312355": { razonSocial: "SUPERMERCADOS PERUANOS S.A.", direccion: "AV. CARLOS IZAGUIRRE NRO. 275 - INDEPENDENCIA" }
-    };
-
-    try {
-        const { data } = await axios.post('https://apiperu.dev/api/ruc',
-            { ruc },
-            {
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.APIS_PERU_TOKEN}`
-                },
-                timeout: 5000
-            }
-        );
-
-        if (data.success && data.data) {
-            return res.json({
-                success: true,
-                razonSocial: data.data.nombre_o_razon_social,
-                direccion: data.data.direccion_completa
-            });
-        }
-
-        if (mockRuc[ruc]) return res.json({ success: true, ...mockRuc[ruc] });
-        return res.json({ success: false, error: "RUC no encontrado" });
-
-    } catch (error) {
-        if (mockRuc[ruc]) return res.json({ success: true, ...mockRuc[ruc] });
-        return res.json({ success: false, error: "Error al consultar SUNAT" });
+    if (!token) {
+        console.error('APISPERU_TOKEN no configurado en .env');
+        return res.status(500).json({ success: false, error: 'Configuración de API no disponible' });
     }
-});
 
-app.get('/api/facturacion/dni/:dni', async (req, res) => {
-    const { dni } = req.params;
-    if (!/^\d{8}$/.test(dni)) return res.status(400).json({ error: "El DNI debe tener exactamente 8 dígitos" });
+    // Validar formato según tipo
+    if (type === 'dni' && documento.length !== 8) {
+        return res.status(400).json({ success: false, error: 'DNI debe tener 8 dígitos' });
+    }
+    if (type === 'ruc' && documento.length !== 11) {
+        return res.status(400).json({ success: false, error: 'RUC debe tener 11 dígitos' });
+    }
 
-    const mockDni = {
-        "12345678": { razonSocial: "JUAN CARLOS PEREZ LOPEZ", direccion: "AV. AREQUIPA NRO. 1200 - LINCE, LIMA" },
-        "87654321": { razonSocial: "MARIA ELENA TORRES QUISPE", direccion: "JR. HUANCAVELICA NRO. 540 - CERCADO DE LIMA" },
-        "11223344": { razonSocial: "CARLOS ALBERTO MENDOZA RIVAS", direccion: "AV. BRASIL NRO. 890 - JESUS MARIA, LIMA" }
-    };
+    const endpoint = type === 'ruc' ? 'ruc' : 'dni';
+    const url = `https://dniruc.apisperu.com/api/v1/${endpoint}/${documento}?token=${token}`;
 
     try {
-        const { data } = await axios.post('https://apiperu.dev/api/dni',
-            { dni },
-            {
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.APIS_PERU_TOKEN}`
-                },
-                timeout: 5000
-            }
-        );
+        const apiRes = await fetch(url);
+        const data = await apiRes.json();
 
-        if (data.success && data.data) {
+        console.log(`[APIsPERU] ${type.toUpperCase()} ${documento} -> status ${apiRes.status}`, data);
+
+        if (!apiRes.ok || data.success === false) {
             return res.json({
-                success: true,
-                razonSocial: data.data.nombre_completo || `${data.data.nombres} ${data.data.apellido_paterno} ${data.data.apellido_materno}`,
-                direccion: data.data.direccion_completa || "Dirección no especificada"
+                success: false,
+                error: data.message || `No se encontró el ${type.toUpperCase()}`
             });
         }
 
-        if (mockDni[dni]) return res.json({ success: true, ...mockDni[dni] });
-        return res.json({ success: false, error: "DNI no encontrado" });
-
-    } catch (error) {
-        if (mockDni[dni]) return res.json({ success: true, ...mockDni[dni] });
-        return res.json({ success: false, error: "Error al consultar RENIEC" });
+        // Normalizar respuesta al formato que espera PaymentModal.jsx
+        if (type === 'dni') {
+            const nombreCompleto = `${data.nombres} ${data.apellidoPaterno} ${data.apellidoMaterno}`.trim();
+            return res.json({
+                success: true,
+                razonSocial: nombreCompleto,
+                direccion: '' // DNI no devuelve dirección en esta API
+            });
+        } else {
+            return res.json({
+                success: true,
+                razonSocial: data.razonSocial,
+                direccion: data.direccion || ''
+            });
+        }
+    } catch (e) {
+        console.error('[APIsPERU] Error de conexión:', e.message);
+        return res.status(500).json({ success: false, error: 'Error al consultar APIsPERU' });
     }
 });
 
@@ -1213,39 +1174,69 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
             })
         ]);
 
-        // 3. Explosión de insumos (secuencial, sin transacción)
+        // 3. Explosión de insumos (Optimized Batch & Parallel)
         const platosActivos = order.detalles.filter(d => d.estado !== 'anulado');
+        const platoIds = platosActivos.map(d => d.platoId);
 
-        for (const detalle of platosActivos) {
-            const receta = await prisma.recetaInsumo.findMany({
-                where: { platoId: detalle.platoId }
+        if (platoIds.length > 0) {
+            // Fetch all recipes and their current insumo stocks in one query
+            const recetas = await prisma.recetaInsumo.findMany({
+                where: { platoId: { in: platoIds } },
+                include: { insumo: true }
             });
-            if (!receta || receta.length === 0) continue;
 
-            for (const ingrediente of receta) {
-                try {
+            // Aggregate stock changes in memory to avoid multiple queries for the same insumo
+            const insumoUpdates = {};
+
+            for (const detalle of platosActivos) {
+                const recetaDelPlato = recetas.filter(r => r.platoId === detalle.platoId);
+                for (const ingrediente of recetaDelPlato) {
+                    if (!ingrediente.insumo) continue;
+                    
                     const cantidadConsumida = round2(ingrediente.cantidad * detalle.cantidad);
-                    const insumo = await prisma.insumo.findUnique({
-                        where: { id: ingrediente.insumoId }
-                    });
-                    if (!insumo) continue;
+                    const insumoId = ingrediente.insumoId;
 
-                    await prisma.insumo.update({
-                        where: { id: ingrediente.insumoId },
-                        data: { stock: round2(insumo.stock - cantidadConsumida) }
-                    });
+                    if (!insumoUpdates[insumoId]) {
+                        insumoUpdates[insumoId] = {
+                            change: 0,
+                            currentStock: ingrediente.insumo.stock,
+                            name: ingrediente.insumo.nombre,
+                            motivos: []
+                        };
+                    }
+                    insumoUpdates[insumoId].change = round2(insumoUpdates[insumoId].change + cantidadConsumida);
+                    insumoUpdates[insumoId].motivos.push(`Plato: ${detalle.plato.nombre} (x${detalle.cantidad})`);
+                }
+            }
 
-                    await prisma.movimientoInsumo.create({
-                        data: {
-                            insumoId: ingrediente.insumoId,
-                            tipoMovimiento: 'VENTA',
-                            cantidad: round2(-1 * cantidadConsumida),
-                            motivo: `Venta automática Comanda ID: ${order.id} - Plato: ${detalle.plato.nombre}`,
-                            usuarioId: order.usuarioId
-                        }
+            // Perform Insumo stock updates in parallel (without transaction)
+            const updatePromises = Object.entries(insumoUpdates).map(([insumoId, data]) => {
+                const newStock = round2(data.currentStock - data.change);
+                return prisma.insumo.update({
+                    where: { id: parseInt(insumoId) },
+                    data: { stock: newStock }
+                }).catch(e => {
+                    console.error(`[KARDEX] Error updating stock for insumo ${insumoId}:`, e.message);
+                });
+            });
+            await Promise.all(updatePromises);
+
+            // Create Movement logs in batch
+            const movimientosData = Object.entries(insumoUpdates).map(([insumoId, data]) => ({
+                insumoId: parseInt(insumoId),
+                tipoMovimiento: 'VENTA',
+                cantidad: round2(-1 * data.change),
+                motivo: `Venta automática Comanda ID: ${order.id} - ${data.motivos.join(', ')}`,
+                usuarioId: order.usuarioId
+            }));
+
+            if (movimientosData.length > 0) {
+                try {
+                    await prisma.movimientoInsumo.createMany({
+                        data: movimientosData
                     });
-                } catch (ingredienteError) {
-                    console.error(`[KARDEX] Error en insumo ${ingrediente.insumoId}:`, ingredienteError.message);
+                } catch (e) {
+                    console.error("[KARDEX] Error creating batch movimientos:", e.message);
                 }
             }
         }
@@ -1266,20 +1257,60 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
         const arq = await prisma.arqueo.findUnique({ where: { id: parseInt(id) } });
         if (!arq) return res.status(404).json({ error: "Arqueo not found" });
 
-        // Logic similar to balance but for specific ID range
         const startDate = arq.fechaInicio;
         const endDate = arq.estado === 'abierto' ? new Date() : arq.fechaFin;
 
-        const sales = await prisma.comanda.findMany({
-            where: {
-                estado: 'cerrada',
-                fecha: { gte: startDate, lte: endDate }
-            },
-            include: { detalles: { include: { plato: true } }, usuario: true, mesa: true } // Include Waiter and Mesa info
-        });
+        // Run queries in parallel
+        const [sales, movements, pendingOrders] = await Promise.all([
+            prisma.comanda.findMany({
+                where: {
+                    estado: 'cerrada',
+                    fecha: { gte: startDate, lte: endDate }
+                },
+                include: { detalles: { include: { plato: true } }, usuario: true, mesa: true }
+            }),
+            prisma.movimientoCaja.findMany({
+                where: { arqueoId: arq.id }
+            }),
+            prisma.comanda.findMany({
+                where: {
+                    estado: { notIn: ['cerrada', 'anulada'] }
+                },
+                include: {
+                    detalles: {
+                        where: { estado: { not: 'anulado' } },
+                        include: { plato: true }
+                    }
+                }
+            })
+        ]);
+
+        const parsePaymentMethod = (metodoPago) => {
+            const m = (metodoPago || 'efectivo').toLowerCase();
+            if (m.includes('izipay') || m.includes('izi')) return 'izipay';
+            if (m.includes('plin')) return 'plin';
+            if (m.includes('yape')) return 'yape';
+            if (m.includes('tarjeta')) return 'tarjeta';
+            return 'efectivo';
+        };
+
+        const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
+        const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
+
+        const inicio = arq.montoInicial + manualIngresos - manualEgresos;
+        const egresos = manualEgresos;
 
         let totalPropinas = 0;
         let propinasPorMozo = {};
+
+        let incomeDetails = {
+            efectivo: 0,
+            tarjeta: 0,
+            yape: 0,
+            izipay: 0,
+            plin: 0,
+            manual: manualIngresos
+        };
 
         const salesData = sales.map(order => {
             const subtotal = order.detalles.reduce((s, d) => s + (d.cantidad * d.plato.precio), 0);
@@ -1298,6 +1329,13 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
                 propinasPorMozo[mozoId].propinas += propina;
             }
 
+            const cat = parsePaymentMethod(order.metodoPago);
+            if (incomeDetails[cat] !== undefined) {
+                incomeDetails[cat] += subtotal;
+            } else {
+                incomeDetails.efectivo += subtotal;
+            }
+
             return {
                 id: order.id,
                 hora: order.fecha,
@@ -1311,17 +1349,35 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
                 propina: propina,
                 metodo: order.metodoPago,
                 doc: order.tipoDocumento,
-                mozo: order.usuario?.nombre || 'General', // Waiter Name
+                mozo: order.usuario?.nombre || 'General',
                 mesa: order.mesa?.numero || 'Barra'
             };
         });
 
+        const totalPendiente = pendingOrders.reduce((acc, order) => {
+            const hasKitchenItems = order.detalles.some(d => 
+                ['listo', 'lista', 'entregado', 'entregada'].includes(d.estado.toLowerCase())
+            );
+            if (hasKitchenItems) {
+                return acc + order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+            }
+            return acc;
+        }, 0);
+
+        const totalCaja = inicio + incomeDetails.efectivo;
+
         res.json({
             ...arq,
+            inicio,
+            egresos,
+            ingresos: incomeDetails,
+            totalCaja,
             ventas: salesData,
             totalBruto: salesData.reduce((acc, s) => acc + s.total, 0) + totalPropinas,
             totalPropinas,
-            propinasPorMozo: Object.values(propinasPorMozo)
+            propinasPorMozo: Object.values(propinasPorMozo),
+            totalPendiente,
+            movimientos: movements
         });
 
     } catch (e) {
@@ -1330,7 +1386,9 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
             ventas: [],
             totalBruto: 0,
             totalPropinas: 0,
-            propinasPorMozo: []
+            propinasPorMozo: [],
+            totalPendiente: 0,
+            movimientos: []
         });
     }
 });
@@ -1344,38 +1402,68 @@ app.get('/api/cashier/balance', async (req, res) => {
         });
 
         // Default state if no history exists
-        let currentArqueo = lastArqueo;
-        if (!currentArqueo) {
-            // If absolutely no history, we can return a "Closed" state ready to open
+        if (!lastArqueo) {
             return res.json({
                 estado: 'cerrado',
                 inicio: 0,
                 egresos: 0,
-                ingresos: { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0 },
+                ingresos: { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0, plin: 0, manual: 0 },
                 totalCaja: 0,
                 totalBruto: 0,
                 totalPendiente: 0,
-                ventas: []
+                ventas: [],
+                movimientos: []
             });
         }
 
         // Determine Time Range
-        // If OPEN: From fechaInicio to NOW
-        // If CLOSED: From fechaInicio to fechaFin
-        const startDate = currentArqueo.fechaInicio;
-        const endDate = currentArqueo.estado === 'abierto' ? new Date() : currentArqueo.fechaFin;
+        const startDate = lastArqueo.fechaInicio;
+        const endDate = lastArqueo.estado === 'abierto' ? new Date() : lastArqueo.fechaFin;
 
-        // Fetch Sales within this range
-        const sales = await prisma.comanda.findMany({
-            where: {
-                estado: 'cerrada',
-                fecha: {
-                    gte: startDate,
-                    lte: endDate
+        // Run queries in parallel
+        const [sales, movements, pendingOrders] = await Promise.all([
+            prisma.comanda.findMany({
+                where: {
+                    estado: 'cerrada',
+                    fecha: {
+                        gte: startDate,
+                        lte: endDate
+                    }
+                },
+                include: { detalles: { include: { plato: true } }, usuario: true }
+            }),
+            prisma.movimientoCaja.findMany({
+                where: { arqueoId: lastArqueo.id }
+            }),
+            prisma.comanda.findMany({
+                where: {
+                    estado: { notIn: ['cerrada', 'anulada'] }
+                },
+                include: {
+                    detalles: {
+                        where: { estado: { not: 'anulado' } },
+                        include: { plato: true }
+                    }
                 }
-            },
-            include: { detalles: { include: { plato: true } }, usuario: true }
-        });
+            })
+        ]);
+
+        const parsePaymentMethod = (metodoPago) => {
+            const m = (metodoPago || 'efectivo').toLowerCase();
+            if (m.includes('izipay') || m.includes('izi')) return 'izipay';
+            if (m.includes('plin')) return 'plin';
+            if (m.includes('yape')) return 'yape';
+            if (m.includes('tarjeta')) return 'tarjeta';
+            return 'efectivo';
+        };
+
+        // Calculate manual incomes and egresos
+        const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
+        const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
+
+        // Dynamic Inicio
+        const inicio = lastArqueo.montoInicial + manualIngresos - manualEgresos;
+        const egresos = manualEgresos;
 
         // Calculate Totals
         let totalBruto = 0;
@@ -1386,7 +1474,9 @@ app.get('/api/cashier/balance', async (req, res) => {
             efectivo: 0,
             tarjeta: 0,
             yape: 0,
-            izipay: 0
+            izipay: 0,
+            plin: 0,
+            manual: manualIngresos
         };
 
         sales.forEach(order => {
@@ -1412,31 +1502,30 @@ app.get('/api/cashier/balance', async (req, res) => {
                 propinasPorMozo[mozoId].propinas += propina;
             }
 
-            const method = order.metodoPago?.toLowerCase() || 'efectivo';
-
-            if (method.includes('izipay')) incomeDetails.izipay += subtotal;
-            else if (method.includes('yape') || method.includes('plin')) incomeDetails.yape += subtotal;
-            else if (method.includes('tarjeta')) incomeDetails.tarjeta += subtotal;
-            else if (incomeDetails[method] !== undefined) incomeDetails[method] += subtotal;
-            else incomeDetails.efectivo += subtotal;
+            const cat = parsePaymentMethod(order.metodoPago);
+            if (incomeDetails[cat] !== undefined) {
+                incomeDetails[cat] += subtotal;
+            } else {
+                incomeDetails.efectivo += subtotal;
+            }
         });
 
         // Convertir objeto a array para frontend
         const desglosePropinas = Object.values(propinasPorMozo);
 
-        // Calculate Locked/Pending Amounts (Only relevant if Open, but let's calculate anyway for info)
-        const openOrders = await prisma.comanda.findMany({
-            where: { estado: { not: 'cerrada' } },
-            include: { detalles: { include: { plato: true } } }
-        });
-
-        const totalPendiente = openOrders.reduce((acc, order) => {
-            return acc + order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+        // Calculate total pending based on order state (lista or entregada)
+        const totalPendiente = pendingOrders.reduce((acc, order) => {
+            const hasKitchenItems = order.detalles.some(d => 
+                ['listo', 'lista', 'entregado', 'entregada'].includes(d.estado.toLowerCase())
+            );
+            if (hasKitchenItems) {
+                return acc + order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+            }
+            return acc;
         }, 0);
 
-        const inicio = currentArqueo.montoInicial;
-        const egresos = 0.00; // Future feature
-        const totalCaja = inicio + incomeDetails.efectivo - egresos;
+        // totalCaja = dynamic inicio + cash sales
+        const totalCaja = inicio + incomeDetails.efectivo;
 
         const ventasDetalladas = sales.map(order => ({
             id: order.id,
@@ -1453,10 +1542,10 @@ app.get('/api/cashier/balance', async (req, res) => {
         }));
 
         res.json({
-            id: currentArqueo.id,
-            estado: currentArqueo.estado,
-            fechaInicio: currentArqueo.fechaInicio,
-            fechaFin: currentArqueo.fechaFin,
+            id: lastArqueo.id,
+            estado: lastArqueo.estado,
+            fechaInicio: lastArqueo.fechaInicio,
+            fechaFin: lastArqueo.fechaFin,
             inicio,
             egresos,
             ingresos: incomeDetails,
@@ -1465,7 +1554,8 @@ app.get('/api/cashier/balance', async (req, res) => {
             totalPropinas,
             propinasPorMozo: desglosePropinas,
             totalPendiente,
-            ventas: ventasDetalladas
+            ventas: ventasDetalladas,
+            movimientos: movements
         });
 
     } catch (e) {
@@ -1474,13 +1564,14 @@ app.get('/api/cashier/balance', async (req, res) => {
             estado: 'cerrado',
             inicio: 0,
             egresos: 0,
-            ingresos: { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0 },
+            ingresos: { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0, plin: 0, manual: 0 },
             totalCaja: 0,
             totalBruto: 0,
             totalPropinas: 0,
             propinasPorMozo: [],
             totalPendiente: 0,
-            ventas: []
+            ventas: [],
+            movimientos: []
         });
     }
 });
@@ -1528,6 +1619,68 @@ app.delete('/api/admin/reset-simulation', async (req, res) => {
     } catch (e) {
         console.error("Reset Failed:", e);
         res.status(500).json({ error: "Error en el reseteo: " + e.message });
+    }
+});
+
+// Register Cash Movement (Manual Ingreso / Egreso)
+app.post('/api/cashier/movimientos', async (req, res) => {
+    try {
+        const { tipo, tipoComprobante, concepto, observacion, monto } = req.body;
+
+        // 1. Validation
+        if (!tipo || !['INGRESO', 'EGRESO'].includes(tipo.toUpperCase())) {
+            return res.status(400).json({ error: "Tipo de movimiento inválido. Debe ser INGRESO o EGRESO." });
+        }
+        if (!tipoComprobante || !['boleta', 'factura', 'recibo'].includes(tipoComprobante.toLowerCase())) {
+            return res.status(400).json({ error: "Tipo de comprobante inválido. Debe ser boleta, factura o recibo." });
+        }
+        if (!concepto || concepto.trim() === '') {
+            return res.status(400).json({ error: "El concepto es obligatorio." });
+        }
+        const numericMonto = parseFloat(monto);
+        if (isNaN(numericMonto) || numericMonto <= 0) {
+            return res.status(400).json({ error: "El monto debe ser un número positivo." });
+        }
+
+        // 2. Find active Arqueo
+        const lastArqueo = await prisma.arqueo.findFirst({ orderBy: { id: 'desc' } });
+        if (!lastArqueo || lastArqueo.estado !== 'abierto') {
+            return res.status(400).json({ error: "No hay una caja abierta para registrar movimientos." });
+        }
+
+        // 3. For EGRESO, check limit
+        if (tipo.toUpperCase() === 'EGRESO') {
+            // Fetch existing movements to calculate current dynamic Inicio
+            const movements = await prisma.movimientoCaja.findMany({
+                where: { arqueoId: lastArqueo.id }
+            });
+            const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
+            const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
+            const currentInicio = lastArqueo.montoInicial + manualIngresos - manualEgresos;
+
+            if (numericMonto > currentInicio) {
+                return res.status(400).json({ 
+                    error: `Monto supera el rango permitido. El monto disponible en Inicio es S/. ${currentInicio.toFixed(2)}`
+                });
+            }
+        }
+
+        // 4. Create Movement
+        const nuevoMovimiento = await prisma.movimientoCaja.create({
+            data: {
+                arqueoId: lastArqueo.id,
+                tipo: tipo.toUpperCase(),
+                tipoComprobante: tipoComprobante.toLowerCase(),
+                concepto: concepto.trim(),
+                observacion: observacion ? observacion.trim() : null,
+                monto: numericMonto
+            }
+        });
+
+        res.json({ message: "Movimiento registrado con éxito", movimiento: nuevoMovimiento });
+    } catch (e) {
+        console.error("Error registering movimiento:", e);
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -1611,51 +1764,98 @@ app.get('/api/cashier/history', async (req, res) => {
         const historyData = await Promise.all(arqueos.map(async (arq) => {
             const startDate = arq.fechaInicio;
             const endDate = arq.estado === 'abierto' ? new Date() : arq.fechaFin;
+            const isAbierto = arq.estado === 'abierto';
 
-            // Agregación veloz directo en PostgreSQL
-            const comandasCerradas = await prisma.comanda.findMany({
-                where: {
-                    estado: 'cerrada',
-                    fecha: { gte: startDate, lte: endDate }
-                },
-                select: {
-                    metodoPago: true,
-                    propina: true,
-                    detalles: {
-                        select: {
-                            cantidad: true,
-                            plato: { select: { precio: true } }
+            // Parallelized sub-queries
+            const [comandasCerradas, movements, pendingOrders] = await Promise.all([
+                prisma.comanda.findMany({
+                    where: {
+                        estado: 'cerrada',
+                        fecha: { gte: startDate, lte: endDate }
+                    },
+                    select: {
+                        metodoPago: true,
+                        propina: true,
+                        detalles: {
+                            select: {
+                                cantidad: true,
+                                plato: { select: { precio: true } }
+                            }
                         }
                     }
-                }
-            });
+                }),
+                prisma.movimientoCaja.findMany({
+                    where: { arqueoId: arq.id }
+                }),
+                isAbierto
+                    ? prisma.comanda.findMany({
+                        where: { estado: { notIn: ['cerrada', 'anulada'] } },
+                        include: { detalles: { where: { estado: { not: 'anulado' } }, include: { plato: true } } }
+                      })
+                    : Promise.resolve([])
+            ]);
+
+            const parsePaymentMethod = (metodoPago) => {
+                const m = (metodoPago || 'efectivo').toLowerCase();
+                if (m.includes('izipay') || m.includes('izi')) return 'izipay';
+                if (m.includes('plin')) return 'plin';
+                if (m.includes('yape')) return 'yape';
+                if (m.includes('tarjeta')) return 'tarjeta';
+                return 'efectivo';
+            };
+
+            const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
+            const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
+
+            const inicio = arq.montoInicial + manualIngresos - manualEgresos;
+            const egresos = manualEgresos;
 
             let totalBruto = 0;
             let totalPropinas = 0;
-            let incomeDetails = { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0 };
+            let incomeDetails = {
+                efectivo: 0,
+                tarjeta: 0,
+                yape: 0,
+                izipay: 0,
+                plin: 0,
+                manual: manualIngresos
+            };
 
             comandasCerradas.forEach(order => {
                 const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
                 totalBruto += subtotal;
                 totalPropinas += order.propina || 0;
 
-                const method = (order.metodoPago || 'efectivo').toLowerCase();
-                if (method.includes('izipay')) incomeDetails.izipay += subtotal;
-                else if (method.includes('yape')) incomeDetails.yape += subtotal;
-                else if (method.includes('tarjeta')) incomeDetails.tarjeta += subtotal;
-                else incomeDetails.efectivo += subtotal;
+                const cat = parsePaymentMethod(order.metodoPago);
+                if (incomeDetails[cat] !== undefined) {
+                    incomeDetails[cat] += subtotal;
+                } else {
+                    incomeDetails.efectivo += subtotal;
+                }
             });
+
+            const totalPendiente = pendingOrders.reduce((acc, order) => {
+                const hasKitchenItems = order.detalles.some(d => 
+                    ['listo', 'lista', 'entregado', 'entregada'].includes(d.estado.toLowerCase())
+                );
+                if (hasKitchenItems) {
+                    return acc + order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+                }
+                return acc;
+            }, 0);
 
             return {
                 id: arq.id,
                 fechaInicio: arq.fechaInicio,
                 fechaFin: arq.fechaFin,
                 estado: arq.estado,
-                inicio: arq.montoInicial,
+                inicio,
+                egresos,
                 ingresos: incomeDetails,
-                totalCaja: arq.montoInicial + incomeDetails.efectivo,
+                totalCaja: inicio + incomeDetails.efectivo,
                 totalBruto,
-                totalPropinas
+                totalPropinas,
+                totalPendiente
             };
         }));
 
