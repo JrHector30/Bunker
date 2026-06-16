@@ -43,15 +43,19 @@ const WaiterOrderView = () => {
                   c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase())
                 );
                 const dbComensales = comandaActiva?.comensales;
+                let numeroCompleto = currentTable.numero;
+                if (currentTable.mesasHijas && currentTable.mesasHijas.length > 0) {
+                    const hijasNumeros = currentTable.mesasHijas.map(h => h.numero).join(' - ');
+                    numeroCompleto = `${currentTable.numero} - ${hijasNumeros}`;
+                }
                 setTableInfo({
-                    numero: currentTable.numero,
+                    numero: numeroCompleto,
                     comensales: dbComensales || location.state?.comensales || 1
                 });
             }
         };
         fetchTableData();
     }, [tableId, location.state]);
-
     const addToCart = (product) => {
         setCart(prev => {
             // Find existing line with SAME product AND NO observation

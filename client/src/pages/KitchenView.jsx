@@ -84,7 +84,14 @@ const ItemCard = React.memo(({ item, actionButton }) => (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 15, paddingTop: 10, borderTop: '1px solid var(--glass-border)' }}>
             {/* Mesa Badge bottom left */}
             <span className="badge" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: '6px 12px', fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>
-                Mesa {item.comanda.mesa.numero}
+                {(() => {
+                    let num = item.comanda.mesa.numero;
+                    if (item.comanda.mesa.mesasHijas && item.comanda.mesa.mesasHijas.length > 0) {
+                        const hijas = item.comanda.mesa.mesasHijas.map(h => h.numero).join(' - ');
+                        num = `${num} - ${hijas}`;
+                    }
+                    return `MESA ${num.toUpperCase()}`;
+                })()}
             </span>
 
             {/* Cook / Actions bottom right */}

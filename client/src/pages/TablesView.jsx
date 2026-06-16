@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer, ChefHat } from 'lucide-react';
+import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer, ChefHat, RotateCcw } from 'lucide-react';
 import { numberToLetters } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
@@ -39,6 +39,309 @@ const TablesView = () => {
     const [showTicket, setShowTicket] = useState(false); // Ticket modal state
     const navigate = useNavigate();
 
+    // United / Merged Tables Modal States
+    const [showMergeMode, setShowMergeMode] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [tablesState, setTablesState] = useState([]);
+    const [draggingTableId, setDraggingTableId] = useState(null);
+    const [showGlobalMergeModal, setShowGlobalMergeModal] = useState(false);
+    const [globalMergePadreId, setGlobalMergePadreId] = useState(null);
+    const [globalMergeHijaId, setGlobalMergeHijaId] = useState(null);
+
+    // States for dynamically modifying comensales of occupied tables upon merge
+    const [isUpdatingDiners, setIsUpdatingDiners] = useState(false);
+    const [updatingComandaId, setUpdatingComandaId] = useState(null);
+
+    // Fetch edit mode on mount
+    const fetchEditMode = async () => {
+        try {
+            const res = await fetch('/api/config/tables-edit-mode');
+            const data = await res.json();
+            setIsEditMode(data.enabled);
+        } catch (e) {
+            console.error("Error fetching edit mode:", e);
+        }
+    };
+
+    // Sync tablesState when tables data updates
+    useEffect(() => {
+        if (tables && tables.length > 0) {
+            setTablesState(prev => {
+                return tables.map(t => {
+                    const existing = prev.find(p => p.id === t.id);
+                    if (isEditMode && existing) {
+                        return { ...t, posX: existing.posX, posY: existing.posY };
+                    }
+                    return t;
+                });
+            });
+        } else {
+            setTablesState([]);
+        }
+    }, [tables, isEditMode]);
+
+    const checkCollisionClient = (tableId, targetPosX, targetPosY, allTables) => {
+        const table = allTables.find(t => t.id === tableId);
+        if (!table) return false;
+
+        const widthPct = 8.33;
+        const heightPct = 11.76;
+
+        const rect1 = {
+            left: targetPosX - widthPct / 2,
+            right: targetPosX + widthPct / 2,
+            top: targetPosY - heightPct / 2,
+            bottom: targetPosY + heightPct / 2
+        };
+
+        for (const other of allTables) {
+            if (other.id === tableId) continue;
+            if (other.mesaPadreId === table.id || table.mesaPadreId === other.id) continue;
+
+            const otherWidthPct = 8.33;
+            const otherHeightPct = 11.76;
+
+            const otherPosX = other.posX ?? 15;
+            const otherPosY = other.posY ?? 25;
+
+            const rect2 = {
+                left: otherPosX - otherWidthPct / 2,
+                right: otherPosX + otherWidthPct / 2,
+                top: otherPosY - otherHeightPct / 2,
+                bottom: otherPosY + otherHeightPct / 2
+            };
+
+            const overlapX = rect1.left < rect2.right && rect1.right > rect2.left;
+            const overlapY = rect1.top < rect2.bottom && rect1.bottom > rect2.top;
+
+            if (overlapX && overlapY) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    const handleToggleEditMode = async (enable) => {
+        if (enable) {
+            try {
+                await fetch('/api/config/tables-edit-mode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: true })
+                });
+                setIsEditMode(true);
+                showToast("Modo Edición habilitado.", "success");
+            } catch (e) {
+                showToast("Error de conexión", "error");
+            }
+        } else {
+            try {
+                const positions = tablesState.map(t => ({
+                    id: t.id,
+                    posX: t.posX ?? 15,
+                    posY: t.posY ?? 25
+                }));
+
+                const posRes = await fetch('/api/tables/positions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ positions })
+                });
+
+                if (posRes.ok) {
+                    await fetch('/api/config/tables-edit-mode', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ enabled: false })
+                    });
+                    setIsEditMode(false);
+                    showToast("Posiciones guardadas y salón bloqueado.", "success");
+                    fetchTables();
+                } else {
+                    const err = await posRes.json();
+                    showToast("Error al guardar: " + err.error, "error");
+                }
+            } catch (e) {
+                showToast("Error al guardar posiciones.", "error");
+            }
+        }
+    };
+
+    const handleResetPositions = async () => {
+        if (!await showConfirmation("¿Desea continuar con restablecer la posición de todas las mesas?", { type: "warning" })) {
+            return;
+        }
+
+        try {
+            // Ordenar las mesas por número de forma ascendente
+            const sortedTables = [...tablesState].sort((a, b) => parseInt(a.numero, 10) - parseInt(b.numero, 10));
+
+            const xValues = [15, 32, 50, 68, 85];
+            const positions = sortedTables.map((t, index) => {
+                const cols = 5;
+                const colIndex = index % cols;
+                const rowIndex = Math.floor(index / cols);
+                return {
+                    id: t.id,
+                    posX: xValues[colIndex],
+                    posY: 25 + rowIndex * 25
+                };
+            });
+
+            const posRes = await fetch('/api/tables/positions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ positions })
+            });
+
+            if (posRes.ok) {
+                showToast("Posiciones de las mesas restablecidas con éxito", "success");
+                fetchTables();
+            } else {
+                const err = await posRes.json();
+                showToast("Error al restablecer posiciones: " + err.error, "error");
+            }
+        } catch (e) {
+            showToast("Error de conexión al restablecer posiciones", "error");
+        }
+    };
+
+    const handlePointerDown = (e, table) => {
+        if (!isEditMode) return;
+        if (e.button !== 0) return;
+        e.preventDefault();
+
+        setDraggingTableId(table.id);
+        const card = e.currentTarget;
+        const container = card.parentElement;
+        const rect = container.getBoundingClientRect();
+
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startPosX = table.posX ?? 15;
+        const startPosY = table.posY ?? 25;
+
+        let currentPosX = startPosX;
+        let currentPosY = startPosY;
+
+        const handlePointerMove = (moveEvent) => {
+            const deltaX = moveEvent.clientX - startX;
+            const deltaY = moveEvent.clientY - startY;
+
+            const deltaXPct = (deltaX / rect.width) * 100;
+            const deltaYPct = (deltaY / rect.height) * 100;
+
+            let newPosX = Math.max(5, Math.min(95, startPosX + deltaXPct));
+            let newPosY = Math.max(5, Math.min(95, startPosY + deltaYPct));
+
+            setTablesState(prev => prev.map(t => t.id === table.id ? { ...t, posX: newPosX, posY: newPosY } : t));
+            currentPosX = newPosX;
+            currentPosY = newPosY;
+        };
+
+        const handlePointerUp = () => {
+            document.removeEventListener('pointermove', handlePointerMove);
+            document.removeEventListener('pointerup', handlePointerUp);
+            setDraggingTableId(null);
+
+            const collides = checkCollisionClient(table.id, currentPosX, currentPosY, tablesState);
+            if (collides) {
+                showToast("Las mesas no pueden sobreponerse.", "error");
+                setTablesState(prev => prev.map(t => t.id === table.id ? { ...t, posX: startPosX, posY: startPosY } : t));
+            }
+        };
+
+        document.addEventListener('pointermove', handlePointerMove);
+        document.addEventListener('pointerup', handlePointerUp);
+    };
+
+    const handleMerge = async (padreId, hijaId) => {
+        // Encontrar la mesa padre actual y su comanda en el estado local de antemano
+        const parentTable = tables.find(t => t.id === padreId);
+        const activeComanda = parentTable?.comandas?.[0];
+
+        try {
+            const res = await fetch('/api/tables/merge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mesaPadreId: padreId, mesaHijaId: hijaId })
+            });
+
+            if (res.ok) {
+                setShowMergeMode(false);
+                closeModal();
+
+                if (parentTable && parentTable.estado === 'ocupada' && activeComanda) {
+                    setIsUpdatingDiners(true);
+                    setUpdatingComandaId(activeComanda.id);
+
+                    // Construimos la representación de mesa padre actualizada en memoria local para velocidad instantánea
+                    const currentHijas = parentTable.mesasHijas || [];
+                    const nuevaHija = tables.find(t => t.id === hijaId) || { id: hijaId, numero: '', capacidad: 6, estado: 'ocupada' };
+                    const updatedParent = {
+                        ...parentTable,
+                        mesasHijas: [...currentHijas, nuevaHija]
+                    };
+
+                    setSelectedFreeTable(updatedParent);
+
+                    const numMesas = 1 + updatedParent.mesasHijas.length;
+                    const minLimit = numMesas === 1 ? 1 : (6 * (numMesas - 1) + 1);
+                    const maxLimit = 6 * numMesas;
+
+                    const rawComensales = activeComanda.comensales || 0;
+                    const initialDiners = Math.min(maxLimit, Math.max(rawComensales, minLimit));
+
+                    setDinersCount(initialDiners);
+                    setShowDinersModal(true);
+                } else {
+                    showToast("Mesas unidas con éxito", "success");
+                    fetchTables();
+                }
+            } else {
+                const err = await res.json();
+                showToast("Error: " + err.error, "error");
+            }
+        } catch (e) {
+            showToast("Error de conexión", "error");
+        }
+    };
+
+    const handleUnmerge = async (hijaId) => {
+        if (!await showConfirmation("¿Estás seguro de que quieres separar esta mesa?", { type: "warning" })) return;
+        try {
+            const res = await fetch('/api/tables/unmerge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mesaHijaId: hijaId })
+            });
+
+            if (res.ok) {
+                showToast("Mesas separadas con éxito", "success");
+                closeModal();
+                fetchTables();
+            } else {
+                const err = await res.json();
+                showToast("Error: " + err.error, "error");
+            }
+        } catch (e) {
+            showToast("Error de conexión", "error");
+        }
+    };
+
+    const getTableDisplayName = (table) => {
+        if (table.mesasHijas && table.mesasHijas.length > 0) {
+            const hijasNumeros = table.mesasHijas.map(h => h.numero).join(' - ');
+            return `${table.numero} - ${hijasNumeros}`;
+        }
+        return table.numero;
+    };
+
+    const getCombinedCapacity = (table) => {
+        const hijasCapacidad = table.mesasHijas?.reduce((acc, h) => acc + h.capacidad, 0) || 0;
+        return Math.min(18, table.capacidad + hijasCapacidad);
+    };
+
     // Handlers
     const handleTableClick = (table) => {
         // Si la mesa ya está ocupada o tiene ítems, permitimos ver la comanda pase lo que pase con la caja
@@ -55,7 +358,11 @@ const TablesView = () => {
 
         // Flujo ordinario si la caja está abierta
         setSelectedFreeTable(table);
-        setDinersCount(2); // Default
+        const numMesas = 1 + (table.mesasHijas?.length || 0);
+        const minLimit = numMesas === 1 ? 1 : (6 * (numMesas - 1) + 1);
+        setDinersCount(minLimit);
+        setIsUpdatingDiners(false);
+        setUpdatingComandaId(null);
         setShowDinersModal(true);
     };
 
@@ -64,14 +371,53 @@ const TablesView = () => {
             showToast("Cantidad de comensales no válida", 'error');
             return;
         }
-        if (dinersCount < 1) return showToast("Mínimo 1 comensal", 'info');
-        setShowDinersModal(false);
-        navigate(`/order/${selectedFreeTable.id}`, { state: { comensales: dinersCount } });
+
+        const numMesas = 1 + (selectedFreeTable?.mesasHijas?.length || 0);
+        const minLimit = numMesas === 1 ? 1 : (6 * (numMesas - 1) + 1);
+        const maxLimit = 6 * numMesas;
+
+        if (dinersCount < minLimit) {
+            showToast(`Mínimo ${minLimit} comensales para esta configuración de mesas`, 'info');
+            return;
+        }
+        if (dinersCount > maxLimit) {
+            showToast(`Límite de comensales excedido. Una mesa ${numMesas === 1 ? 'individual' : 'unida'} tiene un máximo de ${maxLimit} personas.`, 'warning');
+            return;
+        }
+
+        if (isUpdatingDiners) {
+            try {
+                const res = await fetch(`/api/orders/${updatingComandaId}/comensales`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comensales: dinersCount })
+                });
+                if (res.ok) {
+                    showToast("Comensales actualizados con éxito", "success");
+                    setShowDinersModal(false);
+                    setIsUpdatingDiners(false);
+                    setUpdatingComandaId(null);
+                    fetchTables();
+                } else {
+                    const err = await res.json();
+                    showToast("Error al actualizar comensales: " + err.error, "error");
+                }
+            } catch (e) {
+                showToast("Error de conexión", "error");
+            }
+        } else {
+            setShowDinersModal(false);
+            navigate(`/order/${selectedFreeTable.id}`, { state: { comensales: dinersCount } });
+        }
     };
 
     useEffect(() => {
         fetchTables(); // Fetch immediately on mount to bypass cache delay
-        const interval = setInterval(fetchTables, 1500); // Poll every 1.5 seconds (down from 3s)
+        fetchEditMode();
+        const interval = setInterval(() => {
+            fetchTables();
+            fetchEditMode();
+        }, 1500); // Poll every 1.5 seconds (down from 3s)
         return () => clearInterval(interval);
     }, []);
 
@@ -101,6 +447,7 @@ const TablesView = () => {
         setSelectedTableId(null);
         setModalType(null);
         setShowTransferMode(false);
+        setShowMergeMode(false);
     };
 
     // --- Helper Functions for API ---
@@ -232,6 +579,7 @@ const TablesView = () => {
         const selectedTable = tables.find(t => t.id === selectedTableId);
         if (!selectedTable || !modalType) return null;
 
+        const isTableMerged = selectedTable.mesasHijas && selectedTable.mesasHijas.length > 0;
         const groupedItems = getGroupedDetails();
 
         // NUEVA CONSOLIDACIÓN LIMPIA PARA PRE-CUENTA (Une Coca Colas con notas distintas en una sola fila)
@@ -261,17 +609,39 @@ const TablesView = () => {
                         <div>
                             <h2 style={{ color: 'var(--text-main)' }}>{modalType === 'pre-check' ? 'Pre-cuenta' : 'Pedido Activo'}</h2>
                             <div className="text-muted" style={{ fontSize: '0.9rem' }}>
-                                Mesa {selectedTable.numero} • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                Mesa {getTableDisplayName(selectedTable)} • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: 10 }}>
                             {modalType === 'view' && (
                                 <button
                                     className={`glass-button ${showTransferMode ? 'active' : ''}`}
-                                    onClick={() => setShowTransferMode(!showTransferMode)}
-                                    title="Trasladar mesa"
+                                    onClick={() => {
+                                        if (isTableMerged) return;
+                                        setShowTransferMode(!showTransferMode);
+                                        setShowMergeMode(false);
+                                    }}
+                                    disabled={isTableMerged}
+                                    style={{
+                                        opacity: isTableMerged ? 0.35 : 1,
+                                        cursor: isTableMerged ? 'not-allowed' : 'pointer'
+                                    }}
+                                    title={isTableMerged ? "No se puede trasladar una mesa unida" : "Trasladar mesa"}
                                 >
                                     <ArrowRightLeft size={20} />
+                                </button>
+                            )}
+                            {modalType === 'view' && (user?.rol === 'mozo' || user?.rol === 'admin') && (
+                                <button
+                                    className={`glass-button ${showMergeMode ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setShowMergeMode(!showMergeMode);
+                                        setShowTransferMode(false);
+                                    }}
+                                    title="Unir mesas"
+                                    style={{ borderColor: 'var(--success)', color: 'var(--success)' }}
+                                >
+                                    🔗 Unir
                                 </button>
                             )}
                             <button className="glass-button" style={{ padding: 5 }} onClick={closeModal}>
@@ -301,6 +671,34 @@ const TablesView = () => {
                                     ))}
                                     {freeTables.length === 0 && <p>No hay mesas libres.</p>}
                                 </div>
+                            </div>
+                        ) : showMergeMode ? (
+                            <div style={{ textAlign: 'center' }}>
+                                <h3>Selecciona la mesa libre a unir:</h3>
+                                <p className="text-muted" style={{ marginBottom: 20 }}>
+                                    Se unirá a la Mesa {selectedTable.numero}
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 10 }}>
+                                    {tablesState
+                                        .filter(t => t.estado === 'libre' && t.id !== selectedTable.id && !t.mesaPadreId)
+                                        .map(t => (
+                                            <button
+                                                key={t.id}
+                                                className="glass-button"
+                                                style={{
+                                                    border: '1px solid var(--success)', color: 'var(--success)',
+                                                    height: 60, fontSize: '1.2rem', fontWeight: 'bold'
+                                                }}
+                                                onClick={() => handleMerge(selectedTable.id, t.id)}
+                                            >
+                                                {t.numero}
+                                            </button>
+                                        ))
+                                    }
+                                </div>
+                                {tablesState.filter(t => t.estado === 'libre' && t.id !== selectedTable.id && !t.mesaPadreId).length === 0 && (
+                                    <p className="text-muted">No hay mesas libres disponibles para unir.</p>
+                                )}
                             </div>
                         ) : (
                             groupedItems.length === 0 ? (
@@ -406,6 +804,28 @@ const TablesView = () => {
                                 </table>
                             )
                         )}
+
+                        {!showTransferMode && !showMergeMode && selectedTable.mesasHijas && selectedTable.mesasHijas.length > 0 && (
+                            <div style={{ marginTop: 20, borderTop: '1px solid var(--glass-border)', paddingTop: 15 }}>
+                                <h4 style={{ marginBottom: 10, color: 'var(--text-main)' }}>Mesas Unidas:</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    {selectedTable.mesasHijas.map(hija => (
+                                        <div key={hija.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: 8 }}>
+                                            <span style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>Mesa {hija.numero}</span>
+                                            {(user?.rol === 'mozo' || user?.rol === 'admin') && (
+                                                <button
+                                                    className="glass-button"
+                                                    style={{ padding: '4px 10px', borderColor: '#ff4b4b', color: '#ff4b4b', height: 'auto', fontSize: '0.8rem' }}
+                                                    onClick={() => handleUnmerge(hija.id)}
+                                                >
+                                                    Separar
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {!showTransferMode && (
@@ -463,7 +883,7 @@ const TablesView = () => {
                                 <button className="glass-button" onClick={closeModal}>Cerrar</button>
                                 {modalType === 'pre-check' && (
                                     <button className="glass-button primary" onClick={() => setShowTicket(true)}>
-                                        Imprimir 🧾
+                                        Imprimir Mesa {getTableDisplayName(selectedTable)} 🧾
                                     </button>
                                 )}
                             </div>
@@ -497,7 +917,7 @@ const TablesView = () => {
 
                     <div style={{ fontSize: '0.9rem', marginBottom: 10 }}>
                         <div>Ambiente: Salon Principal</div>
-                        <div>Mesa: {selectedTable.numero}</div>
+                        <div>Mesa: {getTableDisplayName(selectedTable)}</div>
                         <div>Mozo: {selectedTable.comandas?.[0]?.usuarioId || 'General'}</div>
                         <div>Pedido #: {comandaId}</div>
                     </div>
@@ -543,6 +963,95 @@ const TablesView = () => {
         );
     };
 
+    const renderGlobalMergeModal = () => {
+        if (!showGlobalMergeModal) return null;
+
+        const freeTables = tablesState.filter(t => t.estado === 'libre' && !t.mesaPadreId);
+
+        return (
+            <div className="modal-overlay" onClick={() => { setShowGlobalMergeModal(false); setGlobalMergePadreId(null); setGlobalMergeHijaId(null); }}>
+                <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 450 }}>
+                    <div className="modal-header">
+                        <h2 style={{ color: 'var(--text-main)' }}>🔗 Unir Mesas Libres</h2>
+                        <button className="glass-button" style={{ padding: 5 }} onClick={() => { setShowGlobalMergeModal(false); setGlobalMergePadreId(null); setGlobalMergeHijaId(null); }}>
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: 'var(--text-main)' }}>1. Selecciona la Mesa Principal (Padre):</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: 8 }}>
+                                {freeTables.map(t => (
+                                    <button
+                                        key={t.id}
+                                        className={`glass-button ${globalMergePadreId === t.id ? 'active' : ''}`}
+                                        style={{
+                                            height: 50,
+                                            fontWeight: 'bold',
+                                            borderColor: globalMergePadreId === t.id ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
+                                            color: globalMergePadreId === t.id ? 'var(--primary)' : ''
+                                        }}
+                                        onClick={() => {
+                                            setGlobalMergePadreId(t.id);
+                                            if (globalMergeHijaId === t.id) setGlobalMergeHijaId(null);
+                                        }}
+                                    >
+                                        {t.numero}
+                                    </button>
+                                ))}
+                            </div>
+                            {freeTables.length === 0 && <p className="text-muted">No hay mesas libres disponibles.</p>}
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: 'var(--text-main)' }}>2. Selecciona la Mesa a acoplar (Hija):</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: 8 }}>
+                                {freeTables
+                                    .filter(t => t.id !== globalMergePadreId)
+                                    .map(t => (
+                                        <button
+                                            key={t.id}
+                                            className={`glass-button ${globalMergeHijaId === t.id ? 'active' : ''}`}
+                                            style={{
+                                                height: 50,
+                                                fontWeight: 'bold',
+                                                borderColor: globalMergeHijaId === t.id ? 'var(--success)' : 'rgba(255,255,255,0.1)',
+                                                color: globalMergeHijaId === t.id ? 'var(--success)' : ''
+                                            }}
+                                            onClick={() => setGlobalMergeHijaId(t.id)}
+                                        >
+                                            {t.numero}
+                                        </button>
+                                    ))}
+                            </div>
+                            {!globalMergePadreId && <p className="text-muted">Selecciona primero la mesa principal.</p>}
+                            {globalMergePadreId && freeTables.filter(t => t.id !== globalMergePadreId).length === 0 && (
+                                <p className="text-muted">No hay otras mesas libres.</p>
+                            )}
+                        </div>
+                    </div>
+                    <div className="modal-footer" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+                        <button className="glass-button" onClick={() => { setShowGlobalMergeModal(false); setGlobalMergePadreId(null); setGlobalMergeHijaId(null); }}>
+                            Cancelar
+                        </button>
+                        <button
+                            className="glass-button primary"
+                            disabled={!globalMergePadreId || !globalMergeHijaId}
+                            onClick={() => {
+                                handleMerge(globalMergePadreId, globalMergeHijaId);
+                                setShowGlobalMergeModal(false);
+                                setGlobalMergePadreId(null);
+                                setGlobalMergeHijaId(null);
+                            }}
+                        >
+                            Confirmar Unión
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     if (isCajaAbierta === null) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#fff' }}>
@@ -553,25 +1062,107 @@ const TablesView = () => {
 
     return (
         <div>
-            <h1 className="high-end-title" style={{ marginBottom: 20 }}>Salón Principal</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h1 className="high-end-title" style={{ margin: 0 }}>Salón Principal</h1>
+                {(user?.rol === 'admin' || user?.rol === 'mozo') && (
+                    <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
+                        <button
+                            className="glass-button"
+                            onClick={() => setShowGlobalMergeModal(true)}
+                            style={{
+                                borderColor: 'var(--success)',
+                                color: 'var(--success)',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            🔗 Unir Mesas
+                        </button>
+
+                        <div
+                            className="glass-button"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '7px 5px 7px 22px',
+                                cursor: 'default',
+                                borderColor: isEditMode ? 'var(--success)' : 'rgba(255,255,255,0.15)',
+                                color: isEditMode ? 'var(--success)' : 'var(--text-main)',
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={isEditMode}
+                                    onChange={(e) => handleToggleEditMode(e.target.checked)}
+                                    className="sr-only peer"
+                                />
+                                <div className="group peer ring-0 bg-rose-500 rounded-full outline-none duration-300 after:duration-300 w-10 h-6 shadow-md peer-checked:bg-emerald-500 peer-focus:outline-none after:content-[''] after:rounded-full after:absolute after:bg-gray-50 after:outline-none after:h-4 after:w-4 after:top-1 after:left-1 after:flex after:justify-center after:items-center peer-checked:after:translate-x-4 peer-hover:after:scale-95">
+                                    <svg className="absolute top-1 left-5 stroke-gray-900 w-4 h-4" height="16" preserveAspectRatio="xMidYMid meet" viewBox="0 0 100 100" width="16" x="0" xmlns="http://www.w3.org/2000/svg" y="0">
+                                        <path d="M30,46V38a20,20,0,0,1,40,0v8a8,8,0,0,1,8,8V74a8,8,0,0,1-8,8H30a8,8,0,0,1-8-8V54A8,8,0,0,1,30,46Zm32-8v8H38V38a12,12,0,0,1,24,0Z" fill-rule="evenodd"></path>
+                                    </svg>
+                                    <svg className="absolute top-1 left-1 stroke-gray-900 w-4 h-4" height="16" preserveAspectRatio="xMidYMid meet" viewBox="0 0 100 100" width="16" x="0" xmlns="http://www.w3.org/2000/svg" y="0">
+                                        <path className="svg-fill-primary" d="M50,18A19.9,19.9,0,0,0,30,38v8a8,8,0,0,0-8,8V74a8,8,0,0,0,8,8H70a8,8,0,0,0,8-8V54a8,8,0,0,0-8-8H38V38a12,12,0,0,1,23.6-3,4,4,0,1,0,7.8-2A20.1,20.1,0,0,0,50,18Z"></path>
+                                    </svg>
+                                </div>
+                            </label>
+
+                            <div className="relative w-24 h-5 select-none text-left" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                                <span
+                                    className={`absolute left-0 top-0 text-sm font-bold transition-all duration-500 transform ${isEditMode ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}`}
+                                    style={{ color: 'var(--success)' }}
+                                >
+                                    Modo Edición
+                                </span>
+                                <span
+                                    className={`absolute left-0 top-0 text-sm font-bold transition-all duration-500 transform ${!isEditMode ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2'}`}
+                                    style={{ color: 'var(--warning)' }}
+                                >
+                                    Bloqueado
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Botón de Reset de Posición */}
+                        <button
+                            onClick={handleResetPositions}
+                            className="group flex items-center justify-center p-2 rounded-lg bg-gray-950/40 border border-gray-900 hover:border-gray-800 transition-all duration-200"
+                            title="Restablecer posición de todas las mesas"
+                            style={{ height: 40, width: 40 }}
+                        >
+                            <RotateCcw
+                                className="text-gray-400 group-hover:text-white group-hover:-rotate-180 transition-transform duration-500 ease-out"
+                                size={16}
+                            />
+                        </button>
+                    </div>
+                )}
+            </div>
             <div className="salon-contenedor">
-                {tables.length === 0 && <p className="text-muted" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', padding: '2rem' }}>No hay datos registrados o cargando...</p>}
-                {tables.map(table => {
+                {tablesState.length === 0 && <p className="text-muted" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', padding: '2rem' }}>No hay datos registrados o cargando...</p>}
+                {tablesState.map(table => {
                     const debaBloquear = table.estado === 'libre' && !isCajaAbierta;
+                    const isDaughter = table.mesaPadreId !== null;
+                    const padreMesa = isDaughter ? tablesState.find(t => t.id === table.mesaPadreId) : null;
+                    const badgeText = padreMesa ? `→ Mesa ${padreMesa.numero}` : 'Unida';
+
                     const comandaActiva = table.comandas?.find(c => c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase()));
                     // Extraer la cantidad real de comensales desde la comanda activa en la BD (por defecto usa la capacidad si no hay orden)
                     const totalComensales = table.estado === 'ocupada' && comandaActiva ? (comandaActiva.comensales || 2) : 0;
-                    
+
                     // Cálculo de productos de barra pendientes (no enviados a cocina)
-                    const itemsBarraPendientes = comandaActiva?.detalles?.filter(d => 
-                        d.estado !== 'entregado' && 
-                        d.estado !== 'listo' && 
-                        d.estado !== 'anulado' && 
+                    const itemsBarraPendientes = comandaActiva?.detalles?.filter(d =>
+                        d.estado !== 'entregado' &&
+                        d.estado !== 'listo' &&
+                        d.estado !== 'anulado' &&
                         d.plato?.categoria?.enviarCocina === false
                     ).reduce((acc, curr) => acc + curr.cantidad, 0) || 0;
 
-                    let claseNeon = debaBloquear ? 'mesa-apagada' : (table.estado === 'ocupada' ? 'mesa-ocupada-neon' : 'mesa-libre-neon');
-                    
+                    let claseNeon = isDaughter
+                        ? 'mesa-unida-dashed'
+                        : (debaBloquear ? 'mesa-apagada' : (table.estado === 'ocupada' ? 'mesa-ocupada-neon' : 'mesa-libre-neon'));
+
                     let finalTop = table.posY !== undefined && table.posY !== null ? table.posY : 25;
                     finalTop -= 10; // Aplicado a TODAS las mesas para mantener alineación
 
@@ -579,7 +1170,15 @@ const TablesView = () => {
                         <div
                             key={table.id}
                             className={`mesa-mapa ${claseNeon}`}
-                            onClick={() => handleTableClick(table)}
+                            onPointerDown={(e) => handlePointerDown(e, table)}
+                            onClick={() => {
+                                if (isEditMode) return;
+                                if (isDaughter) {
+                                    showToast(`Esta mesa está unida a la Mesa ${padreMesa ? padreMesa.numero : ''}. Realice el pedido en ella.`, "info");
+                                    return;
+                                }
+                                handleTableClick(table);
+                            }}
                             style={{
                                 position: 'absolute',
                                 left: `${table.posX !== undefined && table.posX !== null ? table.posX : 15}%`,
@@ -595,26 +1194,28 @@ const TablesView = () => {
                                 flexDirection: 'column',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                
+
                                 // 🛡️ SOLUCIÓN BUG 1: Elevar el z-index si la mesa está ocupada para que sus botones floten encima de la fila inferior
-                                zIndex: table.estado === 'ocupada' ? 35 : 20, 
-                                
-                                transition: 'all 0.15s ease',
-                                boxShadow: debaBloquear 
-                                    ? 'var(--mesa-shadow-apagada, none)' 
-                                    : (table.estado === 'ocupada' ? 'var(--mesa-shadow-ocupada, 0 0 25px rgba(255, 234, 0, 0.35))' : 'var(--mesa-shadow-libre, 0 0 15px rgba(0, 255, 136, 0.15))'),
-                                border: debaBloquear
-                                    ? '1px solid var(--mesa-border-apagada, rgba(75, 85, 99, 0.4))'
-                                    : (table.estado === 'ocupada' ? '1px solid var(--mesa-border-ocupada, #ffea00)' : '1px solid var(--mesa-border-libre, #00ff88)'),
-                                opacity: debaBloquear ? 0.4 : 1,
-                                cursor: debaBloquear ? 'not-allowed' : 'pointer'
+                                zIndex: draggingTableId === table.id ? 100 : (table.estado === 'ocupada' ? 35 : 20),
+
+                                transition: draggingTableId === table.id ? 'none' : 'all 0.15s ease',
+                                boxShadow: isDaughter ? 'none' : (debaBloquear
+                                    ? 'var(--mesa-shadow-apagada, none)'
+                                    : (table.estado === 'ocupada' ? 'var(--mesa-shadow-ocupada, 0 0 25px rgba(255, 234, 0, 0.35))' : 'var(--mesa-shadow-libre, 0 0 15px rgba(0, 255, 136, 0.15))')),
+                                border: isDaughter
+                                    ? '1px dashed rgba(255, 255, 255, 0.3)'
+                                    : (debaBloquear
+                                        ? '1px solid var(--mesa-border-apagada, rgba(75, 85, 99, 0.4))'
+                                        : (table.estado === 'ocupada' ? '1px solid var(--mesa-border-ocupada, #ffea00)' : '1px solid var(--mesa-border-libre, #00ff88)')),
+                                opacity: isDaughter ? 0.5 : (debaBloquear ? 0.4 : 1),
+                                cursor: isEditMode ? 'move' : (isDaughter || debaBloquear ? 'not-allowed' : 'pointer')
                             }}
                         >
                             {/* 🛡️ Renderizado Geométrico de Sillas Dinámicas alrededor de la mesa */}
                             {(() => {
-                                const count = table.estado === 'ocupada' ? totalComensales : table.capacidad;
-                                const chairColor = debaBloquear ? '#9ca3af' : (table.estado === 'ocupada' ? '#ffea00' : '#00ff88');
-                                
+                                const count = table.estado === 'ocupada' ? totalComensales : getCombinedCapacity(table);
+                                const chairColor = isDaughter ? '#9ca3af' : (debaBloquear ? '#9ca3af' : (table.estado === 'ocupada' ? '#ffea00' : '#00ff88'));
+
                                 if (!count || count <= 0) return null;
 
                                 return (
@@ -622,13 +1223,13 @@ const TablesView = () => {
                                         {Array.from({ length: count }).map((_, index) => {
                                             // Calcular el ángulo de distribución matemática radial para colocar cada silla simétricamente
                                             const angle = (index * (360 / count)) * (Math.PI / 180);
-                                            const radius = 62; // Distancia ajustada para la mesa más pequeña
+                                            const radius = count > 6 ? 66 : 62; // Distancia ajustada para la mesa
                                             const x = Math.cos(angle) * radius;
                                             const y = Math.sin(angle) * radius;
                                             const rotation = (index * (360 / count)) + 90;
 
                                             return (
-                                                <div 
+                                                <div
                                                     key={index}
                                                     className="silla-dinamica"
                                                     style={{
@@ -638,7 +1239,7 @@ const TablesView = () => {
                                                         borderRadius: '6px 6px 2px 2px',
                                                         background: chairColor,
                                                         borderBottom: '3px solid rgba(0,0,0,0.3)',
-                                                        boxShadow: debaBloquear ? 'none' : `0 0 8px ${chairColor}`,
+                                                        boxShadow: (debaBloquear || isDaughter) ? 'none' : `0 0 8px ${chairColor}`,
                                                         left: `calc(50% + ${x}px)`,
                                                         top: `calc(50% + ${y}px)`,
                                                         transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
@@ -653,33 +1254,33 @@ const TablesView = () => {
 
                             {/* Contenido ordinario de la mesa (Número, Badge, Mozo y Botones satélite) */}
                             <div style={{ fontSize: '1.6rem', fontWeight: 'bold', marginBottom: 2, color: 'var(--text-main, #fff)' }}>
-                                {table.numero}
+                                {getTableDisplayName(table)}
                             </div>
-                            <div className="badge-estado" style={{ 
-                                fontSize: '0.65rem', 
-                                letterSpacing: 1, 
+                            <div className="badge-estado" style={{
+                                fontSize: '0.65rem',
+                                letterSpacing: 1,
                                 padding: '2px 8px',
                                 borderRadius: '12px',
-                                background: debaBloquear ? 'var(--badge-bg-cerrada, transparent)' : (table.estado === 'ocupada' ? 'var(--badge-bg-ocupada, transparent)' : 'var(--badge-bg-libre, transparent)'),
-                                color: debaBloquear ? 'var(--badge-text-cerrada, #9ca3af)' : (table.estado === 'ocupada' ? 'var(--badge-text-ocupada, #ffea00)' : 'var(--badge-text-libre, #00ff88)'),
+                                background: isDaughter ? 'rgba(255,255,255,0.05)' : (debaBloquear ? 'var(--badge-bg-cerrada, transparent)' : (table.estado === 'ocupada' ? 'var(--badge-bg-ocupada, transparent)' : 'var(--badge-bg-libre, transparent)')),
+                                color: isDaughter ? '#9ca3af' : (debaBloquear ? 'var(--badge-text-cerrada, #9ca3af)' : (table.estado === 'ocupada' ? 'var(--badge-text-ocupada, #ffea00)' : 'var(--badge-text-libre, #00ff88)')),
                                 fontWeight: 'bold'
                             }}>
-                                {debaBloquear ? 'CERRADA' : (table.estado === 'ocupada' ? 'OCUPADA' : 'LIBRE')}
+                                {isDaughter ? badgeText : (debaBloquear ? 'CERRADA' : (table.estado === 'ocupada' ? 'OCUPADA' : 'LIBRE'))}
                             </div>
 
-                            <div style={{ 
-                                fontSize: '0.65rem', 
-                                marginTop: 3, 
-                                color: 'var(--text-main, #fff)', 
-                                background: 'var(--item-hover, rgba(255,255,255,0.1))', 
-                                padding: '2px 6px', 
+                            <div style={{
+                                fontSize: '0.65rem',
+                                marginTop: 3,
+                                color: 'var(--text-main, #fff)',
+                                background: 'var(--item-hover, rgba(255,255,255,0.1))',
+                                padding: '2px 6px',
                                 borderRadius: 10,
-                                visibility: (table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? 'visible' : 'hidden'
+                                visibility: (!isDaughter && table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? 'visible' : 'hidden'
                             }}>
-                                🤵 {(table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? table.comandas[0].usuario.nombre.split(' ')[0] : 'Vacio'}
+                                🤵 {(!isDaughter && table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? table.comandas[0].usuario.nombre.split(' ')[0] : 'Vacio'}
                             </div>
 
-                            {table.estado !== 'libre' && (
+                            {!isDaughter && table.estado !== 'libre' && !isEditMode && (
                                 <div className="satelite-buttons" style={{ position: 'absolute', top: '110%', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 12, zIndex: 50 }}>
                                     <button className="glass-button primary" style={{ padding: '12px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={(e) => { e.stopPropagation(); navigate(`/order/${table.id}`); }}>
                                         <Plus size={24} />
@@ -722,30 +1323,73 @@ const TablesView = () => {
 
             {renderModalContent()}
             {renderTicket()}
+            {renderGlobalMergeModal()}
             {/* Diners Modal */}
-            {showDinersModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: 400, textAlign: 'center' }}>
-                        <h2>Mesa {selectedFreeTable?.numero}</h2>
-                        <p className="text-muted">Ingrese cantidad de comensales</p>
+            {/* Diners Modal */}
+            {showDinersModal && (() => {
+                const numMesas = 1 + (selectedFreeTable?.mesasHijas?.length || 0);
+                const minLimit = numMesas === 1 ? 1 : (6 * (numMesas - 1) + 1);
+                const maxLimit = 6 * numMesas;
+                const isMinDisabled = dinersCount <= minLimit;
+                const isMaxDisabled = dinersCount >= maxLimit;
 
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, margin: '30px 0' }}>
-                            <button className="glass-button" onClick={() => setDinersCount(Math.max(1, dinersCount - 1))} style={{ width: 50, height: 50, borderRadius: '50%' }}>
-                                <Minus />
-                            </button>
-                            <span style={{ fontSize: '3rem', fontWeight: 'bold' }}>{dinersCount}</span>
-                            <button className="glass-button" onClick={() => setDinersCount(dinersCount + 1)} style={{ width: 50, height: 50, borderRadius: '50%' }}>
-                                <Plus />
-                            </button>
-                        </div>
+                return (
+                    <div className="modal-overlay">
+                        <div className="modal-content" style={{ maxWidth: 400, textAlign: 'center' }}>
+                            <h2>Mesa {getTableDisplayName(selectedFreeTable || {})}</h2>
+                            <p className="text-muted" style={{ marginBottom: 5 }}>Ingrese cantidad de comensales</p>
+                            <div className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 15 }}>
+                                Rango permitido: {minLimit} - {maxLimit} comensales ({numMesas} {numMesas === 1 ? 'mesa' : 'mesas unidas'})
+                            </div>
 
-                        <div style={{ display: 'flex', gap: 10 }}>
-                            <button className="glass-button" onClick={() => setShowDinersModal(false)} style={{ flex: 1 }}>Cancelar</button>
-                            <button className="glass-button primary" onClick={confirmDiners} style={{ flex: 1 }}>Continuar</button>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, margin: '20px 0' }}>
+                                <button
+                                    className="glass-button"
+                                    onClick={() => !isMinDisabled && setDinersCount(dinersCount - 1)}
+                                    disabled={isMinDisabled}
+                                    style={{
+                                        width: 55,
+                                        height: 55,
+                                        borderRadius: '50%',
+                                        opacity: isMinDisabled ? 0.35 : 1,
+                                        cursor: isMinDisabled ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        backgroundColor: isMinDisabled ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)'
+                                    }}
+                                >
+                                    <Minus />
+                                </button>
+                                <span style={{ fontSize: '3.5rem', fontWeight: 'bold', minWidth: '80px', display: 'inline-block' }}>{dinersCount}</span>
+                                <button
+                                    className="glass-button"
+                                    onClick={() => !isMaxDisabled && setDinersCount(dinersCount + 1)}
+                                    disabled={isMaxDisabled}
+                                    style={{
+                                        width: 55,
+                                        height: 55,
+                                        borderRadius: '50%',
+                                        opacity: isMaxDisabled ? 0.35 : 1,
+                                        cursor: isMaxDisabled ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        backgroundColor: isMaxDisabled ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)'
+                                    }}
+                                >
+                                    <Plus />
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+                                <button className="glass-button" onClick={() => {
+                                    setShowDinersModal(false);
+                                    setIsUpdatingDiners(false);
+                                    setUpdatingComandaId(null);
+                                }} style={{ flex: 1 }}>Cancelar</button>
+                                <button className="glass-button primary" onClick={confirmDiners} style={{ flex: 1 }}>Continuar</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 };

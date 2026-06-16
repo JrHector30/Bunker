@@ -22,15 +22,21 @@ model User {
 }
 
 model Mesa {
-  id        Int       @id @default(autoincrement())
-  numero    String    @unique
-  capacidad Int
-  estado    String    @default("libre") // libre, ocupada, cerrada
-  posX      Float     @default(0)
-  posY      Float     @default(0)
-  forma     String    @default("cuadrada")
-  comandas  Comanda[]
+  id          Int       @id @default(autoincrement())
+  numero      String    @unique
+  capacidad   Int
+  estado      String    @default("libre") // libre, ocupada, cerrada
+  posX        Float     @default(0)
+  posY        Float     @default(0)
+  forma       String    @default("cuadrada")
+  comandas    Comanda[]
+
+  // Relación Padre-Hijo para unión de mesas
+  mesaPadreId Int?
+  mesaPadre   Mesa?     @relation("MesaUnion", fields: [mesaPadreId], references: [id])
+  mesasHijas  Mesa[]    @relation("MesaUnion")
 }
+
 
 
 model Categoria {
@@ -184,5 +190,10 @@ model PermisoModulo {
   
   @@unique([rol, modulo])
   @@map("permisos_modulos")
+}
+
+model Configuracion {
+  clave String @id
+  valor String
 }
 

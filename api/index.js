@@ -515,6 +515,15 @@ app.get('/api/tables', async (req, res) => {
                 posX: true,
                 posY: true,
                 forma: true,
+                mesaPadreId: true,
+                mesasHijas: {
+                    select: {
+                        id: true,
+                        numero: true,
+                        capacidad: true,
+                        estado: true
+                    }
+                },
                 comandas: {
                     where: { estado: { notIn: ['cerrada', 'anulada'] } },
                     take: 1,
@@ -558,6 +567,205 @@ app.get('/api/tables', async (req, res) => {
     }
 });
 
+// Collision check helper function on the server side
+function checkCollisionServer(tableId, targetPosX, targetPosY, allTables) {
+    const table = allTables.find(t => t.id === tableId);
+    if (!table) return false;
+    
+    // Width and height remain 8.33% and 11.76% (100px x 100px)
+    const widthPct = 8.33;
+    const heightPct = 11.76;
+    
+    const rect1 = {
+        left: targetPosX - widthPct / 2,
+        right: targetPosX + widthPct / 2,
+        top: targetPosY - heightPct / 2,
+        bottom: targetPosY + heightPct / 2
+    };
+
+    for (const other of allTables) {
+        if (other.id === tableId) continue;
+        if (other.mesaPadreId === table.id || table.mesaPadreId === other.id) continue;
+        
+        const otherWidthPct = 8.33;
+        const otherHeightPct = 11.76;
+        
+        const otherPosX = other.posX ?? 15;
+        const otherPosY = other.posY ?? 25;
+        
+        const rect2 = {
+            left: otherPosX - otherWidthPct / 2,
+            right: otherPosX + otherWidthPct / 2,
+            top: otherPosY - otherHeightPct / 2,
+            bottom: otherPosY + otherHeightPct / 2
+        };
+        
+        const overlapX = rect1.left < rect2.right && rect1.right > rect2.left;
+        const overlapY = rect1.top < rect2.bottom && rect1.bottom > rect2.top;
+        
+        if (overlapX && overlapY) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// GET /api/config/tables-edit-mode
+app.get('/api/config/tables-edit-mode', async (req, res) => {
+    try {
+        let config = await prisma.configuracion.findUnique({ where: { clave: 'tables_edit_mode' } });
+        if (!config) {
+            config = await prisma.configuracion.create({ data: { clave: 'tables_edit_mode', valor: 'false' } });
+        }
+        res.json({ enabled: config.valor === 'true' });
+    } catch (e) {
+        console.error("Error reading edit mode config:", e);
+        res.json({ enabled: false });
+    }
+});
+
+// POST /api/config/tables-edit-mode
+app.post('/api/config/tables-edit-mode', async (req, res) => {
+    const { enabled } = req.body;
+    try {
+        const config = await prisma.configuracion.upsert({
+            where: { clave: 'tables_edit_mode' },
+            update: { valor: String(enabled) },
+            create: { clave: 'tables_edit_mode', valor: String(enabled) }
+        });
+        res.json({ success: true, enabled: config.valor === 'true' });
+    } catch (e) {
+        console.error("Error updating edit mode config:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/tables/positions (Batch update table positions)
+app.post('/api/tables/positions', async (req, res) => {
+    const { positions } = req.body;
+    try {
+        if (!Array.isArray(positions)) {
+            return res.status(400).json({ error: "positions must be an array" });
+        }
+
+        const allTables = await prisma.mesa.findMany({
+            include: { mesasHijas: true }
+        });
+
+        const tempTables = allTables.map(t => {
+            const update = positions.find(p => p.id === t.id);
+            if (update) {
+                return { ...t, posX: parseFloat(update.posX), posY: parseFloat(update.posY) };
+            }
+            return t;
+        });
+
+        for (const update of positions) {
+            const tableId = parseInt(update.id);
+            const posX = parseFloat(update.posX);
+            const posY = parseFloat(update.posY);
+
+            const collides = checkCollisionServer(tableId, posX, posY, tempTables);
+            if (collides) {
+                const tbl = allTables.find(t => t.id === tableId);
+                return res.status(400).json({ error: `La Mesa ${tbl ? tbl.numero : tableId} colisiona en su nueva posición.` });
+            }
+        }
+
+        await prisma.$transaction(
+            positions.map(p => prisma.mesa.update({
+                where: { id: parseInt(p.id) },
+                data: { posX: parseFloat(p.posX), posY: parseFloat(p.posY) }
+            }))
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Error saving positions in bulk:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/tables/merge
+app.post('/api/tables/merge', async (req, res) => {
+    const { mesaPadreId, mesaHijaId } = req.body;
+    try {
+        const padreId = parseInt(mesaPadreId);
+        const hijaId = parseInt(mesaHijaId);
+
+        if (padreId === hijaId) {
+            return res.status(400).json({ error: "No se puede unir una mesa consigo misma" });
+        }
+
+        const padre = await prisma.mesa.findUnique({
+            where: { id: padreId },
+            include: { comandas: { where: { estado: { notIn: ['cerrada', 'anulada'] } } } }
+        });
+        const hija = await prisma.mesa.findUnique({ where: { id: hijaId } });
+
+        if (!padre) return res.status(404).json({ error: "Mesa padre no encontrada" });
+        if (!hija) return res.status(404).json({ error: "Mesa hija no encontrada" });
+
+        // 1. La mesa padre debe estar 'libre' o 'ocupada' (no 'cerrada' o restringida)
+        // 2. La mesa hija debe estar 'libre'
+        if (hija.estado !== 'libre') {
+            return res.status(400).json({ error: "La mesa hija debe estar libre" });
+        }
+        // 3. La mesa hija NO debe tener ya un mesaPadreId (no se permiten cadenas)
+        if (hija.mesaPadreId !== null) {
+            return res.status(400).json({ error: "La mesa hija ya está unida a otra mesa" });
+        }
+        // 4. Una mesa padre no puede ser hija de otra (mesaPadreId === null)
+        if (padre.mesaPadreId !== null) {
+            return res.status(400).json({ error: "Una mesa hija no puede ser padre de otra" });
+        }
+
+        // Acción: actualizar mesaHija.mesaPadreId = mesaPadreId, mesaHija.estado = padre.estado
+        const updatedHija = await prisma.mesa.update({
+            where: { id: hijaId },
+            data: { mesaPadreId: padreId, estado: padre.estado }
+        });
+
+        res.json({ success: true, hija: updatedHija });
+    } catch (error) {
+        console.error("Error merging tables:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/tables/unmerge
+app.post('/api/tables/unmerge', async (req, res) => {
+    const { mesaHijaId } = req.body;
+    try {
+        const hijaId = parseInt(mesaHijaId);
+        const hija = await prisma.mesa.findUnique({ where: { id: hijaId } });
+        if (!hija) return res.status(404).json({ error: "Mesa hija no encontrada" });
+        if (!hija.mesaPadreId) return res.status(400).json({ error: "La mesa no está unida a ninguna mesa padre" });
+
+        const padre = await prisma.mesa.findUnique({
+            where: { id: hija.mesaPadreId },
+            include: { comandas: { where: { estado: { notIn: ['cerrada', 'anulada'] } } } }
+        });
+
+        // Solo permitir si la mesa padre sigue con comanda activa (para no dejar inconsistencias)
+        // O si ambas están libres
+        if (padre && padre.estado === 'ocupada' && padre.comandas.length === 0) {
+            return res.status(400).json({ error: "Solo se puede separar si la mesa padre sigue con comanda activa o ambas están libres" });
+        }
+
+        // Acción: actualizar mesaHija.mesaPadreId = null, mesaHija.estado = 'libre'
+        const updatedHija = await prisma.mesa.update({
+            where: { id: hijaId },
+            data: { mesaPadreId: null, estado: 'libre' }
+        });
+
+        res.json({ success: true, hija: updatedHija });
+    } catch (error) {
+        console.error("Error unmerging tables:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Kitchen Queue Endpoint (Item-based)
 app.get('/api/kitchen/queue', async (req, res) => {
     const queue = await prisma.detalleComanda.findMany({
@@ -570,7 +778,7 @@ app.get('/api/kitchen/queue', async (req, res) => {
         },
         include: {
             plato: true,
-            comanda: { include: { mesa: true } },
+            comanda: { include: { mesa: { include: { mesasHijas: true } } } },
             cocinero: true
         },
         orderBy: { id: 'asc' } // FIFO
@@ -634,10 +842,22 @@ app.post('/api/orders', async (req, res) => {
             where: { id: parseInt(mesaId) },
             data: { estado: 'ocupada' }
         });
+
+        // Sincronizar estado de mesas hijas
+        await prisma.mesa.updateMany({
+            where: { mesaPadreId: parseInt(mesaId) },
+            data: { estado: 'ocupada' }
+        });
     } else {
         // Self-Healing: If for any reason the mesa was visually 'libre', force it back to 'ocupada'
         await prisma.mesa.update({
             where: { id: parseInt(mesaId) },
+            data: { estado: 'ocupada' }
+        });
+
+        // Sincronizar estado de mesas hijas
+        await prisma.mesa.updateMany({
+            where: { mesaPadreId: parseInt(mesaId) },
             data: { estado: 'ocupada' }
         });
 
@@ -704,7 +924,7 @@ app.post('/api/tables/transfer', async (req, res) => {
             })
         );
 
-        // Transaction: Update Comandas -> Update Old Table -> Update New Table
+        // Transaction: Update Comandas -> Update Old Table -> Update New Table -> Unmerge old daughters
         await prisma.$transaction([
             ...updates,
             prisma.mesa.update({
@@ -714,6 +934,10 @@ app.post('/api/tables/transfer', async (req, res) => {
             prisma.mesa.update({
                 where: { id: parseInt(toTableId) },
                 data: { estado: 'ocupada' }
+            }),
+            prisma.mesa.updateMany({
+                where: { mesaPadreId: parseInt(fromTableId) },
+                data: { mesaPadreId: null, estado: 'libre' }
             })
         ]);
 
@@ -732,6 +956,23 @@ app.put('/api/orders/:id/status', async (req, res) => {
         data: { estado }
     });
     res.json(order);
+});
+
+// Update comensales count for an active order
+app.put('/api/orders/:id/comensales', async (req, res) => {
+    const { id } = req.params;
+    const { comensales } = req.body;
+    try {
+        const orderId = parseInt(id);
+        const updatedOrder = await prisma.comanda.update({
+            where: { id: orderId },
+            data: { comensales: parseInt(comensales) }
+        });
+        res.json({ success: true, order: updatedOrder });
+    } catch (e) {
+        console.error("Error updating comensales count:", e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // Update specific order detail (Status or Quantity)
@@ -1004,6 +1245,12 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
                 data: { estado: 'libre' }
             });
 
+            // Liberar automáticamente todas las mesas hijas
+            await tx.mesa.updateMany({
+                where: { mesaPadreId: comanda.mesaId },
+                data: { mesaPadreId: null, estado: 'libre' }
+            });
+
             // Procesar descarte de insumos y mermas por plato
             for (const detalle of comanda.detalles) {
                 let isMerma = false;
@@ -1171,6 +1418,10 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
             prisma.mesa.update({
                 where: { id: parseInt(mesaId) },
                 data: { estado: 'libre' }
+            }),
+            prisma.mesa.updateMany({
+                where: { mesaPadreId: parseInt(mesaId) },
+                data: { mesaPadreId: null, estado: 'libre' }
             })
         ]);
 

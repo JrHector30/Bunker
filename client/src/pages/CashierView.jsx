@@ -32,7 +32,9 @@ const CashierView = () => {
             showToast("Debe ABRIR CAJA antes de cobrar.", 'error');
             return;
         }
-        setSelectedOrder({ ...order, tableNumero: table.numero, tableId: table.id });
+        const hijasNumeros = table.mesasHijas && table.mesasHijas.length > 0 ? ' - ' + table.mesasHijas.map(h => h.numero).join(' - ') : '';
+        const tableNumero = `${table.numero}${hijasNumeros}`;
+        setSelectedOrder({ ...order, tableNumero: tableNumero, tableId: table.id });
         setPaymentModalOpen(true);
     };
 
@@ -79,7 +81,14 @@ const CashierView = () => {
                     return (
                         <div key={table.id} className="glass-panel" style={{ padding: 20 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15, borderBottom: '1px solid var(--glass-border)', paddingBottom: 10 }}>
-                                <h2>Mesa {table.numero}</h2>
+                                <h2>Mesa {(() => {
+                                    let num = table.numero;
+                                    if (table.mesasHijas && table.mesasHijas.length > 0) {
+                                        const hijas = table.mesasHijas.map(h => h.numero).join(' - ');
+                                        num = `${num} - ${hijas}`;
+                                    }
+                                    return num;
+                                })()}</h2>
                                 <h2 style={{ color: 'var(--success)' }}>S/. {realTotal.toFixed(2)}</h2>
                             </div>
 
