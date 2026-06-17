@@ -9,34 +9,23 @@ import {
 } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Calendar as DayPickerCalendar } from '../components/ui/Calendar';
+import { format } from 'date-fns';
+import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
 
 const StaffStatsView = () => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const navigate = useNavigate();
     const [stats, setStats] = useState({ waiters: [], cooks: [] });
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(new Date());
     const [loading, setLoading] = useState(false);
-    const [showCalendar, setShowCalendar] = useState(false);
-    const [displayMonth, setDisplayMonth] = useState(
-        date ? new Date(date + 'T12:00:00') : new Date()
-    );
-    const calendarRef = useRef(null);
 
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (calendarRef.current && !calendarRef.current.contains(e.target)) {
-                setShowCalendar(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    const dateQueryStr = React.useMemo(() => date ? format(date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), [date]);
+    const dateDisplayStr = React.useMemo(() => date ? format(date, 'dd-MM-yyyy') : format(new Date(), 'dd-MM-yyyy'), [date]);
 
     const fetchStats = () => {
         setLoading(true);
-        fetch(`/api/staff/stats?date=${date}`)
+        fetch(`/api/staff/stats?date=${dateQueryStr}`)
             .then(res => res.json())
             .then(data => setStats(data))
             .catch(err => console.error(err))
@@ -45,13 +34,13 @@ const StaffStatsView = () => {
 
     useEffect(() => {
         fetchStats();
-    }, [date]);
+    }, [dateQueryStr]);
 
     const handleCleanDay = async () => {
-        if (!await showConfirmation(`⚠ PELIGRO:\n\n¿Estás seguro de ELIMINAR PERMANENTEMENTE todas las ventas del día ${date}?\n\nEsta acción NO se puede deshacer.`, { type: 'danger' })) return;
+        if (!await showConfirmation(`⚠ PELIGRO:\n\n¿Estás seguro de ELIMINAR PERMANENTEMENTE todas las ventas del día ${dateDisplayStr}?\n\nEsta acción NO se puede deshacer.`, { type: 'danger' })) return;
 
         try {
-            const res = await fetch(`/api/staff/stats/daily?date=${date}`, { method: 'DELETE' });
+            const res = await fetch(`/api/staff/stats/daily?date=${dateQueryStr}`, { method: 'DELETE' });
             const data = await res.json();
             if (res.ok) {
                 showToast(data.message, 'error');
@@ -71,7 +60,7 @@ const StaffStatsView = () => {
         doc.setFontSize(18);
         doc.text("ComandaGo - Reporte de Personal", 14, 20);
         doc.setFontSize(12);
-        doc.text(`Fecha: ${date}`, 14, 28);
+        doc.text(`Fecha: ${dateDisplayStr}`, 14, 28);
 
         // Waiters Table
         doc.setFontSize(14);
@@ -138,36 +127,16 @@ const StaffStatsView = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <div style={{ position: 'relative', zIndex: showCalendar ? 9999 : 1 }} ref={calendarRef}>
-                        <button
-                            type="button"
-                            className="glass-button"
-                            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 15px' }}
-                            onClick={() => setShowCalendar(!showCalendar)}
-                        >
-                            <Calendar size={18} className="text-teal-400" />
-                            <span>{date ? date : "Seleccionar Fecha"}</span>
-                        </button>
-                        {showCalendar && (
-                            <div style={{ position: 'absolute', right: 0, top: 45, zIndex: 99999 }}>
-                                <DayPickerCalendar
-                                    selected={date ? new Date(date + 'T12:00:00') : undefined}
-                                    onSelect={(selectedDate) => {
-                                        if (selectedDate) {
-                                            const yyyy = selectedDate.getFullYear();
-                                            const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
-                                            const dd = String(selectedDate.getDate()).padStart(2, '0');
-                                            setDate(`${yyyy}-${mm}-${dd}`);
-                                            setDisplayMonth(selectedDate);
-                                        }
-                                        setShowCalendar(false);
-                                    }}
-                                    month={displayMonth}
-                                    onMonthChange={setDisplayMonth}
-                                />
-                            </div>
-                        )}
-                    </div>
+                    <DropdownRangeDatePicker
+                        mode="single"
+                        value={date}
+                        onChange={(selectedDate) => {
+                            if (selectedDate) {
+                                setDate(selectedDate);
+                            }
+                        }}
+                        placeholder="Seleccionar Fecha"
+                    />
 
                     <button
                         className="glass-button"

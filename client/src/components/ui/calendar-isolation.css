@@ -1,17 +1,8 @@
-/* ============================================
-   AISLAMIENTO DEL CALENDARIO (react-day-picker v9)
-   Anula CUALQUIER estilo global de table/th/td/tr
-   que la app aplique a tablas de Caja/Kardex/Inventario.
-   Agregar este bloque AL FINAL del CSS global,
-   después de los estilos de glass-panel/table-responsive.
-   ============================================ */
+/* ============================================================
+   BÚNKER DE AISLAMIENTO COMPLETO: FIX PARA VARIANTES DE SHADCN
+   ============================================================ */
 
-.rdp-isolated,
-.rdp-isolated * {
-  all: revert;
-  box-sizing: border-box;
-}
-
+/* 1. Neutralizar tablas globales */
 .rdp-isolated table,
 .rdp-isolated th,
 .rdp-isolated td,
@@ -25,8 +16,125 @@
   width: auto !important;
   text-align: center !important;
   font-weight: normal !important;
+  box-shadow: none !important;
 }
 
 .rdp-isolated table {
   border-collapse: collapse !important;
+}
+
+/* 2. FIX DE BOTÓN ATÓMICO: Pulveriza los paddings y h-9 de tu button.tsx */
+.rdp-isolated .rdp-day_button {
+  all: unset !important;
+  /* Resetea herencias de CVA de tu button.tsx */
+  box-sizing: border-box !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+  font-family: Inter, sans-serif !important;
+  color: #d1d5db !important;
+  /* text-gray-300 */
+  cursor: pointer !important;
+  border-radius: 8px !important;
+  background-color: transparent !important;
+  transition: border-radius 450ms ease, background-color 150ms ease !important;
+  /* Transición elástica al cambiar de forma */
+
+}
+
+/* ── 🟢 DISEÑO DEL RANGO CONTINUO (Corrección de franja unificada para v9) ── */
+
+/* Forzar a que las celdas del rango medio no dejen espacios negros intermedios */
+.rdp-isolated td.rdp-range_middle {
+  background-color: #1e1e24 !important;
+  /* Gris zinc oscuro sólido (equivalente al look original) */
+  padding: 0 !important;
+  margin: 0 !important;
+  /* El truco maestro: Forzar escala para que las celdas se pisen en los bordes y tapen la línea */
+  transform: scale(1.05) !important;
+}
+
+/* Botón intermedio: Se estira completamente para heredar el fondo unificado */
+.rdp-isolated .rdp-range_middle .rdp-day_button {
+  background-color: transparent !important;
+  color: #ffffff !important;
+  border-radius: 0 !important;
+  width: 100% !important;
+  height: 32px !important;
+
+}
+
+/* Día Inicial: Celda contenedora con conector a la derecha */
+.rdp-isolated td.rdp-range_start {
+  background: linear-gradient(to right, transparent 50%, rgba(63, 63, 70, 0.45) 50%) !important;
+  transform: scale(1.01) !important;
+  /* Simetría con las del medio */
+}
+
+/* El botón exacto donde arranca el rango: Tapón blanco redondo perfecto */
+.rdp-isolated .rdp-range_start .rdp-day_button {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+  width: 32px !important;
+  height: 32px !important;
+  /* 🎯 El Truco: Redondea solo izquierda-arriba e izquierda-abajo. Derecha en punta (0) */
+  border-top-left-radius: 12px !important;
+  border-bottom-left-radius: 12px !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+
+}
+
+/* Día Final: Celda contenedora con conector a la izquierda */
+.rdp-isolated td.rdp-range_end {
+  background: linear-gradient(to left, transparent 50%, rgba(63, 63, 70, 0.45) 50%) !important;
+  transform: scale(1.01) !important;
+  /* Simetría con las del medio */
+}
+
+/* El botón exacto donde termina el rango: Tapón blanco redondo perfecto */
+.rdp-isolated .rdp-range_end .rdp-day_button {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+  width: 32px !important;
+  height: 32px !important;
+  /* 🎯 El Truco: Redondea solo derecha-arriba y derecha-abajo. Izquierda en punta (0) */
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+}
+
+/* Caso especial: Cuando el rango es de un solo día */
+.rdp-isolated td.rdp-range_start.rdp-range_end {
+  background: transparent !important;
+
+}
+
+.rdp-isolated .rdp-range_start.rdp-range_end .rdp-day_button {
+  border-radius: 8px !important;
+}
+
+/* Hovers elásticos */
+.rdp-isolated .rdp-day_button:hover {
+  background-color: rgba(63, 63, 70, 0.60) !important;
+  color: #ffffff !important;
+}
+
+.rdp-isolated .rdp-range_start .rdp-day_button:hover,
+.rdp-isolated .rdp-range_end .rdp-day_button:hover {
+  background-color: rgba(255, 255, 255, 0.678) !important;
+  color: #000000 !important;
+}
+
+.rdp-isolated .rdp-range_middle .rdp-day_button:hover {
+  background-color: rgba(63, 63, 70, 0.70) !important;
+  color: #ffffff !important;
 }

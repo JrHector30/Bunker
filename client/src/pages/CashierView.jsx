@@ -140,7 +140,7 @@ const CashierView = () => {
                                     style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 10 }}
                                     onClick={() => handleOpenPayment(table, activeOrder)}
                                 >
-                                    <Printer size={18} /> Cerrar Cuenta & Imprimir
+                                    <Printer size={18} /> Cerrar Cuenta e Imprimir
                                 </button>
                             </div>
                         </div>

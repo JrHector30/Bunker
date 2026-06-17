@@ -3,7 +3,8 @@ import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download, Calendar as CalendarIcon } from 'lucide-react';
-import { Calendar as DayPickerCalendar } from '../components/ui/Calendar';
+import { format } from 'date-fns';
+import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
@@ -30,23 +31,8 @@ const InventoryView = () => {
     const [formError, setFormError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
-    const [kardexDateFilter, setKardexDateFilter] = useState('');
+    const [kardexDateFilterRange, setKardexDateFilterRange] = useState(undefined);
     const [kardexCurrentPage, setKardexCurrentPage] = useState(1);
-    const [showKardexCalendar, setShowKardexCalendar] = useState(false);
-    const [kardexDisplayMonth, setKardexDisplayMonth] = useState(
-        kardexDateFilter ? new Date(kardexDateFilter + 'T12:00:00') : new Date()
-    );
-    const kardexCalendarRef = useRef(null);
-
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (kardexCalendarRef.current && !kardexCalendarRef.current.contains(e.target)) {
-                setShowKardexCalendar(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     const fetchData = () => {
         refetchProducts();
@@ -635,14 +621,20 @@ const InventoryView = () => {
 
         // Filter by Date
         const filteredKardex = kardex.filter(mov => {
-            if (!kardexDateFilter) return true;
-            // Compare local YYYY-MM-DD
+            if (!kardexDateFilterRange || (!kardexDateFilterRange.from && !kardexDateFilterRange.to)) return true;
+            
             const movDate = new Date(mov.fecha);
-            const movYear = movDate.getFullYear();
-            const movMonth = String(movDate.getMonth() + 1).padStart(2, '0');
-            const movDay = String(movDate.getDate()).padStart(2, '0');
-            const movDateStr = `${movYear}-${movMonth}-${movDay}`;
-            return movDateStr === kardexDateFilter;
+            const dateToCompare = new Date(movDate.getFullYear(), movDate.getMonth(), movDate.getDate());
+            
+            if (kardexDateFilterRange.from && kardexDateFilterRange.to) {
+                const fromDate = new Date(kardexDateFilterRange.from.getFullYear(), kardexDateFilterRange.from.getMonth(), kardexDateFilterRange.from.getDate());
+                const toDate = new Date(kardexDateFilterRange.to.getFullYear(), kardexDateFilterRange.to.getMonth(), kardexDateFilterRange.to.getDate());
+                return dateToCompare >= fromDate && dateToCompare <= toDate;
+            } else if (kardexDateFilterRange.from) {
+                const fromDate = new Date(kardexDateFilterRange.from.getFullYear(), kardexDateFilterRange.from.getMonth(), kardexDateFilterRange.from.getDate());
+                return dateToCompare.getTime() === fromDate.getTime();
+            }
+            return true;
         });
 
         // Pagination
@@ -654,15 +646,6 @@ const InventoryView = () => {
 
         const handlePrevPage = () => setKardexCurrentPage(p => Math.max(1, p - 1));
         const handleNextPage = () => setKardexCurrentPage(p => Math.min(totalPages, p + 1));
-        const handleDateFilterChange = (e) => {
-            setKardexDateFilter(e.target.value);
-            setKardexCurrentPage(1); // Reset to page 1 on filter
-        };
-        const handleClearDateFilter = () => {
-            setKardexDateFilter('');
-            setKardexDisplayMonth(new Date());
-            setKardexCurrentPage(1);
-        };
 
         const handleExportExcel = () => {
             if (filteredKardex.length === 0) {
@@ -687,7 +670,11 @@ const InventoryView = () => {
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Kardex");
 
-            const dateStr = kardexDateFilter || 'General';
+            const dateStr = kardexDateFilterRange?.from
+                ? (kardexDateFilterRange.to
+                    ? `${format(kardexDateFilterRange.from, 'yyyy-MM-dd')}_a_${format(kardexDateFilterRange.to, 'yyyy-MM-dd')}`
+                    : format(kardexDateFilterRange.from, 'yyyy-MM-dd'))
+                : 'General';
             XLSX.writeFile(workbook, `Reporte_Kardex_${dateStr}.xlsx`);
         };
 
@@ -696,51 +683,15 @@ const InventoryView = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
                         <h2 style={{ margin: 0 }}>Historial de Movimientos</h2>
-                        <div style={{ position: 'relative', zIndex: showKardexCalendar ? 9999 : 1 }} ref={kardexCalendarRef}>
-                            <button
-                                type="button"
-                                className="glass-button"
-                                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 15px' }}
-                                onClick={() => setShowKardexCalendar(!showKardexCalendar)}
-                            >
-                                <CalendarIcon size={16} className="text-teal-400" />
-                                <span>{kardexDateFilter ? kardexDateFilter : "Filtrar por Fecha"}</span>
-                                {kardexDateFilter && (
-                                    <span 
-                                        style={{ marginLeft: 5, cursor: 'pointer', opacity: 0.6 }} 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleClearDateFilter();
-                                        }}
-                                    >
-                                        ✕
-                                    </span>
-                                )}
-                            </button>
-                            {showKardexCalendar && (
-                                <div style={{ position: 'absolute', left: 0, top: 40, zIndex: 99999 }}>
-                                    <DayPickerCalendar
-                                        selected={kardexDateFilter ? new Date(kardexDateFilter + 'T12:00:00') : undefined}
-                                        onSelect={(date) => {
-                                            if (date) {
-                                                const yyyy = date.getFullYear();
-                                                const mm = String(date.getMonth() + 1).padStart(2, '0');
-                                                const dd = String(date.getDate()).padStart(2, '0');
-                                                setKardexDateFilter(`${yyyy}-${mm}-${dd}`);
-                                                setKardexDisplayMonth(date);
-                                            } else {
-                                                setKardexDateFilter('');
-                                                setKardexDisplayMonth(new Date());
-                                            }
-                                            setKardexCurrentPage(1);
-                                            setShowKardexCalendar(false);
-                                        }}
-                                        month={kardexDisplayMonth}
-                                        onMonthChange={setKardexDisplayMonth}
-                                    />
-                                </div>
-                            )}
-                        </div>
+                        <DropdownRangeDatePicker
+                            mode="range"
+                            value={kardexDateFilterRange}
+                            onChange={(range) => {
+                                setKardexDateFilterRange(range);
+                                setKardexCurrentPage(1);
+                            }}
+                            placeholder="Filtrar por Fecha"
+                        />
                         <button className="glass-button" onClick={handleExportExcel} style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', padding: '6px 15px', color: 'var(--success)' }}>
                             <Download size={18} /> Exportar Excel
                         </button>
@@ -766,7 +717,7 @@ const InventoryView = () => {
                             {currentData.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>
-                                        {kardexDateFilter ? 'No se registraron movimientos en este periodo.' : 'No hay movimientos registrados.'}
+                                        {kardexDateFilterRange?.from ? 'No se registraron movimientos en este periodo.' : 'No hay movimientos registrados.'}
                                     </td>
                                 </tr>
                             ) : currentData.map(mov => {

@@ -2,7 +2,7 @@
 @import "tailwindcss/utilities" layer(utilities);
 @import url('https://fonts.googleapis.com/css2?family=Lexend+Peta:wght@400;600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Montserrat:wght@300;400;500;600&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap');
 @layer theme, base, components, utilities;
 
 @layer base {
@@ -1817,98 +1817,7 @@ body {
   color: #9ca3af;
 }
 
-/* ============================================
-   AISLAMIENTO DEL CALENDARIO (react-day-picker v9)
-   Versión quirúrgica: NO usa "all: revert".
-   Agregar AL FINAL del CSS global.
-   ============================================ */
 
-.rdp-isolated table,
-.rdp-isolated th,
-.rdp-isolated td,
-.rdp-isolated tr,
-.rdp-isolated thead,
-.rdp-isolated tbody {
-  width: auto !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border: none !important;
-  text-align: center !important;
-  font-weight: normal !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  box-shadow: none !important;
-  line-height: normal !important;
-}
-
-.rdp-isolated table {
-  border-collapse: collapse !important;
-  border-spacing: 0 !important;
-}
-
-/* Título del mes: centrado horizontal y vertical, capitalizado para español */
-.rdp-isolated .rdp-month_caption {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
-  padding-inline: 0 !important;
-}
-
-.rdp-isolated .rdp-caption_label {
-  text-align: center !important;
-  width: 100% !important;
-}
-
-/* Texto de los días de la semana */
-.rdp-isolated .rdp-weekday {
-  color: #6b7280 !important;
-}
-
-/* Botón de cada día */
-.rdp-isolated .rdp-day_button {
-  color: #d1d5db !important;
-  background-color: transparent !important;
-}
-
-/* HOVER: gris en cualquier día, EXCEPTO el seleccionado */
-.rdp-isolated .rdp-day_button:hover {
-  background-color: rgba(107, 114, 128, 0.35) !important;
-}
-
-/* SELECCIONADO: fondo blanco, texto negro — el hover no debe sobreescribir esto */
-.rdp-isolated .rdp-selected .rdp-day_button,
-.rdp-isolated .rdp-day_selected .rdp-day_button,
-.rdp-isolated .rdp-day_button[aria-selected="true"],
-.rdp-isolated [aria-selected="true"] .rdp-day_button,
-.rdp-isolated .rdp-selected button,
-.rdp-isolated .rdp-day_selected button,
-.rdp-isolated [aria-selected="true"] button {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  font-weight: bold !important;
-}
-
-.rdp-isolated .rdp-selected .rdp-day_button:hover,
-.rdp-isolated .rdp-day_selected .rdp-day_button:hover,
-.rdp-isolated .rdp-day_button[aria-selected="true"]:hover,
-.rdp-isolated [aria-selected="true"] .rdp-day_button:hover,
-.rdp-isolated .rdp-selected button:hover,
-.rdp-isolated .rdp-day_selected button:hover,
-.rdp-isolated [aria-selected="true"] button:hover {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-}
-
-/* Días fuera del mes actual: tenues, sin hover */
-.rdp-isolated .rdp-outside .rdp-day_button {
-  color: #374151 !important;
-  opacity: 0.4;
-}
-
-.rdp-isolated .rdp-outside .rdp-day_button:hover {
-  background-color: transparent !important;
-}
 
 /* ============================================
    ESTILOS DE IMPRESIÓN (TICKETS DE COURIER)
@@ -1917,13 +1826,13 @@ body {
   body * {
     visibility: hidden;
   }
-  
+
   /* Mostrar única y exclusivamente el ticket de impresión */
   .print-ticket,
   .print-ticket * {
     visibility: visible;
   }
-  
+
   .print-ticket {
     position: absolute !important;
     left: 0 !important;

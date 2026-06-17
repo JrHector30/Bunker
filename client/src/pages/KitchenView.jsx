@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CheckCircle, Clock, ChefHat, Play, Check, Undo, Flame, Volume2, VolumeX } from 'lucide-react';
 
@@ -60,7 +60,7 @@ const KitchenTimer = ({ startTime }) => {
     return <span className={alertClass} style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{alertClass === 'timer-critical' && '⚠️ '}{elapsed}</span>;
 };
 
-const ItemCard = React.memo(({ item, actionButton }) => (
+const ItemCard = React.memo(({ item, actionButton, showTimer = true }) => (
     <div className="glass-panel fade-in kds-card" style={{ padding: '16px 20px', marginBottom: 16, borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 10, transition: 'all 0.3s ease', border: '1px solid var(--primary)', position: 'relative', overflow: 'hidden', background: 'var(--bg-surface)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
         {/* Glow effect top border simulation */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'var(--primary)', opacity: 0.8 }}></div>
@@ -70,9 +70,11 @@ const ItemCard = React.memo(({ item, actionButton }) => (
                 <span style={{ color: 'var(--primary)', marginRight: 8, fontSize: '1.1rem' }}>{item.cantidad}x</span>
                 {item.plato.nombre}
             </span>
-            <div style={{ marginLeft: 15 }}>
-                <KitchenTimer startTime={item.fechaCreacion || item.comanda.fecha} />
-            </div>
+            {showTimer && (
+                <div style={{ marginLeft: 15 }}>
+                    <KitchenTimer startTime={item.fechaCreacion || item.comanda.fecha} />
+                </div>
+            )}
         </div>
 
         {item.observacion && (
@@ -107,16 +109,62 @@ const ItemCard = React.memo(({ item, actionButton }) => (
     </div>
 ));
 
+// Keep cache of the kitchen queue and audio settings globally so they are preserved across mounts
+let globalQueueCache = null;
+let globalAudioEnabled = true;
+
 const KitchenView = () => {
     const { user } = useAuth();
-    const [queue, setQueue] = useState([]);
-    const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-    const prevPendingCountReq = React.useRef(0);
+    
+    // Use the global cache to instantly render previously loaded orders
+    const [queue, _setQueue] = useState(globalQueueCache || []);
+    const setQueue = (newQueueOrFunc) => {
+        _setQueue(prev => {
+            const next = typeof newQueueOrFunc === 'function' ? newQueueOrFunc(prev) : newQueueOrFunc;
+            globalQueueCache = next;
+            return next;
+        });
+    };
+
+    const [isAudioEnabled, setIsAudioEnabled] = useState(globalAudioEnabled);
+    const toggleAudio = () => {
+        setIsAudioEnabled(prev => {
+            const next = !prev;
+            globalAudioEnabled = next;
+            return next;
+        });
+    };
+
+    const prevPendingCountReq = useRef(0);
+    const pendingUpdates = useRef({});
+    
+    // Fetch sequencer to prevent out-of-order resolution of promises
+    const fetchCounter = useRef(0);
+    const lastAppliedFetchId = useRef(0);
 
     const fetchQueue = () => {
+        fetchCounter.current += 1;
+        const currentFetchId = fetchCounter.current;
+
         fetch('/api/kitchen/queue')
             .then(res => res.json())
-            .then(data => setQueue(data))
+            .then(data => {
+                // Ignore stale results
+                if (currentFetchId < lastAppliedFetchId.current) {
+                    return;
+                }
+                lastAppliedFetchId.current = currentFetchId;
+
+                // Apply pending updates to the incoming data to prevent reverts
+                const mergedData = data.map(item => {
+                    const pending = pendingUpdates.current[item.id];
+                    if (pending) {
+                        return { ...item, ...pending };
+                    }
+                    return item;
+                });
+                setQueue(mergedData);
+            })
             .catch(err => console.error("Error polling queue", err));
     };
 
@@ -132,21 +180,25 @@ const KitchenView = () => {
             payload.cocineroId = user.id;
         }
 
-        // 1. Actualización optimista local
+        // Prepare optimistic data
+        const optimisticData = { estado: status };
+        if (status === 'preparando' && !options.preserveCook) {
+            optimisticData.cocinero = { id: user.id, nombre: user.nombre || 'Yo' };
+            optimisticData.cocineroId = user.id;
+        }
+
+        // Save in pending updates ref so background polls don't overwrite it
+        pendingUpdates.current[itemId] = optimisticData;
+
+        // 1. Local optimistic update
         setQueue(prev => prev.map(item => {
             if (item.id === itemId) {
-                const updatedItem = { ...item, estado: status };
-                if (status === 'preparando' && !options.preserveCook) {
-                    // Simular cocinero local para el badge
-                    updatedItem.cocinero = { id: user.id, nombre: user.nombre || 'Yo' };
-                    updatedItem.cocineroId = user.id;
-                }
-                return updatedItem;
+                return { ...item, ...optimisticData };
             }
             return item;
         }));
 
-        // 2. Confirmar con el servidor
+        // 2. Confirm with server
         try {
             const res = await fetch(`/api/orders/details/${itemId}`, {
                 method: 'PUT',
@@ -156,11 +208,41 @@ const KitchenView = () => {
             if (!res.ok) {
                 throw new Error("HTTP error " + res.status);
             }
-            fetchQueue();
+
+            // Increment fetch counter for our fresh fetch
+            fetchCounter.current += 1;
+            const currentFetchId = fetchCounter.current;
+
+            // Re-fetch queue to get latest server state
+            const freshRes = await fetch('/api/kitchen/queue');
+            if (freshRes.ok) {
+                const freshData = await freshRes.json();
+                
+                // Only apply if it's the latest fetch response
+                if (currentFetchId >= lastAppliedFetchId.current) {
+                    lastAppliedFetchId.current = currentFetchId;
+                    
+                    // Safe to remove the pending update now
+                    delete pendingUpdates.current[itemId];
+
+                    // Merge any other in-flight updates (if any) and set queue
+                    const mergedData = freshData.map(item => {
+                        const pending = pendingUpdates.current[item.id];
+                        if (pending) {
+                            return { ...item, ...pending };
+                        }
+                        return item;
+                    });
+                    setQueue(mergedData);
+                }
+            } else {
+                delete pendingUpdates.current[itemId];
+                fetchQueue();
+            }
         } catch (error) {
             console.error("Error updating item, reverting...", error);
-            // 3. Revertir si falla
-            fetchQueue(); // re-fetch real desde servidor
+            delete pendingUpdates.current[itemId];
+            fetchQueue();
         }
     };
 
@@ -184,7 +266,7 @@ const KitchenView = () => {
                 <h1 className="high-end-title" style={{ margin: 0 }}>Flujo de Cocina (Por Plato)</h1>
                 <button
                     className={`glass-button ${isAudioEnabled ? 'primary' : ''}`}
-                    onClick={() => setIsAudioEnabled(!isAudioEnabled)}
+                    onClick={toggleAudio}
                     title={isAudioEnabled ? "Silenciar notificaciones" : "Activar sonido de nuevos pedidos"}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 20 }}
                 >
@@ -271,6 +353,7 @@ const KitchenView = () => {
                             <ItemCard
                                 key={item.id}
                                 item={item}
+                                showTimer={false}
                                 actionButton={
                                     <div style={{ display: 'flex', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
                                         {item.cocineroId === user.id && (

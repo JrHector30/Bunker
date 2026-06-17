@@ -6,19 +6,16 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useCache } from '../hooks/useCache';
 import { useCaja } from '../context/CajaContext';
-import { Calendar } from './ui/Calendar';
+import { format } from 'date-fns';
+import { DropdownRangeDatePicker } from './DropdownRangeDatePicker';
+import SmoothDropdown from './ui/SmoothDropdown';
 
 const CashCountTable = ({ onStatusChange }) => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const { refreshCajaStatus } = useCaja();
-    const [filterDate, setFilterDate] = useState('');
+    const [filterDateRange, setFilterDateRange] = useState(undefined);
     const [currentPage, setCurrentPage] = useState(1);
-    const [showCalendar, setShowCalendar] = useState(false);
-    const [displayMonth, setDisplayMonth] = useState(
-        filterDate ? new Date(filterDate + 'T12:00:00') : new Date()
-    );
-    const calendarRef = useRef(null);
 
     // Manual Cash Movement Modal & Expandable details states
     const [showMovementModal, setShowMovementModal] = useState(false);
@@ -29,23 +26,29 @@ const CashCountTable = ({ onStatusChange }) => {
     const [summaryData, setSummaryData] = useState(null);
     const [loadingSummary, setLoadingSummary] = useState(false);
 
-    const handleOpenSummaryModal = async () => {
-        let targetId = null;
-        if (filterDate && history?.data?.length > 0) {
-            targetId = history.data[0].id;
-        } else if (currentStatus) {
-            targetId = currentStatus.id;
+    // Paloteo States
+    const [paloteoData, setPaloteoData] = useState(null);
+    const [loadingPaloteo, setLoadingPaloteo] = useState(false);
+
+    const handleOpenSummaryModal = async (targetId = null) => {
+        let actualId = targetId;
+        if (!actualId) {
+            if (filterDateRange?.from && history?.data?.length > 0) {
+                actualId = history.data[0].id;
+            } else if (currentStatus) {
+                actualId = currentStatus.id;
+            }
         }
 
-        if (!targetId) {
-            showToast("No hay datos de arqueo disponibles para la fecha seleccionada.", 'error');
+        if (!actualId) {
+            showToast("No hay datos de arqueo disponibles.", 'error');
             return;
         }
 
         setLoadingSummary(true);
         setShowSummaryModal(true);
         try {
-            const res = await fetch(`/api/cashier/arqueo/${targetId}`);
+            const res = await fetch(`/api/cashier/arqueo/${actualId}`);
             if (res.ok) {
                 const data = await res.json();
                 setSummaryData(data);
@@ -58,6 +61,50 @@ const CashCountTable = ({ onStatusChange }) => {
             setShowSummaryModal(false);
         } finally {
             setLoadingSummary(false);
+        }
+    };
+
+    const handleOpenPaloteo = async (targetId = null) => {
+        let actualId = targetId;
+        if (!actualId) {
+            if (filterDateRange?.from && history?.data?.length > 0) {
+                actualId = history.data[0].id;
+            } else if (currentStatus) {
+                actualId = currentStatus.id;
+            }
+        }
+
+        if (!actualId) {
+            showToast("No hay datos de arqueo disponibles.", 'error');
+            return;
+        }
+
+        setLoadingPaloteo(true);
+        setPaloteoOpen(true);
+        try {
+            const res = await fetch(`/api/cashier/arqueo/${actualId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setPaloteoData(data);
+            } else {
+                showToast("Error al obtener los detalles del paloteo.", 'error');
+                setPaloteoOpen(false);
+            }
+        } catch (err) {
+            showToast("Error de conexión al obtener los detalles.", 'error');
+            setPaloteoOpen(false);
+        } finally {
+            setLoadingPaloteo(false);
+        }
+    };
+
+    const handleRowAction = (actionId, targetId) => {
+        if (actionId === 'paloteo') {
+            handleOpenPaloteo(targetId);
+        } else if (actionId === 'resumen') {
+            handleOpenSummaryModal(targetId);
+        } else if (actionId === 'pdf') {
+            generatePDF(targetId);
         }
     };
 
@@ -129,16 +176,6 @@ const CashCountTable = ({ onStatusChange }) => {
         }
     };
 
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (calendarRef.current && !calendarRef.current.contains(e.target)) {
-                setShowCalendar(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
     const statusFetcher = useCallback(
         () => fetch('/api/cashier/balance').then(res => res.json()),
         []
@@ -153,10 +190,25 @@ const CashCountTable = ({ onStatusChange }) => {
 
     const historyFetcher = useCallback(() => {
         let url = `/api/cashier/history?page=${currentPage}&limit=5`;
-        if (filterDate) url += `&date=${filterDate}`;
+        if (filterDateRange?.from) {
+            const startStr = format(filterDateRange.from, 'yyyy-MM-dd');
+            if (filterDateRange.to) {
+                const endStr = format(filterDateRange.to, 'yyyy-MM-dd');
+                url += `&startDate=${startStr}&endDate=${endStr}`;
+            } else {
+                url += `&startDate=${startStr}&endDate=${startStr}`;
+            }
+        }
         return fetch(url).then(res => res.json());
-    }, [currentPage, filterDate]);
-    const historyKey = `cashier_history_${currentPage}_${filterDate}`;
+    }, [currentPage, filterDateRange]);
+
+    const historyKey = React.useMemo(() => {
+        if (!filterDateRange?.from) return `cashier_history_${currentPage}_none`;
+        const startStr = format(filterDateRange.from, 'yyyy-MM-dd');
+        const endStr = filterDateRange.to ? format(filterDateRange.to, 'yyyy-MM-dd') : '';
+        return `cashier_history_${currentPage}_${startStr}_${endStr}`;
+    }, [currentPage, filterDateRange]);
+
     const { data: history, loading: historyLoading, mutate: fetchHistory } = useCache(
         historyKey,
         historyFetcher,
@@ -250,17 +302,19 @@ const CashCountTable = ({ onStatusChange }) => {
     };
 
     // PDF GENERATION LOGIC
-    const generatePDF = async () => {
-        let targetId = null;
+    const generatePDF = async (targetId = null) => {
+        let actualId = targetId;
 
         // Si hay una fecha filtrada y resultados en el historial, tomamos el primero de esa fecha
-        if (filterDate && history?.data?.length > 0) {
-            targetId = history.data[0].id;
-        } else if (currentStatus) {
-            targetId = currentStatus.id;
+        if (!actualId) {
+            if (filterDateRange?.from && history?.data?.length > 0) {
+                actualId = history.data[0].id;
+            } else if (currentStatus) {
+                actualId = currentStatus.id;
+            }
         }
 
-        if (!targetId) {
+        if (!actualId) {
             showToast("No hay datos de arqueo disponibles para descargar.", 'error');
             return;
         }
@@ -268,7 +322,7 @@ const CashCountTable = ({ onStatusChange }) => {
         setIsGenerating(true);
 
         try {
-            const res = await fetch(`/api/cashier/arqueo/${targetId}`);
+            const res = await fetch(`/api/cashier/arqueo/${actualId}`);
             const fullData = await res.json();
 
             const doc = new jsPDF();
@@ -288,7 +342,11 @@ const CashCountTable = ({ onStatusChange }) => {
             doc.setTextColor(100);
             doc.setFont("helvetica", "normal");
 
-            const reportDate = filterDate ? formatDate(fullData.fechaInicio, false) : formatDate(new Date().toISOString(), false);
+            const reportDate = filterDateRange?.from
+                ? (filterDateRange.to
+                    ? `${format(filterDateRange.from, 'dd-MM-yyyy')} a ${format(filterDateRange.to, 'dd-MM-yyyy')}`
+                    : format(filterDateRange.from, 'dd-MM-yyyy'))
+                : formatDate(new Date().toISOString(), false);
             doc.text(`Fecha del Turno: ${reportDate}`, 14, 35);
             doc.text(`Turno ID: #${fullData.id} - Estado: ${fullData.estado.toUpperCase()}`, 14, 40);
             doc.text(`Usuario: ${fullData.usuario?.nombre || 'Administrador'}`, 14, 45);
@@ -516,8 +574,20 @@ const CashCountTable = ({ onStatusChange }) => {
 
     // Paloteo Modal
     const PaloteoModal = () => {
-        if (!paloteoOpen || !currentStatus) return null;
-        const data = currentStatus;
+        if (!paloteoOpen) return null;
+
+        if (loadingPaloteo) {
+            return (
+                <div className="modal-overlay" onClick={() => setPaloteoOpen(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, textAlign: 'center', padding: '40px 20px' }}>
+                        Cargando Paloteo...
+                    </div>
+                </div>
+            );
+        }
+
+        if (!paloteoData) return null;
+        const data = paloteoData;
         const productCounts = {};
         if (data.ventas) {
             data.ventas.forEach(v => {
@@ -531,7 +601,7 @@ const CashCountTable = ({ onStatusChange }) => {
             <div className="modal-overlay" onClick={() => setPaloteoOpen(false)}>
                 <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
                     <div className="modal-header">
-                        <h2>Resumen Actual</h2>
+                        <h2>Resumen / Paloteo</h2>
                         <button className="glass-button" onClick={() => setPaloteoOpen(false)}><X size={18} /></button>
                     </div>
                     <div style={{ maxHeight: 400, overflowY: 'auto' }}>
@@ -565,7 +635,7 @@ const CashCountTable = ({ onStatusChange }) => {
         <div className="glass-panel" style={{ padding: 20, marginBottom: 20, overflow: 'visible' }}>
 
             {/* Header: Title + Toggle Button + Filters */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, position: 'relative', zIndex: showCalendar ? 9999 : 1 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, position: 'relative', zIndex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
                     <h2 style={{ margin: 0 }}>Arqueo de Caja</h2>
                     {currentStatus && (
@@ -597,7 +667,7 @@ const CashCountTable = ({ onStatusChange }) => {
                                         if (res.ok) {
                                             showToast("Simulación reiniciada correctamente.", 'success');
                                             fetchStatus();
-                                            fetchHistory(1, filterDate);
+                                            fetchHistory();
                                         } else {
                                             const err = await res.json();
                                             showToast("Error: " + err.error, 'error');
@@ -629,6 +699,10 @@ const CashCountTable = ({ onStatusChange }) => {
                         className="glass-button primary"
                         disabled={!currentStatus || currentStatus.estado !== 'abierto'}
                         onClick={() => {
+                            if (!currentStatus || currentStatus.estado !== 'abierto') {
+                                showToast("Debe abrir caja antes de registrar un movimiento.", "error");
+                                return;
+                            }
                             setMovTipo('EGRESO');
                             setMovComprobante('recibo');
                             setMovConcepto('');
@@ -655,7 +729,7 @@ const CashCountTable = ({ onStatusChange }) => {
                     {/* PDF DOWNLOAD BUTTON */}
                     <button
                         className="glass-button"
-                        onClick={generatePDF}
+                        onClick={() => generatePDF(null)}
                         disabled={isGenerating}
                         title="Descargar Reporte Actual"
                         style={{ display: 'flex', alignItems: 'center', gap: 5 }}
@@ -664,101 +738,16 @@ const CashCountTable = ({ onStatusChange }) => {
                         {isGenerating ? '...' : ''}
                     </button>
 
-                    <div style={{ position: 'relative', zIndex: showCalendar ? 9999 : 1 }} ref={calendarRef}>
-                        <button
-                            type="button"
-                            className="glass-button"
-                            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 15px' }}
-                            onClick={() => setShowCalendar(!showCalendar)}
-                        >
-                            <CalendarIcon size={16} className="text-teal-400" />
-                            <span>{filterDate ? filterDate : "Filtrar por Fecha"}</span>
-                            {filterDate && (
-                                <span
-                                    style={{ marginLeft: 5, cursor: 'pointer', opacity: 0.6 }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setFilterDate('');
-                                        setDisplayMonth(new Date());
-                                        setCurrentPage(1);
-                                    }}
-                                >
-                                    ✕
-                                </span>
-                            )}
-                        </button>
-                        {showCalendar && (
-                            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 99999 }}>
-                                <Calendar
-                                    selected={filterDate ? new Date(filterDate + 'T12:00:00') : undefined}
-                                    onSelect={(date) => {
-                                        if (date) {
-                                            const yyyy = date.getFullYear();
-                                            const mm = String(date.getMonth() + 1).padStart(2, '0');
-                                            const dd = String(date.getDate()).padStart(2, '0');
-                                            setFilterDate(`${yyyy}-${mm}-${dd}`);
-                                            setDisplayMonth(date);
-                                        } else {
-                                            setFilterDate('');
-                                            setDisplayMonth(new Date());
-                                        }
-                                        setCurrentPage(1);
-                                        setShowCalendar(false);
-                                    }}
-                                    month={displayMonth}
-                                    onMonthChange={setDisplayMonth}
-                                />
-                            </div>
-                        )}
-                    </div>
+                    <DropdownRangeDatePicker
+                        mode="range"
+                        value={filterDateRange}
+                        onChange={(range) => {
+                            setFilterDateRange(range);
+                            setCurrentPage(1);
+                        }}
+                        placeholder="Filtrar por Fecha"
+                    />
                     {/* Refresh auto-handled */}
-
-
-                    <div style={{ position: 'relative' }}>
-                        <button className="glass-button icon" onClick={() => setMenuOpen(!menuOpen)}>
-                            <MoreVertical size={18} />
-                        </button>
-                        {menuOpen && (
-                            <div className="glass-panel" style={{
-                                position: 'absolute', right: 0, top: 40, width: 220, zIndex: 100,
-                                display: 'flex', flexDirection: 'column', gap: 5, padding: 10,
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.3)', background: 'rgba(30, 30, 30, 0.95)'
-                            }}>
-                                <button className="glass-button" style={{ justifyContent: 'flex-start', border: 'none' }} onClick={() => { setPaloteoOpen(true); setMenuOpen(false); }}>
-                                    Resumen / Paloteo (Actual)
-                                </button>
-                                <button className="glass-button" style={{ justifyContent: 'flex-start', border: 'none' }} onClick={() => { handleOpenSummaryModal(); setMenuOpen(false); }}>
-                                    Resumen de Caja
-                                </button>
-                                <button className="glass-button" style={{ justifyContent: 'flex-start', border: 'none' }} onClick={generatePDF}>
-                                    Exportar PDF
-                                </button>
-                                <button
-                                    className="glass-button"
-                                    disabled={!currentStatus || currentStatus.estado !== 'abierto'}
-                                    style={{
-                                        justifyContent: 'flex-start',
-                                        border: 'none',
-                                        opacity: currentStatus && currentStatus.estado === 'abierto' ? 1 : 0.5,
-                                        cursor: currentStatus && currentStatus.estado === 'abierto' ? 'pointer' : 'not-allowed'
-                                    }}
-                                    onClick={() => {
-                                        if (!currentStatus || currentStatus.estado !== 'abierto') return;
-                                        setMovTipo('EGRESO');
-                                        setMovComprobante('recibo');
-                                        setMovConcepto('');
-                                        setMovObservacion('');
-                                        setMovMonto('');
-                                        setMovError('');
-                                        setShowMovementModal(true);
-                                        setMenuOpen(false);
-                                    }}
-                                >
-                                    Registrar Movimiento
-                                </button>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
 
@@ -776,20 +765,22 @@ const CashCountTable = ({ onStatusChange }) => {
                             <th>Total en Caja</th>
                             <th>Total en Bruto</th>
                             <th>Pendiente</th>
+                            <th style={{ textAlign: 'center' }}>Acciones</th>
                         </tr>
                     </thead>
                     <tbody style={{ opacity: historyLoading ? 0.6 : 1, transition: 'opacity 0.1s' }}>
                         {historyLoading && (!history || history.data.length === 0) ? (
-                            <tr><td colSpan="9" className="text-center text-muted" style={{ padding: '20px' }}>Cargando registros de caja...</td></tr>
+                            <tr><td colSpan="10" className="text-center text-muted" style={{ padding: '20px' }}>Cargando registros de caja...</td></tr>
                         ) : !history || !history.data || history.data.length === 0 ? (
-                            <tr><td colSpan="9" className="text-center text-muted" style={{ padding: '20px' }}>No se encontraron registros.</td></tr>
+                            <tr><td colSpan="10" className="text-center text-muted" style={{ padding: '20px' }}>No se encontraron registros.</td></tr>
                         ) : (
-                            history.data.map(item => {
+                            history.data.map((item, index) => {
                                 const digitalSum = (item.ingresos?.yape || 0) + (item.ingresos?.izipay || 0) + (item.ingresos?.plin || 0);
+                                const dimStyle = item.estado === 'cerrado' ? { opacity: 0.6 } : {};
                                 return (
-                                    <tr key={item.id} style={{ opacity: item.estado === 'cerrado' ? 0.8 : 1 }}>
-                                        <td>{item.id}</td>
-                                        <td>
+                                    <tr key={item.id}>
+                                        <td style={dimStyle}>{item.id}</td>
+                                        <td style={dimStyle}>
                                             <div style={{ fontWeight: 'bold', color: item.estado === 'abierto' ? '#28a745' : 'var(--text-main)' }}>
                                                 Inicio: {formatDate(item.fechaInicio)}
                                             </div>
@@ -799,11 +790,11 @@ const CashCountTable = ({ onStatusChange }) => {
                                                 )}
                                             </div>
                                         </td>
-                                        <td>S/. {(item.inicio || 0).toFixed(2)}</td>
-                                        <td>
+                                        <td style={dimStyle}>S/. {(item.inicio || 0).toFixed(2)}</td>
+                                        <td style={dimStyle}>
                                             <div>Efec: S/. {(item.egresos || 0).toFixed(2)}</div>
                                         </td>
-                                        <td>
+                                        <td style={dimStyle}>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 10px', fontSize: '0.85em', alignItems: 'center' }}>
                                                 <span>Efec: {(item.ingresos?.efectivo || 0).toFixed(2)}</span>
                                                 <span>Tarj: {(item.ingresos?.tarjeta || 0).toFixed(2)}</span>
@@ -827,12 +818,17 @@ const CashCountTable = ({ onStatusChange }) => {
                                                 </div>
                                             )}
                                         </td>
-                                        <td style={{ color: 'var(--warning)', fontWeight: 'bold' }}>
+                                        <td style={{ ...dimStyle, color: 'var(--warning)', fontWeight: 'bold' }}>
                                             S/. {(item.totalPropinas || 0).toFixed(2)}
                                         </td>
-                                        <td style={{ fontWeight: 'bold', color: 'var(--success)' }}>S/. {(item.totalCaja || 0).toFixed(2)}</td>
-                                        <td style={{ fontWeight: 'bold' }}>S/. {(item.totalBruto || 0).toFixed(2)}</td>
-                                        <td style={{ color: 'var(--warning)' }}>S/. {(item.totalPendiente || 0).toFixed(2)}</td>
+                                        <td style={{ ...dimStyle, fontWeight: 'bold', color: 'var(--success)' }}>S/. {(item.totalCaja || 0).toFixed(2)}</td>
+                                        <td style={{ ...dimStyle, fontWeight: 'bold' }}>S/. {(item.totalBruto || 0).toFixed(2)}</td>
+                                        <td style={{ ...dimStyle, color: 'var(--warning)' }}>S/. {(item.totalPendiente || 0).toFixed(2)}</td>
+                                        <td style={{ textAlign: 'center', overflow: 'visible', width: 80 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                                <SmoothDropdown id={item.id} dropUp={index === history.data.length - 1} onAction={(actionId) => handleRowAction(actionId, item.id)} />
+                                            </div>
+                                        </td>
                                     </tr>
                                 );
                             })
@@ -1052,11 +1048,11 @@ const CashCountTable = ({ onStatusChange }) => {
                                 </div>
                                 <div style={{ borderTop: '1px dashed black', paddingTop: 5, display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.05rem', marginBottom: 5 }}>
                                     <span>Total:</span>
-                                    <span>S/. {((summaryData.ingresos?.efectivo || 0) + 
-                                                (summaryData.ingresos?.tarjeta || 0) + 
-                                                (summaryData.ingresos?.yape || 0) + 
-                                                (summaryData.ingresos?.plin || 0) + 
-                                                (summaryData.ingresos?.izipay || 0)).toFixed(2)}</span>
+                                    <span>S/. {((summaryData.ingresos?.efectivo || 0) +
+                                        (summaryData.ingresos?.tarjeta || 0) +
+                                        (summaryData.ingresos?.yape || 0) +
+                                        (summaryData.ingresos?.plin || 0) +
+                                        (summaryData.ingresos?.izipay || 0)).toFixed(2)}</span>
                                 </div>
 
                                 <div style={{ borderBottom: '1px dashed black', marginBottom: 5 }}></div>

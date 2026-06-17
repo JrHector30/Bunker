@@ -1991,12 +1991,16 @@ app.post('/api/cashier/toggle', async (req, res) => {
 // History Endpoint (Paginated & Filtered)
 app.get('/api/cashier/history', async (req, res) => {
     try {
-        const { date, page = 1, limit = 5 } = req.query;
+        const { date, startDate, endDate, page = 1, limit = 5 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const take = parseInt(limit);
 
         let where = {};
-        if (date) {
+        if (startDate && endDate) {
+            const start = new Date(`${startDate}T00:00:00-05:00`);
+            const end = new Date(`${endDate}T23:59:59-05:00`);
+            where.fechaInicio = { gte: start, lte: end };
+        } else if (date) {
             const start = new Date(`${date}T00:00:00-05:00`);
             const end = new Date(`${date}T23:59:59-05:00`);
             where.fechaInicio = { gte: start, lte: end };
