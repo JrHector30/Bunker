@@ -13,6 +13,8 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
 
     // State
     const [paymentMethod, setPaymentMethod] = useState('efectivo');
+    const [cardProvider, setCardProvider] = useState('izipay');
+    const [digitalProvider, setDigitalProvider] = useState('yape');
     const [cashGiven, setCashGiven] = useState('');
     const [hasTip, setHasTip] = useState(false);
     const [tipAmount, setTipAmount] = useState(0);
@@ -82,13 +84,20 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
 
         const resolvedDocType = tipoComprobante === 'ticket' ? 'sin_comprobante' : tipoComprobante;
 
-        if (await showConfirmation(`¿Finalizar cobro por S/. ${finalTotal.toFixed(2, { type: 'warning' })}?`)) {
+        let resolvedPaymentMethod = paymentMethod;
+        if (paymentMethod === 'tarjeta') {
+            resolvedPaymentMethod = cardProvider;
+        } else if (paymentMethod === 'digital') {
+            resolvedPaymentMethod = digitalProvider;
+        }
+
+        if (await showConfirmation(`¿Finalizar cobro por S/. ${finalTotal.toFixed(2)}?`, { type: 'warning' })) {
             try {
                 const res = await fetch(`/api/checkout/${order.mesaId || order.tableId || order.id}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        paymentMethod,
+                        paymentMethod: resolvedPaymentMethod,
                         docType: resolvedDocType,
                         totalReceived: Number(cashGiven),
                         tip: hasTip ? Number(tipAmount) : 0,
@@ -190,20 +199,18 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                                 <Banknote size={18} /> Efectivo
                             </label>
                             <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                                <input type="radio" name="method" checked={paymentMethod === 'tarjeta'} onChange={() => setPaymentMethod('tarjeta')} />
+                                <input type="radio" name="method" checked={paymentMethod === 'tarjeta'} onChange={() => {
+                                    setPaymentMethod('tarjeta');
+                                    setCardProvider('izipay');
+                                }} />
                                 <CreditCard size={18} /> Tarjeta Crédito/Débito
                             </label>
                             <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                                <input type="radio" name="method" checked={paymentMethod === 'yape'} onChange={() => setPaymentMethod('yape')} />
-                                <Smartphone size={18} /> Yape
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                                <input type="radio" name="method" checked={paymentMethod === 'plin'} onChange={() => setPaymentMethod('plin')} />
-                                <Smartphone size={18} /> Plin
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                                <input type="radio" name="method" checked={paymentMethod === 'izipay'} onChange={() => setPaymentMethod('izipay')} />
-                                <CreditCard size={18} /> Izipay
+                                <input type="radio" name="method" checked={paymentMethod === 'digital'} onChange={() => {
+                                    setPaymentMethod('digital');
+                                    setDigitalProvider('yape');
+                                }} />
+                                <Smartphone size={18} /> Billetera Digital
                             </label>
                         </div>
                     </div>
@@ -245,6 +252,58 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                                     <span>S/. {change > 0 ? change.toFixed(2) : '0.00'}</span>
                                 </div>
                             </>
+                        )}
+
+                        {paymentMethod === 'tarjeta' && (
+                            <div className="bg-[#0c0c0e] text-gray-200 p-3 rounded-lg border border-gray-800 flex flex-col gap-2 mt-3" style={{ backgroundColor: '#0c0c0e', color: '#e5e7eb' }}>
+                                <span style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#9ca3af' }}>SELECCIONE OPERADOR:</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                                        <input
+                                            type="radio"
+                                            name="cardProvider"
+                                            checked={cardProvider === 'izipay'}
+                                            onChange={() => setCardProvider('izipay')}
+                                        />
+                                        IZIPAY
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                                        <input
+                                            type="radio"
+                                            name="cardProvider"
+                                            checked={cardProvider === 'niubiz'}
+                                            onChange={() => setCardProvider('niubiz')}
+                                        />
+                                        NIUBIZ
+                                    </label>
+                                </div>
+                            </div>
+                        )}
+
+                        {paymentMethod === 'digital' && (
+                            <div className="bg-[#0c0c0e] text-gray-200 p-3 rounded-lg border border-gray-800 flex flex-col gap-2 mt-3" style={{ backgroundColor: '#0c0c0e', color: '#e5e7eb' }}>
+                                <span style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#9ca3af' }}>SELECCIONE OPERADOR:</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                                        <input
+                                            type="radio"
+                                            name="digitalProvider"
+                                            checked={digitalProvider === 'yape'}
+                                            onChange={() => setDigitalProvider('yape')}
+                                        />
+                                        Yape
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                                        <input
+                                            type="radio"
+                                            name="digitalProvider"
+                                            checked={digitalProvider === 'plin'}
+                                            onChange={() => setDigitalProvider('plin')}
+                                        />
+                                        Plin
+                                    </label>
+                                </div>
+                            </div>
                         )}
                     </div>
 

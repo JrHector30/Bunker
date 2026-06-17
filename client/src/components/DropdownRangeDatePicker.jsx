@@ -5,7 +5,8 @@ import { Calendar } from "./ui/Calendar";
 import { Button } from "./ui/Button";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/Popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/Select";
-import { Calendar as CalendarIcon, X } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { CloseButton } from "./ui/CloseButton";
 
 export function DropdownRangeDatePicker({
   mode = "range", // "range" | "single"
@@ -90,30 +91,20 @@ export function DropdownRangeDatePicker({
     : !tempSelected;
 
   return (
-    <div className="relative inline-flex items-center">
+    // Contenedor principal relativo de 280px que ahora sí abraza y cuadra a la perfección a la X
+    <div className={`relative inline-flex items-center w-[280px] ${triggerClassName}`}>
+
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className={`w-[280px] justify-start text-left font-normal pr-8 ${triggerClassName}`}
+            // Mantener el padding derecho pr-10 para que el texto de las fechas no se meta debajo de la X
+            className="w-full justify-start text-left font-normal pr-10"
           >
             <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-teal-400" />
             <span className="truncate overflow-hidden text-gray-200">{formattedValue}</span>
           </Button>
         </PopoverTrigger>
-
-        {/* Render a clear X button inside the trigger on the right side if value is selected */}
-        {hasValue && (
-          <button
-            type="button"
-            onClick={handleTriggerClear}
-            // 🎨 Rediseño del contenedor de la X: centrado perfecto, hover sutil y transición elástica
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md size-7 flex items-center justify-center text-gray-500 hover:bg-zinc-800/80 hover:text-red-400 active:scale-90 transition-all duration-150 ease-out cursor-pointer z-10"
-            title="Limpiar filtro"
-          >
-            <X className="h-3.5 w-3.5 stroke-[2.5]" />
-          </button>
-        )}
 
         <PopoverContent className="w-auto p-4" align="start">
           <div className="space-y-4">
@@ -191,6 +182,20 @@ export function DropdownRangeDatePicker({
           </div>
         </PopoverContent>
       </Popover>
+
+      {/* 🎯 LA JUGADA MAESTRA: El CloseButton se renderiza AQUÍ. */}
+      {/* Al estar fuera de las etiquetas de Popover, se amarra al div general y el clic es 100% interactivo */}
+      {hasValue && (
+        <CloseButton
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Detiene el trigger para que Radix no abra el calendario al hacer clic en borrar
+            handleTriggerClear(e);
+          }}
+          // Se posiciona de forma absoluta milimétricamente flotando en la esquina derecha del input
+          className="absolute right-[33px] top-0.1px z-30"
+        />
+      )}
     </div>
   );
 }

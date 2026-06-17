@@ -20,6 +20,7 @@ const CashCountTable = ({ onStatusChange }) => {
     // Manual Cash Movement Modal & Expandable details states
     const [showMovementModal, setShowMovementModal] = useState(false);
     const [expandedDig, setExpandedDig] = useState({});
+    const [expandedTarj, setExpandedTarj] = useState({});
 
     // Summary Modal States
     const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -134,9 +135,9 @@ const CashCountTable = ({ onStatusChange }) => {
 
         // Limit validation for egresos
         if (movTipo === 'EGRESO') {
-            const currentInicio = currentStatus?.inicio || 0;
-            if (numericMonto > currentInicio) {
-                setMovError(`Monto supera el rango permitido. El egreso no puede ser mayor que el monto actual en Inicio (S/. ${currentInicio.toFixed(2)})`);
+            const currentTotalCaja = currentStatus?.totalCaja || 0;
+            if (numericMonto > currentTotalCaja) {
+                setMovError(`Monto de egreso supera el efectivo disponible en caja (S/. ${currentTotalCaja.toFixed(2)})`);
                 return;
             }
         }
@@ -775,7 +776,8 @@ const CashCountTable = ({ onStatusChange }) => {
                             <tr><td colSpan="10" className="text-center text-muted" style={{ padding: '20px' }}>No se encontraron registros.</td></tr>
                         ) : (
                             history.data.map((item, index) => {
-                                const digitalSum = (item.ingresos?.yape || 0) + (item.ingresos?.izipay || 0) + (item.ingresos?.plin || 0);
+                                const digitalSum = (item.ingresos?.yape || 0) + (item.ingresos?.plin || 0);
+                                const cardSum = (item.ingresos?.tarjeta || 0) + (item.ingresos?.izipay || 0) + (item.ingresos?.niubiz || 0);
                                 const dimStyle = item.estado === 'cerrado' ? { opacity: 0.6 } : {};
                                 return (
                                     <tr key={item.id}>
@@ -797,7 +799,16 @@ const CashCountTable = ({ onStatusChange }) => {
                                         <td style={dimStyle}>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 10px', fontSize: '0.85em', alignItems: 'center' }}>
                                                 <span>Efec: {(item.ingresos?.efectivo || 0).toFixed(2)}</span>
-                                                <span>Tarj: {(item.ingresos?.tarjeta || 0).toFixed(2)}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <span>Tarj: {cardSum.toFixed(2)}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setExpandedTarj(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                                                        style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center' }}
+                                                    >
+                                                        {expandedTarj[item.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                    </button>
+                                                </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                     <span>Dig: {digitalSum.toFixed(2)}</span>
                                                     <button
@@ -813,8 +824,16 @@ const CashCountTable = ({ onStatusChange }) => {
                                             {expandedDig[item.id] && (
                                                 <div style={{ fontSize: '0.75em', borderTop: '1px solid var(--glass-border)', marginTop: 5, paddingTop: 5, paddingLeft: 10, display: 'flex', flexDirection: 'column', gap: 2, animation: 'fadeIn 0.2s ease' }}>
                                                     <span>Yape: S/. {(item.ingresos?.yape || 0).toFixed(2)}</span>
-                                                    <span>Izi: S/. {(item.ingresos?.izipay || 0).toFixed(2)}</span>
                                                     <span>Plin: S/. {(item.ingresos?.plin || 0).toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            {expandedTarj[item.id] && (
+                                                <div style={{ fontSize: '0.75em', borderTop: '1px solid var(--glass-border)', marginTop: 5, paddingTop: 5, paddingLeft: 10, display: 'flex', flexDirection: 'column', gap: 2, animation: 'fadeIn 0.2s ease' }}>
+                                                    <span>Izipay: S/. {(item.ingresos?.izipay || 0).toFixed(2)}</span>
+                                                    <span>Niubiz: S/. {(item.ingresos?.niubiz || 0).toFixed(2)}</span>
+                                                    {(item.ingresos?.tarjeta || 0) > 0 && (
+                                                        <span>Tarjeta (Otros): S/. {(item.ingresos?.tarjeta || 0).toFixed(2)}</span>
+                                                    )}
                                                 </div>
                                             )}
                                         </td>
@@ -919,6 +938,23 @@ const CashCountTable = ({ onStatusChange }) => {
                                     <option value="EGRESO">Egreso (Gasto/Salida)</option>
                                     <option value="INGRESO">Ingreso (Entrada Manual)</option>
                                 </select>
+                                {movTipo === 'EGRESO' && (
+                                    <div style={{
+                                        marginTop: 8,
+                                        padding: '8px 12px',
+                                        backgroundColor: '#ffeeba',
+                                        color: '#856404',
+                                        border: '1px solid #ffeeba',
+                                        borderRadius: '8px',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '5px'
+                                    }}>
+                                        ⚠️ Límite disponible en Caja: S/. {(currentStatus?.totalCaja || 0).toFixed(2)}
+                                    </div>
+                                )}
                             </div>
 
                             <div>
@@ -1045,6 +1081,10 @@ const CashCountTable = ({ onStatusChange }) => {
                                         <span>Izi:</span>
                                         <span>S/. {(summaryData.ingresos?.izipay || 0).toFixed(2)}</span>
                                     </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Niubiz:</span>
+                                        <span>S/. {(summaryData.ingresos?.niubiz || 0).toFixed(2)}</span>
+                                    </div>
                                 </div>
                                 <div style={{ borderTop: '1px dashed black', paddingTop: 5, display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.05rem', marginBottom: 5 }}>
                                     <span>Total:</span>
@@ -1052,7 +1092,8 @@ const CashCountTable = ({ onStatusChange }) => {
                                         (summaryData.ingresos?.tarjeta || 0) +
                                         (summaryData.ingresos?.yape || 0) +
                                         (summaryData.ingresos?.plin || 0) +
-                                        (summaryData.ingresos?.izipay || 0)).toFixed(2)}</span>
+                                        (summaryData.ingresos?.izipay || 0) +
+                                        (summaryData.ingresos?.niubiz || 0)).toFixed(2)}</span>
                                 </div>
 
                                 <div style={{ borderBottom: '1px dashed black', marginBottom: 5 }}></div>

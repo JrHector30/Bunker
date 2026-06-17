@@ -1539,6 +1539,7 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
         const parsePaymentMethod = (metodoPago) => {
             const m = (metodoPago || 'efectivo').toLowerCase();
             if (m.includes('izipay') || m.includes('izi')) return 'izipay';
+            if (m.includes('niubiz')) return 'niubiz';
             if (m.includes('plin')) return 'plin';
             if (m.includes('yape')) return 'yape';
             if (m.includes('tarjeta')) return 'tarjeta';
@@ -1548,7 +1549,7 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
         const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
         const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
 
-        const inicio = arq.montoInicial + manualIngresos - manualEgresos;
+        const inicio = arq.montoInicial;
         const egresos = manualEgresos;
 
         let totalPropinas = 0;
@@ -1560,6 +1561,7 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
             yape: 0,
             izipay: 0,
             plin: 0,
+            niubiz: 0,
             manual: manualIngresos
         };
 
@@ -1615,7 +1617,7 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
             return acc;
         }, 0);
 
-        const totalCaja = inicio + incomeDetails.efectivo;
+        const totalCaja = arq.montoInicial + manualIngresos + incomeDetails.efectivo - manualEgresos;
 
         res.json({
             ...arq,
@@ -1624,7 +1626,7 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
             ingresos: incomeDetails,
             totalCaja,
             ventas: salesData,
-            totalBruto: salesData.reduce((acc, s) => acc + s.total, 0) + totalPropinas,
+            totalBruto: salesData.reduce((acc, s) => acc + s.total, 0),
             totalPropinas,
             propinasPorMozo: Object.values(propinasPorMozo),
             totalPendiente,
@@ -1658,7 +1660,7 @@ app.get('/api/cashier/balance', async (req, res) => {
                 estado: 'cerrado',
                 inicio: 0,
                 egresos: 0,
-                ingresos: { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0, plin: 0, manual: 0 },
+                ingresos: { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0, plin: 0, niubiz: 0, manual: 0 },
                 totalCaja: 0,
                 totalBruto: 0,
                 totalPendiente: 0,
@@ -1702,6 +1704,7 @@ app.get('/api/cashier/balance', async (req, res) => {
         const parsePaymentMethod = (metodoPago) => {
             const m = (metodoPago || 'efectivo').toLowerCase();
             if (m.includes('izipay') || m.includes('izi')) return 'izipay';
+            if (m.includes('niubiz')) return 'niubiz';
             if (m.includes('plin')) return 'plin';
             if (m.includes('yape')) return 'yape';
             if (m.includes('tarjeta')) return 'tarjeta';
@@ -1712,8 +1715,8 @@ app.get('/api/cashier/balance', async (req, res) => {
         const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
         const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
 
-        // Dynamic Inicio
-        const inicio = lastArqueo.montoInicial + manualIngresos - manualEgresos;
+        // Dynamic Inicio -> Fixed initial amount
+        const inicio = lastArqueo.montoInicial;
         const egresos = manualEgresos;
 
         // Calculate Totals
@@ -1727,15 +1730,15 @@ app.get('/api/cashier/balance', async (req, res) => {
             yape: 0,
             izipay: 0,
             plin: 0,
+            niubiz: 0,
             manual: manualIngresos
         };
 
         sales.forEach(order => {
             const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
             const propina = order.propina || 0;
-            const orderTotal = subtotal + propina;
 
-            totalBruto += orderTotal;
+            totalBruto += subtotal;
             totalPropinas += propina;
 
             // Acumular propinas por mozo
@@ -1775,8 +1778,8 @@ app.get('/api/cashier/balance', async (req, res) => {
             return acc;
         }, 0);
 
-        // totalCaja = dynamic inicio + cash sales
-        const totalCaja = inicio + incomeDetails.efectivo;
+        // totalCaja = Inicio + manualIngresos + cash sales - manualEgresos
+        const totalCaja = lastArqueo.montoInicial + manualIngresos + incomeDetails.efectivo - manualEgresos;
 
         const ventasDetalladas = sales.map(order => ({
             id: order.id,
@@ -1815,7 +1818,7 @@ app.get('/api/cashier/balance', async (req, res) => {
             estado: 'cerrado',
             inicio: 0,
             egresos: 0,
-            ingresos: { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0, plin: 0, manual: 0 },
+            ingresos: { efectivo: 0, tarjeta: 0, yape: 0, izipay: 0, plin: 0, niubiz: 0, manual: 0 },
             totalCaja: 0,
             totalBruto: 0,
             totalPropinas: 0,
@@ -1901,17 +1904,48 @@ app.post('/api/cashier/movimientos', async (req, res) => {
 
         // 3. For EGRESO, check limit
         if (tipo.toUpperCase() === 'EGRESO') {
-            // Fetch existing movements to calculate current dynamic Inicio
+            // Fetch existing movements
             const movements = await prisma.movimientoCaja.findMany({
                 where: { arqueoId: lastArqueo.id }
             });
             const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
             const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
-            const currentInicio = lastArqueo.montoInicial + manualIngresos - manualEgresos;
 
-            if (numericMonto > currentInicio) {
+            // Fetch cash sales (Ganancias en Efectivo) for the active arqueo
+            const startDate = lastArqueo.fechaInicio;
+            const endDate = new Date();
+            const sales = await prisma.comanda.findMany({
+                where: {
+                    estado: 'cerrada',
+                    fecha: { gte: startDate, lte: endDate }
+                },
+                include: { detalles: { include: { plato: true } } }
+            });
+
+            const parsePaymentMethod = (metodoPago) => {
+                const m = (metodoPago || 'efectivo').toLowerCase();
+                if (m.includes('izipay') || m.includes('izi')) return 'izipay';
+                if (m.includes('niubiz')) return 'niubiz';
+                if (m.includes('plin')) return 'plin';
+                if (m.includes('yape')) return 'yape';
+                if (m.includes('tarjeta')) return 'tarjeta';
+                return 'efectivo';
+            };
+
+            let gananciasEfectivo = 0;
+            sales.forEach(order => {
+                const cat = parsePaymentMethod(order.metodoPago);
+                if (cat === 'efectivo') {
+                    const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+                    gananciasEfectivo += subtotal;
+                }
+            });
+
+            const currentTotalCaja = lastArqueo.montoInicial + manualIngresos + gananciasEfectivo - manualEgresos;
+
+            if (numericMonto > currentTotalCaja) {
                 return res.status(400).json({ 
-                    error: `Monto supera el rango permitido. El monto disponible en Inicio es S/. ${currentInicio.toFixed(2)}`
+                    error: "Monto de egreso supera el efectivo disponible en caja"
                 });
             }
         }
@@ -2053,6 +2087,7 @@ app.get('/api/cashier/history', async (req, res) => {
             const parsePaymentMethod = (metodoPago) => {
                 const m = (metodoPago || 'efectivo').toLowerCase();
                 if (m.includes('izipay') || m.includes('izi')) return 'izipay';
+                if (m.includes('niubiz')) return 'niubiz';
                 if (m.includes('plin')) return 'plin';
                 if (m.includes('yape')) return 'yape';
                 if (m.includes('tarjeta')) return 'tarjeta';
@@ -2062,7 +2097,7 @@ app.get('/api/cashier/history', async (req, res) => {
             const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
             const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
 
-            const inicio = arq.montoInicial + manualIngresos - manualEgresos;
+            const inicio = arq.montoInicial;
             const egresos = manualEgresos;
 
             let totalBruto = 0;
@@ -2073,6 +2108,7 @@ app.get('/api/cashier/history', async (req, res) => {
                 yape: 0,
                 izipay: 0,
                 plin: 0,
+                niubiz: 0,
                 manual: manualIngresos
             };
 
@@ -2107,7 +2143,7 @@ app.get('/api/cashier/history', async (req, res) => {
                 inicio,
                 egresos,
                 ingresos: incomeDetails,
-                totalCaja: inicio + incomeDetails.efectivo,
+                totalCaja: arq.montoInicial + manualIngresos + incomeDetails.efectivo - manualEgresos,
                 totalBruto,
                 totalPropinas,
                 totalPendiente

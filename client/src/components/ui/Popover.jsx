@@ -6,7 +6,7 @@ export function Popover({ open: controlledOpen, onOpenChange, children }) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
-  
+
   const setOpen = (newOpen) => {
     if (onOpenChange) onOpenChange(newOpen);
     if (!isControlled) setUncontrolledOpen(newOpen);
@@ -28,7 +28,7 @@ export function Popover({ open: controlledOpen, onOpenChange, children }) {
 
   return (
     <PopoverContext.Provider value={{ open, setOpen, containerRef }}>
-      <div ref={containerRef} className="relative inline-block text-left">
+      <div ref={containerRef} className="inline-block">
         {children}
       </div>
     </PopoverContext.Provider>
@@ -37,7 +37,7 @@ export function Popover({ open: controlledOpen, onOpenChange, children }) {
 
 export function PopoverTrigger({ children, asChild }) {
   const { open, setOpen } = useContext(PopoverContext);
-  
+
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children, {
       onClick: (e) => {
