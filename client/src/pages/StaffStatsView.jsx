@@ -147,13 +147,13 @@ const StaffStatsView = () => {
                         <FileText size={18} /> PDF
                     </button>
 
-                    <button
+                    {/*<button
                         className="glass-button"
                         style={{ borderColor: '#dc3545', color: '#dc3545', gap: 5 }}
                         onClick={handleCleanDay}
                     >
                         <Trash size={18} /> Limpiar Jornada
-                    </button>
+                    </button>*/}
                 </div>
             </div>
 

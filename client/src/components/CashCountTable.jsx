@@ -635,7 +635,7 @@ const CashCountTable = ({ onStatusChange }) => {
         <div className="glass-panel" style={{ padding: 20, marginBottom: 20, overflow: 'visible' }}>
 
             {/* Header: Title + Toggle Button + Filters */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, position: 'relative', zIndex: 50 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
                     <h2 style={{ margin: 0 }}>Arqueo de Caja</h2>
                     {currentStatus && (
@@ -658,7 +658,7 @@ const CashCountTable = ({ onStatusChange }) => {
                             </button>
 
                             {/* Reset Button */}
-                            <button
+                            {/*<button
                                 onClick={async () => {
                                     if (!await showConfirmation("⚠️ ¿ESTÁS SEGURO?\n\nEsto eliminará TODO el historial de ventas y reiniciará los contadores a 1.\n\nÚsalo solo para limpiar datos de prueba.", { type: 'danger' })) return;
 
@@ -687,7 +687,7 @@ const CashCountTable = ({ onStatusChange }) => {
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                                     <Trash size={14} /> Limpiar
                                 </span>
-                            </button>
+                            </button>*/}
                         </div>
                     )}
                 </div>

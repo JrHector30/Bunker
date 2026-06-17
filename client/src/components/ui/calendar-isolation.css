@@ -42,7 +42,6 @@
   background-color: transparent !important;
   transition: border-radius 450ms ease, background-color 150ms ease !important;
   /* Transición elástica al cambiar de forma */
-
 }
 
 /* ── 🟢 DISEÑO DEL RANGO CONTINUO (Corrección de franja unificada para v9) ── */
@@ -64,7 +63,6 @@
   border-radius: 0 !important;
   width: 100% !important;
   height: 32px !important;
-
 }
 
 /* Día Inicial: Celda contenedora con conector a la derecha */
@@ -87,7 +85,6 @@
   border-bottom-left-radius: 12px !important;
   border-top-right-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
-
 }
 
 /* Día Final: Celda contenedora con conector a la izquierda */
@@ -115,11 +112,20 @@
 /* Caso especial: Cuando el rango es de un solo día */
 .rdp-isolated td.rdp-range_start.rdp-range_end {
   background: transparent !important;
-
 }
 
 .rdp-isolated .rdp-range_start.rdp-range_end .rdp-day_button {
-  border-radius: 8px !important;
+  border-radius: 12px !important;
+}
+
+/* 🎯 Selección de fecha única (como en Reporte Personal - sin rango de fechas) */
+.rdp-isolated .rdp-selected:not(.rdp-range_start):not(.rdp-range_end):not(.rdp-range_middle) .rdp-day_button {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  width: 32px !important;
+  height: 32px !important;
 }
 
 /* Hovers elásticos */
@@ -128,13 +134,29 @@
   color: #ffffff !important;
 }
 
+.rdp-isolated .rdp-selected .rdp-day_button:hover,
 .rdp-isolated .rdp-range_start .rdp-day_button:hover,
 .rdp-isolated .rdp-range_end .rdp-day_button:hover {
-  background-color: rgba(255, 255, 255, 0.678) !important;
+  background-color: rgba(255, 255, 255, 0.85) !important;
   color: #000000 !important;
 }
 
 .rdp-isolated .rdp-range_middle .rdp-day_button:hover {
   background-color: rgba(63, 63, 70, 0.70) !important;
   color: #ffffff !important;
+}
+
+/* Días fuera del mes: tenues */
+.rdp-isolated .rdp-outside .rdp-day_button {
+  color: #374151 !important;
+  opacity: 0.35 !important;
+}
+
+.rdp-isolated .rdp-outside .rdp-day_button:hover {
+  background-color: transparent !important;
+}
+
+/* Día de hoy: texto teal, sin interferir con el rango o selección */
+.rdp-isolated .rdp-today:not(.rdp-range_start):not(.rdp-range_end):not(.rdp-range_middle):not(.rdp-selected) .rdp-day_button {
+  color: #2dd4bf !important;
 }
