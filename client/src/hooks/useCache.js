@@ -3,26 +3,55 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 // Global cache object for fast memory retrieval
 const globalCache = {};
 
+// Global locks object to override slow backend tables status
+if (!globalCache.locks) {
+    globalCache.locks = {};
+}
+
+export function setOptimisticLock(tableId, estado) {
+    globalCache.locks[tableId] = { estado, timestamp: Date.now() };
+}
+
+function applyLocks(key, data) {
+    if (key !== 'tables' || !Array.isArray(data)) return data;
+    if (!globalCache.locks) return data;
+    
+    const now = Date.now();
+    return data.map(table => {
+        const lock = globalCache.locks[table.id];
+        // 5 seconds lock
+        if (lock && (now - lock.timestamp < 5000)) {
+            return { 
+                ...table, 
+                estado: lock.estado,
+                comandas: lock.estado === 'libre' ? [] : (table.comandas && table.comandas.length > 0 ? table.comandas : [{ id: 'temp' }]) 
+            };
+        }
+        return table;
+    });
+}
+
 export function useCache(key, fetcher, initialData = []) {
     const fetcherRef = useRef(fetcher);
     // Siempre actualizar el ref sin re-ejecutar effects
     useEffect(() => { fetcherRef.current = fetcher; });
 
     const getCachedData = () => {
-        if (globalCache[key]) return globalCache[key];
-        
-        const local = localStorage.getItem(key);
-        if (local) {
-            try {
-                const parsed = JSON.parse(local);
-                globalCache[key] = parsed; // Populate memory
-                return parsed;
-            } catch (e) {
-                return initialData;
+        let cached = initialData;
+        if (globalCache[key]) {
+            cached = globalCache[key];
+        } else {
+            const local = localStorage.getItem(key);
+            if (local) {
+                try {
+                    cached = JSON.parse(local);
+                    globalCache[key] = cached; // Populate memory
+                } catch (e) {
+                    cached = initialData;
+                }
             }
         }
-        
-        return initialData;
+        return applyLocks(key, cached);
     };
 
     const [data, setData] = useState(getCachedData);
@@ -46,10 +75,11 @@ export function useCache(key, fetcher, initialData = []) {
         fetcherRef.current()
             .then(result => {
                 if (!isMounted) return;
-                const newString = JSON.stringify(result);
-                globalCache[key] = result;
+                const lockedResult = applyLocks(key, result);
+                const newString = JSON.stringify(lockedResult);
+                globalCache[key] = lockedResult;
                 localStorage.setItem(key, newString);
-                setData(result);
+                setData(lockedResult);
             })
             .catch(error => console.error(`Cache background fetch error for ${key}:`, error))
             .finally(() => { if (isMounted) setLoading(false); });
@@ -65,20 +95,22 @@ export function useCache(key, fetcher, initialData = []) {
     const manualMutate = useCallback(async (optimisticData = null) => {
         const currentKey = keyRef.current;
         if (optimisticData !== null) {
-            globalCache[currentKey] = optimisticData;
-            localStorage.setItem(currentKey, JSON.stringify(optimisticData));
-            setData(optimisticData);
+            const lockedOptimistic = applyLocks(currentKey, optimisticData);
+            globalCache[currentKey] = lockedOptimistic;
+            localStorage.setItem(currentKey, JSON.stringify(lockedOptimistic));
+            setData(lockedOptimistic);
             return;
         }
         setLoading(!globalCache[currentKey]);
         try {
             const result = await fetcherRef.current();
-            const newString = JSON.stringify(result);
+            const lockedResult = applyLocks(currentKey, result);
+            const newString = JSON.stringify(lockedResult);
             if (JSON.stringify(globalCache[currentKey]) !== newString) {
-                globalCache[currentKey] = result;
+                globalCache[currentKey] = lockedResult;
                 localStorage.setItem(currentKey, newString);
             }
-            setData(result);
+            setData(lockedResult);
         } catch (error) {
             console.error(`Cache fetch error for ${currentKey}:`, error);
         } finally {

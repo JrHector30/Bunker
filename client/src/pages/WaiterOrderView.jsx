@@ -3,7 +3,7 @@ import { useNotification } from '../context/NotificationContext';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Minus, Send, Trash2, ArrowLeft, Search, Image as ImageIcon, FileText, Info, X } from 'lucide-react';
-import { useCache } from '../hooks/useCache';
+import { useCache, setOptimisticLock } from '../hooks/useCache';
 
 const WaiterOrderView = () => {
     const { showToast } = useNotification();
@@ -105,10 +105,13 @@ const WaiterOrderView = () => {
     };
 
     const sendOrder = async () => {
+        const parsedTableId = parseInt(tableId);
+        // Call optimistic lock in first line to override slow server fetches
+        setOptimisticLock(parsedTableId, 'ocupada');
+
         if (cart.length === 0) return;
         setLoading(true);
 
-        const parsedTableId = parseInt(tableId);
         let previousTables = null;
 
         // 1. Optimistic Update in Cache
@@ -148,10 +151,12 @@ const WaiterOrderView = () => {
                     // Dispatch synchronization events
                     window.dispatchEvent(new CustomEvent('refreshTables'));
                     window.dispatchEvent(new CustomEvent('refreshKitchenQueue'));
+                    window.dispatchEvent(new CustomEvent('refreshCashCount'));
                     try {
                         const channel = new BroadcastChannel('comandago');
                         channel.postMessage('refreshKitchenQueue');
                         channel.postMessage('refreshTables');
+                        channel.postMessage('refreshCashCount');
                         channel.close();
                     } catch (e) {}
                 } else {

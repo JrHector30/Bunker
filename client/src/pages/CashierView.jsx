@@ -20,9 +20,37 @@ const CashierView = () => {
     const [selectedOrder, setSelectedOrder] = useState(null);
 
     useEffect(() => {
+        const handleRefresh = () => {
+            fetchTables();
+        };
+
         fetchTables(); // Fetch immediately on mount to bypass cache delay
-        const interval = setInterval(fetchTables, 2000); // Poll every 2 seconds (down from 5s)
-        return () => clearInterval(interval);
+        const interval = setInterval(handleRefresh, 2000); // Poll every 2 seconds (down from 5s)
+
+        window.addEventListener('refreshCashCount', handleRefresh);
+        window.addEventListener('refreshTables', handleRefresh);
+
+        // BroadcastChannel listener for cross-tab instant sync
+        let channel = null;
+        try {
+            channel = new BroadcastChannel('comandago');
+            channel.onmessage = (event) => {
+                if (event.data === 'refreshCashCount' || event.data === 'refreshTables') {
+                    handleRefresh();
+                }
+            };
+        } catch (e) {
+            console.error(e);
+        }
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('refreshCashCount', handleRefresh);
+            window.removeEventListener('refreshTables', handleRefresh);
+            if (channel) {
+                channel.close();
+            }
+        };
     }, []);
 
     const [shiftStatus, setShiftStatus] = useState('cerrado'); // Default to closed
@@ -43,6 +71,29 @@ const CashierView = () => {
         fetchTables();
         window.dispatchEvent(new Event('refreshCashCount'));
     };
+
+    if (!openTables || !Array.isArray(openTables)) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#0c0c0e', color: '#fff', fontFamily: 'sans-serif' }}>
+                <div style={{ 
+                    border: '3px solid rgba(255, 255, 255, 0.1)', 
+                    borderTop: '3px solid var(--primary, #0d6efd)', 
+                    borderRadius: '50%', 
+                    width: '30px', 
+                    height: '30px', 
+                    animation: 'spin 1s linear infinite',
+                    marginBottom: '15px'
+                }}></div>
+                <style>{`
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `}</style>
+                <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.8 }}>Cargando caja...</p>
+            </div>
+        );
+    }
 
     return (
         <div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { Banknote, CreditCard, Smartphone, CheckSquare, X, AlertCircle } from 'lucide-react';
+import { setOptimisticLock } from '../hooks/useCache';
 
 const PaymentModal = ({ order, onClose, onSuccess }) => {
     const { showConfirmation } = useConfirmation();
@@ -92,11 +93,13 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
         }
 
         if (await showConfirmation(`¿Finalizar cobro por S/. ${finalTotal.toFixed(2)}?`, { type: 'warning' })) {
+            const targetTableId = order.mesaId || order.tableId || order.id;
+            // Set lock immediately on first line of action
+            setOptimisticLock(parseInt(targetTableId), 'libre');
+
             // ✅ Cerrar modal INMEDIATAMENTE al confirmar, sin esperar el fetch
             onSuccess();
 
-            // Optimistic update of the tables cache to free the table
-            const targetTableId = order.mesaId || order.tableId || order.id;
             let previousTables = null;
             try {
                 const cached = localStorage.getItem('tables');

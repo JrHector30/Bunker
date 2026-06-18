@@ -1077,10 +1077,25 @@ const TablesView = () => {
         );
     };
 
-    if (isCajaAbierta === null) {
+    if (isCajaAbierta === null || !tables || !Array.isArray(tables)) {
         return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#fff' }}>
-                <p>Cargando distribución del salón...</p>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#0c0c0e', color: '#fff', fontFamily: 'sans-serif' }}>
+                <div style={{ 
+                    border: '3px solid rgba(255, 255, 255, 0.1)', 
+                    borderTop: '3px solid var(--primary, #0d6efd)', 
+                    borderRadius: '50%', 
+                    width: '30px', 
+                    height: '30px', 
+                    animation: 'spin 1s linear infinite',
+                    marginBottom: '15px'
+                }}></div>
+                <style>{`
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `}</style>
+                <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.8 }}>Cargando salón...</p>
             </div>
         );
     }
