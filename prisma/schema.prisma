@@ -35,6 +35,8 @@ model Mesa {
   mesaPadreId Int?
   mesaPadre   Mesa?     @relation("MesaUnion", fields: [mesaPadreId], references: [id])
   mesasHijas  Mesa[]    @relation("MesaUnion")
+
+  @@index([estado])
 }
 
 
@@ -93,6 +95,8 @@ model Comanda {
   direccionFiscal String? @map("direccion_fiscal")
   
   detalles  DetalleComanda[]
+
+  @@index([mesaId, estado])
 }
 
 model Arqueo {
@@ -132,6 +136,8 @@ model DetalleComanda {
   fechaCreacion    DateTime @default(now())
   fechaPreparacion DateTime?
   fechaListo       DateTime?
+
+  @@index([comandaId])
 }
 
 model Insumo {

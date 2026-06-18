@@ -13,7 +13,7 @@ const CashierView = () => {
     const { showConfirmation } = useConfirmation();
     const { user } = useAuth();
     const navigate = useNavigate();
-    const fetcher = () => fetch('/api/tables').then(res => res.json()).then(data => data.filter(t => t.estado === 'ocupada'));
+    const fetcher = () => fetch('/api/cashier/open-accounts').then(res => res.json());
     const { data: openTables, mutate: fetchTables } = useCache('openTables', fetcher, []);
 
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -121,21 +121,20 @@ const CashierView = () => {
                 opacity: shiftStatus === 'cerrado' ? 0.6 : 1,
                 pointerEvents: shiftStatus === 'cerrado' ? 'none' : 'auto'
             }}>
-                {openTables.length === 0 && <p className="text-muted">No hay mesas ocupadas.</p>}
+                {openTables.length === 0 && <p className="text-muted">No hay cuentas abiertas.</p>}
 
-                {openTables.map(table => {
-                    const activeOrder = table.comandas[0];
-                    if (!activeOrder) return null;
+                {openTables.map(comanda => {
+                    if (!comanda || !comanda.mesa) return null;
 
-                    const realTotal = activeOrder.detalles.reduce((sum, d) => sum + (d.cantidad * d.plato.precio), 0);
+                    const realTotal = comanda.detalles.reduce((sum, d) => sum + (d.cantidad * d.plato.precio), 0);
 
                     return (
-                        <div key={table.id} className="glass-panel" style={{ padding: 20 }}>
+                        <div key={comanda.id} className="glass-panel" style={{ padding: 20 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15, borderBottom: '1px solid var(--glass-border)', paddingBottom: 10 }}>
                                 <h2>Mesa {(() => {
-                                    let num = table.numero;
-                                    if (table.mesasHijas && table.mesasHijas.length > 0) {
-                                        const hijas = table.mesasHijas.map(h => h.numero).join(' - ');
+                                    let num = comanda.mesa.numero;
+                                    if (comanda.mesa.mesasHijas && comanda.mesa.mesasHijas.length > 0) {
+                                        const hijas = comanda.mesa.mesasHijas.map(h => h.numero).join(' - ');
                                         num = `${num} - ${hijas}`;
                                     }
                                     return num;
@@ -144,7 +143,7 @@ const CashierView = () => {
                             </div>
 
                             <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 20 }}>
-                                {activeOrder.detalles.map(d => (
+                                {comanda.detalles.map(d => (
                                     <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                                         <span>{d.cantidad}x {d.plato.nombre}</span>
                                         <span>S/. {(d.cantidad * d.plato.precio).toFixed(2)}</span>
@@ -166,7 +165,7 @@ const CashierView = () => {
                                         if (motivo === null || motivo.trim() === '') return;
 
                                         try {
-                                            const res = await fetch(`/api/orders/${activeOrder.id}/cancel`, {
+                                            const res = await fetch(`/api/orders/${comanda.id}/cancel`, {
                                                 method: 'PUT',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({ motivo, usuarioResponsable: "Caja/Admin", usuarioId: user.id })
@@ -189,7 +188,7 @@ const CashierView = () => {
                                 <button
                                     className="glass-button primary"
                                     style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 10 }}
-                                    onClick={() => handleOpenPayment(table, activeOrder)}
+                                    onClick={() => handleOpenPayment(comanda.mesa, comanda)}
                                 >
                                     <Printer size={18} /> Cerrar Cuenta e Imprimir
                                 </button>

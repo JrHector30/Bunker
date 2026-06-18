@@ -505,7 +505,14 @@ app.get('/api/orders', async (req, res) => {
 // 5.1 Tables Endpoint (Modified for Comensales)
 app.get('/api/tables', async (req, res) => {
     try {
+        const { estado } = req.query;
+        const where = {};
+        if (estado) {
+            where.estado = estado;
+        }
+
         const tables = await prisma.mesa.findMany({
+            where,
             orderBy: { numero: 'asc' },
             select: {
                 id: true,
@@ -1643,6 +1650,30 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
             totalPendiente: 0,
             movimientos: []
         });
+    }
+});
+
+// GET /api/cashier/open-accounts
+app.get('/api/cashier/open-accounts', async (req, res) => {
+    try {
+        const comandasActivas = await prisma.comanda.findMany({
+            where: { estado: { notIn: ['cerrada', 'anulada'] } },
+            include: {
+                mesa: { select: { id: true, numero: true, mesasHijas: { select: { numero: true } } } },
+                usuario: { select: { id: true, nombre: true } },
+                detalles: {
+                    where: { estado: { notIn: ['anulado'] } },
+                    include: {
+                        plato: { select: { id: true, nombre: true, precio: true } }
+                    }
+                }
+            },
+            orderBy: { fecha: 'asc' }
+        });
+        res.json(comandasActivas);
+    } catch (e) {
+        console.error('Error en open-accounts:', e);
+        res.status(500).json([]);
     }
 });
 
