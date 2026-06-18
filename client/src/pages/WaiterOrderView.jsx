@@ -108,29 +108,68 @@ const WaiterOrderView = () => {
         if (cart.length === 0) return;
         setLoading(true);
 
+        const parsedTableId = parseInt(tableId);
+        let previousTables = null;
+
+        // 1. Optimistic Update in Cache
         try {
-            await fetch('/api/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    mesaId: parseInt(tableId),
-                    usuarioId: user.id,
-                    comensales: tableInfo.comensales, // Send captured count
-                    detalles: cart.map(item => ({
-                        platoId: item.platoId,
-                        cantidad: item.cantidad,
-                        observacion: item.observacion
-                    }))
-                })
-            });
-            showToast('Pedido enviado a cocina!', 'success');
-            navigate('/tables');
-        } catch (error) {
-            console.error(error);
-            showToast('Error al enviar pedido', 'error');
-        } finally {
-            setLoading(false);
+            const cached = localStorage.getItem('tables');
+            if (cached) {
+                previousTables = cached;
+                const parsed = JSON.parse(cached);
+                const updated = parsed.map(t => t.id === parsedTableId ? { ...t, estado: 'ocupada' } : t);
+                localStorage.setItem('tables', JSON.stringify(updated));
+            }
+        } catch (e) {
+            console.error(e);
         }
+
+        // 2. Navigate immediately to Tables view
+        navigate('/tables');
+
+        // 3. Perform the fetch in the background
+        fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mesaId: parsedTableId,
+                usuarioId: user.id,
+                comensales: tableInfo.comensales, // Send captured count
+                detalles: cart.map(item => ({
+                    platoId: item.platoId,
+                    cantidad: item.cantidad,
+                    observacion: item.observacion
+                }))
+            })
+        })
+            .then(async res => {
+                if (res.ok) {
+                    showToast('Pedido enviado a cocina!', 'success');
+                    // Dispatch synchronization events
+                    window.dispatchEvent(new CustomEvent('refreshTables'));
+                    window.dispatchEvent(new CustomEvent('refreshKitchenQueue'));
+                    try {
+                        const channel = new BroadcastChannel('comandago');
+                        channel.postMessage('refreshKitchenQueue');
+                        channel.postMessage('refreshTables');
+                        channel.close();
+                    } catch (e) {}
+                } else {
+                    throw new Error('Error al enviar pedido');
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                showToast('Error al enviar pedido', 'error');
+                // Revert cache to previous state
+                if (previousTables) {
+                    localStorage.setItem('tables', previousTables);
+                    window.dispatchEvent(new CustomEvent('refreshTables'));
+                }
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     };
 
     // Filter Products

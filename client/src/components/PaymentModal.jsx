@@ -50,7 +50,7 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
             console.log('[FRONTEND] Status respuesta:', res.status);
             const data = await res.json();
             console.log('[FRONTEND] Data recibida:', data);
-            
+
             if (data.success) {
                 setRazonSocial(data.razonSocial);
                 setDireccionFiscal(data.direccion);
@@ -92,36 +92,74 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
         }
 
         if (await showConfirmation(`¿Finalizar cobro por S/. ${finalTotal.toFixed(2)}?`, { type: 'warning' })) {
-            try {
-                const res = await fetch(`/api/checkout/${order.mesaId || order.tableId || order.id}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        paymentMethod: resolvedPaymentMethod,
-                        docType: resolvedDocType,
-                        totalReceived: Number(cashGiven),
-                        tip: hasTip ? Number(tipAmount) : 0,
-                        observation,
-                        email,
-                        tipoComprobante,
-                        documentoCliente: tipoComprobante !== 'ticket' ? documentoCliente : null,
-                        razonSocial: tipoComprobante !== 'ticket' ? razonSocial : null,
-                        direccionFiscal: tipoComprobante !== 'ticket' ? direccionFiscal : null
-                    })
-                });
+            // ✅ Cerrar modal INMEDIATAMENTE al confirmar, sin esperar el fetch
+            onSuccess();
 
-                if (res.ok) {
-                    showToast('Pago registrado correctamente.', 'success');
-                    onSuccess();
-                } else {
-                    showToast('Error al registrar pago.', 'error');
+            // Optimistic update of the tables cache to free the table
+            const targetTableId = order.mesaId || order.tableId || order.id;
+            let previousTables = null;
+            try {
+                const cached = localStorage.getItem('tables');
+                if (cached) {
+                    previousTables = cached;
+                    const parsed = JSON.parse(cached);
+                    const updated = parsed.map(t => t.id === parseInt(targetTableId) ? { ...t, estado: 'libre', comandas: [] } : t);
+                    localStorage.setItem('tables', JSON.stringify(updated));
+                    // Dispatch event locally to refresh TablesView immediately
+                    window.dispatchEvent(new CustomEvent('refreshTables'));
                 }
             } catch (e) {
                 console.error(e);
-                showToast('Error de conexión', 'error');
             }
+
+            // El fetch corre en segundo plano
+            fetch(`/api/checkout/${order.mesaId || order.tableId || order.id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    paymentMethod: resolvedPaymentMethod,
+                    docType: resolvedDocType,
+                    totalReceived: Number(cashGiven),
+                    tip: hasTip ? Number(tipAmount) : 0,
+                    observation,
+                    email,
+                    tipoComprobante,
+                    documentoCliente: tipoComprobante !== 'ticket' ? documentoCliente : null,
+                    razonSocial: tipoComprobante !== 'ticket' ? razonSocial : null,
+                    direccionFiscal: tipoComprobante !== 'ticket' ? direccionFiscal : null
+                })
+            })
+                .then(async res => {
+                    if (res.ok) {
+                        showToast('Pago registrado correctamente.', 'success');
+                        window.dispatchEvent(new CustomEvent('refreshCashCount'));
+                        window.dispatchEvent(new CustomEvent('refreshTables'));
+                        try {
+                            const channel = new BroadcastChannel('comandago');
+                            channel.postMessage('refreshTables');
+                            channel.postMessage('refreshCashCount');
+                            channel.close();
+                        } catch (e) {}
+                    } else {
+                        showToast('Error al registrar pago. Verifica en Caja.', 'error');
+                        // Revert cache if error
+                        if (previousTables) {
+                            localStorage.setItem('tables', previousTables);
+                            window.dispatchEvent(new CustomEvent('refreshTables'));
+                        }
+                    }
+                })
+                .catch(e => {
+                    console.error(e);
+                    showToast('Error de conexión al registrar pago.', 'error');
+                    // Revert cache if error
+                    if (previousTables) {
+                        localStorage.setItem('tables', previousTables);
+                        window.dispatchEvent(new CustomEvent('refreshTables'));
+                    }
+                });
         }
-    };
+    }; // Cierre final de la función handleFinalize
 
     // Validation: Check for Pending Kitchen Items
     const pendingKitchenItems = order.detalles.filter(d => {
@@ -315,7 +353,7 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                             <button className={`glass-button ${tipoComprobante === 'boleta' ? 'primary' : ''}`} onClick={() => setTipoComprobante('boleta')} style={{ padding: '8px 5px', fontSize: '0.85rem' }}>Boleta</button>
                             <button className={`glass-button ${tipoComprobante === 'factura' ? 'primary' : ''}`} onClick={() => setTipoComprobante('factura')} style={{ padding: '8px 5px', fontSize: '0.85rem' }}>Factura</button>
                         </div>
-                        
+
                         {tipoComprobante !== 'ticket' && (
                             <div className="glass-panel" style={{ padding: 10, marginTop: 5, background: 'rgba(0,0,0,0.03)' }}>
                                 {tipoComprobante === 'boleta' && (
@@ -325,23 +363,23 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                                     </div>
                                 )}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                    <input 
-                                        type="text" 
-                                        className="glass-input" 
+                                    <input
+                                        type="text"
+                                        className="glass-input"
                                         placeholder={`Ingrese ${(tipoComprobante === 'factura' || tipoDocumento === 'ruc') ? 'RUC' : 'DNI'}`}
                                         maxLength={(tipoComprobante === 'factura' || tipoDocumento === 'ruc') ? 11 : 8}
                                         value={documentoCliente}
                                         onChange={e => setDocumentoCliente(e.target.value)}
                                         style={{ width: '100%', padding: '10px', textAlign: 'center', letterSpacing: '2px', fontWeight: 'bold' }}
                                     />
-                                    <button 
-                                        className="glass-button" 
+                                    <button
+                                        className="glass-button"
                                         onClick={validateDocument}
                                         disabled={isValidating}
-                                        style={{ 
-                                            background: '#14b8a6', 
-                                            borderColor: '#14b8a6', 
-                                            color: '#fff', 
+                                        style={{
+                                            background: '#14b8a6',
+                                            borderColor: '#14b8a6',
+                                            color: '#fff',
                                             boxShadow: '0 0 10px rgba(20, 184, 166, 0.5)',
                                             padding: '10px',
                                             width: '100%',

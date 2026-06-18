@@ -412,13 +412,38 @@ const TablesView = () => {
     };
 
     useEffect(() => {
-        fetchTables(); // Fetch immediately on mount to bypass cache delay
-        fetchEditMode();
-        const interval = setInterval(() => {
+        const handleRefresh = () => {
             fetchTables();
             fetchEditMode();
-        }, 1500); // Poll every 1.5 seconds (down from 3s)
-        return () => clearInterval(interval);
+        };
+
+        fetchTables(); // Fetch immediately on mount to bypass cache delay
+        fetchEditMode();
+        const interval = setInterval(handleRefresh, 1500); // Poll every 1.5 seconds (down from 3s)
+
+        // Local event listener
+        window.addEventListener('refreshTables', handleRefresh);
+
+        // BroadcastChannel listener for cross-tab instant sync
+        let channel = null;
+        try {
+            channel = new BroadcastChannel('comandago');
+            channel.onmessage = (event) => {
+                if (event.data === 'refreshTables') {
+                    handleRefresh();
+                }
+            };
+        } catch (e) {
+            console.error(e);
+        }
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('refreshTables', handleRefresh);
+            if (channel) {
+                channel.close();
+            }
+        };
     }, []);
 
     const getStatusColor = (status) => {

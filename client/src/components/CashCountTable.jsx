@@ -230,10 +230,10 @@ const CashCountTable = ({ onStatusChange }) => {
     });
 
     useEffect(() => {
-        // Poll estado cada 10 segundos
+        // Poll estado cada 2 segundos
         const interval = setInterval(() => {
             statusIntervalRef.current?.();
-        }, 10000);
+        }, 2000);
 
         const handleRefresh = () => {
             fetchStatus();

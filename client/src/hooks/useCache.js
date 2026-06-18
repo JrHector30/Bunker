@@ -61,9 +61,15 @@ export function useCache(key, fetcher, initialData = []) {
     const keyRef = useRef(key);
     useEffect(() => { keyRef.current = key; }, [key]);
 
-    // Manual mutate for forced refreshes (e.g. Refresh button)
-    const manualMutate = useCallback(async () => {
+    // Manual mutate for forced refreshes (e.g. Refresh button) or optimistic updates
+    const manualMutate = useCallback(async (optimisticData = null) => {
         const currentKey = keyRef.current;
+        if (optimisticData !== null) {
+            globalCache[currentKey] = optimisticData;
+            localStorage.setItem(currentKey, JSON.stringify(optimisticData));
+            setData(optimisticData);
+            return;
+        }
         setLoading(!globalCache[currentKey]);
         try {
             const result = await fetcherRef.current();

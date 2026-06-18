@@ -52,8 +52,8 @@ const KitchenTimer = ({ startTime }) => {
         };
 
         calculateTime();
-        // Force an aggressive 10s poll so '0 min' changes to '1 min' quickly when real
-        const interval = setInterval(calculateTime, 10000);
+        // Force an aggressive 2s poll so '0 min' changes to '1 min' quickly when real
+        const interval = setInterval(calculateTime, 2000);
         return () => clearInterval(interval);
     }, [startTime]);
 
@@ -171,7 +171,33 @@ const KitchenView = () => {
     useEffect(() => {
         fetchQueue();
         const interval = setInterval(fetchQueue, 1500); // Poll every 1.5 seconds (down from 5s)
-        return () => clearInterval(interval);
+
+        // Local event listener for instant refresh
+        const handleRefresh = () => {
+            fetchQueue();
+        };
+        window.addEventListener('refreshKitchenQueue', handleRefresh);
+
+        // BroadcastChannel listener for cross-tab instant sync
+        let channel = null;
+        try {
+            channel = new BroadcastChannel('comandago');
+            channel.onmessage = (event) => {
+                if (event.data === 'refreshKitchenQueue') {
+                    fetchQueue();
+                }
+            };
+        } catch (e) {
+            console.error(e);
+        }
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('refreshKitchenQueue', handleRefresh);
+            if (channel) {
+                channel.close();
+            }
+        };
     }, []);
 
     const updateItemStatus = async (itemId, status, options = {}) => {
