@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer, ChefHat, RotateCcw } from 'lucide-react';
+import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer, ChefHat, RotateCcw, Unlink } from 'lucide-react';
 import { numberToLetters } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
@@ -45,8 +45,7 @@ const TablesView = () => {
     const [tablesState, setTablesState] = useState([]);
     const [draggingTableId, setDraggingTableId] = useState(null);
     const [showGlobalMergeModal, setShowGlobalMergeModal] = useState(false);
-    const [globalMergePadreId, setGlobalMergePadreId] = useState(null);
-    const [globalMergeHijaId, setGlobalMergeHijaId] = useState(null);
+    const [selectedMergeTableIds, setSelectedMergeTableIds] = useState([]);
 
     // States for dynamically modifying comensales of occupied tables upon merge
     const [isUpdatingDiners, setIsUpdatingDiners] = useState(false);
@@ -328,6 +327,37 @@ const TablesView = () => {
             showToast("Error de conexión", "error");
         }
     };
+
+    const handleDirectUnmergeAll = async (table, e) => {
+        if (e) e.stopPropagation();
+        try {
+            const hijas = table.mesasHijas || [];
+            if (hijas.length === 0) return;
+
+            const promises = hijas.map(hija =>
+                fetch('/api/tables/unmerge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mesaHijaId: hija.id })
+                })
+            );
+
+            const responses = await Promise.all(promises);
+            const allOk = responses.every(res => res.ok);
+
+            if (allOk) {
+                showToast("Mesas separadas con éxito", "success");
+                fetchTables();
+            } else {
+                showToast("Hubo un problema al separar algunas mesas", "error");
+                fetchTables();
+            }
+        } catch (error) {
+            console.error("Error al separar mesas directamente:", error);
+            showToast("Error de conexión", "error");
+        }
+    };
+
 
     const getTableDisplayName = (table) => {
         if (table.mesasHijas && table.mesasHijas.length > 0) {
@@ -991,86 +1021,141 @@ const TablesView = () => {
     const renderGlobalMergeModal = () => {
         if (!showGlobalMergeModal) return null;
 
-        const freeTables = tablesState.filter(t => t.estado === 'libre' && !t.mesaPadreId);
+        // Filtrar y ordenar todas las mesas reales (las mesas 100 y 101 son técnicas)
+        const allMergeableTables = tablesState
+            .filter(t => t && t.numero !== '100' && t.numero !== '101')
+            .sort((a, b) => parseInt(a.numero, 10) - parseInt(b.numero, 10));
+
+        const handleTableSelection = (t) => {
+            const isSelected = selectedMergeTableIds.includes(t.id);
+            if (isSelected) {
+                // Deseleccionar
+                setSelectedMergeTableIds(prev => prev.filter(id => id !== t.id));
+                return;
+            }
+
+            if (t.estado === 'ocupada') {
+                showToast("La mesa está ocupada", "warning");
+                return;
+            }
+
+            if (t.mesaPadreId !== null || (t.mesasHijas && t.mesasHijas.length > 0)) {
+                showToast("La mesa ya forma parte de una unión", "warning");
+                return;
+            }
+
+            if (selectedMergeTableIds.length >= 2) {
+                return;
+            }
+
+            // Seleccionar
+            setSelectedMergeTableIds(prev => [...prev, t.id]);
+        };
+
+        const getTableItemStyle = (t) => {
+            const isSelected = selectedMergeTableIds.includes(t.id);
+            const isUnavailable = t.estado === 'ocupada' || t.mesaPadreId !== null || (t.mesasHijas && t.mesasHijas.length > 0) || (selectedMergeTableIds.length === 2 && !isSelected);
+
+            const baseStyle = {
+                height: '60px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '1.2rem',
+                transition: 'all 0.2s ease',
+            };
+
+            if (isSelected) {
+                return {
+                    ...baseStyle,
+                    border: '1.5px solid #ffea00',
+                    boxShadow: '0 0 12px rgba(255, 234, 0, 0.4)',
+                    color: '#ffea00',
+                    opacity: 1,
+                    cursor: 'pointer',
+                    background: 'rgba(255, 234, 0, 0.08)'
+                };
+            } else if (isUnavailable) {
+                return {
+                    ...baseStyle,
+                    border: '1px dashed rgba(255, 255, 255, 0.25)',
+                    color: '#9ca3af',
+                    opacity: 0.4,
+                    cursor: 'not-allowed',
+                    background: 'transparent'
+                };
+            } else {
+                // Disponible (Verde Neón Fino)
+                return {
+                    ...baseStyle,
+                    border: '1.5px solid #00ff88',
+                    boxShadow: '0 0 8px rgba(0, 255, 136, 0.15)',
+                    color: '#00ff88',
+                    opacity: 1,
+                    cursor: 'pointer',
+                    background: 'rgba(0, 255, 136, 0.04)'
+                };
+            }
+        };
+
+        const handleConfirmMerge = () => {
+            if (selectedMergeTableIds.length !== 2) return;
+            const [padreId, hijaId] = selectedMergeTableIds;
+            handleMerge(padreId, hijaId);
+            setShowGlobalMergeModal(false);
+            setSelectedMergeTableIds([]);
+        };
+
+        const handleCancel = () => {
+            setShowGlobalMergeModal(false);
+            setSelectedMergeTableIds([]);
+        };
 
         return (
-            <div className="modal-overlay" onClick={() => { setShowGlobalMergeModal(false); setGlobalMergePadreId(null); setGlobalMergeHijaId(null); }}>
-                <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 450 }}>
-                    <div className="modal-header">
-                        <h2 style={{ color: 'var(--text-main)' }}>🔗 Unir Mesas Libres</h2>
-                        <button className="glass-button" style={{ padding: 5 }} onClick={() => { setShowGlobalMergeModal(false); setGlobalMergePadreId(null); setGlobalMergeHijaId(null); }}>
+            <div className="modal-overlay" onClick={handleCancel}>
+                <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, width: '90%' }}>
+                    <div className="modal-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '15px' }}>
+                        <h2 style={{ color: 'var(--text-main)', margin: 0 }}>🔗 Selecciona las mesas a unir:</h2>
+                        <button className="glass-button" style={{ padding: 5 }} onClick={handleCancel}>
                             <X size={20} />
                         </button>
                     </div>
-                    <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: 'var(--text-main)' }}>1. Selecciona la Mesa Principal (Padre):</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: 8 }}>
-                                {freeTables.map(t => (
-                                    <button
-                                        key={t.id}
-                                        className={`glass-button ${globalMergePadreId === t.id ? 'active' : ''}`}
-                                        style={{
-                                            height: 50,
-                                            fontWeight: 'bold',
-                                            borderColor: globalMergePadreId === t.id ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
-                                            color: globalMergePadreId === t.id ? 'var(--primary)' : ''
-                                        }}
-                                        onClick={() => {
-                                            setGlobalMergePadreId(t.id);
-                                            if (globalMergeHijaId === t.id) setGlobalMergeHijaId(null);
-                                        }}
-                                    >
-                                        {t.numero}
-                                    </button>
-                                ))}
-                            </div>
-                            {freeTables.length === 0 && <p className="text-muted">No hay mesas libres disponibles.</p>}
+                    <div className="modal-body" style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 15 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 10, maxHeight: '350px', overflowY: 'auto', paddingRight: '5px' }}>
+                            {allMergeableTables.map(t => (
+                                <button
+                                    key={t.id}
+                                    style={getTableItemStyle(t)}
+                                    onClick={() => handleTableSelection(t)}
+                                >
+                                    {t.numero}
+                                </button>
+                            ))}
                         </div>
-
-                        <div>
-                            <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: 'var(--text-main)' }}>2. Selecciona la Mesa a acoplar (Hija):</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: 8 }}>
-                                {freeTables
-                                    .filter(t => t.id !== globalMergePadreId)
-                                    .map(t => (
-                                        <button
-                                            key={t.id}
-                                            className={`glass-button ${globalMergeHijaId === t.id ? 'active' : ''}`}
-                                            style={{
-                                                height: 50,
-                                                fontWeight: 'bold',
-                                                borderColor: globalMergeHijaId === t.id ? 'var(--success)' : 'rgba(255,255,255,0.1)',
-                                                color: globalMergeHijaId === t.id ? 'var(--success)' : ''
-                                            }}
-                                            onClick={() => setGlobalMergeHijaId(t.id)}
-                                        >
-                                            {t.numero}
-                                        </button>
-                                    ))}
+                        {selectedMergeTableIds.length > 0 && (
+                            <div className="text-muted" style={{ fontSize: '0.9rem', marginTop: 10 }}>
+                                Seleccionadas: {selectedMergeTableIds.map(id => {
+                                    const mesa = tablesState.find(t => t.id === id);
+                                    return mesa ? `Mesa ${mesa.numero}` : '';
+                                }).join(' y ')}
                             </div>
-                            {!globalMergePadreId && <p className="text-muted">Selecciona primero la mesa principal.</p>}
-                            {globalMergePadreId && freeTables.filter(t => t.id !== globalMergePadreId).length === 0 && (
-                                <p className="text-muted">No hay otras mesas libres.</p>
-                            )}
-                        </div>
+                        )}
                     </div>
-                    <div className="modal-footer" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
-                        <button className="glass-button" onClick={() => { setShowGlobalMergeModal(false); setGlobalMergePadreId(null); setGlobalMergeHijaId(null); }}>
+                    <div className="modal-footer" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '15px', marginTop: '10px' }}>
+                        <button className="glass-button" onClick={handleCancel}>
                             Cancelar
                         </button>
-                        <button
-                            className="glass-button primary"
-                            disabled={!globalMergePadreId || !globalMergeHijaId}
-                            onClick={() => {
-                                handleMerge(globalMergePadreId, globalMergeHijaId);
-                                setShowGlobalMergeModal(false);
-                                setGlobalMergePadreId(null);
-                                setGlobalMergeHijaId(null);
-                            }}
-                        >
-                            Confirmar Unión
-                        </button>
+                        {selectedMergeTableIds.length === 2 && (
+                            <button
+                                className="glass-button primary"
+                                onClick={handleConfirmMerge}
+                                style={{ fontWeight: 'bold' }}
+                            >
+                                Confirmar unión
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -1080,12 +1165,12 @@ const TablesView = () => {
     if (isCajaAbierta === null || !tables || !Array.isArray(tables)) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#0c0c0e', color: '#fff', fontFamily: 'sans-serif' }}>
-                <div style={{ 
-                    border: '3px solid rgba(255, 255, 255, 0.1)', 
-                    borderTop: '3px solid var(--primary, #0d6efd)', 
-                    borderRadius: '50%', 
-                    width: '30px', 
-                    height: '30px', 
+                <div style={{
+                    border: '3px solid rgba(255, 255, 255, 0.1)',
+                    borderTop: '3px solid var(--primary, #0d6efd)',
+                    borderRadius: '50%',
+                    width: '30px',
+                    height: '30px',
                     animation: 'spin 1s linear infinite',
                     marginBottom: '15px'
                 }}></div>
@@ -1108,7 +1193,7 @@ const TablesView = () => {
                     <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
                         <button
                             className="glass-button"
-                            onClick={() => setShowGlobalMergeModal(true)}
+                            onClick={() => { setShowGlobalMergeModal(true); setSelectedMergeTableIds([]); }}
                             style={{
                                 borderColor: 'var(--success)',
                                 color: 'var(--success)',
@@ -1353,6 +1438,29 @@ const TablesView = () => {
                                     </button>
                                     <button className="glass-button" style={{ padding: '12px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={(e) => handleOpenModal(e, table, 'pre-check')}>
                                         <Calculator size={24} />
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* 🔗 Botón satélite minimalista para separar mesas unidas libres */}
+                            {!isDaughter && table.mesasHijas && table.mesasHijas.length > 0 && table.estado === 'libre' && !isEditMode && (
+                                <div className="absolute top-[105%] left-1/2 -translate-x-1/2 flex z-50">
+                                    <button
+                                        onClick={(e) => handleDirectUnmergeAll(table, e)}
+                                        title="Separar mesas"
+                                        className="
+                group flex h-10 w-10 items-center justify-center rounded-full cursor-pointer select-none
+                border border-red-500/30 bg-red-950/20 text-white backdrop-blur-sm
+                transition-all duration-300 ease-out 
+                hover:scale-110 hover:border-red-500 hover:bg-red-500 hover:text-white 
+                hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]
+                active:scale-95 disabled:pointer-events-none disabled:opacity-50
+            "
+                                    >
+                                        <Unlink
+                                            size={18}
+                                            className="transition-transform duration-300 ease-in-out group-hover:rotate-12"
+                                        />
                                     </button>
                                 </div>
                             )}

@@ -111,6 +111,7 @@ const CashCountTable = ({ onStatusChange }) => {
 
     // Modal Form States
     const [movTipo, setMovTipo] = useState('EGRESO');
+    const [movMetodoPago, setMovMetodoPago] = useState('efectivo');
     const [movComprobante, setMovComprobante] = useState('recibo');
     const [movConcepto, setMovConcepto] = useState('');
     const [movObservacion, setMovObservacion] = useState('');
@@ -135,9 +136,21 @@ const CashCountTable = ({ onStatusChange }) => {
 
         // Limit validation for egresos
         if (movTipo === 'EGRESO') {
-            const currentTotalCaja = currentStatus?.totalCaja || 0;
-            if (numericMonto > currentTotalCaja) {
-                setMovError(`Monto de egreso supera el efectivo disponible en caja (S/. ${currentTotalCaja.toFixed(2)})`);
+            let availableLimit = 0;
+            let limitLabel = 'Caja';
+            if (movMetodoPago === 'efectivo') {
+                availableLimit = currentStatus?.totalCaja || 0;
+                limitLabel = 'Caja';
+            } else if (movMetodoPago === 'yape') {
+                availableLimit = currentStatus?.ingresos?.yape || 0;
+                limitLabel = 'Yape';
+            } else if (movMetodoPago === 'plin') {
+                availableLimit = currentStatus?.ingresos?.plin || 0;
+                limitLabel = 'Plin';
+            }
+
+            if (numericMonto > availableLimit) {
+                setMovError(`Monto de egreso supera el disponible en ${limitLabel} (S/. ${availableLimit.toFixed(2)})`);
                 return;
             }
         }
@@ -151,8 +164,8 @@ const CashCountTable = ({ onStatusChange }) => {
                     tipo: movTipo,
                     tipoComprobante: movComprobante,
                     concepto: movConcepto,
-                    observacion: movObservacion,
-                    monto: numericMonto
+                    monto: numericMonto,
+                    metodoPago: movTipo === 'EGRESO' ? movMetodoPago : 'efectivo'
                 })
             });
 
@@ -163,6 +176,7 @@ const CashCountTable = ({ onStatusChange }) => {
                 setMovConcepto('');
                 setMovObservacion('');
                 setMovMonto('');
+                setMovMetodoPago('efectivo');
                 // Refresh data
                 fetchStatus();
                 fetchHistory();
@@ -302,78 +316,239 @@ const CashCountTable = ({ onStatusChange }) => {
         }).replace(',', '');
     };
 
+    // GENERACIÓN DE IMAGEN DEL GRÁFICO DE TENDENCIA (CANVAS EN MEMORIA)
+    const generateChartImage = (arqArray) => {
+        const salesByDate = {};
+
+        // Ordenar arqueos cronológicamente para establecer las fechas extremas del rango
+        const sortedArqs = [...arqArray].sort((a, b) => new Date(a.fechaInicio) - new Date(b.fechaInicio));
+
+        if (sortedArqs.length === 0) return null;
+
+        // Obtener la fecha inicial y final del rango en huso horario local Perú (UTC-5)
+        const getLocalDateStr = (dateStr) => {
+            const d = new Date(dateStr);
+            // Restamos 5 horas para normalizar a UTC-5 (Perú)
+            const localDate = new Date(d.getTime() - (5 * 60 * 60 * 1000));
+            return localDate.toISOString().split('T')[0];
+        };
+
+        const startDStr = getLocalDateStr(sortedArqs[0].fechaInicio);
+        const endDStr = getLocalDateStr(sortedArqs[sortedArqs.length - 1].fechaInicio);
+
+        const startD = new Date(`${startDStr}T00:00:00`);
+        const endD = new Date(`${endDStr}T00:00:00`);
+
+        // Inicializar los días intermedios con 0 para tener un flujo continuo
+        let cur = new Date(startD);
+        while (cur <= endD) {
+            const key = cur.toISOString().split('T')[0];
+            salesByDate[key] = 0;
+            cur.setDate(cur.getDate() + 1);
+        }
+
+        // Acumular las ventas de cada turno en su respectivo día
+        sortedArqs.forEach(arq => {
+            (arq.ventas || []).forEach(v => {
+                const dKey = getLocalDateStr(v.hora);
+                if (salesByDate[dKey] !== undefined) {
+                    salesByDate[dKey] += v.total;
+                } else {
+                    salesByDate[dKey] = v.total;
+                }
+            });
+        });
+
+        // Formatear los datos a una lista ordenada cronológicamente
+        const chartData = Object.entries(salesByDate).map(([dateStr, amount]) => {
+            const d = new Date(`${dateStr}T00:00:00`);
+            const day = d.getDate();
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic'];
+            const label = `${day} ${months[d.getMonth()]}`;
+            return {
+                dateStr,
+                label,
+                amount
+            };
+        }).sort((a, b) => a.dateStr.localeCompare(b.dateStr));
+
+        // Configurar el Canvas en memoria
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 400;
+        const ctx = canvas.getContext('2d');
+
+        // Fondo blanco limpio
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const padding = { top: 60, right: 50, bottom: 60, left: 80 };
+        const chartWidth = canvas.width - padding.left - padding.right;
+        const chartHeight = canvas.height - padding.top - padding.bottom;
+
+        const amounts = chartData.map(d => d.amount);
+        const maxVal = Math.max(...amounts, 100) * 1.15; // 15% de holgura superior
+        const minVal = 0;
+
+        // Coordenadas calculadas
+        const points = chartData.map((d, i) => {
+            const x = padding.left + (chartData.length > 1 ? (i / (chartData.length - 1)) * chartWidth : chartWidth / 2);
+            const y = padding.top + chartHeight - ((d.amount - minVal) / (maxVal - minVal)) * chartHeight;
+            return { x, y, amount: d.amount, label: d.label };
+        });
+
+        // Dibujar rejilla horizontal del eje Y
+        ctx.strokeStyle = '#f1f3f5';
+        ctx.lineWidth = 1;
+        ctx.fillStyle = '#868e96';
+        ctx.font = '11px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
+        const yTicks = 5;
+        for (let i = 0; i <= yTicks; i++) {
+            const val = minVal + (i / yTicks) * (maxVal - minVal);
+            const y = padding.top + chartHeight - (i / yTicks) * chartHeight;
+
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(canvas.width - padding.right, y);
+            ctx.stroke();
+
+            ctx.fillText(`S/. ${val.toFixed(2)}`, padding.left - 12, y);
+        }
+
+        // Dibujar marcas y etiquetas del eje X
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = '#868e96';
+
+        // Evitar solapamiento si hay demasiadas fechas
+        const labelStep = Math.max(1, Math.ceil(chartData.length / 10));
+        points.forEach((p, i) => {
+            if (i % labelStep === 0) {
+                ctx.fillText(p.label, p.x, padding.top + chartHeight + 10);
+
+                ctx.strokeStyle = '#dee2e6';
+                ctx.beginPath();
+                ctx.moveTo(p.x, padding.top + chartHeight);
+                ctx.lineTo(p.x, padding.top + chartHeight + 5);
+                ctx.stroke();
+            }
+        });
+
+        if (points.length > 0) {
+            // Relleno de área con Degradado Lineal (Celeste transparente)
+            const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
+            gradient.addColorStop(0, 'rgba(13, 110, 253, 0.35)'); // Azul semitransparente arriba
+            gradient.addColorStop(1, 'rgba(13, 110, 253, 0.0)');  // Transparencia absoluta abajo
+
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, padding.top + chartHeight);
+            points.forEach(p => {
+                ctx.lineTo(p.x, p.y);
+            });
+            ctx.lineTo(points[points.length - 1].x, padding.top + chartHeight);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Línea de tendencia principal
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            points.forEach(p => {
+                ctx.lineTo(p.x, p.y);
+            });
+            ctx.strokeStyle = '#0d6efd'; // Azul ComandaGo
+            ctx.lineWidth = 2.5; // Trazo fino y estilizado
+            ctx.stroke();
+
+            // Dibujar puntos de datos y destacar el pico más alto (máximo financiero)
+            const maxAmount = Math.max(...amounts);
+            points.forEach(p => {
+                const isPeak = p.amount === maxAmount && maxAmount > 0;
+
+                // Círculo base del punto
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.strokeStyle = '#0d6efd';
+                ctx.lineWidth = 1.8;
+                ctx.stroke();
+
+                // Si es el pico de ventas, agregar el indicador estético y etiqueta
+                if (isPeak) {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 6.5, 0, 2 * Math.PI);
+                    ctx.strokeStyle = 'rgba(13, 110, 253, 0.45)';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#0d6efd';
+                    ctx.font = 'bold 12px Inter, system-ui, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(`S/. ${p.amount.toFixed(2)}`, p.x, p.y - 12);
+                }
+            });
+        }
+
+        return canvas.toDataURL('image/png');
+    };
+
     // PDF GENERATION LOGIC
     const generatePDF = async (targetId = null) => {
-        let actualId = targetId;
-
-        // Si hay una fecha filtrada y resultados en el historial, tomamos el primero de esa fecha
-        if (!actualId) {
-            if (filterDateRange?.from && history?.data?.length > 0) {
-                actualId = history.data[0].id;
-            } else if (currentStatus) {
-                actualId = currentStatus.id;
-            }
-        }
-
-        if (!actualId) {
-            showToast("No hay datos de arqueo disponibles para descargar.", 'error');
-            return;
-        }
-
         setIsGenerating(true);
 
         try {
-            const res = await fetch(`/api/cashier/arqueo/${actualId}`);
-            const fullData = await res.json();
+            let arqArray = [];
+
+            // Si targetId es nulo y hay un rango de fechas seleccionado, consultamos por rango
+            if (!targetId && filterDateRange?.from) {
+                const startStr = format(filterDateRange.from, 'yyyy-MM-dd');
+                const endStr = filterDateRange.to ? format(filterDateRange.to, 'yyyy-MM-dd') : startStr;
+                const res = await fetch(`/api/cashier/arqueo/report/range?startDate=${startStr}&endDate=${endStr}`);
+                if (!res.ok) {
+                    throw new Error("Error al obtener los datos de arqueo por rango");
+                }
+                arqArray = await res.json();
+            } else {
+                // De lo contrario, cargamos un único arqueo
+                let actualId = targetId;
+                if (!actualId) {
+                    if (currentStatus) {
+                        actualId = currentStatus.id;
+                    }
+                }
+                if (!actualId) {
+                    showToast("No hay datos de arqueo disponibles para descargar.", 'error');
+                    setIsGenerating(false);
+                    return;
+                }
+                const res = await fetch(`/api/cashier/arqueo/${actualId}`);
+                if (!res.ok) {
+                    throw new Error("Error al obtener los datos de arqueo");
+                }
+                const fullData = await res.json();
+                arqArray = [fullData];
+            }
+
+            if (arqArray.length === 0) {
+                showToast("No se encontraron registros de arqueo en el período seleccionado.", 'warning');
+                setIsGenerating(false);
+                return;
+            }
 
             const doc = new jsPDF();
             doc.setFont("helvetica");
 
-            // HEADER
-            doc.setFontSize(22);
-            doc.setTextColor(13, 110, 253); // ComandaGo Blue
-            doc.setFont("helvetica", "bold");
-            doc.text("ComandaGo", 14, 20);
-
-            doc.setFontSize(14);
-            doc.setTextColor(40, 40, 40);
-            doc.text("Reporte: Arqueo de Caja", 14, 28);
-
-            doc.setFontSize(10);
-            doc.setTextColor(100);
-            doc.setFont("helvetica", "normal");
-
+            const isRange = arqArray.length > 1;
             const reportDate = filterDateRange?.from
                 ? (filterDateRange.to
                     ? `${format(filterDateRange.from, 'dd-MM-yyyy')} a ${format(filterDateRange.to, 'dd-MM-yyyy')}`
                     : format(filterDateRange.from, 'dd-MM-yyyy'))
                 : formatDate(new Date().toISOString(), false);
-            doc.text(`Fecha del Turno: ${reportDate}`, 14, 35);
-            doc.text(`Turno ID: #${fullData.id} - Estado: ${fullData.estado.toUpperCase()}`, 14, 40);
-            doc.text(`Usuario: ${fullData.usuario?.nombre || 'Administrador'}`, 14, 45);
-
-            // FINANCIAL SUMMARY (Grid)
-            let startY = 50;
-            doc.setFillColor(248, 249, 250);
-            doc.setDrawColor(220, 220, 220);
-            doc.rect(14, startY, 180, 22, 'FD');
-
-            doc.setFontSize(10);
-            doc.setTextColor(100);
-            doc.text("Total Ventas", 20, startY + 8);
-            doc.text("Total Propinas", 80, startY + 8);
-            doc.text("Saldo Final (Caja)", 140, startY + 8);
-
-            const saldoFinal = fullData.totalCaja || 0;
-
-            doc.setFontSize(12);
-            doc.setTextColor(40, 40, 40);
-            doc.setFont("helvetica", "bold");
-            doc.text(`S/. ${(fullData.totalBruto || 0).toFixed(2)}`, 20, startY + 16);
-            doc.text(`S/. ${(fullData.totalPropinas || 0).toFixed(2)}`, 80, startY + 16);
-            doc.text(`S/. ${(saldoFinal || 0).toFixed(2)}`, 140, startY + 16);
-
-            doc.setFont("helvetica", "normal");
 
             const formatTime = (dateStr) => {
                 if (!dateStr) return '-';
@@ -381,193 +556,572 @@ const CashCountTable = ({ onStatusChange }) => {
                 return d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
             };
 
-            // 1. FLOW HISTORY TABLE
-            let currentY = startY + 30;
-            doc.setFontSize(12);
-            doc.setTextColor(13, 110, 253);
-            doc.setFont("helvetica", "bold");
-            doc.text("Historial de Flujo de Caja (Inicio)", 14, currentY);
+            // PÁGINA 1: RESUMEN CONSOLIDADO (Solo si es un rango de múltiples arqueos)
+            if (isRange) {
+                // CABECERA CORPORATIVA
+                doc.setFontSize(22);
+                doc.setTextColor(13, 110, 253); // ComandaGo Blue
+                doc.setFont("helvetica", "bold");
+                doc.text("ComandaGo", 14, 20);
 
-            const flowHistoryRows = [];
-            flowHistoryRows.push([
-                formatTime(fullData.fechaInicio),
-                'Monto Inicial de Apertura',
-                '-',
-                `S/. ${fullData.montoInicial.toFixed(2)}`
-            ]);
+                doc.setFontSize(14);
+                doc.setTextColor(40, 40, 40);
+                doc.text("Reporte Consolidado: Arqueos de Caja", 14, 28);
 
-            // Combine movements and calculate running starts
-            const sortedMovements = [...(fullData.movimientos || [])].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-            let runningStart = fullData.montoInicial;
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.setFont("helvetica", "normal");
+                doc.text(`Período Seleccionado: ${reportDate}`, 14, 35);
+                doc.text(`Cantidad de Turnos: ${arqArray.length}`, 14, 40);
 
-            sortedMovements.forEach(m => {
-                if (m.tipo === 'INGRESO') {
-                    runningStart += m.monto;
+                // TOTALES ACUMULADOS
+                const totalMontoInicial = arqArray.reduce((sum, arq) => sum + arq.montoInicial, 0);
+                const totalVentas = arqArray.reduce((sum, arq) => sum + arq.totalBruto, 0);
+                const totalIngresosManuales = arqArray.reduce((sum, arq) => sum + arq.movimientos.filter(m => m.tipo === 'INGRESO').reduce((s, m) => s + m.monto, 0), 0);
+                const totalEgresosManuales = arqArray.reduce((sum, arq) => sum + arq.egresos, 0);
+                const totalPropinas = arqArray.reduce((sum, arq) => sum + arq.totalPropinas, 0);
+                const totalCajaConsolidado = arqArray.reduce((sum, arq) => sum + arq.totalCaja, 0);
+
+                let startY = 48;
+                doc.setFillColor(248, 249, 250);
+                doc.setDrawColor(220, 220, 220);
+                doc.rect(14, startY, 180, 22, 'FD');
+
+                doc.setFontSize(9);
+                doc.setTextColor(100);
+                doc.text("Total Ventas", 18, startY + 8);
+                doc.text("Ingresos Manuales", 62, startY + 8);
+                doc.text("Egresos Manuales", 108, startY + 8);
+                doc.text("Saldo Final Acumulado", 152, startY + 8);
+
+                doc.setFontSize(11);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont("helvetica", "bold");
+                doc.text(`S/. ${totalVentas.toFixed(2)}`, 18, startY + 16);
+                doc.text(`S/. ${totalIngresosManuales.toFixed(2)}`, 62, startY + 16);
+                doc.text(`S/. ${totalEgresosManuales.toFixed(2)}`, 108, startY + 16);
+                doc.text(`S/. ${totalCajaConsolidado.toFixed(2)}`, 152, startY + 16);
+
+                doc.setFont("helvetica", "normal");
+
+                // TABLA DE RESUMEN DE SESIONES
+                let currentY = startY + 30;
+                doc.setFontSize(12);
+                doc.setTextColor(13, 110, 253);
+                doc.setFont("helvetica", "bold");
+                doc.text("Resumen de Sesiones de Caja", 14, currentY);
+
+                let runningAccumulated = 0;
+                const summaryRows = arqArray.map((arq) => {
+                    runningAccumulated += arq.totalCaja;
+                    const manualIng = arq.movimientos.filter(m => m.tipo === 'INGRESO').reduce((s, m) => s + m.monto, 0);
+                    return [
+                        `#${arq.id}`,
+                        arq.usuario?.nombre || 'Admin',
+                        formatDate(arq.fechaInicio, true),
+                        arq.fechaFin ? formatDate(arq.fechaFin, true) : 'Abierto',
+                        `S/. ${arq.montoInicial.toFixed(2)}`,
+                        `S/. ${arq.totalBruto.toFixed(2)}`,
+                        `S/. ${manualIng.toFixed(2)}`,
+                        `S/. ${arq.egresos.toFixed(2)}`,
+                        `S/. ${arq.totalCaja.toFixed(2)}`,
+                        `S/. ${runningAccumulated.toFixed(2)}`
+                    ];
+                });
+
+                autoTable(doc, {
+                    startY: currentY + 5,
+                    head: [['Turno', 'Usuario', 'Apertura', 'Cierre', 'M. Inicial', 'Ventas', 'Ing. Man.', 'Egr. Man.', 'Saldo Final', 'Saldo Acum.']],
+                    body: summaryRows,
+                    theme: 'grid',
+                    headStyles: { halign: 'center', fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold', fontSize: 8 },
+                    styles: { font: 'helvetica', fontSize: 7.5 },
+                    columnStyles: {
+                        0: { halign: 'center' },
+                        2: { halign: 'center' },
+                        3: { halign: 'center' },
+                        4: { halign: 'right' },
+                        5: { halign: 'right' },
+                        6: { halign: 'right' },
+                        7: { halign: 'right' },
+                        8: { halign: 'right' },
+                        9: { halign: 'right' }
+                    }
+                });
+
+                // Avanzamos a la siguiente página para los detalles
+                doc.addPage();
+
+                // DETALLES POR SESIÓN DE CAJA (Para rango)
+                let currentDetailY = 20;
+                const pageHeight = doc.internal.pageSize.height;
+
+                const checkPageSpace = (neededHeight) => {
+                    if (pageHeight - currentDetailY < neededHeight) {
+                        doc.addPage();
+                        currentDetailY = 20;
+                        return true;
+                    }
+                    return false;
+                };
+
+                for (let index = 0; index < arqArray.length; index++) {
+                    const fullData = arqArray[index];
+
+                    if (index > 0) {
+                        doc.addPage();
+                        currentDetailY = 20;
+                    }
+
+                    // SUBHEADER DE LA SESIÓN
+                    doc.setFontSize(14);
+                    doc.setTextColor(13, 110, 253);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`Sesión de Caja Turno #${fullData.id} - ${fullData.estado.toUpperCase()}`, 14, currentDetailY);
+                    currentDetailY += 6;
+
+                    doc.setFontSize(9);
+                    doc.setTextColor(100);
+                    doc.setFont("helvetica", "normal");
+                    const openStr = formatDate(fullData.fechaInicio, true);
+                    const closeStr = fullData.fechaFin ? formatDate(fullData.fechaFin, true) : 'Abierto';
+                    doc.text(`Apertura: ${openStr} | Cierre: ${closeStr} | Responsable: ${fullData.usuario?.nombre || 'Administrador'}`, 14, currentDetailY);
+                    currentDetailY += 10;
+
+                    // 1. FLOW HISTORY TABLE
+                    doc.setFontSize(11);
+                    doc.setTextColor(40, 40, 40);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("Historial de Flujo de Caja (Inicio)", 14, currentDetailY);
+
+                    const flowHistoryRows = [];
                     flowHistoryRows.push([
-                        formatTime(m.fecha),
-                        `Ingreso: ${m.concepto}`,
-                        `▲ S/. ${m.monto.toFixed(2)}`,
-                        `S/. ${runningStart.toFixed(2)}`
+                        formatTime(fullData.fechaInicio),
+                        'Monto Inicial de Apertura',
+                        '-',
+                        `S/. ${fullData.montoInicial.toFixed(2)}`
                     ]);
-                } else if (m.tipo === 'EGRESO') {
-                    runningStart -= m.monto;
-                    flowHistoryRows.push([
-                        formatTime(m.fecha),
-                        `Egreso: ${m.concepto}`,
-                        `▼ S/. ${m.monto.toFixed(2)}`,
-                        `S/. ${runningStart.toFixed(2)}`
-                    ]);
+
+                    const sortedMovements = [...(fullData.movimientos || [])].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+                    let runningStart = fullData.montoInicial;
+
+                    sortedMovements.forEach(m => {
+                        if (m.tipo === 'INGRESO') {
+                            runningStart += m.monto;
+                            flowHistoryRows.push([
+                                formatTime(m.fecha),
+                                `Ingreso: ${m.concepto}`,
+                                `+ S/. ${m.monto.toFixed(2)}`,
+                                `S/. ${runningStart.toFixed(2)}`
+                            ]);
+                        } else if (m.tipo === 'EGRESO') {
+                            runningStart -= m.monto;
+                            flowHistoryRows.push([
+                                formatTime(m.fecha),
+                                `Egreso: ${m.concepto}`,
+                                `- S/. ${m.monto.toFixed(2)}`,
+                                `S/. ${runningStart.toFixed(2)}`
+                            ]);
+                        }
+                    });
+
+                    autoTable(doc, {
+                        startY: currentDetailY + 4,
+                        head: [['Hora', 'Descripción', 'Afectación', 'Saldo de Inicio']],
+                        body: flowHistoryRows,
+                        theme: 'grid',
+                        headStyles: { halign: 'center', fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+                        styles: { font: 'helvetica', fontSize: 9 },
+                        columnStyles: {
+                            0: { halign: 'center' },
+                            2: { halign: 'center' },
+                            3: { halign: 'right' }
+                        },
+                        didParseCell: function (data) {
+                            if (data.section === 'body' && data.column.index === 2) {
+                                const textValue = data.cell.text ? data.cell.text.toString().trim() : '';
+                                if (textValue.startsWith('+')) {
+                                    data.cell.styles.textColor = [40, 167, 69];
+                                } else if (textValue.startsWith('-')) {
+                                    data.cell.styles.textColor = [220, 53, 69];
+                                }
+                            }
+                        }
+                    });
+
+                    currentDetailY = doc.lastAutoTable.finalY + 12;
+
+                    // 2. INGRESOS TABLE
+                    checkPageSpace(30);
+                    doc.setFontSize(11);
+                    doc.setTextColor(40, 40, 40);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("Ingresos Registrados", 14, currentDetailY);
+
+                    const ingresosList = [];
+                    (fullData.ventas || []).forEach(v => {
+                        ingresosList.push({
+                            fecha: v.hora,
+                            hora: formatTime(v.hora),
+                            comprobante: (v.doc || 'ticket').toUpperCase(),
+                            concepto: `Venta Mesa ${v.mesa}`,
+                            observacion: `Pago: ${(v.metodo || 'EFECTIVO').toUpperCase()}${v.propina > 0 ? ` + Propina S/. ${v.propina.toFixed(2)}` : ''}`,
+                            monto: `S/. ${(v.total || 0).toFixed(2)}`
+                        });
+                    });
+
+                    (fullData.movimientos || []).filter(m => m.tipo === 'INGRESO').forEach(m => {
+                        ingresosList.push({
+                            fecha: m.fecha,
+                            hora: formatTime(m.fecha),
+                            comprobante: m.tipoComprobante.toUpperCase(),
+                            concepto: m.concepto,
+                            observacion: `Manual${m.observacion ? `: ${m.observacion}` : ''}`,
+                            monto: `S/. ${(m.monto || 0).toFixed(2)}`
+                        });
+                    });
+
+                    ingresosList.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+                    const ingresosRows = ingresosList.length > 0
+                        ? ingresosList.map(i => [i.hora, i.comprobante, i.concepto, i.observacion, i.monto])
+                        : [["-", "-", "Sin ingresos en este turno", "-", "-"]];
+
+                    autoTable(doc, {
+                        startY: currentDetailY + 4,
+                        head: [['Hora', 'Comprobante', 'Concepto', 'Observación', 'Monto']],
+                        body: ingresosRows,
+                        theme: 'grid',
+                        headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold', halign: 'center' },
+                        styles: { font: 'helvetica', fontSize: 9 },
+                        columnStyles: {
+                            4: { halign: 'right' }
+                        }
+                    });
+
+                    currentDetailY = doc.lastAutoTable.finalY + 12;
+
+                    // 3. EGRESOS TABLE
+                    checkPageSpace(30);
+                    doc.setFontSize(11);
+                    doc.setTextColor(40, 40, 40);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("Egresos Registrados", 14, currentDetailY);
+
+                    const egresosList = (fullData.movimientos || []).filter(m => m.tipo === 'EGRESO');
+                    egresosList.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+                    const egresosRows = egresosList.length > 0
+                        ? egresosList.map(e => [
+                            formatTime(e.fecha),
+                            e.tipoComprobante.toUpperCase(),
+                            e.concepto,
+                            e.observacion || '-',
+                            `S/. ${(e.monto || 0).toFixed(2)}`
+                        ])
+                        : [["-", "-", "Sin egresos en este turno", "-", "-"]];
+
+                    autoTable(doc, {
+                        startY: currentDetailY + 4,
+                        head: [['Hora', 'Comprobante', 'Concepto', 'Observación', 'Monto']],
+                        body: egresosRows,
+                        theme: 'grid',
+                        headStyles: { halign: 'center', fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+                        styles: { font: 'helvetica', fontSize: 9 },
+                        columnStyles: {
+                            4: { halign: 'right' }
+                        }
+                    });
+
+                    currentDetailY = doc.lastAutoTable.finalY + 12;
+
+                    // 4. PROPINAS
+                    checkPageSpace(30);
+                    doc.setFontSize(11);
+                    doc.setTextColor(40, 40, 40);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("Desglose de Propinas", 14, currentDetailY);
+
+                    if (fullData.propinasPorMozo && fullData.propinasPorMozo.length > 0) {
+                        const propinasRows = fullData.propinasPorMozo.map(m => [
+                            m.nombre,
+                            `S/. ${(m.propinas || 0).toFixed(2)}`
+                        ]);
+
+                        autoTable(doc, {
+                            startY: currentDetailY + 4,
+                            head: [['Mozo', 'Total Propinas']],
+                            body: propinasRows,
+                            theme: 'grid',
+                            headStyles: { halign: 'center', fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+                            styles: { font: 'helvetica', fontSize: 9 },
+                            columnStyles: {
+                                1: { halign: 'right' }
+                            }
+                        });
+
+                        currentDetailY = doc.lastAutoTable.finalY + 10;
+                        doc.setFontSize(10);
+                        doc.setTextColor(40, 40, 40);
+                        doc.setFont("helvetica", "bold");
+                        doc.text(`Total Propinas Recaudadas: S/. ${(fullData.totalPropinas || 0).toFixed(2)}`, 14, currentDetailY);
+                        currentDetailY += 8;
+                    } else {
+                        doc.setFontSize(9);
+                        doc.setTextColor(100, 100, 100);
+                        doc.setFont("helvetica", "normal");
+                        doc.text("No se registraron propinas en este turno.", 14, currentDetailY + 6);
+                        currentDetailY += 12;
+                    }
+
+                    // RESUMEN DE ESTE TURNO
+                    checkPageSpace(20);
+                    doc.setFontSize(10);
+                    doc.setTextColor(40, 40, 40);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`Resumen Turno #${fullData.id}: M. Inicial: S/. ${fullData.montoInicial.toFixed(2)} | Ventas: S/. ${fullData.totalBruto.toFixed(2)} | Egresos: S/. ${fullData.egresos.toFixed(2)} | Saldo Final: S/. ${fullData.totalCaja.toFixed(2)}`, 14, currentDetailY);
                 }
-            });
+            } else {
+                // FORMATO PERSONALIZADO PARA REPORTE INDIVIDUAL (UN SOLO ARQUEO)
+                const fullData = arqArray[0];
 
-            autoTable(doc, {
-                startY: currentY + 5,
-                head: [['Hora', 'Descripción', 'Afectación', 'Saldo de Inicio']],
-                body: flowHistoryRows,
-                theme: 'grid',
-                headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
-                styles: { font: 'helvetica', fontSize: 9 },
-                columnStyles: {
-                    2: { halign: 'center' },
-                    3: { halign: 'right' }
-                },
-                didParseCell: function (data) {
-                    if (data.section === 'body' && data.column.index === 2) {
-                        const val = data.cell.raw;
-                        if (val.startsWith('▲')) {
-                            data.cell.styles.textColor = [40, 167, 69]; // green
-                        } else if (val.startsWith('▼')) {
-                            data.cell.styles.textColor = [220, 53, 69]; // red
+                // CABECERA
+                doc.setFontSize(22);
+                doc.setTextColor(13, 110, 253); // ComandaGo Blue
+                doc.setFont("helvetica", "bold");
+                doc.text("ComandaGo", 14, 20);
+
+                // Monto Inicial en la esquina superior derecha
+                doc.setFontSize(11);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont("helvetica", "bold");
+                doc.text(`Monto Inicial: S/. ${fullData.montoInicial.toFixed(2)}`, 145, 20);
+
+                doc.setFontSize(14);
+                doc.text("Reporte: Arqueo de Caja", 14, 28);
+
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.setFont("helvetica", "normal");
+                doc.text(`Fecha del Turno: ${reportDate}`, 14, 35);
+                doc.text(`Turno ID: #${fullData.id} - Estado: ${fullData.estado.toUpperCase()}`, 14, 40);
+                doc.text(`Usuario: ${fullData.usuario?.nombre || 'Administrador'}`, 14, 45);
+
+                let currentY = 52;
+                const pageHeight = doc.internal.pageSize.height;
+
+                const checkPageSpace = (neededHeight) => {
+                    if (pageHeight - currentY < neededHeight) {
+                        doc.addPage();
+                        currentY = 20;
+                        return true;
+                    }
+                    return false;
+                };
+
+                // 1. FLOW HISTORY TABLE
+                doc.setFontSize(11);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont("helvetica", "bold");
+                doc.text("Historial de Flujo de Caja (Inicio)", 14, currentY);
+
+                const flowHistoryRows = [];
+                // Fila inicial de Total en Caja con el monto inicial más las ganancias del día en efectivo
+                const baseCashBalance = fullData.montoInicial + (fullData.ingresos?.efectivo || 0);
+                flowHistoryRows.push([
+                    formatTime(fullData.fechaInicio),
+                    'Total en Caja',
+                    '-',
+                    `S/. ${baseCashBalance.toFixed(2)}`
+                ]);
+
+                const sortedMovements = [...(fullData.movimientos || [])].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+                let runningStart = baseCashBalance;
+
+                sortedMovements.forEach(m => {
+                    if (m.tipo === 'INGRESO') {
+                        runningStart += m.monto;
+                        flowHistoryRows.push([
+                            formatTime(m.fecha),
+                            `Ingreso: ${m.concepto}`,
+                            `+ S/. ${m.monto.toFixed(2)}`,
+                            `S/. ${runningStart.toFixed(2)}`
+                        ]);
+                    } else if (m.tipo === 'EGRESO') {
+                        runningStart -= m.monto;
+                        flowHistoryRows.push([
+                            formatTime(m.fecha),
+                            `Egreso: ${m.concepto}`,
+                            `- S/. ${m.monto.toFixed(2)}`,
+                            `S/. ${runningStart.toFixed(2)}`
+                        ]);
+                    }
+                });
+
+                autoTable(doc, {
+                    startY: currentY + 4,
+                    head: [['Hora', 'Descripción', 'Afectación', 'Total en Caja']],
+                    body: flowHistoryRows,
+                    theme: 'grid',
+                    headStyles: { halign: 'center', fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+                    styles: { font: 'helvetica', fontSize: 9 },
+                    columnStyles: {
+                        0: { halign: 'center' },
+                        2: { halign: 'center' },
+                        3: { halign: 'right' }
+                    },
+                    didParseCell: function (data) {
+                        if (data.section === 'body' && data.column.index === 2) {
+                            const textValue = data.cell.text ? data.cell.text.toString().trim() : '';
+                            if (textValue.startsWith('+')) {
+                                data.cell.styles.textColor = [40, 167, 69]; // Verde profesional
+                            } else if (textValue.startsWith('-')) {
+                                data.cell.styles.textColor = [220, 53, 69]; // Rojo profesional
+                            }
                         }
                     }
-                }
-            });
-
-            // 2. INGRESOS TABLE
-            currentY = doc.lastAutoTable.finalY + 15;
-            doc.setFontSize(12);
-            doc.setTextColor(13, 110, 253);
-            doc.setFont("helvetica", "bold");
-            doc.text("Ingresos Registrados", 14, currentY);
-
-            const ingresosList = [];
-
-            // Add sales from comandas
-            (fullData.ventas || []).forEach(v => {
-                ingresosList.push({
-                    fecha: v.hora,
-                    hora: formatTime(v.hora),
-                    comprobante: (v.doc || 'ticket').toUpperCase(),
-                    concepto: `Venta Mesa ${v.mesa}`,
-                    observacion: `Pago: ${(v.metodo || 'EFECTIVO').toUpperCase()}${v.propina > 0 ? ` + Propina S/. ${v.propina.toFixed(2)}` : ''}`,
-                    monto: `S/. ${(v.total || 0).toFixed(2)}`
                 });
-            });
 
-            // Add manual incomes
-            (fullData.movimientos || []).filter(m => m.tipo === 'INGRESO').forEach(m => {
-                ingresosList.push({
-                    fecha: m.fecha,
-                    hora: formatTime(m.fecha),
-                    comprobante: m.tipoComprobante.toUpperCase(),
-                    concepto: m.concepto,
-                    observacion: `Manual${m.observacion ? `: ${m.observacion}` : ''}`,
-                    monto: `S/. ${(m.monto || 0).toFixed(2)}`
+                currentY = doc.lastAutoTable.finalY + 12;
+
+                // 2. INGRESOS TABLE (Exclusivamente ventas de comandas)
+                checkPageSpace(30);
+                doc.setFontSize(11);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont("helvetica", "bold");
+                doc.text("Ingresos Registrados", 14, currentY);
+
+                const totalVentasMonto = (fullData.ventas || []).reduce((sum, v) => sum + v.total, 0);
+
+                const ingresosRows = (fullData.ventas || []).map(v => {
+                    let docText = (v.doc || 'ticket');
+                    if (docText.toLowerCase() === 'sin_comprobante') {
+                        docText = 'Ticket';
+                    } else {
+                        docText = docText.toUpperCase();
+                    }
+                    return [
+                        formatTime(v.hora),
+                        docText,
+                        `Venta Mesa ${v.mesa}`,
+                        v.mozo || 'General',
+                        `Pago: ${(v.metodo || 'EFECTIVO').toUpperCase()}${v.propina > 0 ? ` + Propina S/. ${v.propina.toFixed(2)}` : ''}`,
+                        `S/. ${v.total.toFixed(2)}`
+                    ];
                 });
-            });
 
-            // Sort chronologically
-            ingresosList.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+                // Fila de total sumatorio
+                ingresosRows.push([
+                    '', '', '', '', 'Total en Bruto:', `S/. ${totalVentasMonto.toFixed(2)}`
+                ]);
 
-            const ingresosRows = ingresosList.length > 0
-                ? ingresosList.map(i => [i.hora, i.comprobante, i.concepto, i.observacion, i.monto])
-                : [["-", "-", "Sin ingresos en este turno", "-", "-"]];
-
-            autoTable(doc, {
-                startY: currentY + 5,
-                head: [['Hora', 'Comprobante', 'Concepto', 'Observación', 'Monto']],
-                body: ingresosRows,
-                theme: 'grid',
-                headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
-                styles: { font: 'helvetica', fontSize: 9 },
-                columnStyles: {
-                    4: { halign: 'right' }
+                if (ingresosRows.length === 1) { // Solo fila de total
+                    ingresosRows.unshift(["-", "-", "Sin ventas en este turno", "-", "-", "S/. 0.00"]);
                 }
-            });
 
-            // 3. EGRESOS TABLE
-            currentY = doc.lastAutoTable.finalY + 15;
-            doc.setFontSize(12);
-            doc.setTextColor(13, 110, 253);
-            doc.setFont("helvetica", "bold");
-            doc.text("Egresos Registrados", 14, currentY);
+                autoTable(doc, {
+                    startY: currentY + 4,
+                    head: [['Hora', 'Comprobante', 'Concepto', 'Mozo', 'Observación', 'Monto']],
+                    body: ingresosRows,
+                    theme: 'grid',
+                    headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold', halign: 'center' },
+                    styles: { font: 'helvetica', fontSize: 9 },
+                    columnStyles: {
+                        5: { halign: 'right' }
+                    },
+                    didParseCell: function (data) {
+                        if (data.section === 'body' && data.row.index === ingresosRows.length - 1) {
+                            data.cell.styles.fontStyle = 'bold';
+                            if (data.column.index === 4) {
+                                data.cell.styles.halign = 'right';
+                            }
+                            if (data.column.index === 5) {
+                                data.cell.styles.halign = 'right';
+                            }
+                        }
+                    }
+                });
 
-            const egresosList = (fullData.movimientos || []).filter(m => m.tipo === 'EGRESO');
-            egresosList.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+                currentY = doc.lastAutoTable.finalY + 12;
 
-            const egresosRows = egresosList.length > 0
-                ? egresosList.map(e => [
-                    formatTime(e.fecha),
-                    e.tipoComprobante.toUpperCase(),
-                    e.concepto,
-                    e.observacion || '-',
-                    `S/. ${(e.monto || 0).toFixed(2)}`
-                ])
-                : [["-", "-", "Sin egresos en este turno", "-", "-"]];
+                // 3. DESGLOSE DE PROPINAS (En lugar de Egresos Registrados)
+                checkPageSpace(30);
+                doc.setFontSize(11);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont("helvetica", "bold");
+                doc.text("Desglose de Propinas", 14, currentY);
 
-            autoTable(doc, {
-                startY: currentY + 5,
-                head: [['Hora', 'Comprobante', 'Concepto', 'Observación', 'Monto']],
-                body: egresosRows,
-                theme: 'grid',
-                headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
-                styles: { font: 'helvetica', fontSize: 9 },
-                columnStyles: {
-                    4: { halign: 'right' }
-                }
-            });
-
-            // 4. PROPINAS
-            currentY = doc.lastAutoTable.finalY + 15;
-            doc.setFontSize(12);
-            doc.setTextColor(13, 110, 253);
-            doc.setFont("helvetica", "bold");
-            doc.text("Desglose de Propinas", 14, currentY);
-
-            if (fullData.propinasPorMozo && fullData.propinasPorMozo.length > 0) {
-                const propinasRows = fullData.propinasPorMozo.map(m => [
+                const propinasRows = (fullData.propinasPorMozo || []).map(m => [
                     m.nombre,
                     `S/. ${(m.propinas || 0).toFixed(2)}`
                 ]);
 
+                if (propinasRows.length === 0) {
+                    propinasRows.push(["-", "No se registraron propinas en este turno."]);
+                }
+
                 autoTable(doc, {
-                    startY: currentY + 5,
+                    startY: currentY + 4,
                     head: [['Mozo', 'Total Propinas']],
                     body: propinasRows,
                     theme: 'grid',
-                    headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+                    headStyles: { halign: 'center', fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
                     styles: { font: 'helvetica', fontSize: 9 },
+                    columnStyles: {
+                        1: { halign: 'right' }
+                    }
                 });
 
                 currentY = doc.lastAutoTable.finalY + 10;
-                doc.setFontSize(11);
+
+                if (fullData.propinasPorMozo && fullData.propinasPorMozo.length > 0) {
+                    doc.setFontSize(10);
+                    doc.setTextColor(40, 40, 40);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`Total Propinas Recaudadas: S/. ${(fullData.totalPropinas || 0).toFixed(2)}`, 14, currentY);
+                    currentY += 8;
+                } else {
+                    currentY += 2;
+                }
+
+                // RESUMEN DE ESTE TURNO
+                checkPageSpace(20);
+                doc.setFontSize(10);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont("helvetica", "bold");
-                doc.text(`Total Propinas Recaudadas: S/. ${(fullData.totalPropinas || 0).toFixed(2)}`, 14, currentY);
-            } else {
-                doc.setFontSize(10);
-                doc.setTextColor(100, 100, 100);
-                doc.setFont("helvetica", "normal");
-                doc.text("No se registraron propinas en este turno.", 14, currentY + 8);
+                doc.text(`Resumen Turno #${fullData.id}: M. Inicial: S/. ${fullData.montoInicial.toFixed(2)} | Ventas: S/. ${fullData.totalBruto.toFixed(2)} | Saldo Final (Caja): S/. ${fullData.totalCaja.toFixed(2)}`, 14, currentY);
             }
 
-            // Save
+            // PÁGINA FINAL: GRÁFICA DE TENDENCIA DE VENTAS
+            if (isRange) {
+                doc.addPage();
+                doc.setFontSize(22);
+                doc.setTextColor(13, 110, 253); // ComandaGo Blue
+                doc.setFont("helvetica", "bold");
+                doc.text("ComandaGo", 14, 20);
+
+                doc.setFontSize(14);
+                doc.setTextColor(40, 40, 40);
+                doc.text("Tendencia Diaria de Ventas", 14, 28);
+
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.setFont("helvetica", "normal");
+                doc.text(`Visualización analítica del período ${reportDate}`, 14, 35);
+
+                const chartDataUrl = generateChartImage(arqArray);
+                if (chartDataUrl) {
+                    doc.addImage(chartDataUrl, 'PNG', 14, 50, 182, 91); // Manteniendo proporción 2:1 del canvas 800x400
+                }
+            }
+
+            // Guardar PDF
             const dateStr = new Date().toISOString().split('T')[0];
-            doc.save(`Arqueo_Caja_${dateStr}.pdf`);
+            doc.save(isRange ? `Reporte_Consolidado_Arqueo_${dateStr}.pdf` : `Arqueo_Caja_${arqArray[0].id}_${dateStr}.pdf`);
 
         } catch (e) {
             console.error(e);
-            showToast("Error generando PDF", 'error');
+            showToast("Error generando PDF: " + e.message, 'error');
         } finally {
             setIsGenerating(false);
         }
@@ -932,13 +1486,32 @@ const CashCountTable = ({ onStatusChange }) => {
                                 <select
                                     className="glass-input"
                                     value={movTipo}
-                                    onChange={e => setMovTipo(e.target.value)}
+                                    onChange={e => {
+                                        setMovTipo(e.target.value);
+                                        if (e.target.value === 'INGRESO') {
+                                            setMovMetodoPago('efectivo');
+                                        }
+                                    }}
                                     style={{ width: '100%', padding: '8px 10px' }}
                                 >
                                     <option value="EGRESO">Egreso (Gasto/Salida)</option>
                                     <option value="INGRESO">Ingreso (Entrada Manual)</option>
                                 </select>
-                                {movTipo === 'EGRESO' && (
+                            </div>
+
+                            {movTipo === 'EGRESO' && (
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: 5, fontWeight: 'bold' }}>Método de Pago</label>
+                                    <select
+                                        className="glass-input"
+                                        value={movMetodoPago}
+                                        onChange={e => setMovMetodoPago(e.target.value)}
+                                        style={{ width: '100%', padding: '8px 10px' }}
+                                    >
+                                        <option value="efectivo">Efectivo</option>
+                                        <option value="yape">Yape</option>
+                                        <option value="plin">Plin</option>
+                                    </select>
                                     <div style={{
                                         marginTop: 8,
                                         padding: '8px 12px',
@@ -952,10 +1525,17 @@ const CashCountTable = ({ onStatusChange }) => {
                                         alignItems: 'center',
                                         gap: '5px'
                                     }}>
-                                        ⚠️ Límite disponible en Caja: S/. {(currentStatus?.totalCaja || 0).toFixed(2)}
+                                        ⚠️ Límite disponible en {movMetodoPago === 'efectivo' ? 'Caja' : movMetodoPago === 'yape' ? 'Yape' : 'Plin'}: S/. {
+                                            (movMetodoPago === 'efectivo'
+                                                ? (currentStatus?.totalCaja || 0)
+                                                : movMetodoPago === 'yape'
+                                                    ? (currentStatus?.ingresos?.yape || 0)
+                                                    : (currentStatus?.ingresos?.plin || 0)
+                                            ).toFixed(2)
+                                        }
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
 
                             <div>
                                 <label style={{ display: 'block', marginBottom: 5, fontWeight: 'bold' }}>Tipo de Comprobante</label>
@@ -980,18 +1560,6 @@ const CashCountTable = ({ onStatusChange }) => {
                                     value={movConcepto}
                                     onChange={e => setMovConcepto(e.target.value)}
                                     required
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
-
-                            <div>
-                                <label style={{ display: 'block', marginBottom: 5, fontWeight: 'bold' }}>Observación (Opcional)</label>
-                                <input
-                                    type="text"
-                                    className="glass-input"
-                                    placeholder="Detalles adicionales"
-                                    value={movObservacion}
-                                    onChange={e => setMovObservacion(e.target.value)}
                                     style={{ width: '100%' }}
                                 />
                             </div>

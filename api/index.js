@@ -1508,6 +1508,173 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
 });
 
 // 7. Cashier Arqueo Routes
+// 7.0 Get Arqueos within a range of dates (For PDF Consolidado)
+app.get('/api/cashier/arqueo/report/range', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        if (!startDate || !endDate) {
+            return res.status(400).json({ error: "startDate and endDate parameters are required" });
+        }
+
+        const start = new Date(`${startDate}T00:00:00-05:00`);
+        const end = new Date(`${endDate}T23:59:59-05:00`);
+
+        const arqueos = await prisma.arqueo.findMany({
+            where: {
+                fechaInicio: { gte: start, lte: end }
+            },
+            orderBy: { fechaInicio: 'asc' }
+        });
+
+        const detailedArqueos = await Promise.all(arqueos.map(async (arq) => {
+            const arqStart = arq.fechaInicio;
+            const arqEnd = arq.estado === 'abierto' ? new Date() : arq.fechaFin;
+
+            const [sales, movements, pendingOrders, user] = await Promise.all([
+                prisma.comanda.findMany({
+                    where: {
+                        estado: 'cerrada',
+                        fecha: { gte: arqStart, lte: arqEnd }
+                    },
+                    include: { detalles: { include: { plato: true } }, usuario: true, mesa: true }
+                }),
+                prisma.movimientoCaja.findMany({
+                    where: { arqueoId: arq.id }
+                }),
+                prisma.comanda.findMany({
+                    where: {
+                        estado: { notIn: ['cerrada', 'anulada'] }
+                    },
+                    include: {
+                        detalles: {
+                            where: { estado: { not: 'anulado' } },
+                            include: { plato: true }
+                        }
+                    }
+                }),
+                prisma.user.findUnique({
+                    where: { id: arq.usuarioId },
+                    select: { nombre: true }
+                })
+            ]);
+
+            const parsePaymentMethod = (metodoPago) => {
+                const m = (metodoPago || 'efectivo').toLowerCase();
+                if (m.includes('izipay') || m.includes('izi')) return 'izipay';
+                if (m.includes('niubiz')) return 'niubiz';
+                if (m.includes('plin')) return 'plin';
+                if (m.includes('yape')) return 'yape';
+                if (m.includes('tarjeta')) return 'tarjeta';
+                return 'efectivo';
+            };
+
+            const manualIngresos = movements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + m.monto, 0);
+            const manualEgresos = movements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + m.monto, 0);
+
+            const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
+            const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
+
+            const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
+            const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
+
+            const inicio = arq.montoInicial;
+            const egresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
+
+            let totalPropinas = 0;
+            let propinasPorMozo = {};
+
+            let incomeDetails = {
+                efectivo: 0,
+                tarjeta: 0,
+                yape: 0,
+                izipay: 0,
+                plin: 0,
+                niubiz: 0,
+                manual: manualIngresos
+            };
+
+            const salesData = sales.map(order => {
+                const subtotal = order.detalles.reduce((s, d) => s + (d.cantidad * d.plato.precio), 0);
+                const propina = order.propina || 0;
+                totalPropinas += propina;
+
+                if (propina > 0 && order.usuario) {
+                    const mozoId = order.usuario.id;
+                    if (!propinasPorMozo[mozoId]) {
+                        propinasPorMozo[mozoId] = {
+                            id: mozoId,
+                            nombre: order.usuario.nombre,
+                            propinas: 0
+                        };
+                    }
+                    propinasPorMozo[mozoId].propinas += propina;
+                }
+
+                const cat = parsePaymentMethod(order.metodoPago);
+                if (incomeDetails[cat] !== undefined) {
+                    incomeDetails[cat] += subtotal;
+                } else {
+                    incomeDetails.efectivo += subtotal;
+                }
+
+                return {
+                    id: order.id,
+                    hora: order.fecha,
+                    items: order.detalles.map(d => ({
+                        cantidad: d.cantidad,
+                        descripcion: d.plato.nombre,
+                        precio: d.plato.precio,
+                        total: d.cantidad * d.plato.precio
+                    })),
+                    total: subtotal,
+                    propina: propina,
+                    metodo: order.metodoPago,
+                    doc: order.tipoDocumento,
+                    mozo: order.usuario?.nombre || 'General',
+                    mesa: order.mesa?.numero || 'Barra'
+                };
+            });
+
+            // Apply manual movements safely (no negative balance)
+            incomeDetails.yape = Math.max(0, incomeDetails.yape + manualIngresosYape - manualEgresosYape);
+            incomeDetails.plin = Math.max(0, incomeDetails.plin + manualIngresosPlin - manualEgresosPlin);
+
+            const totalPendiente = pendingOrders.reduce((acc, order) => {
+                const hasKitchenItems = order.detalles.some(d => 
+                    ['listo', 'lista', 'entregado', 'entregada'].includes(d.estado.toLowerCase())
+                );
+                if (hasKitchenItems) {
+                    return acc + order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+                }
+                return acc;
+            }, 0);
+
+            const totalCaja = arq.montoInicial + manualIngresos + incomeDetails.efectivo - manualEgresos;
+
+            return {
+                ...arq,
+                usuario: user || { nombre: 'Administrador' },
+                inicio,
+                egresos,
+                ingresos: incomeDetails,
+                totalCaja,
+                ventas: salesData,
+                totalBruto: salesData.reduce((acc, s) => acc + s.total, 0),
+                totalPropinas,
+                propinasPorMozo: Object.values(propinasPorMozo),
+                totalPendiente,
+                movimientos: movements
+            };
+        }));
+
+        res.json(detailedArqueos);
+
+    } catch (error) {
+        console.error("Error fetching range arqueo details:", error);
+        res.status(500).json({ error: "Error al obtener arqueos en el rango: " + error.message });
+    }
+});
+
 // 7.1 Get Specific Arqueo Details (For PDF)
 app.get('/api/cashier/arqueo/:id', async (req, res) => {
     const { id } = req.params;
@@ -1553,11 +1720,17 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
             return 'efectivo';
         };
 
-        const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
-        const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
+        const manualIngresos = movements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + m.monto, 0);
+        const manualEgresos = movements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + m.monto, 0);
+
+        const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
+        const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
+
+        const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
+        const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
 
         const inicio = arq.montoInicial;
-        const egresos = manualEgresos;
+        const egresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
 
         let totalPropinas = 0;
         let propinasPorMozo = {};
@@ -1613,6 +1786,10 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
                 mesa: order.mesa?.numero || 'Barra'
             };
         });
+
+        // Apply manual movements safely (no negative balance)
+        incomeDetails.yape = Math.max(0, incomeDetails.yape + manualIngresosYape - manualEgresosYape);
+        incomeDetails.plin = Math.max(0, incomeDetails.plin + manualIngresosPlin - manualEgresosPlin);
 
         const totalPendiente = pendingOrders.reduce((acc, order) => {
             const hasKitchenItems = order.detalles.some(d => 
@@ -1935,14 +2112,14 @@ app.post('/api/cashier/movimientos', async (req, res) => {
 
         // 3. For EGRESO, check limit
         if (tipo.toUpperCase() === 'EGRESO') {
+            const selectedMetodo = (req.body.metodoPago || 'efectivo').toLowerCase();
+            
             // Fetch existing movements
             const movements = await prisma.movimientoCaja.findMany({
                 where: { arqueoId: lastArqueo.id }
             });
-            const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
-            const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
 
-            // Fetch cash sales (Ganancias en Efectivo) for the active arqueo
+            // Fetch sales
             const startDate = lastArqueo.fechaInicio;
             const endDate = new Date();
             const sales = await prisma.comanda.findMany({
@@ -1963,20 +2140,51 @@ app.post('/api/cashier/movimientos', async (req, res) => {
                 return 'efectivo';
             };
 
-            let gananciasEfectivo = 0;
-            sales.forEach(order => {
-                const cat = parsePaymentMethod(order.metodoPago);
-                if (cat === 'efectivo') {
-                    const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
-                    gananciasEfectivo += subtotal;
-                }
-            });
+            let availableLimit = 0;
+            if (selectedMetodo === 'efectivo') {
+                const manualIngresos = movements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + m.monto, 0);
+                const manualEgresos = movements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + m.monto, 0);
+                
+                let gananciasEfectivo = 0;
+                sales.forEach(order => {
+                    const cat = parsePaymentMethod(order.metodoPago);
+                    if (cat === 'efectivo') {
+                        const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+                        gananciasEfectivo += subtotal;
+                    }
+                });
+                availableLimit = lastArqueo.montoInicial + manualIngresos + gananciasEfectivo - manualEgresos;
+            } else if (selectedMetodo === 'yape') {
+                const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
+                const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
+                
+                let gananciasYape = 0;
+                sales.forEach(order => {
+                    const cat = parsePaymentMethod(order.metodoPago);
+                    if (cat === 'yape') {
+                        const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+                        gananciasYape += subtotal;
+                    }
+                });
+                availableLimit = Math.max(0, gananciasYape + manualIngresosYape - manualEgresosYape);
+            } else if (selectedMetodo === 'plin') {
+                const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
+                const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
+                
+                let gananciasPlin = 0;
+                sales.forEach(order => {
+                    const cat = parsePaymentMethod(order.metodoPago);
+                    if (cat === 'plin') {
+                        const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+                        gananciasPlin += subtotal;
+                    }
+                });
+                availableLimit = Math.max(0, gananciasPlin + manualIngresosPlin - manualEgresosPlin);
+            }
 
-            const currentTotalCaja = lastArqueo.montoInicial + manualIngresos + gananciasEfectivo - manualEgresos;
-
-            if (numericMonto > currentTotalCaja) {
+            if (numericMonto > availableLimit) {
                 return res.status(400).json({ 
-                    error: "Monto de egreso supera el efectivo disponible en caja"
+                    error: `Monto de egreso supera el límite disponible para el método seleccionado (${selectedMetodo})`
                 });
             }
         }
@@ -1989,7 +2197,8 @@ app.post('/api/cashier/movimientos', async (req, res) => {
                 tipoComprobante: tipoComprobante.toLowerCase(),
                 concepto: concepto.trim(),
                 observacion: observacion ? observacion.trim() : null,
-                monto: numericMonto
+                monto: numericMonto,
+                metodoPago: tipo.toUpperCase() === 'EGRESO' ? (req.body.metodoPago || 'efectivo').toLowerCase() : 'efectivo'
             }
         });
 
@@ -2125,11 +2334,17 @@ app.get('/api/cashier/history', async (req, res) => {
                 return 'efectivo';
             };
 
-            const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
-            const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
+            const manualIngresos = movements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + m.monto, 0);
+            const manualEgresos = movements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + m.monto, 0);
+
+            const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
+            const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
+
+            const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
+            const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
 
             const inicio = arq.montoInicial;
-            const egresos = manualEgresos;
+            const egresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
 
             let totalBruto = 0;
             let totalPropinas = 0;
@@ -2155,6 +2370,10 @@ app.get('/api/cashier/history', async (req, res) => {
                     incomeDetails.efectivo += subtotal;
                 }
             });
+
+            // Apply manual movements safely (no negative balance)
+            incomeDetails.yape = Math.max(0, incomeDetails.yape + manualIngresosYape - manualEgresosYape);
+            incomeDetails.plin = Math.max(0, incomeDetails.plin + manualIngresosPlin - manualEgresosPlin);
 
             const totalPendiente = pendingOrders.reduce((acc, order) => {
                 const hasKitchenItems = order.detalles.some(d => 

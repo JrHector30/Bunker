@@ -120,6 +120,7 @@ model MovimientoCaja {
   observacion     String?
   monto           Float
   fecha           DateTime @default(now())
+  metodoPago      String   @default("efectivo")
 }
 
 model DetalleComanda {
