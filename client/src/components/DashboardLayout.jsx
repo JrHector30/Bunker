@@ -50,18 +50,21 @@ const DashboardLayout = () => {
         navigate('/login');
     };
 
-    const navLinkStyle = ({ isActive }) => ({
+    const navLinkStyle = () => ({
         display: 'flex',
         alignItems: 'center',
         gap: 10,
         textDecoration: 'none',
         justifyContent: collapsed ? 'center' : 'flex-start',
-        padding: collapsed ? '10px' : '10px 20px',
+        padding: collapsed ? '9px' : '9px 12px',
         width: '100%',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        borderRadius: 8,
+        transition: 'background 0.15s ease',
     });
 
-    const navLinkClass = ({ isActive }) => `glass-button ${isActive ? 'primary active' : ''}`;
+    const navLinkClass = ({ isActive }) =>
+        `sidebar-nav-item ${isActive ? 'sidebar-nav-item--active' : ''}`;
 
     return (
         <React.Fragment>
@@ -190,7 +193,7 @@ const DashboardLayout = () => {
                                 </NavLink>
                             )}
                         </nav>
-
+                        <div style={{ height: 1, background: 'var(--sidebar-border)', margin: '8px 0' }} />
                         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
                             {tienePermiso('usuarios') && (
                                 <NavLink to="/admin/users" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Usuarios">
@@ -287,11 +290,17 @@ const DashboardLayout = () => {
                             </div>
 
                             {/* Ghost Logout Button */}
-                            <button onClick={handleLogout} className="glass-button" style={{
-                                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                                background: '#ffffff', color: '#000000', border: '1px solid #000000',
-                                padding: collapsed ? 10 : '12px 20px', borderRadius: 12, fontWeight: 'bold'
-                            }}>
+                            <button onClick={handleLogout} className="sidebar-nav-item" style={{
+                                width: '100%', display: 'flex', alignItems: 'center',
+                                justifyContent: collapsed ? 'center' : 'flex-start',
+                                gap: 10, padding: collapsed ? '9px' : '9px 12px',
+                                borderRadius: 8, background: 'transparent', border: 'none',
+                                color: 'var(--sidebar-text)', cursor: 'pointer', opacity: 0.6,
+                                transition: 'opacity 0.15s ease',
+                            }}
+                                onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                                onMouseLeave={e => e.currentTarget.style.opacity = 0.6}
+                            >
                                 <LogOut size={16} /> {!collapsed && "Salir"}
                             </button>
                         </div>

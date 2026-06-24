@@ -1855,3 +1855,106 @@ body {
     visibility: hidden !important;
   }
 }
+
+/* ============================================
+   SIDEBAR REDISEÑO — UNTITLED UI STYLE
+   Blanco en light, Negro en dark.
+   Independiente del tema de color seleccionado.
+   ============================================ */
+
+/* Forzar blanco/negro independiente del tema */
+.mode-light .sidebar {
+  --sidebar-bg: #ffffff !important;
+  --sidebar-text: #18181b !important;
+  --sidebar-muted: #71717a !important;
+  --sidebar-border: #e4e4e7 !important;
+  border-right: 1px solid #e4e4e7 !important;
+  box-shadow: 1px 0 0 #e4e4e7 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.mode-dark .sidebar {
+  --sidebar-bg: #0a0a0a !important;
+  --sidebar-text: #fafafa !important;
+  --sidebar-muted: #71717a !important;
+  --sidebar-border: #1f1f1f !important;
+  border-right: 1px solid #1f1f1f !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Item de navegación base */
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--sidebar-text);
+  font-size: 0.875rem;
+  font-weight: 400;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background 0.15s ease, color 0.15s ease;
+  opacity: 0.75;
+}
+
+.sidebar-nav-item:hover {
+  opacity: 1;
+}
+
+.mode-light .sidebar-nav-item:hover {
+  background: #f4f4f5;
+}
+
+.mode-dark .sidebar-nav-item:hover {
+  background: #1a1a1a;
+}
+
+/* Item activo */
+.sidebar-nav-item--active {
+  opacity: 1;
+  font-weight: 500;
+}
+
+.mode-light .sidebar-nav-item--active {
+  background: #f4f4f5;
+  color: #18181b;
+}
+
+.mode-dark .sidebar-nav-item--active {
+  background: #1f1f1f;
+  color: #fafafa;
+}
+
+/* Íconos en sidebar rediseñado */
+.mode-light .sidebar .sidebar-nav-item svg,
+.mode-light .sidebar .sidebar-nav-item .module-icon-svg {
+  color: #18181b !important;
+  filter: brightness(0) !important;
+  opacity: 0.7;
+}
+
+.mode-dark .sidebar .sidebar-nav-item svg,
+.mode-dark .sidebar .sidebar-nav-item .module-icon-svg {
+  color: #fafafa !important;
+  filter: brightness(0) invert(1) !important;
+  opacity: 0.7;
+}
+
+.sidebar-nav-item--active svg,
+.sidebar-nav-item--active .module-icon-svg {
+  opacity: 1 !important;
+}
+
+/* Remover estilos anteriores del sidebar que ya no aplican */
+.sidebar .glass-button.active {
+  all: unset !important;
+}
