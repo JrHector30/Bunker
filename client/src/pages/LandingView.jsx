@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight, Menu, X, LayoutDashboard, Shield, Zap, Sparkles,
-  ChevronDown, Check, Star, HelpCircle, Utensils,
+  ChevronDown, ChevronUp, Check, Star, HelpCircle, Utensils,
   TrendingUp, Users, Printer, Store
 } from 'lucide-react';
 import RevealOnScroll from '../components/RevealOnScroll';
@@ -65,13 +65,13 @@ export default function LandingView() {
   };
 
   const testimonials = [
-    { name: "Carlos Mendoza", role: "Dueño de 'El Carbón & Sazón'", text: "El parpadeo que tenía mi sistema anterior volvía locos a mis mozos. Con el mapa interactivo de ComandaGo, el control de la sala es inmediato y fluido.", stars: 5 },
+    { name: "Carlos Mendoza", role: "Dueño de 'El Carbón & Sazón'", text: "El parpadeo que tenía mi sistema anterior volvía locos a mis mozos. Con el mapa interactivo de Bunker, el control de la sala es inmediato y fluido.", stars: 5 },
     { name: "Milagros Vega", role: "Administradora de 'Inversiones Gastronómicas'", text: "La validación automática de RUC nos ahorra minutos valiosos en caja. La arquitectura es limpia y visualmente está a otro nivel.", stars: 5 },
     { name: "Hector Madrid", role: "Lead Architect", text: "Diseñado bajo los estándares de alta fidelidad oscura. Rendimiento óptimo en renderizado reactivo y persistencia serverless.", stars: 5 }
   ];
 
   const faqs = [
-    { q: "¿Cómo evita el sistema errores con la caja cerrada?", a: "ComandaGo integra un Contexto Global que intercepta el estado operativo. Si la caja no registra apertura, el salón pasa a modo atenuado ('CERRADA') bloqueando la creación de comandas fantasmas." },
+    { q: "¿Cómo evita el sistema errores con la caja cerrada?", a: "Bunker integra un Contexto Global que intercepta el estado operativo. Si la caja no registra apertura, el salón pasa a modo atenuado ('CERRADA') bloqueando la creación de comandas fantasmas." },
     { q: "¿La consulta de RUC requiere una IP estática?", a: "No. El sistema consume un endpoint serverless optimizado mediante autenticación por Token Bearer, haciéndolo 100% compatible con despliegues dinámicos en Vercel." },
     { q: "¿Es compatible con impresoras térmicas de tickets?", a: "Sí, el renderizado de tickets está pre-calculado con fuentes monoespaciadas nativas a través de CSS nativo para un formateado físico perfecto de 80mm." }
   ];
@@ -86,7 +86,7 @@ export default function LandingView() {
         <nav className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2 text-lg font-bold tracking-tight cursor-pointer hover:scale-105 transition-transform origin-left" onClick={() => navigate('/')}>
             <LayoutDashboard className="text-teal-400" size={22} />
-            COMANDA<span className="text-teal-400">GO</span>
+            BUNKER
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
             <a href="#features" className="hover:text-white transition-colors">Beneficios</a>
@@ -384,7 +384,7 @@ export default function LandingView() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
           <div>
             <div className="flex items-center justify-center md:justify-start gap-2 text-sm font-bold text-white tracking-tight mb-2 hover:scale-105 transition-transform origin-left cursor-pointer" onClick={() => navigate('/')}>
-              <LayoutDashboard className="text-teal-400" size={16} /> COMANDA<span className="text-teal-400">GO</span>
+              <LayoutDashboard className="text-teal-400" size={16} /> BUNKER
             </div>
             <p className="leading-relaxed max-w-xs">Optimización transaccional de alta fidelidad para el control administrativo de locales gastronómicos.</p>
           </div>
@@ -401,8 +401,31 @@ export default function LandingView() {
             </div>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto border-t border-gray-900/60 mt-8 pt-6 text-center text-[11px]">
-          &copy; {new Date().getFullYear()} ComandaGo. Todos los derechos reservados. Proyecto Académico de Simulación Comercial.
+        <div className="max-w-6xl mx-auto border-t border-gray-900/60 mt-8 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px]">
+          <div className="text-center sm:text-left">
+            &copy; {new Date().getFullYear()} Bunker. Todos los derechos reservados. Proyecto Académico de Simulación Comercial.
+          </div>
+          <button 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex items-center justify-center w-10 h-10 rounded-full text-white hover:-translate-y-1 active:translate-y-0 transition-all duration-300 group cursor-pointer"
+            style={{
+              backgroundColor: '#00c9b4',
+              boxShadow: '0 0 15px rgba(0, 201, 180, 0.4)',
+              border: '1px solid rgba(0, 201, 180, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#00e0c8';
+              e.currentTarget.style.boxShadow = '0 0 25px rgba(0, 201, 180, 0.6)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#00c9b4';
+              e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 201, 180, 0.4)';
+            }}
+            title="Volver arriba"
+            aria-label="Volver arriba"
+          >
+            <ChevronUp size={20} className="group-hover:animate-bounce text-white" />
+          </button>
         </div>
       </footer>
 

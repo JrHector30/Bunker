@@ -459,7 +459,7 @@ const CashCountTable = ({ onStatusChange }) => {
             points.forEach(p => {
                 ctx.lineTo(p.x, p.y);
             });
-            ctx.strokeStyle = '#0d6efd'; // Azul ComandaGo
+            ctx.strokeStyle = '#0d6efd'; // Azul Bunker
             ctx.lineWidth = 2.5; // Trazo fino y estilizado
             ctx.stroke();
 
@@ -560,9 +560,9 @@ const CashCountTable = ({ onStatusChange }) => {
             if (isRange) {
                 // CABECERA CORPORATIVA
                 doc.setFontSize(22);
-                doc.setTextColor(13, 110, 253); // ComandaGo Blue
+                doc.setTextColor(13, 110, 253); // Bunker Blue
                 doc.setFont("helvetica", "bold");
-                doc.text("ComandaGo", 14, 20);
+                doc.text("Bunker", 14, 20);
 
                 doc.setFontSize(14);
                 doc.setTextColor(40, 40, 40);
@@ -887,9 +887,9 @@ const CashCountTable = ({ onStatusChange }) => {
 
                 // CABECERA
                 doc.setFontSize(22);
-                doc.setTextColor(13, 110, 253); // ComandaGo Blue
+                doc.setTextColor(13, 110, 253); // Bunker Blue
                 doc.setFont("helvetica", "bold");
-                doc.text("ComandaGo", 14, 20);
+                doc.text("Bunker", 14, 20);
 
                 // Monto Inicial en la esquina superior derecha
                 doc.setFontSize(11);
@@ -1096,9 +1096,9 @@ const CashCountTable = ({ onStatusChange }) => {
             if (isRange) {
                 doc.addPage();
                 doc.setFontSize(22);
-                doc.setTextColor(13, 110, 253); // ComandaGo Blue
+                doc.setTextColor(13, 110, 253); // Bunker Blue
                 doc.setFont("helvetica", "bold");
-                doc.text("ComandaGo", 14, 20);
+                doc.text("Bunker", 14, 20);
 
                 doc.setFontSize(14);
                 doc.setTextColor(40, 40, 40);
@@ -1209,7 +1209,7 @@ const CashCountTable = ({ onStatusChange }) => {
                                     boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
                                 }}
                             >
-                                {currentStatus.estado === 'abierto' ? 'OPEN' : 'CLOSED'}
+                                {currentStatus.estado === 'abierto' ? 'ABIERTO' : 'CLOSED'}
                             </button>
 
                             {/* Reset Button */}
@@ -1608,7 +1608,7 @@ const CashCountTable = ({ onStatusChange }) => {
                         ) : (
                             <>
                                 <div style={{ textAlign: 'center', marginBottom: 15, borderBottom: '1px dashed black', paddingBottom: 10 }}>
-                                    <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>COMANDAGO</div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>BUNKER</div>
                                     <div>DEMO</div>
                                     <div style={{ fontSize: '0.8rem' }}>Telf: 519123456789 / RUC: 10000000000</div>
                                     <div style={{ fontSize: '0.8rem', marginTop: 5 }}>
@@ -1679,12 +1679,12 @@ const CashCountTable = ({ onStatusChange }) => {
 
                                 <div style={{ textAlign: 'center', marginTop: 20, fontSize: '0.8rem', borderTop: '1px dashed black', paddingTop: 10 }}>
                                     <div>RESUMEN DE CAJA</div>
-                                    <div>Generado por el sistema ComandaGo</div>
+                                    <div>Generado por el sistema Bunker</div>
                                     <div>Este documento no posee ningún valor fiscal!</div>
                                 </div>
 
                                 <div className="no-print" style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>
-                                    <button className="glass-button primary" onClick={() => window.print()} style={{ background: 'black', color: 'white' }}>
+                                    <button className="glass-button primary cash-count-print-btn" onClick={() => window.print()}>
                                         <Printer size={16} /> Imprimir
                                     </button>
                                 </div>

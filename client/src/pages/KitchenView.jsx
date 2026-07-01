@@ -47,7 +47,7 @@ const KitchenTimer = ({ startTime }) => {
             const minutes = Math.floor(diffMs / 60000);
             setElapsed(`Hace ${minutes} min`);
 
-            if (minutes > 10) setAlertClass('timer-critical'); // Rojo ComandaGo if > 10m
+            if (minutes > 10) setAlertClass('timer-critical'); // Rojo Bunker if > 10m
             else setAlertClass('text-muted');
         };
 
@@ -181,7 +181,7 @@ const KitchenView = () => {
         // BroadcastChannel listener for cross-tab instant sync
         let channel = null;
         try {
-            channel = new BroadcastChannel('comandago');
+            channel = new BroadcastChannel('bunker');
             channel.onmessage = (event) => {
                 if (event.data === 'refreshKitchenQueue') {
                     fetchQueue();

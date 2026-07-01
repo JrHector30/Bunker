@@ -138,7 +138,7 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                         window.dispatchEvent(new CustomEvent('refreshCashCount'));
                         window.dispatchEvent(new CustomEvent('refreshTables'));
                         try {
-                            const channel = new BroadcastChannel('comandago');
+                            const channel = new BroadcastChannel('bunker');
                             channel.postMessage('refreshTables');
                             channel.postMessage('refreshCashCount');
                             channel.close();

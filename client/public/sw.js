@@ -1,4 +1,4 @@
-const CACHE_NAME = 'comandago-v1';
+const CACHE_NAME = 'bunker-v1';
 const urlsToCache = [
     '/',
     '/index.html',

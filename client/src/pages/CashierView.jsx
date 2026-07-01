@@ -33,7 +33,7 @@ const CashierView = () => {
         // BroadcastChannel listener for cross-tab instant sync
         let channel = null;
         try {
-            channel = new BroadcastChannel('comandago');
+            channel = new BroadcastChannel('bunker');
             channel.onmessage = (event) => {
                 if (event.data === 'refreshCashCount' || event.data === 'refreshTables') {
                     handleRefresh();
@@ -75,12 +75,12 @@ const CashierView = () => {
     if (!openTables || !Array.isArray(openTables)) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#0c0c0e', color: '#fff', fontFamily: 'sans-serif' }}>
-                <div style={{ 
-                    border: '3px solid rgba(255, 255, 255, 0.1)', 
-                    borderTop: '3px solid var(--primary, #0d6efd)', 
-                    borderRadius: '50%', 
-                    width: '30px', 
-                    height: '30px', 
+                <div style={{
+                    border: '3px solid rgba(255, 255, 255, 0.1)',
+                    borderTop: '3px solid var(--primary, #0d6efd)',
+                    borderRadius: '50%',
+                    width: '30px',
+                    height: '30px',
                     animation: 'spin 1s linear infinite',
                     marginBottom: '15px'
                 }}></div>

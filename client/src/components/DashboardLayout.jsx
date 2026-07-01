@@ -1,23 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { LogOut, ChefHat, DollarSign, User, Sun, Moon, Menu, X, ChevronLeft, ChevronRight, Settings, BookOpen, AlertCircle, LayoutDashboard } from 'lucide-react';
-
-import iconMesas from '../assets/icons/icon-mesas.svg';
-import iconCategoria from '../assets/icons/icon-categoria.svg';
-import iconReporte from '../assets/icons/icon-reporte.svg';
-import logoMinimalistaRed from '../assets/logo_minimalist_red.png';
+import {
+    LayoutDashboard,
+    UtensilsCrossed,
+    ChefHat,
+    DollarSign,
+    BookOpen,
+    User,
+    TrendingUp,
+    Settings,
+    LogOut,
+    Sun,
+    Moon,
+    ChevronLeft,
+    ChevronRight,
+    AlertCircle,
+    X
+} from 'lucide-react';
 
 const DashboardLayout = () => {
     const { user, logout, tienePermiso } = useAuth();
-    const { theme, mode, toggleMode, showAlerts } = useTheme();
+    const { mode, toggleMode, showAlerts } = useTheme();
     const navigate = useNavigate();
-    const [mobileOpen, setMobileOpen] = useState(false);
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(() => localStorage.getItem('bunker_sidebar_collapsed') === 'true');
     const [lowStockAlerts, setLowStockAlerts] = useState([]);
     const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
-    const location = useLocation();
 
     // Fetch alerts globally if user is admin or caja
     const fetchAlerts = () => {
@@ -35,338 +44,353 @@ const DashboardLayout = () => {
         fetchAlerts();
         window.addEventListener('insumos-updated', fetchAlerts);
         return () => window.removeEventListener('insumos-updated', fetchAlerts);
-    }, [user, location.pathname]); // Re-fetch on route change to keep updated
+    }, [user]);
 
-    // Helper for icon styling to match Lucide size
-    const iconStyle = {
-        width: 20,
-        height: 20,
-        objectFit: 'contain'
-    };
+    useEffect(() => {
+        localStorage.setItem('bunker_sidebar_collapsed', collapsed.toString());
+    }, [collapsed]);
 
     const handleLogout = () => {
-        setMobileOpen(false);
         logout();
         navigate('/login');
     };
 
-    const navLinkStyle = () => ({
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        textDecoration: 'none',
-        justifyContent: collapsed ? 'center' : 'flex-start',
-        padding: collapsed ? '9px' : '9px 12px',
-        width: '100%',
-        boxSizing: 'border-box',
-        borderRadius: 8,
-        transition: 'background 0.15s ease',
-    });
+    const menuItems = [
+        { id: 'home', to: '/home', icon: LayoutDashboard, label: 'Inicio' },
+        { id: 'tables', to: '/tables', icon: UtensilsCrossed, label: 'Mesas', modulo: 'mesas' },
+        { id: 'kitchen', to: '/kitchen', icon: ChefHat, label: 'Cocina', modulo: 'cocina' },
+        { id: 'cashier', to: '/cashier', icon: DollarSign, label: 'Caja', modulo: 'caja' },
+        { id: 'categories', to: '/admin/categories', icon: BookOpen, label: 'Categorías', modulo: 'categories' },
+        { id: 'inventory', to: '/admin/inventory', icon: BookOpen, label: 'Logística', modulo: 'logistica' },
+        { id: 'users', to: '/admin/users', icon: User, label: 'Usuarios', modulo: 'usuarios' },
+        { id: 'reports', to: '/admin/staff-stats', icon: TrendingUp, label: 'Reportes', modulo: 'reportes' },
+        { id: 'settings', to: '/settings', icon: Settings, label: 'Ajustes' },
+    ];
 
-    const navLinkClass = ({ isActive }) =>
-        `sidebar-nav-item ${isActive ? 'sidebar-nav-item--active' : ''}`;
+    // Filter menu items by permission
+    const visibleMenuItems = menuItems.filter(item => !item.modulo || tienePermiso(item.modulo));
+
+    const getRoleName = (role) => {
+        switch (role) {
+            case 'admin':
+            case 'caja':
+                return 'ADMIN / CAJA';
+            case 'cocina':
+                return 'COCINA';
+            case 'mesas':
+            case 'mozo':
+            default:
+                return 'MOZO RESPONSABLE';
+        }
+    };
+
+    const isDarkMode = mode === 'dark';
 
     return (
         <React.Fragment>
+            <div className="app-container" style={{ display: 'flex', minHeight: '100vh', overflow: 'hidden', position: 'relative' }}>
 
-            <div className="app-container" style={{ flexDirection: 'column' }}>
-
-                {/* TOP BAR - Siempre visible */}
-                <header className="topbar" style={{
-                    height: 50,
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '0 20px',
-                    background: 'var(--topbar-bg)',
-                    borderBottom: `1px solid var(--glass-border)`,
-                    color: 'var(--topbar-text)',
-                    zIndex: 1000,
-                    flexShrink: 0
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 15, flex: 1 }}>
-                        <button className="glass-button mobile-nav-toggle" style={{ padding: 8, display: 'none', border: 'none' }} onClick={() => setMobileOpen(true)}>
-                            <Menu size={24} color={mode === 'dark' ? '#fff' : '#000'} />
-                        </button>
-
-                        <div onClick={() => navigate('/home')} style={{ display: 'flex', alignItems: 'center', gap: 15, cursor: 'pointer' }}>
-                            {/* Logo & Brand Tiempre en Top Bar */}
-                            <img src={logoMinimalistaRed} alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 12 }} />
-                            <h2 style={{
-                                margin: 0,
-                                fontSize: '1.2rem',
-                                fontFamily: '"Roboto Mono", monospace',
-                                fontWeight: 600,
-                                letterSpacing: '4px',
-                                color: 'var(--topbar-text)'
-                            }}>
-                                COMANDAGO
-                            </h2>
-                        </div>
-                    </div>
-
-                    {/* User Info in Top Bar */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-                        <div className="badge" style={{ background: 'transparent', color: 'var(--topbar-text)', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '1px', border: '1px solid var(--glass-border)' }}>{user?.rol}</div>
-                        {user?.foto && <img src={user.foto} style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid var(--glass-border)` }} />}
-                        <button onClick={toggleMode} className="glass-button theme-toggle" style={{ border: 'none', padding: 5, color: 'var(--topbar-text)', background: 'transparent' }}>
-                            {mode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                        </button>
-                    </div>
-                </header>
-
-                <div className="content-wrapper" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                    {/* Sidebar */}
-                    <aside
-                        className={`sidebar glass-panel ${mobileOpen ? 'mobile-open' : ''} ${collapsed ? 'collapsed' : ''}`}
-                        style={{
-                            borderRadius: 0,
-                            border: 0,
-                            width: collapsed ? 40 : 250,
-                            transition: 'width 300ms ease-in-out',
-
-                        }}
-                    >
-                        {/* Mobile Close Button */}
-                        <div className="mobile-sidebar-header" style={{ display: 'none', justifyContent: 'flex-end', alignItems: 'center', padding: '0 0 20px 0' }}>
-                            <button className="glass-button" style={{ padding: 8, color: '#fff', borderColor: 'transparent' }} onClick={() => setMobileOpen(false)}>
-                                <X size={28} />
-                            </button>
-                        </div>
-
-                        {/* Desktop Toggle (Brand removed, only toggle remains) */}
-                        <div className="desktop-sidebar-header" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', padding: '0 7px' }}>
-
-
-                            <button
-                                className="glass-button"
-                                style={{
-                                    padding: 5,
-                                    borderRadius: '50%',
-                                    width: 24,
-                                    height: 24,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    border: 'none',
-                                    background: 'transparent',
-                                    color: 'var(--sidebar-muted)',
-                                    marginLeft: collapsed ? '5px' : '0'
-                                }}
-                                onClick={() => setCollapsed(!collapsed)}
-                            >
-                                {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-                            </button>
-                        </div>
-
-                        <nav style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, overflowX: 'hidden' }}>
-                            <NavLink to="/home" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Inicio">
-                                <LayoutDashboard size={20} /> {!collapsed && <span>Inicio</span>}
-                            </NavLink>
-
-                            {tienePermiso('mesas') && (
-                                <NavLink to="/tables" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Mesas">
-                                    <img src={iconMesas} alt="Mesas" style={iconStyle} className="module-icon-svg" /> {!collapsed && <span>Mesas</span>}
-                                </NavLink>
-                            )}
-
-                            {tienePermiso('cocina') && (
-                                <NavLink to="/kitchen" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Cocina">
-                                    <ChefHat size={20} /> {!collapsed && <span>Cocina</span>}
-                                </NavLink>
-                            )}
-
-                            {tienePermiso('caja') && (
-                                <NavLink to="/cashier" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Caja">
-                                    <DollarSign size={20} /> {!collapsed && <span>Caja</span>}
-                                </NavLink>
-                            )}
-
-                            {tienePermiso('categories') && (
-                                <NavLink to="/admin/categories" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Categorías">
-                                    <img src={iconCategoria} alt="Categorías" style={iconStyle} className="module-icon-svg" /> {!collapsed && <span>Categorías</span>}
-                                </NavLink>
-                            )}
-
-                            {tienePermiso('logistica') && (
-                                <NavLink to="/admin/inventory" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Logística">
-                                    <BookOpen size={20} /> {!collapsed && <span>Logística</span>}
-                                </NavLink>
-                            )}
-                        </nav>
-                        <div style={{ height: 1, background: 'var(--sidebar-border)', margin: '8px 0' }} />
-                        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {tienePermiso('usuarios') && (
-                                <NavLink to="/admin/users" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Usuarios">
-                                    <User size={20} /> {!collapsed && <span>Usuarios</span>}
-                                </NavLink>
-                            )}
-
-                            {tienePermiso('reportes') && (
-                                <NavLink to="/admin/staff-stats" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Reporte Personal">
-                                    <img src={iconReporte} alt="Reporte" style={iconStyle} className="module-icon-svg" /> {!collapsed && <span>Reporte Personal</span>}
-                                </NavLink>
-                            )}
-
-                            {/* LOW STOCK ALERTS SECTION */}
-                            {(user?.rol === 'admin' || user?.rol === 'caja') && lowStockAlerts.length > 0 && (
-                                <div
-                                    onClick={() => setIsAlertsModalOpen(true)}
-                                    title="Clic para ver el reporte completo"
-                                    style={{
-                                        marginTop: showAlerts ? 10 : 0,
-                                        marginBottom: showAlerts ? 10 : 0,
-                                        background: 'rgba(219, 42, 64, 0.1)',
-                                        border: showAlerts ? '1px solid rgba(219, 42, 64, 0.3)' : '0px solid transparent',
-                                        borderRadius: 12,
-                                        padding: showAlerts ? (collapsed ? '10px 5px' : '12px') : '0px',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: 5,
-                                        overflow: 'hidden',
-                                        opacity: showAlerts ? 1 : 0,
-                                        maxHeight: showAlerts ? '200px' : '0px',
-                                        transform: showAlerts ? 'translateX(0)' : 'translateX(30px)',
-                                        pointerEvents: showAlerts ? 'auto' : 'none',
-                                        transition: 'all 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-                                        cursor: 'pointer'
-                                    }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', gap: 8, color: '#FFFFFF', fontWeight: 'bold', fontSize: '0.85rem' }}>
-                                        <AlertCircle size={18} style={{ flexShrink: 0 }} />
-                                        {!collapsed && <span style={{ whiteSpace: 'nowrap' }}>Insumos por Agotarse</span>}
+                {/* 1. Sleek Sidebar Panel (Inspired by GestionDeComandas) */}
+                <aside
+                    id="bunker-sidebar"
+                    className={`fixed inset-y-0 left-0 bg-[#0d0e15] border-r border-slate-800/80 flex flex-col justify-between py-5 z-40 transition-all duration-300 shadow-2xl ${collapsed ? 'w-20 items-center' : 'w-64 px-4'
+                        }`}
+                >
+                    {/* Top Branding Section with Búnker Padlock Logo */}
+                    <div className={`flex flex-col gap-5 w-full ${collapsed ? 'items-center px-2' : ''}`}>
+                        {collapsed ? (
+                            /* Collapsed Branding */
+                            <div className="flex flex-col items-center gap-2 w-full">
+                                <div className="relative group cursor-pointer" onClick={() => navigate('/home')}>
+                                    <div className="absolute -inset-1 rounded-2xl logo-glow opacity-30 blur-md group-hover:opacity-100 transition duration-500"></div>
+                                    <div className="relative w-11 h-11 rounded-xl bg-[#ffffff] border border-slate-800 flex items-center justify-center shadow-md">
+                                        <svg viewBox="0 0 100 100" className="w-7 h-7 text-slate-300">
+                                            <path
+                                                d="M 32,42 L 32,28 C 32,16 68,16 68,28 L 68,42"
+                                                fill="none"
+                                                stroke="var(--sidebar-brand-color)"
+                                                strokeWidth="9"
+                                                strokeLinecap="round"
+                                            />
+                                            <rect x="18" y="38" width="64" height="48" rx="12" fill="#090a0f" />
+                                            <path
+                                                d="M 40,48 L 40,74 M 40,48 H 51 C 55.5,48 58,50.5 58,54 C 58,57.5 55.5,61 51,61 M 40,61 H 52.5 C 57,61 59.5,63.5 59.5,67 C 59.5,70.5 57,74 52.5,74 H 40"
+                                                fill="none"
+                                                stroke="var(--sidebar-brand-color)"
+                                                strokeWidth="6.5"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            />
+                                        </svg>
                                     </div>
+                                </div>
+                                <div className="text-[10px] font-extrabold text-brand tracking-widest uppercase">
+                                    BKR
+                                </div>
+                            </div>
+                        ) : (
+                            /* Expanded Branding */
+                            <div className="flex items-center gap-3.5 cursor-pointer group w-full" onClick={() => navigate('/home')}>
+                                <div className="relative">
+                                    <div className="absolute -inset-1 rounded-2xl logo-glow opacity-30 blur-md group-hover:opacity-100 transition duration-500"></div>
+                                    <div className="relative w-11 h-11 rounded-xl bg-[#ffffff] border border-slate-800 flex items-center justify-center shadow-md">
+                                        <svg viewBox="0 0 100 100" className="w-7 h-7 text-slate-300">
+                                            <path
+                                                d="M 32,42 L 32,28 C 32,16 68,16 68,28 L 68,42"
+                                                fill="none"
+                                                stroke="var(--sidebar-brand-color)"
+                                                strokeWidth="9"
+                                                strokeLinecap="round"
+                                            />
+                                            <rect x="18" y="38" width="64" height="48" rx="12" fill="#090a0f" />
+                                            <path
+                                                d="M 40,48 L 40,74 M 40,48 H 51 C 55.5,48 58,50.5 58,54 C 58,57.5 55.5,61 51,61 M 40,61 H 52.5 C 57,61 59.5,63.5 59.5,67 C 59.5,70.5 57,74 52.5,74 H 40"
+                                                fill="none"
+                                                stroke="var(--sidebar-brand-color)"
+                                                strokeWidth="6.5"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="brand-title font-extrabold text-sm text-slate-200 tracking-wider font-sans leading-none">BÚNKER</span>
+                                    <span className="brand-subtitle text-[10px] font-bold text-brand tracking-widest uppercase mt-1">SISTEMA</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className={`${collapsed ? 'w-12' : 'w-full'} h-px bg-slate-800/85`}></div>
+                    </div>
+
+                    {/* Middle Navigation */}
+                    <nav className={`flex flex-col gap-2 w-full overflow-y-auto scrollbar-none py-2 ${collapsed ? 'px-2 items-center' : ''}`}>
+                        {visibleMenuItems.map((item) => {
+                            const Icon = item.icon;
+
+                            return (
+                                <NavLink
+                                    key={item.id}
+                                    to={item.to}
+                                    className={({ isActive }) => `relative rounded-xl flex items-center transition-all duration-200 group cursor-pointer no-underline ${collapsed
+                                        ? 'w-12 h-12 justify-center'
+                                        : 'w-full h-12 px-4 justify-start gap-4'
+                                        } ${isActive
+                                            ? 'active bg-brand text-white shadow-md shadow-brand/20'
+                                            : 'text-slate-400 hover:text-slate-200 hover:bg-[#151722]'
+                                        }`}
+                                >
+                                    <Icon className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+
                                     {!collapsed && (
-                                        <>
-                                            <style>{`
-                                            .minimal-scrollbar::-webkit-scrollbar {
-                                                width: 4px;
-                                            }
-                                            .minimal-scrollbar::-webkit-scrollbar-track {
-                                                background: transparent; 
-                                            }
-                                            .minimal-scrollbar::-webkit-scrollbar-thumb {
-                                                background: rgba(255, 255, 255, 0.2); 
-                                                border-radius: 4px;
-                                            }
-                                            .minimal-scrollbar::-webkit-scrollbar-thumb:hover {
-                                                background: rgba(255, 255, 255, 0.4); 
-                                            }
-                                        `}</style>
-                                            <div
-                                                className="minimal-scrollbar"
-                                                style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 5, maxHeight: 65, overflowY: 'auto', paddingRight: 5 }}
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                {lowStockAlerts.map(alert => (
-                                                    <div onClick={() => setIsAlertsModalOpen(true)} key={alert.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#FFFFFF', flexShrink: 0, height: 18 }}>
-                                                        <span className="low-stock-alert-text" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }} title={alert.nombre}>{alert.nombre}</span>
-                                                        <span style={{ fontWeight: 'bold', color: 'var(--warning)', whiteSpace: 'nowrap' }}>{parseFloat(Number(alert.stock).toFixed(2))} {alert.unidadMedida}</span>
-                                                    </div>
-                                                ))}
+                                        <span className="text-sm font-semibold tracking-wide font-sans">{item.label}</span>
+                                    )}
+
+                                    {/* Floating Tooltip ONLY when collapsed */}
+                                    {collapsed && (
+                                        <div className="absolute left-16 bg-[#12141c] text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-slate-800 z-50">
+                                            {item.label}
+                                        </div>
+                                    )}
+                                </NavLink>
+                            );
+                        })}
+
+                        {/* LOW STOCK ALERTS SECTION */}
+                        {(user?.rol === 'admin' || user?.rol === 'caja') && lowStockAlerts.length > 0 && showAlerts && (
+                            <div
+                                onClick={() => setIsAlertsModalOpen(true)}
+                                title="Clic para ver el reporte completo"
+                                className={`mt-4 mb-2 bg-red-500/10 border border-red-500/20 rounded-xl transition-all duration-300 cursor-pointer flex flex-col gap-2 overflow-hidden ${collapsed ? 'p-2 items-center w-12 h-12 justify-center' : 'p-3 w-full'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-2 text-red-500 font-bold text-xs">
+                                    <AlertCircle size={18} className="flex-shrink-0 animate-pulse" />
+                                    {!collapsed && <span className="whitespace-nowrap font-sans">Insumos por Agotarse</span>}
+                                </div>
+                                {!collapsed && (
+                                    <div className="flex flex-col gap-1 max-h-16 overflow-y-auto pr-1">
+                                        {lowStockAlerts.slice(0, 3).map(alert => (
+                                            <div key={alert.id} className="flex justify-between text-[10px] text-slate-300">
+                                                <span className="truncate max-w-[100px] font-sans" title={alert.nombre}>{alert.nombre}</span>
+                                                <span className="font-bold text-amber-500">{parseFloat(Number(alert.stock).toFixed(2))} {alert.unidadMedida}</span>
                                             </div>
-                                        </>
-                                    )}
-                                </div>
+                                        ))}
+                                        {lowStockAlerts.length > 3 && (
+                                            <span className="text-[9px] text-slate-500 italic font-sans">+{lowStockAlerts.length - 3} más...</span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </nav>
+
+                    {/* Bottom Utility Panel */}
+                    <div className={`bottom-panel flex flex-col items-center gap-3 w-full mt-auto ${collapsed ? 'px-2' : ''}`}>
+                        <div className={`${collapsed ? 'w-12' : 'w-full'} h-px bg-slate-800/85`}></div>
+
+                        {/* Quick Light/Dark Mode Switcher */}
+                        <button
+                            id="sidebar-dark-toggle"
+                            onClick={toggleMode}
+                            className={`rounded-xl flex items-center transition-all duration-200 group cursor-pointer text-slate-400 hover:text-slate-200 hover:bg-[#151722] bg-transparent border-none outline-none ${collapsed
+                                ? 'w-12 h-12 justify-center'
+                                : 'w-full h-12 px-4 justify-start gap-4'
+                                }`}
+                            title={isDarkMode ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
+                        >
+                            {isDarkMode ? (
+                                <Sun className="w-5 h-5 text-amber-500 transition-transform duration-300 group-hover:rotate-45" />
+                            ) : (
+                                <Moon className="w-5 h-5 text-slate-400 transition-transform duration-300 group-hover:-rotate-12" />
                             )}
 
-                            <NavLink to="/settings" className={navLinkClass} style={navLinkStyle} onClick={() => setMobileOpen(false)} title="Ajustes">
-                                <Settings size={20} /> {!collapsed && <span>Ajustes</span>}
-                            </NavLink>
+                            {!collapsed && (
+                                <span className="text-sm font-semibold tracking-wide font-sans">
+                                    {isDarkMode ? "Modo Claro" : "Modo Oscuro"}
+                                </span>
+                            )}
 
-                            <div className={`user-profile-container ${collapsed ? 'collapsed' : ''}`} style={{ borderTop: '1px solid #333' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    {user?.foto ? (
-                                        <img src={user.foto} alt="Profile" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                                            <User size={16} />
-                                        </div>
-                                    )}
-                                    {!collapsed && (
-                                        <div className="user-info">
-                                            <span className="user-name" style={{ color: '#fff' }}>{user?.nombre}</span>
-                                        </div>
-                                    )}
+                            {collapsed && (
+                                <div className="absolute left-16 bg-[#12141c] text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-slate-800 z-50">
+                                    {isDarkMode ? "Modo Claro" : "Modo Oscuro"}
                                 </div>
-                            </div>
+                            )}
+                        </button>
 
-                            {/* Ghost Logout Button */}
-                            <button onClick={handleLogout} className="sidebar-nav-item" style={{
-                                width: '100%', display: 'flex', alignItems: 'center',
-                                justifyContent: collapsed ? 'center' : 'flex-start',
-                                gap: 10, padding: collapsed ? '9px' : '9px 12px',
-                                borderRadius: 8, background: 'transparent', border: 'none',
-                                color: 'var(--sidebar-text)', cursor: 'pointer', opacity: 0.6,
-                                transition: 'opacity 0.15s ease',
-                            }}
-                                onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                                onMouseLeave={e => e.currentTarget.style.opacity = 0.6}
-                            >
-                                <LogOut size={16} /> {!collapsed && "Salir"}
-                            </button>
-                        </div>
-                    </aside>
-
-                    {/* Overlay for mobile drawer */}
-                    {mobileOpen && (
-                        <div
-                            className="sidebar-overlay"
-                            onClick={() => setMobileOpen(false)}
-                            style={{
-                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                                background: 'rgba(0,0,0,0.5)', zIndex: 998,
-                                backdropFilter: 'blur(2px)'
-                            }}
-                        />
-                    )}
-
-                    {/* Modal de Alertas de Escasez */}
-                    {isAlertsModalOpen && (
-                        <div className="modal-overlay" style={{ zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setIsAlertsModalOpen(false)}>
-                            <div className="modal-content glass-panel" style={{ width: '90%', maxWidth: 500, background: 'rgba(20, 20, 20, 0.85)', backdropFilter: 'blur(15px)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }} onClick={e => e.stopPropagation()}>
-                                <div className="modal-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 15, marginBottom: 15 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        <AlertCircle color="var(--danger)" size={24} />
-                                        <h2 style={{ margin: 0 }}>Insumos por Agotarse</h2>
+                        {/* Active Logged-In User Profile Display */}
+                        {user && (
+                            collapsed ? (
+                                <div className="relative group cursor-pointer">
+                                    <div className="w-9 h-9 rounded-full bg-slate-800 overflow-hidden border border-brand/40 flex items-center justify-center">
+                                        {user.foto ? (
+                                            <img src={user.foto} alt={user.nombre} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User className="w-4 h-4 text-slate-300" />
+                                        )}
                                     </div>
-                                    <button className="glass-button" onClick={() => setIsAlertsModalOpen(false)} style={{ border: 'none', background: 'transparent', padding: 5, color: '#fff' }}><X size={24} /></button>
+                                    <div className="absolute left-16 bg-[#12141c] text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-slate-800 z-50">
+                                        <span className="block text-[11px] font-extrabold text-white font-sans">{user.nombre}</span>
+                                        <span className="block text-[9px] text-slate-400 uppercase tracking-wider mt-0.5 font-sans">
+                                            {getRoleName(user.rol)}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="modal-body minimal-scrollbar" style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: 10 }}>
-                                    {lowStockAlerts.length === 0 ? (
-                                        <p className="text-muted" style={{ textAlign: 'center', padding: 20 }}>No hay insumos por agotarse.</p>
-                                    ) : (
-                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                            <thead>
-                                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)' }}>
-                                                    <th style={{ padding: '10px 0' }}>Insumo</th>
-                                                    <th style={{ padding: '10px 0', textAlign: 'right' }}>Stock Actual</th>
-                                                    <th style={{ padding: '10px 0', textAlign: 'right' }}>Mínimo</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {lowStockAlerts.map(alert => (
-                                                    <tr key={alert.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.95rem' }}>
-                                                        <td style={{ padding: '12px 0', fontWeight: '500' }}>{alert.nombre}</td>
-                                                        <td style={{ padding: '12px 0', textAlign: 'right', fontWeight: 'bold', color: 'var(--warning)' }}>
-                                                            {parseFloat(Number(alert.stock).toFixed(2))} <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>{alert.unidadMedida}</span>
-                                                        </td>
-                                                        <td style={{ padding: '12px 0', textAlign: 'right', color: 'rgba(255,255,255,0.5)' }}>
-                                                            {parseFloat(Number(alert.stockMinimo).toFixed(2))} <span style={{ fontSize: '0.8rem' }}>{alert.unidadMedida}</span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    )}
+                            ) : (
+                                <div className="profile-card w-full px-4 py-2.5 rounded-xl bg-[#141622]/50 border border-slate-800/40 flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-full bg-slate-800 overflow-hidden border border-brand/40 flex items-center justify-center flex-shrink-0">
+                                        {user.foto ? (
+                                            <img src={user.foto} alt={user.nombre} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User className="w-4 h-4 text-slate-300" />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-xs font-bold text-white truncate font-sans">{user.nombre}</span>
+                                        <span className="text-[9px] text-slate-400 uppercase tracking-wider truncate mt-0.5 font-sans">
+                                            {getRoleName(user.rol)}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    )}
+                            )
+                        )}
 
-                    <main className="main-content">
+                        {/* Collapse/Expand Toggle Button */}
+                        <button
+                            id="sidebar-collapse-toggle"
+                            onClick={() => setCollapsed(!collapsed)}
+                            className={`rounded-xl flex items-center transition-all duration-200 group cursor-pointer text-slate-500 hover:text-slate-200 hover:bg-[#151722] bg-transparent border-none outline-none ${collapsed
+                                ? 'w-12 h-12 justify-center'
+                                : 'w-full h-12 px-4 justify-start gap-4'
+                                }`}
+                            title={collapsed ? "Expandir menú" : "Contraer menú"}
+                        >
+                            {collapsed ? (
+                                <ChevronRight className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                            ) : (
+                                <>
+                                    <ChevronLeft className="w-5 h-5 transition-transform duration-200 group-hover:-translate-x-0.5 flex-shrink-0" />
+                                    <span className="text-sm font-semibold tracking-wide font-sans">Contraer menú</span>
+                                </>
+                            )}
+                        </button>
+
+                        {/* Logout Action */}
+                        <button
+                            id="sidebar-logout-btn"
+                            onClick={handleLogout}
+                            className={`rounded-xl flex items-center transition-all duration-200 group cursor-pointer text-slate-500 hover:text-red-500 hover:bg-red-500/10 bg-transparent border-none outline-none ${collapsed
+                                ? 'w-12 h-12 justify-center'
+                                : 'w-full h-12 px-4 justify-start gap-4'
+                                }`}
+                            title="Cerrar Sesión de Búnker"
+                        >
+                            <LogOut className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-0.5" />
+
+                            {!collapsed && (
+                                <span className="text-sm font-semibold tracking-wide font-sans">Cerrar Sesión</span>
+                            )}
+
+                            {collapsed && (
+                                <div className="absolute left-16 bg-[#12141c] text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-slate-800 z-50">
+                                    Cerrar Sesión
+                                </div>
+                            )}
+                        </button>
+                    </div>
+                </aside>
+
+                {/* 2. Main Content Layout (Occupies rest of screen space) */}
+                <div className={`flex-1 transition-all duration-300 ${collapsed ? 'pl-20' : 'pl-20 md:pl-64'} flex flex-col w-full min-h-screen bg-bg-primary text-text-main`}>
+                    <main className="main-content flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-screen">
                         <Outlet />
                     </main>
                 </div>
             </div>
+
+            {/* Modal de Alertas de Escasez */}
+            {isAlertsModalOpen && (
+                <div className="modal-overlay" style={{ zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setIsAlertsModalOpen(false)}>
+                    <div className="modal-content glass-panel" style={{ width: '90%', maxWidth: 500, background: 'rgba(20, 20, 20, 0.85)', backdropFilter: 'blur(15px)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 15, marginBottom: 15 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <AlertCircle color="var(--danger)" size={24} />
+                                <h2 style={{ margin: 0 }}>Insumos por Agotarse</h2>
+                            </div>
+                            <button className="glass-button" onClick={() => setIsAlertsModalOpen(false)} style={{ border: 'none', background: 'transparent', padding: 5, color: '#fff' }}><X size={24} /></button>
+                        </div>
+                        <div className="modal-body minimal-scrollbar" style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: 10 }}>
+                            {lowStockAlerts.length === 0 ? (
+                                <p className="text-muted" style={{ textAlign: 'center', padding: 20 }}>No hay insumos por agotarse.</p>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)' }}>
+                                            <th style={{ padding: '10px 0' }}>Insumo</th>
+                                            <th style={{ padding: '10px 0', textAlign: 'right' }}>Stock Actual</th>
+                                            <th style={{ padding: '10px 0', textAlign: 'right' }}>Mínimo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {lowStockAlerts.map(alert => (
+                                            <tr key={alert.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.95rem' }}>
+                                                <td style={{ padding: '12px 0', fontWeight: '500' }}>{alert.nombre}</td>
+                                                <td style={{ padding: '12px 0', textAlign: 'right', fontWeight: 'bold', color: 'var(--warning)' }}>
+                                                    {parseFloat(Number(alert.stock).toFixed(2))} <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>{alert.unidadMedida}</span>
+                                                </td>
+                                                <td style={{ padding: '12px 0', textAlign: 'right', color: 'rgba(255,255,255,0.5)' }}>
+                                                    {parseFloat(Number(alert.stockMinimo).toFixed(2))} <span style={{ fontSize: '0.8rem' }}>{alert.unidadMedida}</span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </React.Fragment>
     );
 };

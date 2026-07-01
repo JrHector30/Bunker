@@ -58,7 +58,7 @@ const StaffStatsView = () => {
 
         // Header
         doc.setFontSize(18);
-        doc.text("ComandaGo - Reporte de Personal", 14, 20);
+        doc.text("Bunker - Reporte de Personal", 14, 20);
         doc.setFontSize(12);
         doc.text(`Fecha: ${dateDisplayStr}`, 14, 28);
 

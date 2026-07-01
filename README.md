@@ -1,4 +1,4 @@
-# ComandaGo - Instalación
+# Bunker - Instalación
 
 ## Requisitos
 - Node.js 18+

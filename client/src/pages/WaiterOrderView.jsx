@@ -153,7 +153,7 @@ const WaiterOrderView = () => {
                     window.dispatchEvent(new CustomEvent('refreshKitchenQueue'));
                     window.dispatchEvent(new CustomEvent('refreshCashCount'));
                     try {
-                        const channel = new BroadcastChannel('comandago');
+                        const channel = new BroadcastChannel('bunker');
                         channel.postMessage('refreshKitchenQueue');
                         channel.postMessage('refreshTables');
                         channel.postMessage('refreshCashCount');

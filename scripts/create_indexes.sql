@@ -1,4 +1,4 @@
--- Script to create indexes on PostgreSQL foreign keys for ComandaGo
+-- Script to create indexes on PostgreSQL foreign keys for Bunker
 -- Copy and run this script in your Supabase SQL Editor to optimize query joins.
 
 CREATE INDEX IF NOT EXISTS idx_comanda_mesaId ON "Comanda"("mesaId");

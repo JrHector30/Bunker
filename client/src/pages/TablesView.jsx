@@ -231,7 +231,7 @@ const TablesView = () => {
             const deltaYPct = (deltaY / rect.height) * 100;
 
             let newPosX = Math.max(5, Math.min(95, startPosX + deltaXPct));
-            let newPosY = Math.max(5, Math.min(95, startPosY + deltaYPct));
+            let newPosY = Math.max(19, Math.min(95, startPosY + deltaYPct));
 
             setTablesState(prev => prev.map(t => t.id === table.id ? { ...t, posX: newPosX, posY: newPosY } : t));
             currentPosX = newPosX;
@@ -457,7 +457,7 @@ const TablesView = () => {
         // BroadcastChannel listener for cross-tab instant sync
         let channel = null;
         try {
-            channel = new BroadcastChannel('comandago');
+            channel = new BroadcastChannel('bunker');
             channel.onmessage = (event) => {
                 if (event.data === 'refreshTables') {
                     handleRefresh();
@@ -962,7 +962,7 @@ const TablesView = () => {
             <div className="modal-overlay" onClick={() => setShowTicket(false)}>
                 <div className="modal-content print-ticket" onClick={e => e.stopPropagation()} style={{ background: 'white', color: 'black', width: 350, fontFamily: '"Courier New", monospace', padding: 20 }}>
                     <div style={{ textAlign: 'center', marginBottom: 15, borderBottom: '1px dashed black', paddingBottom: 10 }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>COMANDAGO</div>
+                        <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>BUNKER</div>
                         <div>DEMO</div>
                         <div style={{ fontSize: '0.8rem' }}>Telf: 519123456789 / RUC: 10000000000</div>
                         <div style={{ fontSize: '0.8rem', marginTop: 5 }}>Fecha: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</div>
@@ -1004,7 +1004,7 @@ const TablesView = () => {
 
                     <div style={{ textAlign: 'center', marginTop: 20, fontSize: '0.8rem', borderTop: '1px dashed black', paddingTop: 10 }}>
                         <div>PRECUENTA</div>
-                        <div>Generado por el sistema ComandaGo</div>
+                        <div>Generado por el sistema Bunker</div>
                         <div>Este documento no posee ningún valor fiscal!</div>
                     </div>
 
@@ -1290,6 +1290,7 @@ const TablesView = () => {
 
                     let finalTop = table.posY !== undefined && table.posY !== null ? table.posY : 25;
                     finalTop -= 10; // Aplicado a TODAS las mesas para mantener alineación
+                    finalTop = Math.max(6, finalTop); // Prevent top border overflow
 
                     return (
                         <div
@@ -1307,7 +1308,7 @@ const TablesView = () => {
                             style={{
                                 position: 'absolute',
                                 left: `${table.posX !== undefined && table.posX !== null ? table.posX : 15}%`,
-                                top: `${finalTop}%`,
+                                top: `calc(${finalTop} * 8.5px)`,
                                 transform: 'translate(-50%, -50%)',
                                 width: '100px',
                                 height: '100px',

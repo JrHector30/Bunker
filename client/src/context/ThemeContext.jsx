@@ -4,10 +4,10 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
     // Theme references COLOR (carbon, blue, red)
-    const validThemes = ['theme-green', 'theme-blue', 'theme-red', 'theme-carbon', 'theme-minimalist', 'theme-noche-azulada'];
+    const validThemes = ['theme-orange', 'theme-green', 'theme-blue', 'theme-red', 'theme-black'];
     const storedTheme = localStorage.getItem('app-theme');
-    // If stored theme is valid use it, otherwise default to theme-green
-    const initialTheme = (storedTheme && validThemes.includes(storedTheme)) ? storedTheme : 'theme-green';
+    // If stored theme is valid use it, otherwise default to theme-orange
+    const initialTheme = (storedTheme && validThemes.includes(storedTheme)) ? storedTheme : 'theme-orange';
 
     const [theme, setTheme] = useState(initialTheme);
 
@@ -15,8 +15,8 @@ export const ThemeProvider = ({ children }) => {
     // Default to dark as per original design
     const [mode, setMode] = useState(localStorage.getItem('app-mode') || 'dark');
 
-    // Show Alerts state
-    const [showAlerts, setShowAlerts] = useState(localStorage.getItem('app-show-alerts') !== 'false');
+    // Show Alerts state - defaults to false until activated in Settings
+    const [showAlerts, setShowAlerts] = useState(localStorage.getItem('app-show-alerts') === 'true');
 
     useEffect(() => {
         const root = document.documentElement;

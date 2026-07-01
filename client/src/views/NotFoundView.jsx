@@ -35,7 +35,7 @@ export default function NotFoundView() {
                 Parece que estás perdido
               </h3>
               <p className="mb-8 max-w-md mx-auto text-sm sm:text-base leading-relaxed" style={{ color: '#4b5563' }}>
-                La página o ambiente que estás buscando no se encuentra disponible en el salón de ComandaGo.
+                La página o ambiente que estás buscando no se encuentra disponible en el salón de Bunker.
               </p>
 
               <button

@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const initAuth = async () => {
-            const storedUser = localStorage.getItem('comandago_user');
+            const storedUser = localStorage.getItem('bunker_user');
             if (storedUser) {
                 const parsedUser = JSON.parse(storedUser);
                 setUser(parsedUser);
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
 
             if (response.ok) {
                 setUser(data);
-                localStorage.setItem('comandago_user', JSON.stringify(data));
+                localStorage.setItem('bunker_user', JSON.stringify(data));
                 await loadPermisos(data.rol);
                 return { success: true };
             } else {
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         setUser(null);
         setPermisosUsuario([]);
-        localStorage.removeItem('comandago_user');
+        localStorage.removeItem('bunker_user');
     };
 
     const tienePermiso = (modulo) => {

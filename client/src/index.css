@@ -1,17 +1,158 @@
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
-@import url('https://fonts.googleapis.com/css2?family=Lexend+Peta:wght@400;600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Montserrat:wght@300;400;500;600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ============================================
+   BUNKER HYBRID FONT DEFINITIONS
+   Plus Jakarta Sans for text, JetBrains Mono for digits 0-9
+   ============================================ */
+
+/* Weight 300 (Light) */
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_907NSg.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf) format('truetype');
+  unicode-range: U+0030-0039;
+}
+
+/* Weight 400 (Regular) */
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_qU7NSg.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf) format('truetype');
+  unicode-range: U+0030-0039;
+}
+
+/* Weight 500 (Medium) */
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_m07NSg.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8-qxjPQ.ttf) format('truetype');
+  unicode-range: U+0030-0039;
+}
+
+/* Weight 600 (SemiBold) */
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_d0nNSg.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8FqtjPQ.ttf) format('truetype');
+  unicode-range: U+0030-0039;
+}
+
+/* Weight 700 (Bold) */
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_TknNSg.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8FqtjPQ.ttf) format('truetype');
+  unicode-range: U+0030-0039;
+}
+
+/* Weight 800 (ExtraBold) */
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_KUnNSg.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'BunkerFont';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8FqtjPQ.ttf) format('truetype');
+  unicode-range: U+0030-0039;
+}
+
 @layer theme, base, components, utilities;
 
 @layer base {
+
+  /* Custom scrollbar for landing page view */
+  html:has(.landing-root)::-webkit-scrollbar,
+  body:has(.landing-root)::-webkit-scrollbar {
+    display: block !important;
+    width: 10px;
+    height: 10px;
+  }
+  html:has(.landing-root)::-webkit-scrollbar-track,
+  body:has(.landing-root)::-webkit-scrollbar-track {
+    display: block !important;
+    background: #060609 !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  html:has(.landing-root)::-webkit-scrollbar-thumb,
+  body:has(.landing-root)::-webkit-scrollbar-thumb {
+    display: block !important;
+    background: rgba(0, 201, 180, 0.3) !important;
+    backdrop-filter: blur(4px) !important;
+    border-radius: 10px;
+    border: 2px solid #060609 !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+    transition: background 0.3s ease;
+  }
+  html:has(.landing-root)::-webkit-scrollbar-thumb:hover,
+  body:has(.landing-root)::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 201, 180, 0.75) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 0 10px rgba(0, 201, 180, 0.6) !important;
+  }
 
   /* ==========================================
      LANDING PAGE RESET (COMPENSATES FOR PREFLIGHT: FALSE)
      ========================================== */
   :where(.landing-root) {
-    font-family: 'Inter', sans-serif !important;
+    font-family: "BunkerFont", "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif !important;
   }
 
   :where(.landing-root) a {
@@ -79,6 +220,10 @@
   --bg-surface: #111111;
   --glass-border: rgba(255, 255, 255, 0.15);
 
+  /* Font Families */
+  --font-sans: "BunkerFont", "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
   --primary: #F0544F;
   --primary-hover: #D8433E;
   --accent: #F0544F;
@@ -98,147 +243,141 @@
   --table-row-border: rgba(255, 255, 255, 0.1);
   --item-hover: rgba(255, 255, 255, 0.1);
 
-  /* Sidebar Variables (Default inherits from theme) */
-  --sidebar-bg: var(--bg-secondary);
-  --sidebar-text: var(--text-main);
-  --sidebar-muted: var(--text-muted);
-  --sidebar-border: var(--glass-border);
+  /* Sidebar Variables (Enforced dark sidebar theme by default) */
+  --sidebar-bg: #0d0e15;
+  --sidebar-text: #ffffff;
+  --sidebar-muted: #888888;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+
+  /* Map dynamic theme colors so they can be used as Tailwind utilities */
+  --color-brand: var(--primary);
+  --color-brand-hover: var(--primary-hover);
+  --color-brand-light: rgba(255, 255, 255, 0.05);
+  --color-brand-border: var(--glass-border);
+  --color-brand-glow: rgba(249, 115, 22, 0.2);
 }
 
 /* THEME CLASSES */
 /* DUEL PANEL UPDATE: The Theme Color is aggressive on the Sidebar */
 
+.theme-orange {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #121218;
+  --bg-surface: #161622;
+  --glass-border: rgba(249, 115, 22, 0.2);
+  --accent: #f97316;
+  --primary: #f97316;
+  --primary-hover: #ea580c;
+  --text-main: #ffffff;
+  --text-muted: #94a3b8;
+  --sidebar-bg: #0d0e15 !important;
+  --sidebar-text: #ffffff !important;
+  --sidebar-muted: #888888 !important;
+  --sidebar-border: rgba(255, 255, 255, 0.08) !important;
+  --color-brand-glow: rgba(249, 115, 22, 0.35);
+  --sidebar-brand-color: #f97316;
+}
+
 .theme-green {
   --bg-primary: #05100b;
   --bg-secondary: #0a1f16;
   --bg-surface: #0f2b1f;
-  --glass-border: rgba(255, 255, 255, 0.15);
-  --accent: #00704A;
-  --primary: #00704A;
-  --primary-hover: #005c3d;
+  --glass-border: rgba(16, 185, 129, 0.2);
+  --accent: #10b981;
+  --primary: #10b981;
+  --primary-hover: #059669;
   --text-main: #ffffff;
-
-  --sidebar-bg: #00704A !important;
+  --text-muted: #94a3b8;
+  --sidebar-bg: #0d0e15 !important;
+  --sidebar-text: #ffffff !important;
+  --sidebar-muted: #888888 !important;
+  --sidebar-border: rgba(255, 255, 255, 0.08) !important;
+  --color-brand-glow: rgba(16, 185, 129, 0.35);
+  --sidebar-brand-color: #10b981;
 }
 
-.theme-red {
-  --bg-primary: #0a0a0a;
-  /* Oscuro */
-  --bg-secondary: #121212;
-  /* Ligeramente más claro para páneles */
-  --bg-surface: #121212;
-  --glass-border: rgba(240, 84, 79, 0.3);
-  --accent: #121212;
-  /* Charcoal for High-End contrast */
-  --primary: #F0544F;
-  /* Deep Charcoal Branding for Red Theme */
-  --sidebar-branding-color: #F0544F !important;
-  --text-main: #ffebeb;
-  --text-muted: #d19a9a;
-  --input-bg: rgba(50, 10, 10, 0.5);
-  --table-header-bg: rgba(240, 84, 79, 0.1);
-
-  --sidebar-bg: #F0544F !important;
-}
-
-.theme-blue,
-.theme-noche-azulada {
+.theme-blue {
   --bg-primary: #020617;
   --bg-secondary: #0f172a;
   --bg-surface: #1e293b;
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(59, 130, 246, 0.2);
   --accent: #3b82f6;
   --primary: #3b82f6;
   --primary-hover: #2563eb;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --sidebar-bg: #1e3a8a !important;
+  --sidebar-bg: #0d0e15 !important;
   --sidebar-text: #ffffff !important;
+  --sidebar-muted: #888888 !important;
+  --sidebar-border: rgba(255, 255, 255, 0.08) !important;
+  --color-brand-glow: rgba(59, 130, 246, 0.35);
+  --sidebar-brand-color: #3b82f6;
 }
 
-/* Minimalist Theme Variables */
-/* Default to "Paper-White" (Light) look */
-.theme-minimalist {
+.theme-red {
+  --bg-primary: #0a0505;
+  --bg-secondary: #120c0c;
+  --bg-surface: #1c1212;
+  --glass-border: rgba(239, 68, 68, 0.2);
+  --accent: #ef4444;
+  --primary: #ef4444;
+  --primary-hover: #dc2626;
+  --text-main: #ffebeb;
+  --text-muted: #d19a9a;
+  --sidebar-bg: #0d0e15 !important;
+  --sidebar-text: #ffffff !important;
+  --sidebar-muted: #888888 !important;
+  --sidebar-border: rgba(255, 255, 255, 0.08) !important;
+  --color-brand-glow: rgba(239, 68, 68, 0.35);
+  --sidebar-brand-color: #ef4444;
+}
+
+/* Minimal Dark Theme (theme-black) */
+.theme-black {
   --bg-primary: #ffffff;
   --bg-secondary: #ffffff;
   --bg-surface: #ffffff;
   --glass-border: #000000;
-  /* Black borders for light mode */
-  --accent: #dc2626;
+  --accent: #000000;
   --primary: #000000;
-  /* Primary actions in black for mono look */
   --primary-hover: #333333;
   --text-main: #000000;
   --text-muted: #666666;
-
-  /* Sidebar Specifics - strict black */
-  --sidebar-bg: #000000;
-  --sidebar-text: #ffffff;
-  --sidebar-muted: #888888;
-  --sidebar-border: #111111;
-
-  --item-hover: #f5f5f5;
-  --input-bg: #ffffff;
-  --input-text: #000000;
-
-  --topbar-bg: #ffffff;
-  --topbar-text: #000000;
+  --sidebar-bg: #0d0e15 !important;
+  --sidebar-text: #ffffff !important;
+  --sidebar-muted: #888888 !important;
+  --sidebar-border: rgba(255, 255, 255, 0.08) !important;
+  --color-brand-glow: rgba(255, 255, 255, 0.2);
+  --sidebar-brand-color: #f8fafc;
 }
 
-/* Minimalist Dark Mode - Inverted (Black Content) */
-.mode-dark.theme-minimalist {
-  --bg-primary: #121212;
-  --bg-secondary: #1a1a1a;
-  --bg-surface: #1e1e1e;
-  --glass-border: #444444;
-  --accent: #dc2626;
+.mode-dark.theme-black {
+  --bg-primary: #000000;
+  --bg-secondary: #0d0d11;
+  --bg-surface: #0d0d11;
+  --glass-border: #1f2026;
+  --accent: #ffffff;
   --primary: #ffffff;
-  --primary-hover: #cccccc;
-  --text-main: #ffffff;
-  --text-muted: #aaaaaa;
-  --item-hover: #2a2a2a;
-  --input-bg: #1e1e1e;
-  --input-text: #ffffff;
-  --sidebar-bg: #000000 !important;
-  --sidebar-text: #ffffff;
-  --sidebar-muted: #888888;
-  --sidebar-border: #111111;
-  --topbar-bg: #000000;
-  --topbar-text: #ffffff;
+  --primary-hover: #cbd5e1;
+  --text-main: #f8fafc;
+  --text-muted: #888888;
+  --sidebar-border: rgba(255, 255, 255, 0.08) !important;
+  --color-brand-glow: rgba(255, 255, 255, 0.2);
+  --sidebar-brand-color: #f8fafc;
 }
-
-/* DARK MODE THEME OVERRIDES FOR SIDEBAR CONSISTENCY */
-.mode-dark.theme-green {
-  --sidebar-bg: #0a1f16 !important;
-  /* Verde oscuro profundo */
-}
-
-.mode-dark.theme-blue,
-.mode-dark.theme-noche-azulada {
-  --sidebar-bg: #0f172a !important;
-  /* Azul suficientemente oscuro */
-}
-
-.mode-dark.theme-red {
-  --sidebar-bg: #1a0505 !important;
-  /* Rojo oscuro (antiguo fondo principal) */
-}
-
-/* Minimalist Light Mode - Paper White (White Content) */
-/* We can leave the default .theme-minimalist variables as Light */
 
 
 /* Sidebar Items Styling in Minimalist Theme */
 
 /* Fix Category Active text in Waiter Menu */
-.theme-minimalist .category-card.active,
-.theme-minimalist .category-card.active .text-muted {
+.theme-black .category-card.active,
+.theme-black .category-card.active .text-muted {
   color: var(--bg-primary) !important;
   opacity: 1 !important;
 }
 
 /* Active Item: White Bg, Black Text, No Border */
-.theme-minimalist aside .glass-button.active {
+.theme-black aside .glass-button.active {
   background: #ffffff !important;
   color: #000000 !important;
   border: none !important;
@@ -246,54 +385,54 @@
 }
 
 /* Active Icon: Black */
-.theme-minimalist aside .glass-button.active .module-icon-svg {
+.theme-black aside .glass-button.active .module-icon-svg {
   filter: brightness(0) !important;
 }
 
-.theme-minimalist aside .glass-button.active svg {
+.theme-black aside .glass-button.active svg {
   color: #000000 !important;
 }
 
 /* Inactive Items: Transparent Bg, White Text, No Border */
-.theme-minimalist aside .glass-button:not(.active) {
+.theme-black aside .glass-button:not(.active) {
   background: #3d3d3db5 !important;
   color: #ffffff !important;
   border: none !important;
 }
 
 /* Inactive Icon: White */
-.theme-minimalist aside .glass-button:not(.active) .module-icon-svg {
+.theme-black aside .glass-button:not(.active) .module-icon-svg {
   filter: brightness(0) invert(1) !important;
 }
 
-.theme-minimalist aside .glass-button:not(.active) svg {
+.theme-black aside .glass-button:not(.active) svg {
   color: #ffffff !important;
 }
 
 /* General button state outside sidebar if needed */
-.theme-minimalist .main-content .glass-button {
+.theme-black .main-content .glass-button {
   border: 1px solid var(--glass-border) !important;
 }
 
 /* Global Borders in Minimalist Theme */
-.theme-minimalist .glass-panel,
-.theme-minimalist .glass-button,
-.theme-minimalist .glass-input,
-.theme-minimalist .card {
+.theme-black .glass-panel,
+.theme-black .glass-button,
+.theme-black .glass-input,
+.theme-black .card {
   border: 1px solid var(--glass-border) !important;
   box-shadow: none !important;
 }
 
 /* Fix Input styles for Dark/Light Minimalist */
-.theme-minimalist input,
-.theme-minimalist select,
-.theme-minimalist textarea {
+.theme-black input,
+.theme-black select,
+.theme-black textarea {
   border: 1px solid var(--glass-border) !important;
   background: var(--input-bg) !important;
   color: var(--input-text) !important;
 }
 
-.theme-minimalist .search-input {
+.theme-black .search-input {
   border: none !important;
   background: transparent !important;
 }
@@ -305,14 +444,14 @@
   /* Default for normal themes */
 }
 
-.theme-minimalist .text-on-primary {
+.theme-black .text-on-primary {
   color: var(--bg-primary) !important;
 }
 
 /* Tables */
-.theme-minimalist tr,
-.theme-minimalist td,
-.theme-minimalist th {
+.theme-black tr,
+.theme-black td,
+.theme-black th {
   border-bottom: 1px solid var(--glass-border) !important;
   color: var(--text-main) !important;
 }
@@ -324,7 +463,7 @@
 
 /* DEFAULT DARK THEME SVG FILTER (For other themes) */
 /* Apply this ONLY when NOT in minimalist theme or when minimalist inactive */
-:not(.theme-minimalist) .module-icon-svg {
+:not(.theme-black) .module-icon-svg {
   filter: brightness(0) invert(1);
 }
 
@@ -357,7 +496,7 @@
   --input-bg: rgba(0, 0, 0, 0.05) !important;
   --input-text: #000000 !important;
   --mesa-bg: #ffffff !important;
-  --mesa-border-libre: #f3f4f6 !important;
+  --mesa-border-libre: #00ff88 !important;
   --mesa-shadow-libre: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1) !important;
   --mesa-shadow-ocupada: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
   --mesa-border-ocupada: #ffea00 !important;
@@ -371,18 +510,11 @@
   --badge-bg-cerrada: #f3f4f6 !important;
 }
 
-.mode-light .salon-contenedor {
-  background-color: #93939385;
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
-}
-
 /* Ensure glass panels look right in light mode */
 .mode-light .glass-panel {
   /* background: removed to allow inline styles; uses --bg-secondary by default via base .glass-panel rule */
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--glass-border) !important;
+  border: 0px solid var(--glass-border) !important;
 }
 
 .mode-light .modal-overlay {
@@ -434,9 +566,7 @@
   .mode-light .glass-button,
   .mode-light .glass-input,
   .mode-light td,
-  .mode-light th {
-    border-width: 1.5px !important;
-  }
+  .mode-light th {}
 
   .mode-light .recipe-table td,
   .mode-light .recipe-table th,
@@ -463,7 +593,7 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: "BunkerFont", "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
   background-color: var(--bg-primary);
   /* CHANGED: Use variable to allow override */
   color: var(--text-main);
@@ -500,7 +630,7 @@ html {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-family: 'Inter', sans-serif;
+  font-family: "BunkerFont", "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
 .glass-button:hover {
@@ -649,7 +779,7 @@ html {
 }
 
 .speed-type-text {
-  font-family: 'Montserrat', sans-serif;
+  font-family: "BunkerFont", "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-weight: 300;
   letter-spacing: 2px;
@@ -777,29 +907,29 @@ h2 {
 
 /* High-End Typography Class for Major Headers */
 .high-end-title {
-  font-family: 'Roboto Mono', monospace;
-  font-weight: 300;
+  font-family: "BunkerFont", "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif !important;
+  font-weight: 800 !important;
   color: var(--text-main) !important;
   background-color: transparent !important;
   padding: 0;
   display: inline-block;
   margin-bottom: 25px;
-  letter-spacing: 1px;
+  letter-spacing: -0.5px;
 }
 
 /* Monochromatic Table overrides for the minimalist theme */
-.theme-minimalist table {
+.theme-black table {
   border-collapse: collapse;
 }
 
-.theme-minimalist table th {
+.theme-black table th {
   background-color: #000000 !important;
   color: #ffffff !important;
-  font-family: 'Roboto Mono', monospace;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   border-bottom: 2px solid var(--glass-border);
 }
 
-.theme-minimalist table td {
+.theme-black table td {
   border-bottom: 1px solid var(--glass-border);
 }
 
@@ -883,7 +1013,7 @@ h2 {
 }
 
 .speed-type-text {
-  font-family: 'Montserrat', sans-serif;
+  font-family: "BunkerFont", "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-weight: 300;
   letter-spacing: 2px;
@@ -986,7 +1116,7 @@ td {
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: "BunkerFont", "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
   background-color: var(--bg-dark);
   color: var(--text-main);
   -webkit-font-smoothing: antialiased;
@@ -997,7 +1127,7 @@ body {
   background: var(--bg-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
+  border: 0px solid var(--glass-border);
   border-radius: 16px;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
@@ -1745,20 +1875,22 @@ body {
 
 
 /* -----------------------------------------------------------------
-   MAPA DE SALÃ“N - INFRAESTRUCTURA Y NEON GLOW (FASE 1)
+   MAPA DE SALON - INFRAESTRUCTURA Y NEON GLOW (FASE 1)
 ----------------------------------------------------------------- */
 .salon-contenedor {
   position: relative;
   width: 100%;
-  min-height: 850px;
-  background-color: #0a0a0f;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 800px !important;
+  height: 800px !important;
+  background-color: #14141bfd;
+  border: 1px solid rgba(163, 163, 163, 0.349);
   border-radius: 12px;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 40px 40px;
-  overflow: hidden;
+  overflow: hidden !important;
+}
+
+.mode-light .salon-contenedor {
+  background-color: #e9e9e9fd;
 }
 
 /* Base de Tarjeta de Mesa Absoluta */
@@ -1845,7 +1977,7 @@ body {
     margin: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    font-family: 'Courier New', Courier, monospace !important;
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace !important;
   }
 
   /* Ocultar elementos que no deben imprimirse, como botones */
@@ -1857,104 +1989,130 @@ body {
 }
 
 /* ============================================
-   SIDEBAR REDISEÑO — UNTITLED UI STYLE
-   Blanco en light, Negro en dark.
-   Independiente del tema de color seleccionado.
+   BÚNKER SIDEBAR PREMIUM STYLES
    ============================================ */
-
-/* Forzar blanco/negro independiente del tema */
-.mode-light .sidebar {
-  --sidebar-bg: #ffffff !important;
-  --sidebar-text: #18181b !important;
-  --sidebar-muted: #71717a !important;
-  --sidebar-border: #e4e4e7 !important;
-  border-right: 1px solid #e4e4e7 !important;
-  box-shadow: 1px 0 0 #e4e4e7 !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+#bunker-sidebar,
+#bunker-sidebar * {
+  box-sizing: border-box !important;
+  /* Force border-box reset on all elements in sidebar (prevents 288px width overflow) */
 }
 
-.mode-dark .sidebar {
-  --sidebar-bg: #0a0a0a !important;
-  --sidebar-text: #fafafa !important;
-  --sidebar-muted: #71717a !important;
-  --sidebar-border: #1f1f1f !important;
-  border-right: 1px solid #1f1f1f !important;
+#bunker-sidebar {
+  background-color: #0d0e15 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  font-family: "BunkerFont", "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif !important;
+  color: #94a3b8 !important;
+  /* Force constant light slate/gray text by default */
+
+  /* Enforce dark sidebar variables and resolve colors to brand variables constants */
+  --primary: var(--sidebar-brand-color) !important;
+  --color-brand: var(--sidebar-brand-color) !important;
+}
+
+#bunker-sidebar .brand-title {
+  color: #e2e8f0 !important;
+  /* Always light slate-200 */
+}
+
+#bunker-sidebar .brand-subtitle {
+  color: var(--sidebar-brand-color) !important;
+  /* Always theme color, never changes with dark/light mode */
+}
+
+#bunker-sidebar a,
+#bunker-sidebar button {
+  text-decoration: none !important;
+  color: #94a3b8 !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
   box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  border-radius: 12px !important;
+  /* Force rounded corners */
+  overflow: hidden !important;
+  /* Essential: prevents child content from clipping rounded corners */
 }
 
-/* Item de navegación base */
-.sidebar-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 9px 12px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--sidebar-text);
-  font-size: 0.875rem;
-  font-weight: 400;
-  font-family: 'Inter', sans-serif;
-  cursor: pointer;
-  text-decoration: none;
-  box-sizing: border-box;
-  transition: background 0.15s ease, color 0.15s ease;
-  opacity: 0.75;
+#bunker-sidebar a.active {
+  background-color: var(--sidebar-brand-color) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px var(--color-brand-glow) !important;
+  border-radius: 12px !important;
 }
 
-.sidebar-nav-item:hover {
-  opacity: 1;
+#bunker-sidebar a:not(.active):hover,
+#bunker-sidebar button:hover {
+  color: #ffffff !important;
+  background-color: #151722 !important;
+  border-radius: 12px !important;
 }
 
-.mode-light .sidebar-nav-item:hover {
-  background: #f4f4f5;
+#bunker-sidebar #sidebar-logout-btn:hover {
+  color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  border-radius: 12px !important;
 }
 
-.mode-dark .sidebar-nav-item:hover {
-  background: #1a1a1a;
+/* Glowing Neon Logo Hover Animation */
+#bunker-sidebar .logo-glow {
+  background-color: var(--sidebar-brand-color) !important;
+  transition: all 0.5s ease-in-out !important;
 }
 
-/* Item activo */
-.sidebar-nav-item--active {
-  opacity: 1;
-  font-weight: 500;
-}
-
-.mode-light .sidebar-nav-item--active {
-  background: #f4f4f5;
-  color: #18181b;
-}
-
-.mode-dark .sidebar-nav-item--active {
-  background: #1f1f1f;
-  color: #fafafa;
-}
-
-/* Íconos en sidebar rediseñado */
-.mode-light .sidebar .sidebar-nav-item svg,
-.mode-light .sidebar .sidebar-nav-item .module-icon-svg {
-  color: #18181b !important;
-  filter: brightness(0) !important;
-  opacity: 0.7;
-}
-
-.mode-dark .sidebar .sidebar-nav-item svg,
-.mode-dark .sidebar .sidebar-nav-item .module-icon-svg {
-  color: #fafafa !important;
-  filter: brightness(0) invert(1) !important;
-  opacity: 0.7;
-}
-
-.sidebar-nav-item--active svg,
-.sidebar-nav-item--active .module-icon-svg {
+#bunker-sidebar .group:hover .logo-glow {
   opacity: 1 !important;
+  filter: blur(12px) !important;
+  box-shadow: 0 0 20px var(--sidebar-brand-color), 0 0 40px var(--sidebar-brand-color) !important;
 }
 
-/* Remover estilos anteriores del sidebar que ya no aplican */
-.sidebar .glass-button.active {
-  all: unset !important;
+/* Glowing animations for elements */
+@keyframes softGlow {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 15px var(--color-brand-glow)) drop-shadow(0 0 5px var(--color-brand-glow));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 25px var(--color-brand-glow)) drop-shadow(0 0 10px var(--color-brand-glow));
+  }
+}
+
+.animate-glow {
+  animation: softGlow 4s infinite ease-in-out;
+}
+
+/* ============================================
+   SMOOTHDROPDOWN THEME ADAPTATION
+   ============================================ */
+.smooth-dropdown-bg {
+  background-color: #0c0c0e !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--text-main) !important;
+  box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.76) !important;
+  --dropdown-hover-bg: rgba(255, 255, 255, 0.06);
+}
+
+.mode-light .smooth-dropdown-bg {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #1f2937 !important;
+  box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.15) !important;
+  --dropdown-hover-bg: rgba(0, 0, 0, 0.06);
+}
+
+/* Print button adaptation inside cash count summary */
+.cash-count-print-btn {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.mode-light .cash-count-print-btn {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
+.mode-light .cash-count-print-btn:hover {
+  background-color: #f3f4f6 !important;
 }

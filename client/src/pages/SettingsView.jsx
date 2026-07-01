@@ -30,36 +30,44 @@ const SettingsView = () => {
 
     const themes = [
         {
+            id: 'theme-orange',
+            name: 'Naranja Warm',
+            description: 'Acento naranja vibrante con fondo oscuro premium.',
+            icon: <Palette size={24} />,
+            color: '#0d0e15',
+            border: '#f97316'
+        },
+        {
             id: 'theme-green',
-            name: 'Starbucks Green',
-            description: 'Estilo clásico y elegante. Verde corporativo.',
+            name: 'Esmeralda',
+            description: 'Tono verde esmeralda para una estética equilibrada.',
             icon: <Zap size={24} />,
-            color: '#00704A',
-            border: '#005c3d'
+            color: '#05100b',
+            border: '#10b981'
         },
         {
             id: 'theme-blue',
-            name: 'Noche Azulada',
-            description: 'El tema clásico. Tonos Slate profundos.',
+            name: 'Zafiro Azul',
+            description: 'Azul zafiro elegante y profesional.',
             icon: <Moon size={24} />,
             color: '#020617',
-            border: '#1e293b'
+            border: '#3b82f6'
         },
         {
             id: 'theme-red',
-            name: 'ComandaGo Rojo',
-            description: 'Pasión por la marca. Tonos rojizos.',
+            name: 'Carmesí Red',
+            description: 'Rojo carmesí enérgico y moderno.',
             icon: <Palette size={24} />,
-            color: '#1a0505',
-            border: '#F0544F'
+            color: '#0a0505',
+            border: '#ef4444'
         },
         {
-            id: 'theme-minimalist',
-            name: 'Minimalist',
-            description: 'Código de autor. Blanco y negro de alta gama.',
+            id: 'theme-black',
+            name: 'Minimal Dark',
+            description: 'Diseño monocromático limpio y de alto contraste.',
             icon: <Terminal size={24} />,
-            color: '#111111',
-            border: '#222222'
+            color: '#000000',
+            border: '#ffffff'
         }
     ];
 
@@ -71,7 +79,7 @@ const SettingsView = () => {
                 </button>
                 <div>
                     <h1 style={{ margin: 0 }}>Ajustes</h1>
-                    <p className="text-muted" style={{ margin: 0 }}>Personaliza tu experiencia en ComandaGo</p>
+                    <p className="text-muted" style={{ margin: 0 }}>Personaliza tu experiencia en Bunker</p>
                 </div>
             </div>
 

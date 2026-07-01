@@ -1891,7 +1891,7 @@ app.get('/api/cashier/balance', async (req, res) => {
                         lte: endDate
                     }
                 },
-                include: { detalles: { include: { plato: true } }, usuario: true }
+                include: { detalles: { include: { plato: true } }, usuario: true, mesa: true }
             }),
             prisma.movimientoCaja.findMany({
                 where: { arqueoId: lastArqueo.id }
@@ -2000,7 +2000,9 @@ app.get('/api/cashier/balance', async (req, res) => {
             })),
             total: order.detalles.reduce((s, d) => s + (d.cantidad * d.plato.precio), 0),
             metodo: order.metodoPago,
-            doc: order.tipoDocumento
+            doc: order.tipoDocumento,
+            waiterName: order.usuario ? order.usuario.nombre : 'Mesero',
+            mesaNum: order.mesa ? order.mesa.numero : order.mesaId
         }));
 
         res.json({

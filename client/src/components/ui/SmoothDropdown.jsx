@@ -60,11 +60,9 @@ export default function SmoothDropdown({ id, dropUp = false, onAction }) {
           stiffness: 380,
           mass: 0.8,
         }}
-        className={`absolute right-0 overflow-hidden cursor-pointer !bg-[#0c0c0e] border border-zinc-700/40 shadow-[0_12px_40px_-4px_rgba(0,0,0,0.76)] ${dropUp ? "bottom-0 origin-bottom-right" : "top-0 origin-top-right"
+        className={`smooth-dropdown-bg absolute right-0 overflow-hidden cursor-pointer border ${dropUp ? "bottom-0 origin-bottom-right" : "top-0 origin-top-right"
           }`}
         style={{
-          background: "#0c0c0e",
-          backgroundColor: "#0c0c0e !important",
           color: "var(--text-main)",
         }}
         onClick={() => !isOpen && setIsOpen(true)}
@@ -144,7 +142,7 @@ export default function SmoothDropdown({ id, dropUp = false, onAction }) {
                         layoutId={`activeIndicator-${id}`}
                         className="absolute inset-0 rounded-lg"
                         style={{
-                          background: "rgba(255, 255, 255, 0.06)", // Forzamos un gris sutil premium si falla tu variable
+                          background: "var(--dropdown-hover-bg, rgba(255, 255, 255, 0.06))",
                         }}
                         transition={{
                           type: "spring",
@@ -160,7 +158,7 @@ export default function SmoothDropdown({ id, dropUp = false, onAction }) {
                         layoutId={`leftBar-${id}`}
                         className="absolute left-0 top-0 bottom-0 my-auto w-[3px] h-5 rounded-full"
                         style={{
-                          background: "#ffffff", // El palito vertical blanco sólido del modelo
+                          background: "var(--primary, #ffffff)",
                         }}
                         transition={{
                           type: "spring",
@@ -173,7 +171,7 @@ export default function SmoothDropdown({ id, dropUp = false, onAction }) {
                     <IconComponent
                       className="w-[18px] h-[18px] relative z-10"
                       style={{
-                        color: isHovered ? "#ffffff" : "var(--text-muted)",
+                        color: isHovered ? "var(--text-main)" : "var(--text-muted)",
                       }}
                     />
                     <span className="font-medium relative z-10 text-xs">
