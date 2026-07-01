@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------
    MAPA DE SALÓN - INFRAESTRUCTURA Y NEON GLOW (FASE 1)
 ----------------------------------------------------------------- */
@@ -9,7 +8,7 @@
   background-color: #0a0a0f;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  background-image: 
+  background-image:
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 40px 40px;
@@ -36,7 +35,7 @@
   color: white;
   text-align: center;
   cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* 1. Verde Neón (Libre y Caja Abierta) */
@@ -44,6 +43,7 @@
   border-color: #00ff88;
   box-shadow: 0 0 15px rgba(0, 255, 136, 0.2), inset 0 0 10px rgba(0, 255, 136, 0.05);
 }
+
 .mesa-libre-neon .badge-estado {
   color: #00ff88;
 }
@@ -53,6 +53,7 @@
   border-color: #ffea00;
   box-shadow: 0 0 25px rgba(255, 234, 0, 0.45), inset 0 0 15px rgba(255, 234, 0, 0.1);
 }
+
 .mesa-ocupada-neon .badge-estado {
   color: #ffea00;
   font-weight: bold;
@@ -65,6 +66,7 @@
   cursor: not-allowed;
   box-shadow: none;
 }
+
 .mesa-apagada .badge-estado {
   color: #9ca3af;
 }
