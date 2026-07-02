@@ -17,7 +17,9 @@ import {
     ChevronLeft,
     ChevronRight,
     AlertCircle,
-    X
+    X,
+    Phone,
+    Heart
 } from 'lucide-react';
 
 const DashboardLayout = () => {
@@ -64,6 +66,7 @@ const DashboardLayout = () => {
         { id: 'inventory', to: '/admin/inventory', icon: BookOpen, label: 'Logística', modulo: 'logistica' },
         { id: 'users', to: '/admin/users', icon: User, label: 'Usuarios', modulo: 'usuarios' },
         { id: 'reports', to: '/admin/staff-stats', icon: TrendingUp, label: 'Reportes', modulo: 'reportes' },
+        { id: 'support', to: '/support', icon: Phone, label: 'Atención y Soporte' },
         { id: 'settings', to: '/settings', icon: Settings, label: 'Ajustes' },
     ];
 
@@ -165,7 +168,7 @@ const DashboardLayout = () => {
                     </div>
 
                     {/* Middle Navigation */}
-                    <nav className={`flex flex-col gap-2 w-full overflow-y-auto scrollbar-none py-2 ${collapsed ? 'px-2 items-center' : ''}`}>
+                    <nav className={`flex flex-col gap-1.5 w-full overflow-y-auto scrollbar-none py-1.5 ${collapsed ? 'px-2 items-center' : ''}`}>
                         {visibleMenuItems.map((item) => {
                             const Icon = item.icon;
 
@@ -174,8 +177,8 @@ const DashboardLayout = () => {
                                     key={item.id}
                                     to={item.to}
                                     className={({ isActive }) => `relative rounded-xl flex items-center transition-all duration-200 group cursor-pointer no-underline ${collapsed
-                                        ? 'w-12 h-12 justify-center'
-                                        : 'w-full h-12 px-4 justify-start gap-4'
+                                        ? 'w-10 h-10 justify-center'
+                                        : 'w-full h-10 px-3.5 justify-start gap-3.5'
                                         } ${isActive
                                             ? 'active bg-brand text-white shadow-md shadow-brand/20'
                                             : 'text-slate-400 hover:text-slate-200 hover:bg-[#151722]'
@@ -235,8 +238,8 @@ const DashboardLayout = () => {
                             id="sidebar-dark-toggle"
                             onClick={toggleMode}
                             className={`rounded-xl flex items-center transition-all duration-200 group cursor-pointer text-slate-400 hover:text-slate-200 hover:bg-[#151722] bg-transparent border-none outline-none ${collapsed
-                                ? 'w-12 h-12 justify-center'
-                                : 'w-full h-12 px-4 justify-start gap-4'
+                                ? 'w-10 h-10 justify-center'
+                                : 'w-full h-10 px-3.5 justify-start gap-3.5'
                                 }`}
                             title={isDarkMode ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
                         >
@@ -301,8 +304,8 @@ const DashboardLayout = () => {
                             id="sidebar-collapse-toggle"
                             onClick={() => setCollapsed(!collapsed)}
                             className={`rounded-xl flex items-center transition-all duration-200 group cursor-pointer text-slate-500 hover:text-slate-200 hover:bg-[#151722] bg-transparent border-none outline-none ${collapsed
-                                ? 'w-12 h-12 justify-center'
-                                : 'w-full h-12 px-4 justify-start gap-4'
+                                ? 'w-10 h-10 justify-center'
+                                : 'w-full h-10 px-3.5 justify-start gap-3.5'
                                 }`}
                             title={collapsed ? "Expandir menú" : "Contraer menú"}
                         >
@@ -321,8 +324,8 @@ const DashboardLayout = () => {
                             id="sidebar-logout-btn"
                             onClick={handleLogout}
                             className={`rounded-xl flex items-center transition-all duration-200 group cursor-pointer text-slate-500 hover:text-red-500 hover:bg-red-500/10 bg-transparent border-none outline-none ${collapsed
-                                ? 'w-12 h-12 justify-center'
-                                : 'w-full h-12 px-4 justify-start gap-4'
+                                ? 'w-10 h-10 justify-center'
+                                : 'w-full h-10 px-3.5 justify-start gap-3.5'
                                 }`}
                             title="Cerrar Sesión de Búnker"
                         >
@@ -343,8 +346,19 @@ const DashboardLayout = () => {
 
                 {/* 2. Main Content Layout (Occupies rest of screen space) */}
                 <div className={`flex-1 transition-all duration-300 ${collapsed ? 'pl-20' : 'pl-20 md:pl-64'} flex flex-col w-full min-h-screen bg-bg-primary text-text-main`}>
-                    <main className="main-content flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-screen">
-                        <Outlet />
+                    <main className="main-content flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-screen flex flex-col justify-between">
+                        <div className="flex-grow pb-8">
+                            <Outlet />
+                        </div>
+                        {/* Footer of Workspace area */}
+                        <footer className="mt-auto pt-6 border-t border-slate-800/10 dark:border-slate-800/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[var(--text-muted)] font-medium">
+                            <span>© 2026 Búnker - Sistema de Gestión de Comandas Inteligentes.</span>
+                            <div className="flex items-center gap-1">
+                                <span>Hecho con</span>
+                                <Heart className="w-3.5 h-3.5 text-[var(--primary)] fill-[var(--primary)] animate-pulse" />
+                                <span>por Hector y Melanie</span>
+                            </div>
+                        </footer>
                     </main>
                 </div>
             </div>

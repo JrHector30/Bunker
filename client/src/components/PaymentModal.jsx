@@ -219,15 +219,15 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                         <h3 style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: 10, marginBottom: 15 }}>Monto</h3>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                             <span className="text-muted">Sub-Total:</span>
-                            <span>S/. {subTotal.toFixed(2)}</span>
+                            <span><span className="font-mono">S/. {subTotal.toFixed(2)}</span></span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                             <span className="text-muted">Impuesto (18%):</span>
-                            <span>S/. {taxAmount.toFixed(2)}</span>
+                            <span><span className="font-mono">S/. {taxAmount.toFixed(2)}</span></span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20, fontWeight: 'bold', fontSize: '1.2rem' }}>
                             <span>Total Bruto:</span>
-                            <span>S/. {totalOrder.toFixed(2)}</span>
+                            <span><span className="font-mono">S/. {totalOrder.toFixed(2)}</span></span>
                         </div>
                     </div>
 
@@ -290,7 +290,7 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: change < 0 ? 'var(--danger)' : 'var(--success)' }}>
                                     <span>Vuelto:</span>
-                                    <span>S/. {change > 0 ? change.toFixed(2) : '0.00'}</span>
+                                    <span><span className="font-mono">S/. {change > 0 ? change.toFixed(2) : '0.00'}</span></span>
                                 </div>
                             </>
                         )}

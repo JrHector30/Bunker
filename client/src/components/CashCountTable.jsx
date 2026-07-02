@@ -1346,9 +1346,9 @@ const CashCountTable = ({ onStatusChange }) => {
                                                 )}
                                             </div>
                                         </td>
-                                        <td style={dimStyle}>S/. {(item.inicio || 0).toFixed(2)}</td>
+                                        <td style={dimStyle}><span className="font-mono">S/. {(item.inicio || 0).toFixed(2)}</span></td>
                                         <td style={dimStyle}>
-                                            <div>Efec: S/. {(item.egresos || 0).toFixed(2)}</div>
+                                            <div>Efec: <span className="font-mono">S/. {(item.egresos || 0).toFixed(2)}</span></div>
                                         </td>
                                         <td style={dimStyle}>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 10px', fontSize: '0.85em', alignItems: 'center' }}>
@@ -1377,26 +1377,26 @@ const CashCountTable = ({ onStatusChange }) => {
                                             </div>
                                             {expandedDig[item.id] && (
                                                 <div style={{ fontSize: '0.75em', borderTop: '1px solid var(--glass-border)', marginTop: 5, paddingTop: 5, paddingLeft: 10, display: 'flex', flexDirection: 'column', gap: 2, animation: 'fadeIn 0.2s ease' }}>
-                                                    <span>Yape: S/. {(item.ingresos?.yape || 0).toFixed(2)}</span>
-                                                    <span>Plin: S/. {(item.ingresos?.plin || 0).toFixed(2)}</span>
+                                                    <span>Yape: <span className="font-mono">S/. {(item.ingresos?.yape || 0).toFixed(2)}</span></span>
+                                                    <span>Plin: <span className="font-mono">S/. {(item.ingresos?.plin || 0).toFixed(2)}</span></span>
                                                 </div>
                                             )}
                                             {expandedTarj[item.id] && (
                                                 <div style={{ fontSize: '0.75em', borderTop: '1px solid var(--glass-border)', marginTop: 5, paddingTop: 5, paddingLeft: 10, display: 'flex', flexDirection: 'column', gap: 2, animation: 'fadeIn 0.2s ease' }}>
-                                                    <span>Izipay: S/. {(item.ingresos?.izipay || 0).toFixed(2)}</span>
-                                                    <span>Niubiz: S/. {(item.ingresos?.niubiz || 0).toFixed(2)}</span>
+                                                    <span>Izipay: <span className="font-mono">S/. {(item.ingresos?.izipay || 0).toFixed(2)}</span></span>
+                                                    <span>Niubiz: <span className="font-mono">S/. {(item.ingresos?.niubiz || 0).toFixed(2)}</span></span>
                                                     {(item.ingresos?.tarjeta || 0) > 0 && (
-                                                        <span>Tarjeta (Otros): S/. {(item.ingresos?.tarjeta || 0).toFixed(2)}</span>
+                                                        <span>Tarjeta (Otros): <span className="font-mono">S/. {(item.ingresos?.tarjeta || 0).toFixed(2)}</span></span>
                                                     )}
                                                 </div>
                                             )}
                                         </td>
                                         <td style={{ ...dimStyle, color: 'var(--warning)', fontWeight: 'bold' }}>
-                                            S/. {(item.totalPropinas || 0).toFixed(2)}
+                                            <span className="font-mono">S/. {(item.totalPropinas || 0).toFixed(2)}</span>
                                         </td>
-                                        <td style={{ ...dimStyle, fontWeight: 'bold', color: 'var(--success)' }}>S/. {(item.totalCaja || 0).toFixed(2)}</td>
-                                        <td style={{ ...dimStyle, fontWeight: 'bold' }}>S/. {(item.totalBruto || 0).toFixed(2)}</td>
-                                        <td style={{ ...dimStyle, color: 'var(--warning)' }}>S/. {(item.totalPendiente || 0).toFixed(2)}</td>
+                                        <td style={{ ...dimStyle, fontWeight: 'bold', color: 'var(--success)' }}><span className="font-mono">S/. {(item.totalCaja || 0).toFixed(2)}</span></td>
+                                        <td style={{ ...dimStyle, fontWeight: 'bold' }}><span className="font-mono">S/. {(item.totalBruto || 0).toFixed(2)}</span></td>
+                                        <td style={{ ...dimStyle, color: 'var(--warning)' }}><span className="font-mono">S/. {(item.totalPendiente || 0).toFixed(2)}</span></td>
                                         <td style={{ textAlign: 'center', overflow: 'visible', width: 80 }}>
                                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                                 <SmoothDropdown id={item.id} dropUp={index === history.data.length - 1} onAction={(actionId) => handleRowAction(actionId, item.id)} />
@@ -1623,7 +1623,7 @@ const CashCountTable = ({ onStatusChange }) => {
                                     {summaryData.fechaFin && (
                                         <div>Cierre: {formatDate(summaryData.fechaFin)}</div>
                                     )}
-                                    <div>Monto Inicio: S/. {(summaryData.montoInicial || 0).toFixed(2)}</div>
+                                    <div>Monto Inicio: <span className="font-mono">S/. {(summaryData.montoInicial || 0).toFixed(2)}</span></div>
                                 </div>
 
                                 <div style={{ borderBottom: '1px dashed black', marginBottom: 5 }}></div>
@@ -1631,37 +1631,37 @@ const CashCountTable = ({ onStatusChange }) => {
                                 <div style={{ fontSize: '0.9rem', marginBottom: 5 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Efectivo:</span>
-                                        <span>S/. {(summaryData.ingresos?.efectivo || 0).toFixed(2)}</span>
+                                        <span><span className="font-mono">S/. {(summaryData.ingresos?.efectivo || 0).toFixed(2)}</span></span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Tarjeta:</span>
-                                        <span>S/. {(summaryData.ingresos?.tarjeta || 0).toFixed(2)}</span>
+                                        <span><span className="font-mono">S/. {(summaryData.ingresos?.tarjeta || 0).toFixed(2)}</span></span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Yape:</span>
-                                        <span>S/. {(summaryData.ingresos?.yape || 0).toFixed(2)}</span>
+                                        <span><span className="font-mono">S/. {(summaryData.ingresos?.yape || 0).toFixed(2)}</span></span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Plin:</span>
-                                        <span>S/. {(summaryData.ingresos?.plin || 0).toFixed(2)}</span>
+                                        <span><span className="font-mono">S/. {(summaryData.ingresos?.plin || 0).toFixed(2)}</span></span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Izi:</span>
-                                        <span>S/. {(summaryData.ingresos?.izipay || 0).toFixed(2)}</span>
+                                        <span><span className="font-mono">S/. {(summaryData.ingresos?.izipay || 0).toFixed(2)}</span></span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Niubiz:</span>
-                                        <span>S/. {(summaryData.ingresos?.niubiz || 0).toFixed(2)}</span>
+                                        <span><span className="font-mono">S/. {(summaryData.ingresos?.niubiz || 0).toFixed(2)}</span></span>
                                     </div>
                                 </div>
                                 <div style={{ borderTop: '1px dashed black', paddingTop: 5, display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.05rem', marginBottom: 5 }}>
                                     <span>Total:</span>
-                                    <span>S/. {((summaryData.ingresos?.efectivo || 0) +
+                                    <span><span className="font-mono">S/. {((summaryData.ingresos?.efectivo || 0) +
                                         (summaryData.ingresos?.tarjeta || 0) +
                                         (summaryData.ingresos?.yape || 0) +
                                         (summaryData.ingresos?.plin || 0) +
                                         (summaryData.ingresos?.izipay || 0) +
-                                        (summaryData.ingresos?.niubiz || 0)).toFixed(2)}</span>
+                                        (summaryData.ingresos?.niubiz || 0)).toFixed(2)}</span></span>
                                 </div>
 
                                 <div style={{ borderBottom: '1px dashed black', marginBottom: 5 }}></div>
@@ -1669,11 +1669,11 @@ const CashCountTable = ({ onStatusChange }) => {
                                 <div style={{ fontSize: '0.9rem', marginBottom: 5 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Ingreso:</span>
-                                        <span>S/. {((summaryData.ingresos?.efectivo || 0) + (summaryData.ingresos?.manual || 0)).toFixed(2)}</span>
+                                        <span><span className="font-mono">S/. {((summaryData.ingresos?.efectivo || 0) + (summaryData.ingresos?.manual || 0)).toFixed(2)}</span></span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Egreso:</span>
-                                        <span>S/. {(summaryData.egresos || 0).toFixed(2)}</span>
+                                        <span><span className="font-mono">S/. {(summaryData.egresos || 0).toFixed(2)}</span></span>
                                     </div>
                                 </div>
 

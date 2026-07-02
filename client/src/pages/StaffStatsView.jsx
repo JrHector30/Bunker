@@ -153,7 +153,7 @@ const StaffStatsView = () => {
             <div className="responsive-grid" style={{ marginBottom: 30, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
                 <div className="glass-panel" style={{ padding: 20, textAlign: 'center' }}>
                     <h3 className="text-muted" style={{ margin: 0 }}>Venta Total</h3>
-                    <h1 style={{ color: 'var(--success)', margin: '10px 0' }}>S/. {parseFloat(Number(totalSales).toFixed(2))}</h1>
+                    <h1 style={{ color: 'var(--success)', margin: '10px 0' }} className="font-mono">S/. {parseFloat(Number(totalSales).toFixed(2))}</h1>
                 </div>
                 <div className="glass-panel" style={{ padding: 20, textAlign: 'center' }}>
                     <h3 className="text-muted" style={{ margin: 0 }}>Pedidos Atendidos</h3>
@@ -252,7 +252,7 @@ const StaffStatsView = () => {
                                         <tr key={w.id}>
                                             <td>{w.nombre}</td>
                                             <td style={{ textAlign: 'center' }}>{w.totalTables}</td>
-                                            <td style={{ textAlign: 'right', color: 'var(--success)', fontWeight: 'bold' }}>
+                                            <td style={{ textAlign: 'right', color: 'var(--success)', fontWeight: 'bold' }} className="font-mono">
                                                 S/. {parseFloat(Number(w.totalSales).toFixed(2))}
                                             </td>
                                         </tr>

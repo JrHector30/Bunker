@@ -18,6 +18,7 @@ import StaffStatsView from './pages/StaffStatsView'; // New
 import SettingsView from './pages/SettingsView';     // New
 import HomeView from './pages/HomeView';             // New
 import LandingView from './pages/LandingView';       // New
+import SupportView from './pages/SupportView';       // New
 import NotFoundView from './views/NotFoundView';
 
 // Protected Route Wrapper
@@ -123,6 +124,12 @@ function App() {
               <Route path="/settings" element={
                 <ProtectedRoute>
                   <SettingsView />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/support" element={
+                <ProtectedRoute>
+                  <SupportView />
                 </ProtectedRoute>
               } />
 

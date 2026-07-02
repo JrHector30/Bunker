@@ -139,14 +139,14 @@ const CashierView = () => {
                                     }
                                     return num;
                                 })()}</h2>
-                                <h2 style={{ color: 'var(--success)' }}>S/. {realTotal.toFixed(2)}</h2>
+                                <h2 style={{ color: 'var(--success)' }} className="font-mono">S/. {realTotal.toFixed(2)}</h2>
                             </div>
 
                             <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 20 }}>
                                 {comanda.detalles.map(d => (
                                     <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                                         <span>{d.cantidad}x {d.plato.nombre}</span>
-                                        <span>S/. {(d.cantidad * d.plato.precio).toFixed(2)}</span>
+                                        <span><span className="font-mono">S/. {(d.cantidad * d.plato.precio).toFixed(2)}</span></span>
                                     </div>
                                 ))}
                             </div>

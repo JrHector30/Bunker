@@ -112,7 +112,7 @@ const MyCardComponent = ({ weeklyEarnings, setWeeklyEarnings }) => {
               GANANCIA SEMANAL
             </span>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-xs font-bold text-[var(--primary)]">S/.</span>
+              <span className="text-xs font-bold text-[var(--primary)] font-mono">S/.</span>
               <motion.span
                 key={Math.floor(weeklyEarnings)}
                 initial={{ opacity: 0.8 }}
@@ -599,7 +599,7 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
               }}
               className="absolute top-0 transform -translate-x-1/2 z-10"
             >
-              <div className="font-black text-[9px] px-2 py-0.5 rounded-full shadow-md tracking-wide bg-[var(--primary)] text-white dark:text-black">
+              <div className="font-black text-[9px] px-2 py-0.5 rounded-full shadow-md tracking-wide bg-[var(--primary)] text-white dark:text-black font-mono">
                 S/. {currentEarning}
               </div>
               <div className="w-1.5 h-1.5 rotate-45 mx-auto -mt-1 shadow-md bg-[var(--primary)]"></div>

@@ -307,7 +307,7 @@ const WaiterOrderView = () => {
                                     <div className="product-body" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
                                         <div className="product-info-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
                                             <div className="product-name" style={{ fontWeight: 600, fontSize: '0.95rem' }}>{product.nombre}</div>
-                                            <div className="product-price" style={{ color: 'var(--success)', fontWeight: 'bold' }}>S/. {product.precio.toFixed(2)}</div>
+                                            <div className="product-price font-mono" style={{ color: 'var(--success)', fontWeight: 'bold' }}>S/. {product.precio.toFixed(2)}</div>
                                         </div>
 
                                         <div className="product-actions-wrap" style={{ marginTop: 'auto', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -401,7 +401,7 @@ const WaiterOrderView = () => {
                                         </div>
                                         <div>
                                             <div style={{ fontWeight: 500 }}>{item.nombre}</div>
-                                            <div className="text-muted" style={{ fontSize: '0.8rem' }}>S/. {(item.precio * item.cantidad).toFixed(2)}</div>
+                                            <div className="text-muted font-mono" style={{ fontSize: '0.8rem' }}>S/. {(item.precio * item.cantidad).toFixed(2)}</div>
                                         </div>
                                     </div>
                                     <div style={{ textAlign: 'right', display: 'flex', gap: 5 }}>
@@ -446,11 +446,11 @@ const WaiterOrderView = () => {
                 <div style={{ position: 'sticky', bottom: 0, background: 'var(--bg-surface)', marginTop: 20, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.1)', zIndex: 10 }}>
                     <div className="text-muted" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                         <span>Subtotal</span>
-                        <span>S/. {cart.reduce((sum, i) => sum + (i.precio * i.cantidad), 0).toFixed(2)}</span>
+                        <span><span className="font-mono">S/. {cart.reduce((sum, i) => sum + (i.precio * i.cantidad), 0).toFixed(2)}</span></span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '2rem', fontWeight: 'bold', marginBottom: 20 }}>
                         <span>Total</span>
-                        <span>S/. {cart.reduce((sum, i) => sum + (i.precio * i.cantidad), 0).toFixed(2)}</span>
+                        <span><span className="font-mono">S/. {cart.reduce((sum, i) => sum + (i.precio * i.cantidad), 0).toFixed(2)}</span></span>
                     </div>
 
                     <button
@@ -518,7 +518,7 @@ const WaiterOrderView = () => {
 
                             <div style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1.5rem', marginBottom: 5 }}>{infoModalProduct.nombre}</h3>
-                                <div style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '1.2rem' }}>S/. {infoModalProduct.precio.toFixed(2)}</div>
+                                <div className="font-mono" style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '1.2rem' }}>S/. {infoModalProduct.precio.toFixed(2)}</div>
                             </div>
 
                             <div className="glass-panel" style={{ padding: 15, background: 'rgba(255,255,255,0.03)' }}>

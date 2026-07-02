@@ -7,22 +7,18 @@
    Plus Jakarta Sans for text, JetBrains Mono for digits 0-9
    ============================================ */
 
-/* Weight 300 (Light) */
+/* ============================================
+   BUNKER FONT DEFINITIONS
+   Plus Jakarta Sans for default text, JetBrains Mono for monospaced elements
+   ============================================ */
+
+/* Plus Jakarta Sans */
 @font-face {
   font-family: 'BunkerFont';
   font-style: normal;
   font-weight: 300;
   font-display: swap;
   src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_907NSg.ttf) format('truetype');
-}
-
-@font-face {
-  font-family: 'BunkerFont';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf) format('truetype');
-  unicode-range: U+0030-0039;
 }
 
 /* Weight 400 (Regular) */
@@ -34,15 +30,6 @@
   src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_qU7NSg.ttf) format('truetype');
 }
 
-@font-face {
-  font-family: 'BunkerFont';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf) format('truetype');
-  unicode-range: U+0030-0039;
-}
-
 /* Weight 500 (Medium) */
 @font-face {
   font-family: 'BunkerFont';
@@ -50,15 +37,6 @@
   font-weight: 500;
   font-display: swap;
   src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_m07NSg.ttf) format('truetype');
-}
-
-@font-face {
-  font-family: 'BunkerFont';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8-qxjPQ.ttf) format('truetype');
-  unicode-range: U+0030-0039;
 }
 
 /* Weight 600 (SemiBold) */
@@ -70,15 +48,6 @@
   src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_d0nNSg.ttf) format('truetype');
 }
 
-@font-face {
-  font-family: 'BunkerFont';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8FqtjPQ.ttf) format('truetype');
-  unicode-range: U+0030-0039;
-}
-
 /* Weight 700 (Bold) */
 @font-face {
   font-family: 'BunkerFont';
@@ -86,15 +55,6 @@
   font-weight: 700;
   font-display: swap;
   src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_TknNSg.ttf) format('truetype');
-}
-
-@font-face {
-  font-family: 'BunkerFont';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8FqtjPQ.ttf) format('truetype');
-  unicode-range: U+0030-0039;
 }
 
 /* Weight 800 (ExtraBold) */
@@ -106,13 +66,53 @@
   src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_KUnNSg.ttf) format('truetype');
 }
 
+/* Standalone JetBrains Mono */
 @font-face {
-  font-family: 'BunkerFont';
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD-qxjPQ.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8FqtjPQ.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8FqtjPQ.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
   font-style: normal;
   font-weight: 800;
   font-display: swap;
   src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8FqtjPQ.ttf) format('truetype');
-  unicode-range: U+0030-0039;
 }
 
 @layer theme, base, components, utilities;
@@ -126,12 +126,14 @@
     width: 10px;
     height: 10px;
   }
+
   html:has(.landing-root)::-webkit-scrollbar-track,
   body:has(.landing-root)::-webkit-scrollbar-track {
     display: block !important;
     background: #060609 !important;
     border-left: 1px solid rgba(255, 255, 255, 0.05);
   }
+
   html:has(.landing-root)::-webkit-scrollbar-thumb,
   body:has(.landing-root)::-webkit-scrollbar-thumb {
     display: block !important;
@@ -142,6 +144,7 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
     transition: background 0.3s ease;
   }
+
   html:has(.landing-root)::-webkit-scrollbar-thumb:hover,
   body:has(.landing-root)::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 201, 180, 0.75) !important;
@@ -2089,7 +2092,7 @@ body {
   background-color: #0c0c0e !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
   color: var(--text-main) !important;
-  box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.76) !important;
+  box-shadow: 0 0px 0px -4px rgba(0, 0, 0, 0.76) !important;
   --dropdown-hover-bg: rgba(255, 255, 255, 0.06);
 }
 
@@ -2097,7 +2100,7 @@ body {
   background-color: #ffffff !important;
   border-color: rgba(0, 0, 0, 0.12) !important;
   color: #1f2937 !important;
-  box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 0px 0px -4px rgba(0, 0, 0, 0.15) !important;
   --dropdown-hover-bg: rgba(0, 0, 0, 0.06);
 }
 
@@ -2113,6 +2116,7 @@ body {
   color: #1f2937 !important;
   border: 1px solid rgba(0, 0, 0, 0.15) !important;
 }
+
 .mode-light .cash-count-print-btn:hover {
   background-color: #f3f4f6 !important;
 }

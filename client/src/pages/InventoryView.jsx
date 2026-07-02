@@ -365,8 +365,8 @@ const InventoryView = () => {
                                         </td>
                                         <td style={{ padding: 15, fontWeight: 'bold' }}>{prod.nombre}</td>
                                         <td style={{ padding: 15 }}><span style={{ padding: '4px 8px', borderRadius: 4, background: prod.categoria?.color + '40', color: prod.categoria?.color }}>{prod.categoria?.icono} {prod.categoria?.nombre}</span></td>
-                                        <td style={{ padding: 15 }}>S/. {prod.precio.toFixed(2)}</td>
-                                        <td style={{ padding: 15, color: isWarning ? 'var(--danger)' : 'var(--success)' }}>S/. {costo.toFixed(2)}</td>
+                                        <td style={{ padding: 15 }} className="font-mono">S/. {prod.precio.toFixed(2)}</td>
+                                        <td style={{ padding: 15, color: isWarning ? 'var(--danger)' : 'var(--success)' }} className="font-mono">S/. {costo.toFixed(2)}</td>
                                         <td style={{ padding: 15 }}>
                                             {isWarning ? (
                                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: 4, fontSize: '0.8rem', fontWeight: 'bold' }}>
@@ -442,7 +442,7 @@ const InventoryView = () => {
                                                 </span>
                                             )}
                                         </td>
-                                        <td style={{ padding: 15 }}>S/. {Number(insumo.precioCompra).toFixed(2)} / {insumo.unidadMedida}</td>
+                                        <td style={{ padding: 15 }}><span className="font-mono">S/. {Number(insumo.precioCompra).toFixed(2)}</span> / {insumo.unidadMedida}</td>
                                         <td style={{ padding: 15, color: (insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo) ? 'var(--warning)' : 'inherit', fontWeight: (insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo) ? 'bold' : 'normal' }}>
                                             {Number(insumo.stock).toFixed(2)} {insumo.unidadMedida}
                                         </td>
@@ -493,15 +493,15 @@ const InventoryView = () => {
                             <h3 style={{ margin: '0 0 15px 0' }}>Análisis de Costos</h3>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: '1.1rem' }}>
                                 <span className="text-muted">Precio Venta (PVP):</span>
-                                <strong>S/. {selectedPlatoObj.precio.toFixed(2)}</strong>
+                                <strong className="font-mono">S/. {selectedPlatoObj.precio.toFixed(2)}</strong>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: '1.1rem' }}>
                                 <span className="text-muted">Costo Producción:</span>
-                                <strong style={{ color: isWarning ? 'var(--danger)' : 'var(--success)' }}>S/. {draftCosto.toFixed(2)}</strong>
+                                <strong style={{ color: isWarning ? 'var(--danger)' : 'var(--success)' }} className="font-mono">S/. {draftCosto.toFixed(2)}</strong>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--glass-border)', paddingTop: 10, marginTop: 10, fontSize: '1.1rem' }}>
                                 <span className="text-muted">Margen Bruto:</span>
-                                <strong>S/. {(selectedPlatoObj.precio - draftCosto).toFixed(2)}</strong>
+                                <strong className="font-mono">S/. {(selectedPlatoObj.precio - draftCosto).toFixed(2)}</strong>
                             </div>
                             {isWarning && (
                                 <div style={{ background: 'var(--danger)', color: 'white', padding: '8px 15px', borderRadius: 8, marginTop: 15, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 'bold' }}>
@@ -552,7 +552,7 @@ const InventoryView = () => {
                                                     <td style={{ padding: 15 }}>
                                                         <input type="number" step="0.01" className="glass-input" style={{ width: 120 }} placeholder="0.00" value={Number.isNaN(item.cantidad) ? '' : item.cantidad} onChange={e => handleIngredientChange(index, 'cantidad', e.target.valueAsNumber)} />
                                                     </td>
-                                                    <td style={{ padding: 15 }}>{insu ? `S/. ${subtotal.toFixed(2)}` : '-'}</td>
+                                                    <td style={{ padding: 15 }} className="font-mono">{insu ? `S/. ${subtotal.toFixed(2)}` : '-'}</td>
                                                     <td style={{ padding: 15 }}>
                                                         <button className="glass-button" onClick={() => handleRemoveIngredient(index)} style={{ padding: 8, borderColor: 'transparent' }}><Trash size={18} color="var(--danger)" /></button>
                                                     </td>

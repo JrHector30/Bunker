@@ -777,8 +777,8 @@ const TablesView = () => {
                                                 <td style={{ padding: 10, fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-main)' }}>
                                                     {item.nombre}
                                                 </td>
-                                                <td style={{ padding: 10, textAlign: 'right' }}>S/. {item.precio.toFixed(2)}</td>
-                                                <td style={{ padding: 10, textAlign: 'right' }}>S/. {(item.cantidad * item.precio).toFixed(2)}</td>
+                                                <td style={{ padding: 10, textAlign: 'right' }} className="font-mono">S/. {item.precio.toFixed(2)}</td>
+                                                <td style={{ padding: 10, textAlign: 'right' }} className="font-mono">S/. {(item.cantidad * item.precio).toFixed(2)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -887,7 +887,7 @@ const TablesView = () => {
                         <div className="modal-footer" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                             {modalType === 'pre-check' ? (
                                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                                    Total: S/. {calculateTotal(groupedItems).toFixed(2)}
+                                    Total: <span className="font-mono">S/. {calculateTotal(groupedItems).toFixed(2)}</span>
                                 </div>
                             ) : (
                                 <div>
