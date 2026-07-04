@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -19,16 +20,37 @@ import {
     AlertCircle,
     X,
     Phone,
-    Heart
+    Heart,
+    ChevronDown,
+    ChevronUp,
+    Package,
+    History,
+    ClipboardCheck,
+    Beaker,
+    Utensils,
+    ChartColumn
 } from 'lucide-react';
 
 const DashboardLayout = () => {
     const { user, logout, tienePermiso } = useAuth();
     const { mode, toggleMode, showAlerts } = useTheme();
     const navigate = useNavigate();
+    const location = useLocation();
     const [collapsed, setCollapsed] = useState(() => localStorage.getItem('bunker_sidebar_collapsed') === 'true');
     const [lowStockAlerts, setLowStockAlerts] = useState([]);
     const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
+    const [isLogisticaExpanded, setIsLogisticaExpanded] = useState(() => {
+        const saved = localStorage.getItem('bunker_logistica_expanded');
+        return saved === 'true';
+    });
+
+    const toggleLogistica = () => {
+        setIsLogisticaExpanded(prev => {
+            const next = !prev;
+            localStorage.setItem('bunker_logistica_expanded', next.toString());
+            return next;
+        });
+    };
 
     // Fetch alerts globally if user is admin or caja
     const fetchAlerts = () => {
@@ -63,7 +85,7 @@ const DashboardLayout = () => {
         { id: 'kitchen', to: '/kitchen', icon: ChefHat, label: 'Cocina', modulo: 'cocina' },
         { id: 'cashier', to: '/cashier', icon: DollarSign, label: 'Caja', modulo: 'caja' },
         { id: 'categories', to: '/admin/categories', icon: BookOpen, label: 'Categorías', modulo: 'categories' },
-        { id: 'inventory', to: '/admin/inventory', icon: BookOpen, label: 'Logística', modulo: 'logistica' },
+        { id: 'inventory', to: '/admin/inventory', icon: ChartColumn, label: 'Logística', modulo: 'logistica' },
         { id: 'users', to: '/admin/users', icon: User, label: 'Usuarios', modulo: 'usuarios' },
         { id: 'reports', to: '/admin/staff-stats', icon: TrendingUp, label: 'Reportes', modulo: 'reportes' },
         { id: 'support', to: '/support', icon: Phone, label: 'Atención y Soporte' },
@@ -88,6 +110,7 @@ const DashboardLayout = () => {
     };
 
     const isDarkMode = mode === 'dark';
+    const isCashier = location.pathname === '/cashier';
 
     return (
         <React.Fragment>
@@ -171,6 +194,100 @@ const DashboardLayout = () => {
                     <nav className={`flex flex-col gap-1.5 w-full overflow-y-auto scrollbar-none py-1.5 ${collapsed ? 'px-2 items-center' : ''}`}>
                         {visibleMenuItems.map((item) => {
                             const Icon = item.icon;
+
+                            if (item.id === 'inventory') {
+                                const logisticaSubItems = [
+                                    { id: 'logistica-platos', to: '/admin/inventory?tab=platos', icon: Utensils, label: 'Menú (Platos)' },
+                                    { id: 'logistica-insumos', to: '/admin/inventory?tab=insumos', icon: Package, label: 'Inventario (Insumos)' },
+                                    { id: 'logistica-recetario', to: '/admin/inventory?tab=recetario', icon: Beaker, label: 'Recetarios (Costeo)' },
+                                    { id: 'logistica-kardex', to: '/admin/inventory?tab=kardex', icon: History, label: 'Kardex' },
+                                    { id: 'logistica-auditoria', to: '/admin/inventory?tab=auditoria', icon: ClipboardCheck, label: 'Auditoría' },
+                                ];
+
+                                const isPathActive = location.pathname.startsWith('/admin/inventory');
+
+                                return (
+                                    <div key={item.id} className="w-full flex flex-col gap-1">
+                                        <div
+                                            onClick={() => {
+                                                if (collapsed) {
+                                                    setCollapsed(false);
+                                                    setIsLogisticaExpanded(true);
+                                                } else {
+                                                    toggleLogistica();
+                                                }
+                                                // Navigate to default module if not already in Logistics
+                                                if (!isPathActive) {
+                                                    navigate('/admin/inventory?tab=platos');
+                                                }
+                                            }}
+                                            className={`relative rounded-xl flex items-center transition-all duration-200 group cursor-pointer no-underline ${collapsed
+                                                ? 'w-16 h-10 justify-center'
+                                                : 'w-full h-10 px-3.5 justify-between gap-3.5'
+                                                } ${isPathActive
+                                                    ? 'text-slate-200 bg-[#151722]/50'
+                                                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#151722]'
+                                                }`}
+                                        >
+                                            {collapsed ? (
+                                                <Icon className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                                            ) : (
+                                                <div className="flex items-center gap-3.5">
+                                                    <Icon className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                                                    <span className="text-sm font-semibold tracking-wide font-sans">{item.label}</span>
+                                                </div>
+                                            )}
+
+                                            {!collapsed && (
+                                                isLogisticaExpanded ? (
+                                                    <ChevronUp className="w-4 h-4 text-slate-400 group-hover:text-slate-200 transition-colors" />
+                                                ) : (
+                                                    <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-200 transition-colors" />
+                                                )
+                                            )}
+
+                                            {collapsed && (
+                                                <div className="absolute left-16 bg-[#12141c] text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-slate-800 z-50">
+                                                    {item.label}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Submodules rendering under Logística with smooth transition */}
+                                        <AnimatePresence initial={false}>
+                                            {!collapsed && isLogisticaExpanded && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                                                    className="overflow-hidden flex flex-col gap-1 pl-4 mt-0.5 border-l border-slate-800 ml-6"
+                                                >
+                                                    {logisticaSubItems.map((sub) => {
+                                                        const SubIcon = sub.icon;
+                                                        const currentPathWithSearch = location.pathname + location.search;
+                                                        const isSubActive = currentPathWithSearch === sub.to || (sub.to.includes('tab=platos') && currentPathWithSearch === '/admin/inventory');
+
+                                                        return (
+                                                            <Link
+                                                                key={sub.id}
+                                                                to={sub.to}
+                                                                className={`rounded-lg flex items-center h-8 px-2.5 justify-start gap-2 transition-all duration-200 group cursor-pointer no-underline ${isSubActive
+                                                                    ? 'active bg-brand text-white shadow-md shadow-brand/20'
+                                                                    : 'text-slate-500 hover:text-slate-300 hover:bg-[#151722]/50'
+                                                                    }`}
+                                                            >
+                                                                <SubIcon className="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                                                                <span className="text-[11px] font-medium tracking-wide font-sans">{sub.label}</span>
+                                                            </Link>
+                                                        );
+                                                    })}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                );
+                            }
 
                             return (
                                 <NavLink
@@ -345,13 +462,12 @@ const DashboardLayout = () => {
                 </aside>
 
                 {/* 2. Main Content Layout (Occupies rest of screen space) */}
-                <div className={`flex-1 transition-all duration-300 ${collapsed ? 'pl-20' : 'pl-20 md:pl-64'} flex flex-col w-full min-h-screen bg-bg-primary text-text-main`}>
-                    <main className="main-content flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-screen flex flex-col justify-between">
+                <div className={`flex-1 transition-all duration-300 ${collapsed ? 'pl-20' : 'pl-20 md:pl-64'} flex flex-col w-full min-h-screen bg-[var(--bg-primary)] text-[var(--text-main)]`}>
+                    <main className={`main-content flex-1 overflow-y-auto flex flex-col ${isCashier ? 'p-0' : 'p-4 sm:p-6 lg:p-8'}`}>
                         <div className="flex-grow pb-8">
                             <Outlet />
                         </div>
-                        {/* Footer of Workspace area */}
-                        <footer className="mt-auto pt-6 border-t border-slate-800/10 dark:border-slate-800/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[var(--text-muted)] font-medium">
+                        <footer className={`mt-auto pt-6 border-t border-slate-800/10 dark:border-slate-800/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[var(--text-muted)] font-medium ${isCashier ? 'mx-4 sm:mx-6 lg:mx-8 mb-4' : ''}`}>
                             <span>© 2026 Búnker - Sistema de Gestión de Comandas Inteligentes.</span>
                             <div className="flex items-center gap-1">
                                 <span>Hecho con</span>

@@ -20,12 +20,11 @@ export default function SupportView() {
       className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full"
     >
       {/* Telephone channels */}
-      <div 
-        className={`rounded-[24px] p-6 flex flex-col justify-between transition-all duration-500 bg-[var(--bg-secondary)] ${
-          highlightHumanSupport
-            ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/30 scale-[1.02] shadow-lg shadow-[var(--primary)]/10'
-            : 'border-[var(--glass-border)]'
-        }`}
+      <div
+        className={`rounded-[24px] p-6 flex flex-col justify-between transition-all duration-500 bg-[var(--bg-secondary)] ${highlightHumanSupport
+          ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/30 scale-[1.02] shadow-lg shadow-[var(--primary)]/10'
+          : 'border-[var(--glass-border)]'
+          }`}
         style={{
           border: '1px solid rgb(228 228 231 / 0.5)',
           boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
@@ -75,17 +74,14 @@ export default function SupportView() {
               </div>
               <a href="https://wa.me/51902564624" target="_blank" rel="noreferrer" className="ml-auto bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer no-underline">Escribir</a>
             </div>
-
           </div>
         </div>
 
-        <div className="mt-8 pt-5 border-t border-[var(--glass-border)] text-[10px] text-[var(--text-muted)] font-mono leading-relaxed">
-          Identificador de Local: BKR-LIM-04 &bull; Servidor: CLOUD-RUN-SOUTH-01
-        </div>
+
       </div>
 
       {/* Create Support Ticket */}
-      <div 
+      <div
         className="rounded-[24px] p-6 bg-[var(--bg-secondary)]"
         style={{
           border: '1px solid rgb(228 228 231 / 0.5)',

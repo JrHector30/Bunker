@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
@@ -14,7 +14,21 @@ const InventoryView = () => {
     const { showToast } = useNotification();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState('platos'); // 'platos', 'insumos', 'recetario'
+    const [searchParams, setSearchParams] = useSearchParams();
+    const tabParam = searchParams.get('tab') || 'platos';
+    const [activeTab, setActiveTab] = useState(tabParam);
+
+    // Sync tab state when URL search params change
+    useEffect(() => {
+        if (tabParam && tabParam !== activeTab) {
+            setActiveTab(tabParam);
+        }
+    }, [tabParam]);
+
+    const handleTabChange = (newTab) => {
+        setActiveTab(newTab);
+        setSearchParams({ tab: newTab });
+    };
 
     // Data States from Cache
     const fetchProductsAPI = () => fetch('/api/products').then(res => res.json());
@@ -87,7 +101,7 @@ const InventoryView = () => {
         const Icon = isActive ? (sortConfig.direction === 'asc' ? ArrowUp : ArrowDown) : ChevronsUpDown;
         return (
             <th style={{ padding: 15, cursor: 'pointer', userSelect: 'none', color: isActive ? 'var(--primary)' : 'inherit' }} onClick={() => handleSort(sortKey)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}>
                     {label} <Icon size={14} style={{ opacity: isActive ? 1 : 0.3 }} />
                 </div>
             </th>
@@ -217,15 +231,15 @@ const InventoryView = () => {
             stockMinimo: (insumoForm.stockMinimo === '' || insumoForm.stockMinimo === null) ? 0 : Number(insumoForm.stockMinimo),
             notificarAlerta: Boolean(insumoForm.notificarAlerta)
         };
-        
+
         const url = editingInsumo ? `/api/insumos/${editingInsumo.id}` : '/api/insumos';
         const method = editingInsumo ? 'PUT' : 'POST';
-        
+
         try {
-            const res = await fetch(url, { 
-                method, 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(payload) 
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
@@ -322,7 +336,7 @@ const InventoryView = () => {
 
         return (
             <>
-                <div className="glass-panel" style={{ marginBottom: 20, display: 'flex', gap: 15, padding: 15, alignItems: 'center' }}>
+                <div className="glass-panel" style={{ marginBottom: 20, display: 'flex', gap: 15, padding: 15, alignItems: 'center', textAlign: 'center' }}>
                     <div className="search-container" style={{ flex: 1 }}>
                         <Search size={22} className="text-muted" />
                         <input
@@ -346,8 +360,8 @@ const InventoryView = () => {
                                 <SortHeader label="Nombre" sortKey="nombre" />
                                 <SortHeader label="Categoría" sortKey="categoria" />
                                 <SortHeader label="Precio Venta" sortKey="precio" />
-                                <th style={{ padding: 15 }}>Costo Prod.</th>
-                                <th style={{ padding: 15 }}>Costo %</th>
+                                <th style={{ padding: 15, textAlign: 'center' }}>Costo Prod.</th>
+                                <th style={{ padding: 15, textAlign: 'center' }}>Costo %</th>
                                 <th style={{ padding: 15 }}>Acciones</th>
                             </tr>
                         </thead>
@@ -358,7 +372,7 @@ const InventoryView = () => {
                                 const isWarning = margenPct > 40;
 
                                 return (
-                                    <tr key={prod.id} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
+                                    <tr key={prod.id} style={{ borderBottom: '1px solid var(--table-row-border)', textAlign: 'center' }}>
                                         <td style={{ padding: 15 }}>
                                             {prod.imagen ? <img src={prod.imagen} alt={prod.nombre} style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 8 }} />
                                                 : <div style={{ width: 50, height: 50, background: 'var(--item-hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={20} className="text-muted" /></div>}
@@ -418,29 +432,31 @@ const InventoryView = () => {
                     <button className="glass-button primary" onClick={() => handleOpenInsumoModal()}><Plus size={20} /> Nuevo Insumo</button>
                 </div>
 
-                <div className="glass-panel table-responsive" style={{ padding: 0 }}>
+                <div className="glass-panel table-responsive" style={{ padding: 0, textAlign: 'center' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr style={{ background: 'var(--table-header-bg)', textAlign: 'left' }}>
+                            <tr style={{ background: 'var(--table-header-bg)', textAlign: 'center' }}>
                                 <SortHeader label="Nombre" sortKey="nombre" />
                                 <SortHeader label="Costo Unitario Bruto" sortKey="precioCompra" />
                                 <SortHeader label="Stock Actual" sortKey="stock" />
-                                <th style={{ padding: 15 }}>Nivel de Stock</th>
-                                <th style={{ padding: 15 }}>Acciones</th>
+                                <th style={{ padding: 15, textAlign: 'center' }}>Nivel de Stock</th>
+                                <th style={{ padding: 15, textAlign: 'center' }}>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {sortedInsumos.map(insumo => {
                                 const stockPct = Math.min(100, Math.max(0, (insumo.stock / 100) * 100)); // Demo ratio against 100 units
                                 return (
-                                    <tr key={insumo.id} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
-                                        <td style={{ padding: 15, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            {insumo.nombre}
-                                            {insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo && (
-                                                <span style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center' }} title={`Stock crítico (Mínimo: ${insumo.stockMinimo})`}>
-                                                    <AlertTriangle size={16} />
-                                                </span>
-                                            )}
+                                    <tr key={insumo.id}>
+                                        <td style={{ padding: 15, fontWeight: 'bold', verticalAlign: 'middle' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
+                                                {insumo.nombre}
+                                                {insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo && (
+                                                    <span style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center' }} title={`Stock crítico (Mínimo: ${insumo.stockMinimo})`}>
+                                                        <AlertTriangle size={16} />
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td style={{ padding: 15 }}><span className="font-mono">S/. {Number(insumo.precioCompra).toFixed(2)}</span> / {insumo.unidadMedida}</td>
                                         <td style={{ padding: 15, color: (insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo) ? 'var(--warning)' : 'inherit', fontWeight: (insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo) ? 'bold' : 'normal' }}>
@@ -452,7 +468,7 @@ const InventoryView = () => {
                                             </div>
                                         </td>
                                         <td style={{ padding: 15 }}>
-                                            <div style={{ display: 'flex', gap: 10 }}>
+                                            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                                                 <button className="glass-button" onClick={() => handleOpenInsumoModal(insumo)}><Edit size={16} /></button>
                                                 <button className="glass-button" onClick={() => handleDeleteInsumo(insumo.id)}><Trash size={16} /></button>
                                             </div>
@@ -622,10 +638,10 @@ const InventoryView = () => {
         // Filter by Date
         const filteredKardex = kardex.filter(mov => {
             if (!kardexDateFilterRange || (!kardexDateFilterRange.from && !kardexDateFilterRange.to)) return true;
-            
+
             const movDate = new Date(mov.fecha);
             const dateToCompare = new Date(movDate.getFullYear(), movDate.getMonth(), movDate.getDate());
-            
+
             if (kardexDateFilterRange.from && kardexDateFilterRange.to) {
                 const fromDate = new Date(kardexDateFilterRange.from.getFullYear(), kardexDateFilterRange.from.getMonth(), kardexDateFilterRange.from.getDate());
                 const toDate = new Date(kardexDateFilterRange.to.getFullYear(), kardexDateFilterRange.to.getMonth(), kardexDateFilterRange.to.getDate());
@@ -702,7 +718,7 @@ const InventoryView = () => {
                 </div>
 
                 <div className="glass-panel table-responsive" style={{ padding: 0 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', justifyItems: 'center', alignItems: 'center', textAlign: 'center' }}>
                         <thead>
                             <tr style={{ background: 'var(--table-header-bg)', textAlign: 'left' }}>
                                 <th style={{ padding: 15 }}>Fecha y Hora</th>
@@ -890,31 +906,30 @@ const InventoryView = () => {
         );
     };
 
+    const getModuleTitle = () => {
+        switch (activeTab) {
+            case 'platos':
+                return 'Menú (Platos)';
+            case 'insumos':
+                return 'Inventario (Insumos)';
+            case 'recetario':
+                return 'Recetarios (Costeo)';
+            case 'kardex':
+                return 'Kardex de Inventario';
+            case 'auditoria':
+                return 'Auditoría de Insumos';
+            default:
+                return 'Logística';
+        }
+    };
+
     return (
         <div className="fade-in" style={{ padding: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
                     <button className="glass-button" onClick={() => navigate('/')} style={{ padding: 10 }}><ArrowLeft size={24} /></button>
-                    <h1 style={{ margin: 0 }}>Logística y Recetas</h1>
+                    <h1 style={{ margin: 0 }}>{getModuleTitle()}</h1>
                 </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, marginBottom: 20, borderBottom: '1px solid var(--glass-border)', paddingBottom: 15, overflowX: 'auto' }}>
-                <button className={`glass-button ${activeTab === 'platos' ? 'primary' : ''}`} onClick={() => { setActiveTab('platos'); setSearchTerm(''); }}>
-                    <BookOpen size={18} /> Menú (Platos)
-                </button>
-                <button className={`glass-button ${activeTab === 'insumos' ? 'primary' : ''}`} onClick={() => { setActiveTab('insumos'); setSearchTerm(''); }}>
-                    <Package size={18} /> Inventario (Insumos)
-                </button>
-                <button className={`glass-button ${activeTab === 'recetario' ? 'primary' : ''}`} onClick={() => setActiveTab('recetario')}>
-                    <Beaker size={18} /> Recetarios (Costeo)
-                </button>
-                <button className={`glass-button ${activeTab === 'kardex' ? 'primary' : ''}`} onClick={() => setActiveTab('kardex')}>
-                    <History size={18} /> Kardex
-                </button>
-                <button className={`glass-button ${activeTab === 'auditoria' ? 'primary' : ''}`} onClick={() => setActiveTab('auditoria')}>
-                    <ClipboardCheck size={18} /> Auditoría
-                </button>
             </div>
 
             {activeTab === 'platos' && renderPlatosTab()}
@@ -1000,13 +1015,13 @@ const InventoryView = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
                                 <div>
                                     <label>Stock Física en Bodega</label>
-                                    <input 
-                                        type="number" 
-                                        step="0.01" 
-                                        className="glass-input" 
-                                        value={Number.isNaN(insumoForm.stock) ? '' : insumoForm.stock} 
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="glass-input"
+                                        value={Number.isNaN(insumoForm.stock) ? '' : insumoForm.stock}
                                         onChange={e => setInsumoForm({ ...insumoForm, stock: e.target.valueAsNumber })}
-                                        required 
+                                        required
                                     />
                                     <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 5 }}>Medida Actual.</p>
                                 </div>

@@ -99,14 +99,14 @@ export function DropdownRangeDatePicker({
           <Button
             variant="outline"
             // Mantener el padding derecho pr-10 para que el texto de las fechas no se meta debajo de la X
-            className="w-full justify-start text-left font-normal pr-10"
+            className="w-full justify-start text-left font-normal pr-10 font-sans"
           >
             <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-teal-400" />
-            <span className="truncate overflow-hidden text-gray-200">{formattedValue}</span>
+            <span className="truncate overflow-hidden text-gray-200 font-sans">{formattedValue}</span>
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent className="w-auto p-4" align="start">
+        <PopoverContent className="w-auto p-4" align="end">
           <div className="space-y-4">
             {/* Dropdowns - Year on the Left, Month on the Right */}
             <div className="flex gap-2 mb-2">
@@ -114,7 +114,7 @@ export function DropdownRangeDatePicker({
                 value={year.toString()}
                 onValueChange={(val) => setYear(Number(val))}
               >
-                <SelectTrigger className="font-['Google_Sans'] w-[120px]">
+                <SelectTrigger className="font-sans w-[120px]">
                   <SelectValue placeholder="Año" />
                 </SelectTrigger>
                 <SelectContent>
@@ -132,7 +132,7 @@ export function DropdownRangeDatePicker({
                 value={month.toString()}
                 onValueChange={(val) => setMonth(Number(val))}
               >
-                <SelectTrigger className="font-['Google_Sans'] w-[140px]">
+                <SelectTrigger className="font-sans w-[140px]">
                   <SelectValue placeholder="Mes" />
                 </SelectTrigger>
                 <SelectContent>
@@ -155,7 +155,7 @@ export function DropdownRangeDatePicker({
                 setMonth(date.getMonth());
                 setYear(date.getFullYear());
               }}
-              className="font-['Google_Sans'] rounded-lg border border-gray-800 bg-[#060609]"
+              className="font-sans rounded-lg border border-gray-800 bg-[#060609]"
             />
 
             {/* Footer */}
@@ -165,7 +165,7 @@ export function DropdownRangeDatePicker({
                 variant="ghost"
                 onClick={handleClear}
                 disabled={mode === "range" ? !tempSelected?.from : !tempSelected}
-                className="font-['Google_Sans'] !bg-transparent !border-none text-white hover:text-gray-500 font-medium transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none p-0 h-auto"
+                className="font-sans !bg-transparent !border-none text-white hover:text-gray-500 font-medium transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none p-0 h-auto"
               >
                 Limpiar
               </Button>
@@ -174,7 +174,7 @@ export function DropdownRangeDatePicker({
                 size="sm"
                 onClick={handleApply}
                 disabled={isApplyDisabled}
-                className="font-['Google_Sans'] !bg-white !text-black hover:!bg-neutral-200 font-semibold px-4 h-8 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:pointer-events-none border-none"
+                className="font-sans !bg-white !text-black hover:!bg-neutral-200 font-semibold px-4 h-8 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:pointer-events-none border-none"
               >
                 Aplicar
               </Button>

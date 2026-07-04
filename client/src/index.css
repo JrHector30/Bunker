@@ -561,7 +561,7 @@
 /* User wants borders thicker in Light Mode on desktop, respecting the theme color */
 @media (min-width: 769px) {
   .mode-light {
-    --glass-border: var(--primary) !important;
+
     --table-row-border: var(--primary) !important;
   }
 
@@ -880,7 +880,6 @@ html {
 
 .main-content {
   flex: 1;
-  padding: 30px;
   overflow-y: auto;
   position: relative;
 }
@@ -1053,7 +1052,7 @@ h2 {
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   padding: 25px;
-  max-width: 500px;
+  max-width: 590px;
   width: 100%;
   max-height: 80vh;
   display: flex;
@@ -1223,7 +1222,6 @@ body {
 
 .main-content {
   flex: 1;
-  padding: 30px;
   overflow-y: auto;
   overflow-x: auto;
   /* Enable horizontal scroll for wide content */

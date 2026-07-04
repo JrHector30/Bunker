@@ -39,8 +39,8 @@ const PermissionsConfig = () => {
         setPermisos(prev => {
             const exists = prev.some(p => p.rol === rol && p.modulo === modulo);
             if (exists) {
-                return prev.map(p => 
-                    p.rol === rol && p.modulo === modulo 
+                return prev.map(p =>
+                    p.rol === rol && p.modulo === modulo
                         ? { ...p, habilitado: !p.habilitado }
                         : p
                 );
@@ -55,14 +55,14 @@ const PermissionsConfig = () => {
         try {
             const promises = permisos
                 .filter(p => p.rol !== 'admin') // No guardar cambios para admin
-                .map(p => 
+                .map(p =>
                     fetch(`/api/permisos/${p.rol}/${p.modulo}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ habilitado: p.habilitado })
                     })
                 );
-            
+
             await Promise.all(promises);
             showToast('✅ Permisos actualizados correctamente', 'success');
             setHasChanges(false);
@@ -88,9 +88,9 @@ const PermissionsConfig = () => {
                         </p>
                     </div>
                 </div>
-                <button 
-                    className={`glass-button ${hasChanges ? 'primary' : ''}`} 
-                    onClick={handleSave} 
+                <button
+                    className={`glass-button ${hasChanges ? 'primary' : ''}`}
+                    onClick={handleSave}
                     disabled={!hasChanges}
                 >
                     <Save size={18} /> Guardar Cambios
@@ -118,13 +118,13 @@ const PermissionsConfig = () => {
                                 </td>
                                 {roles.map(rol => (
                                     <td key={rol} style={{ padding: 15, textAlign: 'center' }}>
-                                        <input 
+                                        <input
                                             type="checkbox"
                                             checked={isEnabled(rol, mod.key)}
                                             onChange={() => handleToggle(rol, mod.key)}
-                                            style={{ 
-                                                width: 20, 
-                                                height: 20, 
+                                            style={{
+                                                width: 20,
+                                                height: 20,
                                                 accentColor: 'var(--primary)',
                                                 cursor: 'pointer'
                                             }}

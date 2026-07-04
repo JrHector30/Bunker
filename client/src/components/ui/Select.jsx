@@ -80,9 +80,8 @@ export function SelectItem({ value, children }) {
         onValueChange(value);
         setOpen(false);
       }}
-      className={`relative flex w-full cursor-pointer select-none items-center rounded-md py-1.5 pl-3 pr-8 text-sm outline-none hover:bg-teal-600 hover:text-white transition-colors ${
-        isSelected ? 'bg-teal-700 text-white font-medium' : 'text-gray-300'
-      }`}
+      className={`relative flex w-full cursor-pointer select-none items-center rounded-md py-1.5 pl-3 pr-8 text-sm outline-none hover:bg-teal-600 hover:text-white transition-colors ${isSelected ? 'bg-teal-700 text-white font-medium' : 'text-gray-300'
+        }`}
     >
       <span className="truncate">{children}</span>
     </div>

@@ -142,7 +142,7 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                             channel.postMessage('refreshTables');
                             channel.postMessage('refreshCashCount');
                             channel.close();
-                        } catch (e) {}
+                        } catch (e) { }
                     } else {
                         showToast('Error al registrar pago. Verifica en Caja.', 'error');
                         // Revert cache if error
@@ -180,9 +180,9 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 900, width: '95%' }}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 1100, width: '95%' }}>
                 {/* Header */}
-                <div className="modal-header" style={{ borderBottom: 'none', background: 'var(--primary)', margin: '-25px -25px 20px -25px', padding: 20 }}>
+                <div className="modal-header" style={{ borderBottom: 'none', background: 'var(--primary)', margin: '-26px -26px 20px', padding: 20, borderTopLeftRadius: '15px', borderTopRightRadius: '15px' }}>
                     <h2 className="text-on-primary" style={{ margin: 0 }}>Tipo de Pago - Mesa {order.tableNumero || order.mesa?.numero || order.mesaId || ''}</h2>
                     <button className="glass-button text-on-primary" style={{ border: 'none', padding: 0 }} onClick={onClose}>
                         <X size={24} />
@@ -296,8 +296,8 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                         )}
 
                         {paymentMethod === 'tarjeta' && (
-                            <div className="bg-[#0c0c0e] text-gray-200 p-3 rounded-lg border border-gray-800 flex flex-col gap-2 mt-3" style={{ backgroundColor: '#0c0c0e', color: '#e5e7eb' }}>
-                                <span style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#9ca3af' }}>SELECCIONE OPERADOR:</span>
+                            <div className="bg-[#0c0c0e] text-gray-200 p-3 rounded-lg border border-gray-800 flex flex-col gap-2 mt-3" style={{ backgroundColor: '#f3f3f3', color: '#000000ff' }}>
+                                <span style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#000000ff' }}>SELECCIONE OPERADOR:</span>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                                         <input
@@ -322,8 +322,8 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                         )}
 
                         {paymentMethod === 'digital' && (
-                            <div className="bg-[#0c0c0e] text-gray-200 p-3 rounded-lg border border-gray-800 flex flex-col gap-2 mt-3" style={{ backgroundColor: '#0c0c0e', color: '#e5e7eb' }}>
-                                <span style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#9ca3af' }}>SELECCIONE OPERADOR:</span>
+                            <div className="bg-[#0c0c0e] text-gray-200 p-3 rounded-lg border border-gray-800 flex flex-col gap-2 mt-3" style={{ backgroundColor: '#f3f3f3', color: '#000000ff' }}>
+                                <span style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#000000ff' }}>SELECCIONE OPERADOR:</span>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                                         <input
@@ -389,7 +389,7 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                                             fontWeight: 'bold'
                                         }}
                                     >
-                                        {isValidating ? 'Consultando...' : 'Validar Documento 🔍'}
+                                        {isValidating ? 'Consultando...' : '🔍 Validar'}
                                     </button>
                                 </div>
                                 {(razonSocial || direccionFiscal) && (

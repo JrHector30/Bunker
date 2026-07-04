@@ -16,11 +16,13 @@ const menuItems = [
 
 const easeOutQuint = [0.23, 1, 0.32, 1];
 
-export default function SmoothDropdown({ id, dropUp = false, onAction }) {
+export default function SmoothDropdown({ id, dropUp = false, onAction, items }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
   const containerRef = useRef(null);
   const [contentRef, contentBounds] = useMeasure();
+
+  const activeItems = items || menuItems;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -103,7 +105,7 @@ export default function SmoothDropdown({ id, dropUp = false, onAction }) {
             }}
           >
             <ul className="flex flex-col gap-1 m-0 p-0 list-none">
-              {menuItems.map((item, index) => {
+              {activeItems.map((item, index) => {
                 const IconComponent = item.icon;
                 const isHovered = hoveredItem === item.id;
                 const itemDelay = isOpen ? 0.06 + index * 0.02 : 0;

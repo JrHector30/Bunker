@@ -573,8 +573,8 @@ const TablesView = () => {
             pendiente: { bg: 'var(--danger)', color: '#ffffff', icon: '🕑' },
             enviada: { bg: 'rgba(0, 0, 255, 0.2)', color: '#4dabf7', icon: '🔵' },
             preparando: { bg: 'var(--warning)', color: '#ffffff', icon: '🟠' },
-            lista: { bg: '#88f798', color: '#ffffff', icon: '☑️' },
-            listo: { bg: '#88f798', color: '#ffffff', icon: '☑️' },
+            lista: { bg: 'rgba(0, 0, 0, 0.05)', color: '#000000ff', icon: '✅' },
+            listo: { bg: 'rgba(0, 0, 0, 0.05)', color: '#000000ff', icon: '✅' },
             entregado: { bg: 'rgba(255, 255, 255, 0.1)', color: '#888', icon: '✅' }
         };
         const s = styles[status] || styles['pendiente'];
@@ -694,7 +694,7 @@ const TablesView = () => {
                                         setShowTransferMode(false);
                                     }}
                                     title="Unir mesas"
-                                    style={{ borderColor: 'var(--success)', color: 'var(--success)' }}
+                                    style={{ borderColor: 'var(--success)', backgroundColor: 'var(--success)', color: 'white' }}
                                 >
                                     🔗 Unir
                                 </button>
@@ -774,7 +774,7 @@ const TablesView = () => {
                                                 <td style={{ padding: 10, textAlign: 'center', fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--primary)' }}>
                                                     {item.cantidad}
                                                 </td>
-                                                <td style={{ padding: 10, fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-main)' }}>
+                                                <td style={{ padding: 0, fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-main)' }}>
                                                     {item.nombre}
                                                 </td>
                                                 <td style={{ padding: 10, textAlign: 'right' }} className="font-mono">S/. {item.precio.toFixed(2)}</td>
@@ -964,7 +964,7 @@ const TablesView = () => {
                     <div style={{ textAlign: 'center', marginBottom: 15, borderBottom: '1px dashed black', paddingBottom: 10 }}>
                         <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>BUNKER</div>
                         <div>DEMO</div>
-                        <div style={{ fontSize: '0.8rem' }}>Telf: 519123456789 / RUC: 10000000000</div>
+                        <div style={{ fontSize: '0.8rem' }}>Telf: 51 9123456789 / RUC: 10000000000</div>
                         <div style={{ fontSize: '0.8rem', marginTop: 5 }}>Fecha: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</div>
                     </div>
 
@@ -979,7 +979,7 @@ const TablesView = () => {
 
                     <div style={{ borderBottom: '1px dashed black', marginBottom: 5 }}></div>
                     <div style={{ display: 'flex', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                        <span style={{ width: 30 }}>Cant</span>
+                        <span style={{ width: 32 }}>Can</span>
                         <span style={{ flex: 1 }}>Producto</span>
                         <span style={{ width: 60, textAlign: 'right' }}>Total</span>
                     </div>
@@ -987,10 +987,10 @@ const TablesView = () => {
 
                     <div style={{ marginBottom: 15 }}>
                         {groupedItems.map(item => (
-                            <div key={item.key} style={{ display: 'flex', fontSize: '0.9rem', marginBottom: 2 }}>
+                            <div key={item.key} style={{ display: 'flex', fontSize: '0.9rem', marginBottom: 4 }}>
                                 <span style={{ width: 30 }}>{item.cantidad}</span>
                                 <span style={{ flex: 1 }}>{item.nombre}</span>
-                                <span style={{ width: 60, textAlign: 'right' }}>S/ {(item.precio * item.cantidad).toFixed(2)}</span>
+                                <span style={{ width: 70, textAlign: 'right' }}>S/ {(item.precio * item.cantidad).toFixed(2)}</span>
                             </div>
                         ))}
                     </div>
@@ -999,7 +999,7 @@ const TablesView = () => {
                         Total: S/ {total.toFixed(2)}
                     </div>
                     <div style={{ fontSize: '0.8rem', marginTop: 5, textAlign: 'right' }}>
-                        Son: {totalLetras}
+                        {totalLetras}
                     </div>
 
                     <div style={{ textAlign: 'center', marginTop: 20, fontSize: '0.8rem', borderTop: '1px dashed black', paddingTop: 10 }}>

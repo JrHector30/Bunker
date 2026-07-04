@@ -42,6 +42,7 @@ const GlassCard = ({ children, className = "" }) => (
     style={{
       border: '1px solid rgb(228 228 231 / 0.5)',
       boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+
     }}
   >
     {children}
@@ -81,7 +82,7 @@ const MyCardComponent = ({ weeklyEarnings, setWeeklyEarnings }) => {
         </button>
       </div>
 
-      <GlassCard className="p-6 min-h-[190px] flex flex-col justify-between">
+      <GlassCard className="p-5 min-h-[160px] flex flex-col justify-between">
         {/* Glow effects */}
         <div className="absolute top-[-20%] right-[-20%] w-[180px] h-[180px] rounded-full bg-[var(--primary)]/5 blur-3xl group-hover:scale-110 transition-transform duration-700 pointer-events-none"></div>
         <div className="absolute bottom-[-30%] left-[-10%] w-[160px] h-[160px] rounded-full bg-[var(--primary)]/5 blur-3xl pointer-events-none"></div>
@@ -192,7 +193,7 @@ const CategoryPanelComponent = ({ activeOrdersCount, averageWaitTime, occupiedTa
               key={cat.id}
               whileHover={{ y: -4, scale: 1.02 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="relative overflow-hidden rounded-[24px] p-4 flex flex-col justify-between items-center text-center min-h-[190px] group cursor-pointer bg-[var(--bg-secondary)]"
+              className="relative overflow-hidden rounded-[24px] p-3 flex flex-col justify-between items-center text-center min-h-[160px] group cursor-pointer bg-[var(--bg-secondary)]"
               style={{
                 border: '1px solid rgb(228 228 231 / 0.5)',
                 boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
@@ -200,8 +201,8 @@ const CategoryPanelComponent = ({ activeOrdersCount, averageWaitTime, occupiedTa
             >
               <div className="absolute inset-0 bg-gradient-to-b from-[var(--primary)]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-              <div className={`relative flex items-center justify-center w-12 h-12 rounded-2xl ${cat.iconBg} border border-zinc-200/50 shadow-sm`}>
-                <Icon className={`w-5 h-5 ${cat.iconColor}`} />
+              <div className={`relative flex items-center justify-center w-10 h-10 rounded-2xl ${cat.iconBg} border border-zinc-200/50 shadow-sm`}>
+                <Icon className={`w-4 h-4 ${cat.iconColor}`} />
                 <div className="absolute -inset-1 rounded-2xl border border-zinc-200/40 opacity-0 group-hover:opacity-100 transition-all duration-500 scale-90 group-hover:scale-100"></div>
               </div>
 
@@ -241,13 +242,13 @@ const PedidosAtendidosComponent = ({ waiters, topWaiter }) => {
       </div>
 
       <div
-        className="flex-1 rounded-[24px] p-5 flex flex-col justify-between min-h-[350px] bg-[var(--bg-secondary)]"
+        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between min-h-[290px] bg-[var(--bg-secondary)]"
         style={{
           border: '1px solid rgb(228 228 231 / 0.5)',
           boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
         }}
       >
-        <div className="flex flex-col gap-3.5 overflow-y-auto max-h-[250px] pr-1 scrollbar-none">
+        <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[160px] pr-1 scrollbar-none">
           {waiters.map((waiter, index) => {
             const isTop = topWaiter && waiter.id === topWaiter.id;
             const avatarUrl = `https://api.dicebear.com/7.x/adventurer/svg?seed=${waiter.nombre || waiter.id}`;
@@ -346,13 +347,13 @@ const CierreMesasComponent = ({ transactions, onDownloadPDF }) => {
       </div>
 
       <div
-        className="flex-1 rounded-[24px] p-5 flex flex-col min-h-[350px] bg-[var(--bg-secondary)]"
+        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between min-h-[290px] bg-[var(--bg-secondary)]"
         style={{
           border: '1px solid rgb(228 228 231 / 0.5)',
           boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
         }}
       >
-        <div className="flex flex-col gap-3.5 overflow-y-auto max-h-[320px] pr-1 scrollbar-none">
+        <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[190px] pr-1 scrollbar-none">
           {transactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center text-[var(--text-muted)]">
               <Receipt className="w-8 h-8 opacity-25 mb-2" />
@@ -409,15 +410,34 @@ const CierreMesasComponent = ({ transactions, onDownloadPDF }) => {
 // 5. StatisticsPanel Component (Right sidebar panel)
 const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings, goalPercentage, currentEarning, onShowToast }) => {
   const [hasNotifications, setHasNotifications] = useState(true);
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 5)); // Junio 2026
+  const [hoveredIdx, setHoveredIdx] = useState(null);
 
-  // Generate June 2026 Calendar grid (starts on Monday June 1st, ends on Tuesday June 30th)
-  const totalDays = 30;
+  // Generate dynamic calendar
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  const monthName = currentMonth.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+  const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+  const totalDays = new Date(year, month + 1, 0).getDate();
   const daysArray = Array.from({ length: totalDays }, (_, i) => i + 1);
+  const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7; // Monday = 0
+  const blanks = Array.from({ length: firstDayIndex }, () => null);
+  const gridCells = [...blanks, ...daysArray];
 
   const handleDayClick = (dayNum) => {
-    const formattedDate = `2026-06-${dayNum.toString().padStart(2, '0')}`;
+    if (dayNum === null) return;
+    const formattedDate = `${year}-${(month + 1).toString().padStart(2, '0')}-${dayNum.toString().padStart(2, '0')}`;
     setSelectedDate(formattedDate);
-    onShowToast(`Estadísticas para el ${dayNum} de Junio, 2026.`, "info");
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   };
 
   // Bar Chart comparison dates - June 24 to June 30
@@ -436,17 +456,67 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
   const strokeDasharray = 2 * Math.PI * radius; // 251.2
   const strokeDashoffset = strokeDasharray - (strokeDasharray * goalPercentage) / 100;
 
+  // Calculate coordinates for the 2D Area Chart (Flujo de Fondos)
+  const svgWidth = 320;
+  const svgHeight = 90;
+  const chartPaddingLeft = 28;
+  const chartPaddingRight = 12;
+  const chartPaddingTop = 18;
+  const chartPaddingBottom = 14;
+
+  const chartWidth = svgWidth - chartPaddingLeft - chartPaddingRight;
+  const chartHeight = svgHeight - chartPaddingTop - chartPaddingBottom;
+
+  const maxAmount = Math.max(...comparisonDays.map(c => dailyEarnings.find(e => e.date === c.date)?.amount || 0));
+
+  // Create coordinate points
+  const points = comparisonDays.map((comp, i) => {
+    const earning = dailyEarnings.find(e => e.date === comp.date)?.amount || 0;
+    const x = chartPaddingLeft + (i / (comparisonDays.length - 1)) * chartWidth;
+    const ratio = maxAmount > 0 ? (earning / maxAmount) : 0.5;
+    const y = chartPaddingTop + chartHeight - ratio * chartHeight;
+    return { x, y, earning, date: comp.date, label: comp.label };
+  });
+
+  // Hermite Spline Path
+  let curvePath = '';
+  if (points.length > 0) {
+    curvePath = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i];
+      const p1 = points[i + 1];
+      const cpX1 = p0.x + (p1.x - p0.x) / 2;
+      const cpY1 = p0.y;
+      const cpX2 = p0.x + (p1.x - p0.x) / 2;
+      const cpY2 = p1.y;
+      curvePath += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${p1.x} ${p1.y}`;
+    }
+  }
+
+  const areaPath = points.length > 0
+    ? `${curvePath} L ${points[points.length - 1].x} ${chartPaddingTop + chartHeight} L ${points[0].x} ${chartPaddingTop + chartHeight} Z`
+    : '';
+
+  // Find active point
+  const activeIdx = hoveredIdx !== null
+    ? hoveredIdx
+    : comparisonDays.findIndex(c => c.date === selectedDate);
+
+  const activePoint = activeIdx !== -1 && points[activeIdx] !== undefined
+    ? points[activeIdx]
+    : points[points.length - 1];
+
+  const activeEarning = activePoint?.earning || 0;
+  const activeLabel = activePoint?.label || '';
+
   return (
-    <div className="flex flex-col gap-4 w-full p-5 h-full bg-[var(--bg-secondary)]" style={{ borderLeft: '1px solid rgb(228 228 231 / 0.4)', boxShadow: '-1px 0 0 0 rgb(228 228 231 / 0.3)', height: '872px', transform: 'translateY(-171px)' }}>
+    <GlassCard className="flex flex-col gap-3 w-full p-4 h-full">
 
       {/* Header Profile & Notification row */}
       <div className="flex items-center justify-between w-full">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => {
-              setHasNotifications(false);
-              onShowToast('Bandeja de alertas limpia.', 'info');
-            }}
+            onClick={() => setHasNotifications(false)}
             className="relative w-10 h-10 rounded-2xl flex items-center justify-center transition-all cursor-pointer hover:bg-white/[0.04] text-[var(--text-muted)] hover:text-[var(--text-main)]"
             style={{ border: '1px solid rgb(228 228 231 / 0.5)' }}
           >
@@ -457,7 +527,6 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
           </button>
 
           <button
-            onClick={() => onShowToast('No tienes mensajes pendientes de cocina.', 'info')}
             className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all cursor-pointer hover:bg-white/[0.04] text-[var(--text-muted)] hover:text-[var(--text-main)]"
             style={{ border: '1px solid rgb(228 228 231 / 0.5)' }}
           >
@@ -491,8 +560,8 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
       </div>
 
       {/* Donut Chart */}
-      <div className="flex flex-col items-center justify-center my-2 relative">
-        <div className="relative w-44 h-44 flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center my-1 relative">
+        <div className="relative w-32 h-32 flex items-center justify-center">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
             <circle
               cx="50"
@@ -515,54 +584,54 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
             />
           </svg>
 
-          <div className="absolute inset-2 rounded-full flex flex-col items-center justify-center bg-[var(--bg-secondary)] shadow-sm" style={{ border: '1px solid rgb(228 228 231 / 0.5)' }}>
+          <div className="absolute inset-1.5 rounded-full flex flex-col items-center justify-center bg-[var(--bg-secondary)] shadow-sm" style={{ border: '1px solid rgb(228 228 231 / 0.5)' }}>
             <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--text-muted)]">
               CAJA DEL DÍA
             </span>
-            <span className="text-xl font-black mt-1 tracking-tight text-[var(--text-main)] font-mono">
+            <span className="text-lg font-black mt-0.5 tracking-tight text-[var(--text-main)] font-mono">
               S/. {currentEarning.toLocaleString('es-PE', { minimumFractionDigits: 0 })}
             </span>
-            <span className="text-[9px] font-bold mt-1 tracking-wide px-2 py-0.5 rounded-full flex items-center gap-0.5 bg-green-500/10 text-green-500 border border-green-500/20">
-              <TrendingUp className="w-3 h-3" /> {goalPercentage}% de Meta
+            <span className="text-[8px] font-bold mt-0.5 tracking-wide px-1.5 py-0.2 rounded-full flex items-center gap-0.5 bg-green-500/10 text-green-500 border border-green-500/20">
+              <TrendingUp className="w-2.5 h-2.5" /> {goalPercentage}%
             </span>
           </div>
         </div>
       </div>
 
       {/* Interactive Calendar */}
-      <div className="rounded-2xl p-3 flex flex-col gap-2" style={{ background: 'rgba(var(--primary-rgb, 0 201 180) / 0.05)', border: '1px solid rgb(228 228 231 / 0.4)' }}>
+      <div className="rounded-xl p-2.5 flex flex-col gap-1.5" style={{ background: 'rgba(var(--primary-rgb, 0 201 180) / 0.05)', border: '1px solid rgb(228 228 231 / 0.4)' }}>
         <div className="flex items-center justify-between text-xs font-bold text-[var(--text-main)]">
-          <span className="flex items-center gap-1.5 uppercase tracking-wider">
+          <span className="flex items-center gap-1.5 uppercase tracking-wider font-sans">
             <Calendar className="w-3.5 h-3.5 text-[var(--primary)]" />
-            Junio 2026
+            {capitalizedMonthName}
           </span>
           <div className="flex gap-1">
-            <button className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer bg-transparent border-none">
+            <button onClick={handlePrevMonth} className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer bg-transparent border-none">
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
-            <button className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer bg-transparent border-none">
+            <button onClick={handleNextMonth} className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer bg-transparent border-none">
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 mt-1 text-center text-[10px]">
+        <div className="grid grid-cols-7 gap-1 mt-1 text-center text-[10px] font-sans">
           {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, idx) => (
             <span key={idx} className="font-extrabold text-[var(--text-muted)]">{day}</span>
           ))}
-          {daysArray.map((day) => {
-            const formatted = `2026-06-${day.toString().padStart(2, '0')}`;
+          {gridCells.map((day, idx) => {
+            if (day === null) {
+              return <div key={`empty-${idx}`} className="w-[22px] h-[22px]" />;
+            }
+            const formatted = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
             const isSelected = selectedDate === formatted;
-
-            // Check if day has data (show colored indicator)
-            const daysWithData = [24, 25, 26, 27, 28, 29, 30];
-            const hasData = daysWithData.includes(day);
+            const hasData = dailyEarnings.some(e => e.date === formatted);
 
             return (
               <button
-                key={day}
+                key={`day-${day}`}
                 onClick={() => handleDayClick(day)}
-                className={`w-6 h-6 rounded-lg text-center flex items-center justify-center font-bold transition-all cursor-pointer border-none bg-transparent ${isSelected
+                className={`w-[22px] h-[22px] rounded-md text-center flex items-center justify-center text-[9px] font-bold font-sans transition-all cursor-pointer border-none bg-transparent ${isSelected
                   ? 'bg-[var(--primary)] text-white dark:text-black shadow-md shadow-[var(--primary)]/20 scale-110'
                   : hasData
                     ? 'text-[var(--primary)] hover:bg-[var(--primary)]/10 font-extrabold'
@@ -576,70 +645,286 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
         </div>
       </div>
 
-      {/* Category Labels inside Statistics */}
-      <div className="flex items-center justify-between text-xs font-bold mt-2">
-        <span className="text-[var(--text-muted)]">Ingresos</span>
-        <div className="flex gap-2">
-          <span className="border-b-2 pb-0.5 text-[var(--primary)] border-[var(--primary)]">Días</span>
-          <span className="text-[var(--text-muted)]">Semanas</span>
-        </div>
-      </div>
-
-      {/* Vertical Comparison Bar Chart */}
-      <div className="relative h-28 flex items-end justify-between px-2 pt-6">
-        <AnimatePresence mode="wait">
-          {comparisonDays.some(c => c.date === selectedDate) && (
-            <motion.div
-              key={selectedDate}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              style={{
-                left: `${(comparisonDays.findIndex(c => c.date === selectedDate) / (comparisonDays.length - 1)) * 74 + 10}%`
-              }}
-              className="absolute top-0 transform -translate-x-1/2 z-10"
-            >
-              <div className="font-black text-[9px] px-2 py-0.5 rounded-full shadow-md tracking-wide bg-[var(--primary)] text-white dark:text-black font-mono">
-                S/. {currentEarning}
-              </div>
-              <div className="w-1.5 h-1.5 rotate-45 mx-auto -mt-1 shadow-md bg-[var(--primary)]"></div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {comparisonDays.map((comp) => {
-          const matchingEarning = dailyEarnings.find(e => e.date === comp.date)?.amount || 0;
-          const maxAmount = Math.max(...dailyEarnings.map(e => e.amount));
-          const heightPercent = maxAmount > 0 ? (matchingEarning / maxAmount) * 100 : 0;
-          const isSelected = selectedDate === comp.date;
-
-          return (
-            <div
-              key={comp.date}
-              onClick={() => setSelectedDate(comp.date)}
-              className="flex flex-col items-center gap-2 group cursor-pointer flex-1"
-            >
-              <div className="relative w-2.5 h-20 rounded-full overflow-hidden flex items-end" style={{ background: 'rgba(228,228,231,0.2)', border: '1px solid rgb(228 228 231 / 0.35)' }}>
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${heightPercent}%` }}
-                  transition={{ type: "spring", stiffness: 80, damping: 15 }}
-                  className={`w-full rounded-full transition-colors ${isSelected
-                    ? 'bg-[var(--primary)]'
-                    : 'bg-[var(--text-muted)]/20 group-hover:bg-[var(--primary)]/10'
-                    }`}
-                />
-              </div>
-
-              <span className={`text-[8px] font-bold ${isSelected ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'
-                }`}>
-                {comp.label}
+      {/* PREMIUM INTERACTIVE 2D AREA CHART CARD: CASH FLOW */}
+      <SubCard className="p-2.5 flex flex-col gap-1.5 relative mt-1 text-[var(--text-main)]">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-extrabold text-[var(--text-muted)] uppercase tracking-widest">Flujo de Fondos</span>
+            <span className="text-lg font-black mt-0.5 tracking-tight font-mono text-[var(--text-main)]">
+              S/. {activeEarning.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+            </span>
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-[9px] text-green-500 font-extrabold flex items-center">
+                <TrendingUp className="w-2.5 h-2.5 mr-0.5" /> 10.2% vs semana anterior
               </span>
+              <span className="text-[9px] text-[var(--text-muted)] font-bold font-sans">({activeLabel})</span>
             </div>
-          );
-        })}
-      </div>
+          </div>
 
+          <div className="relative">
+            <select className="bg-white/5 border border-zinc-500/20 rounded-xl px-2.5 py-1 text-[9px] font-extrabold text-[var(--text-main)] focus:outline-none cursor-pointer">
+              <option>Esta semana</option>
+              <option>Últimos 30 días</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="relative w-full h-[90px] mt-1 select-none">
+          <svg
+            width="100%"
+            height="100%"
+            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+            preserveAspectRatio="none"
+            className="overflow-visible"
+          >
+            <defs>
+              <linearGradient id="chartAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.00" />
+              </linearGradient>
+            </defs>
+
+            {/* Horizontal Grid lines */}
+            {[0, 0.5, 1].map((ratio, index) => {
+              const yVal = chartPaddingTop + ratio * chartHeight;
+              const gridAmount = maxAmount - ratio * maxAmount;
+              return (
+                <g key={index} className="opacity-40">
+                  <line
+                    x1={chartPaddingLeft}
+                    y1={yVal}
+                    x2={svgWidth - chartPaddingRight}
+                    y2={yVal}
+                    stroke="rgba(255, 255, 255, 0.1)"
+                    strokeWidth="0.8"
+                    strokeDasharray="3,3"
+                  />
+                  <text
+                    x={chartPaddingLeft - 6}
+                    y={yVal + 3}
+                    fill="var(--text-muted)"
+                    fontSize="7"
+                    fontWeight="bold"
+                    textAnchor="end"
+                    className="font-mono"
+                  >
+                    {gridAmount >= 1000 ? `${(gridAmount / 1000).toFixed(1)}K` : Math.round(gridAmount)}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Filled Area Gradient */}
+            {areaPath && (
+              <path
+                d={areaPath}
+                fill="url(#chartAreaGradient)"
+                className="transition-all duration-300 ease-out"
+              />
+            )}
+
+            {/* Spline Curve Line */}
+            {curvePath && (
+              <path
+                d={curvePath}
+                fill="none"
+                stroke="var(--primary)"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                className="transition-all duration-300 ease-out"
+              />
+            )}
+
+            {/* X-Axis Labels */}
+            {points.map((p, i) => (
+              <text
+                key={i}
+                x={p.x}
+                y={chartPaddingTop + chartHeight + 11}
+                fill={activeIdx === i ? "var(--primary)" : "var(--text-muted)"}
+                fontSize="7"
+                fontWeight="900"
+                textAnchor="middle"
+                className="transition-colors duration-200"
+              >
+                {p.label.split(' ')[1]}
+              </text>
+            ))}
+
+            {/* Glowing Active Point */}
+            {activePoint && (
+              <g className="transition-all duration-150 ease-out">
+                <circle
+                  cx={activePoint.x}
+                  cy={activePoint.y}
+                  r="7"
+                  fill="var(--primary)"
+                  opacity="0.35"
+                  className="animate-ping"
+                />
+                <circle
+                  cx={activePoint.x}
+                  cy={activePoint.y}
+                  r="5"
+                  fill="white"
+                  stroke="var(--primary)"
+                  strokeWidth="2.5"
+                />
+                <circle
+                  cx={activePoint.x}
+                  cy={activePoint.y}
+                  r="1.5"
+                  fill="var(--primary)"
+                />
+
+                {/* Speech Bubble Tooltip */}
+                <g transform={`translate(${activePoint.x}, ${activePoint.y})`}>
+                  <path
+                    d="M -26 -32 h 52 a 4 4 0 0 1 4 4 v 11 a 4 4 0 0 1 -4 4 h -22 l -4 4 l -4 -4 h -22 a 4 4 0 0 1 -4 -4 v -11 a 4 4 0 0 1 4 -4 z"
+                    fill="var(--primary)"
+                    className="shadow-lg filter drop-shadow-md"
+                  />
+                  <text
+                    y="-20"
+                    fill="white"
+                    fontSize="7.5"
+                    fontWeight="900"
+                    textAnchor="middle"
+                    className="font-mono tracking-tight"
+                  >
+                    S/.{Math.round(activePoint.earning)}
+                  </text>
+                </g>
+              </g>
+            )}
+
+            {/* Invisible Hover triggers */}
+            {points.map((p, i) => {
+              const colWidth = chartWidth / (comparisonDays.length - 1);
+              const triggerX = p.x - colWidth / 2;
+              return (
+                <rect
+                  key={i}
+                  x={triggerX}
+                  y={0}
+                  width={colWidth}
+                  height={svgHeight}
+                  fill="transparent"
+                  className="cursor-pointer"
+                  onMouseEnter={() => setHoveredIdx(i)}
+                  onMouseLeave={() => setHoveredIdx(null)}
+                  onClick={() => handlePointClick(p.date)}
+                />
+              );
+            })}
+          </svg>
+        </div>
+      </SubCard>
+
+    </GlassCard>
+  );
+};
+
+// Editable widget container that allows dragging and resizing (VisBug style)
+const EditableWidget = ({ id, layout, onLayoutChange, designMode, children, className = "" }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0 });
+
+  const handleMouseDown = (e) => {
+    if (!designMode) return;
+    // Don't drag if clicking buttons, links, inputs, or selects
+    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('select') || e.target.closest('input')) return;
+
+    if (e.target.closest('.resize-handle')) {
+      setIsResizing(true);
+      setResizeStart({ x: e.clientX, y: e.clientY });
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - (layout.x || 0), y: e.clientY - (layout.y || 0) });
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isDragging) {
+        const dx = e.clientX - dragStart.x;
+        const dy = e.clientY - dragStart.y;
+        onLayoutChange(id, {
+          ...layout,
+          x: dx,
+          y: dy,
+          absolute: true
+        });
+      } else if (isResizing) {
+        const dx = e.clientX - resizeStart.x;
+        const dy = e.clientY - resizeStart.y;
+        onLayoutChange(id, {
+          ...layout,
+          width: Math.max(100, (layout.width || 300) + dx),
+          height: Math.max(80, (layout.height || 200) + dy),
+          absolute: true
+        });
+        setResizeStart({ x: e.clientX, y: e.clientY });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      setIsResizing(false);
+    };
+
+    if (isDragging || isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, isResizing, dragStart, resizeStart, layout, id, onLayoutChange]);
+
+  const style = layout.absolute ? {
+    position: 'absolute',
+    left: `${layout.x}px`,
+    top: `${layout.y}px`,
+    width: typeof layout.width === 'number' ? `${layout.width}px` : layout.width,
+    height: typeof layout.height === 'number' ? `${layout.height}px` : layout.height,
+    zIndex: isDragging || isResizing ? 50 : 10,
+    cursor: designMode ? 'move' : 'default',
+    transition: isDragging || isResizing ? 'none' : 'box-shadow 0.2s ease',
+  } : {
+    position: 'relative',
+  };
+
+  return (
+    <div
+      onMouseDown={handleMouseDown}
+      style={style}
+      className={`${className} ${designMode ? 'border border-dashed border-[var(--primary)]/60 rounded-[26px] p-0.5 bg-[var(--primary)]/5 select-none shadow-xl' : ''}`}
+    >
+      {designMode && (
+        <div className="absolute top-1 left-2 px-1.5 py-0.5 rounded bg-[var(--primary)] text-white dark:text-black font-extrabold text-[8px] tracking-wider uppercase z-20 pointer-events-none">
+          {id}
+        </div>
+      )}
+      {children}
+      {designMode && (
+        <div
+          className="resize-handle absolute bottom-1.5 right-1.5 w-4 h-4 rounded-br-2xl bg-[var(--primary)] cursor-se-resize flex items-center justify-center text-white dark:text-black z-30"
+          style={{ borderTopLeftRadius: '6px' }}
+        >
+          <svg width="6" height="6" viewBox="0 0 6 6" fill="none" className="rotate-90 opacity-80">
+            <path d="M6 0L0 6M6 3L3 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 };
@@ -649,6 +934,106 @@ const HomeView = () => {
   const navigate = useNavigate();
   const { showToast } = useNotification();
   const { user } = useAuth();
+
+  // VisBug Design Mode States
+  const [designMode, setDesignMode] = useState(false);
+  const [canvasHeight, setCanvasHeight] = useState('auto');
+  const [layouts, setLayouts] = useState(() => {
+    const saved = localStorage.getItem('bunker_dashboard_layouts');
+    return saved ? JSON.parse(saved) : {
+      welcomeHeader: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+      myCard: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+      categories: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+      pedidos: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+      cierre: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+      statistics: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+    };
+  });
+
+  const resetLayout = () => {
+    setDesignMode(false);
+    setCanvasHeight('auto');
+    const defaultLayouts = {
+      welcomeHeader: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+      myCard: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+      categories: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+      pedidos: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+      cierre: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+      statistics: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+    };
+    setLayouts(defaultLayouts);
+    localStorage.removeItem('bunker_dashboard_layouts');
+    showToast('Diseño restablecido al grid original.', 'info');
+  };
+
+  // Run a layout migration on first render to clear any broken states in the user's browser local storage
+  useEffect(() => {
+    const migrationKey = 'bunker_dashboard_layout_migration_v4';
+    if (!localStorage.getItem(migrationKey)) {
+      localStorage.removeItem('bunker_dashboard_layouts');
+      localStorage.setItem(migrationKey, 'true');
+      resetLayout();
+    }
+  }, []);
+
+  // Calculate canvas height dynamically based on layout coordinates to avoid collapses
+  useEffect(() => {
+    const hasAbsolute = Object.values(layouts).some(l => l.absolute);
+    if (hasAbsolute) {
+      const maxBottom = Object.values(layouts).reduce((max, lay) => {
+        if (!lay.absolute) return max;
+        const bottom = (lay.y || 0) + (typeof lay.height === 'number' ? lay.height : 250);
+        return Math.max(max, bottom);
+      }, 550);
+      setCanvasHeight(`${maxBottom + 20}px`);
+    } else {
+      setCanvasHeight('auto');
+    }
+  }, [layouts]);
+
+  const updateLayout = (id, newLayout) => {
+    setLayouts(prev => {
+      const updated = { ...prev, [id]: newLayout };
+      localStorage.setItem('bunker_dashboard_layouts', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const toggleDesignMode = () => {
+    if (!designMode) {
+      const hasAbsolute = Object.values(layouts).some(l => l.absolute);
+      if (!hasAbsolute) {
+        const container = document.getElementById('dashboard-canvas');
+        if (container) {
+          const containerRect = container.getBoundingClientRect();
+          const ids = ['welcomeHeader', 'myCard', 'categories', 'pedidos', 'cierre', 'statistics'];
+          const newLayouts = { ...layouts };
+
+          ids.forEach(id => {
+            const el = document.getElementById(`widget-${id}`);
+            if (el) {
+              const rect = el.getBoundingClientRect();
+              newLayouts[id] = {
+                x: rect.left - containerRect.left,
+                y: rect.top - containerRect.top,
+                width: rect.width,
+                height: rect.height,
+                absolute: true
+              };
+            }
+          });
+
+          setLayouts(newLayouts);
+          localStorage.setItem('bunker_dashboard_layouts', JSON.stringify(newLayouts));
+        }
+      }
+      setDesignMode(true);
+      showToast('Modo Diseño activado. Arrastra y deforma libremente las cartillas y cabecera.', 'info');
+    } else {
+      setDesignMode(false);
+      showToast('Diseño personalizado guardado.', 'success');
+    }
+  };
 
   // Selected Date state
   const [selectedDate, setSelectedDate] = useState('2026-06-30');
@@ -812,69 +1197,148 @@ const HomeView = () => {
   const activeOrdersCount = occupiedTablesCount;
   const averageWaitTime = occupiedTablesCount > 0 ? 12 : 0; // Simulated dynamically
 
+  const hasAbsoluteLayout = Object.values(layouts).some(l => l.absolute);
+
+  // Helper render function for the Welcome Header content
+  const renderHeaderContent = () => (
+    <header id="widget-welcomeHeader" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 w-full relative z-30">
+      <div className="flex flex-col">
+        <h1 className="text-xl font-extrabold tracking-tight text-[var(--text-main)] flex items-center gap-2">
+          ¡Bienvenido, {user?.nombre || 'Usuario'}!
+          {/* Discreet Button for Design Mode */}
+          <button
+            onClick={toggleDesignMode}
+            className="p-1 rounded-lg opacity-20 hover:opacity-100 text-[var(--text-muted)] hover:text-[var(--primary)] transition-all cursor-pointer bg-transparent border-none flex items-center justify-center"
+            title={designMode ? "Guardar y Salir" : "Alternar Modo Diseño (Estilo VisBug)"}
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${designMode ? 'text-[var(--primary)] animate-pulse' : ''}`} />
+          </button>
+        </h1>
+        <p className="text-[11px] mt-0.5 flex items-center gap-1.5 text-[var(--text-muted)] font-sans">
+          <ChefHat className="w-3 h-3 text-[var(--primary)]" />
+          Búnker &bull; Salón y Comandas &bull; Perú
+        </p>
+      </div>
+    </header>
+  );
+
   return (
-    <div className="min-h-screen p-6 flex flex-col gap-6 text-[var(--text-main)] font-sans bg-[var(--bg-primary)]">
-      {/* Welcome Header */}
-      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 w-full">
-        <div className="flex flex-col">
-          <h1 className="text-2xl font-extrabold tracking-tight text-[var(--text-main)]">
-            ¡Bienvenido, {user?.nombre || 'Usuario'}!
-          </h1>
-          <p className="text-xs mt-1 flex items-center gap-1.5 text-[var(--text-muted)]">
-            <ChefHat className="w-3.5 h-3.5 text-[var(--primary)]" />
-            Búnker &bull; Salón y Comandas &bull; Perú
-          </p>
-        </div>
-      </header>
+    <div id="dashboard-canvas" style={{ height: canvasHeight }} className="flex flex-col gap-3 text-[var(--text-main)] font-sans bg-[var(--bg-primary)] pb-1 relative w-full">
+      {designMode || hasAbsoluteLayout ? (
+        // VisBug Drag and Resize Layout Canvas
+        <>
+          {/* If the header is NOT absolute yet, we render it at the top as static */}
+          {!layouts.welcomeHeader.absolute ? (
+            renderHeaderContent()
+          ) : null}
 
-      {/* 2-Column Responsive Layout: Left content (widgets) + Right content (Statistics sidebar) */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
+          {/* If the header is absolute, we render it inside the canvas as an EditableWidget */}
+          {layouts.welcomeHeader.absolute && (
+            <EditableWidget id="welcomeHeader" layout={layouts.welcomeHeader} onLayoutChange={updateLayout} designMode={designMode} className="w-full">
+              {renderHeaderContent()}
+            </EditableWidget>
+          )}
 
-        {/* LEFT COMPONENT COLUMN (Occupies 3 columns out of 4) */}
-        <div className="xl:col-span-3 flex flex-col gap-6">
-
-          {/* Top Row: My Card + Categories */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+          <EditableWidget id="myCard" layout={layouts.myCard} onLayoutChange={updateLayout} designMode={designMode}>
             <MyCardComponent
               weeklyEarnings={weeklyEarnings}
               setWeeklyEarnings={setWeeklyEarnings}
             />
+          </EditableWidget>
 
+          <EditableWidget id="categories" layout={layouts.categories} onLayoutChange={updateLayout} designMode={designMode}>
             <CategoryPanelComponent
               activeOrdersCount={activeOrdersCount}
               averageWaitTime={averageWaitTime}
               occupiedTablesCount={occupiedTablesCount}
               totalTablesCount={totalTablesCount}
             />
-          </div>
+          </EditableWidget>
 
-          {/* Bottom Row: Waiters commissions + Closed Tables */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+          <EditableWidget id="pedidos" layout={layouts.pedidos} onLayoutChange={updateLayout} designMode={designMode}>
             <PedidosAtendidosComponent
               waiters={currentWaiters}
               topWaiter={topWaiter}
             />
+          </EditableWidget>
 
+          <EditableWidget id="cierre" layout={layouts.cierre} onLayoutChange={updateLayout} designMode={designMode}>
             <CierreMesasComponent
               transactions={currentTransactions}
               onDownloadPDF={() => handleDownloadPDF(currentTransactions)}
             />
+          </EditableWidget>
+
+          <EditableWidget id="statistics" layout={layouts.statistics} onLayoutChange={updateLayout} designMode={designMode}>
+            <StatisticsPanelComponent
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              dailyEarnings={dailyEarnings}
+              goalPercentage={goalPercentage}
+              currentEarning={currentEarning}
+              onShowToast={showToast}
+            />
+          </EditableWidget>
+        </>
+      ) : (
+        // Standard Responsive Layout Grid
+        <>
+          {renderHeaderContent()}
+
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-4 items-start w-full h-full">
+            {/* LEFT COMPONENT COLUMN (Occupies 7 columns out of 10) */}
+            <div className="xl:col-span-7 flex flex-col gap-4">
+              {/* Top Row: My Card + Categories */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+                <div id="widget-myCard" className="w-full">
+                  <MyCardComponent
+                    weeklyEarnings={weeklyEarnings}
+                    setWeeklyEarnings={setWeeklyEarnings}
+                  />
+                </div>
+
+                <div id="widget-categories" className="w-full">
+                  <CategoryPanelComponent
+                    activeOrdersCount={activeOrdersCount}
+                    averageWaitTime={averageWaitTime}
+                    occupiedTablesCount={occupiedTablesCount}
+                    totalTablesCount={totalTablesCount}
+                  />
+                </div>
+              </div>
+
+              {/* Bottom Row: Waiters commissions + Closed Tables */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+                <div id="widget-pedidos" className="w-full">
+                  <PedidosAtendidosComponent
+                    waiters={currentWaiters}
+                    topWaiter={topWaiter}
+                  />
+                </div>
+
+                <div id="widget-cierre" className="w-full">
+                  <CierreMesasComponent
+                    transactions={currentTransactions}
+                    onDownloadPDF={() => handleDownloadPDF(currentTransactions)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT COMPONENT COLUMN (Occupies 3 columns out of 10) */}
+            <div id="widget-statistics" className="xl:col-span-3 h-full w-full">
+              <StatisticsPanelComponent
+                selectedDate={selectedDate}
+                setSelectedDate={setSelectedDate}
+                dailyEarnings={dailyEarnings}
+                goalPercentage={goalPercentage}
+                currentEarning={currentEarning}
+                onShowToast={showToast}
+              />
+            </div>
           </div>
-        </div>
-
-        {/* RIGHT COMPONENT COLUMN (Occupies 1 column out of 4) */}
-        <div className="xl:col-span-1 h-full">
-          <StatisticsPanelComponent
-            selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
-            dailyEarnings={dailyEarnings}
-            goalPercentage={goalPercentage}
-            currentEarning={currentEarning}
-            onShowToast={showToast}
-          />
-        </div>
-
-      </div>
+        </>
+      )}
     </div>
   );
 };
