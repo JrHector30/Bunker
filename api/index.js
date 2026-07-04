@@ -2953,6 +2953,25 @@ if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         console.log(`🚀 Servidor backend corriendo en http://localhost:${PORT}`);
+        
+        // --- INICIAR SERVIDOR DE IMPRESIÓN EN SEGUNDO PLANO AUTOMÁTICAMENTE ---
+        try {
+            const { spawn } = require('child_process');
+            const printerScript = path.join(__dirname, '..', 'printer-server', 'server.js');
+            const fs = require('fs');
+            
+            if (fs.existsSync(printerScript)) {
+                console.log("⚙️  Iniciando servidor de impresión local en segundo plano...");
+                const child = spawn('node', [printerScript], {
+                    detached: true,
+                    stdio: 'ignore'
+                });
+                child.unref();
+                console.log("✅ Servidor de impresión local iniciado en segundo plano.");
+            }
+        } catch (e) {
+            console.error("❌ Error al iniciar el servidor de impresión en segundo plano:", e);
+        }
     });
 }
 

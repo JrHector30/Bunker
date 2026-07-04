@@ -4,6 +4,17 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { Pool } = require('pg');
 const fs = require('fs');
 const { exec } = require('child_process');
+const net = require('net');
+
+// Prevenir múltiples instancias en segundo plano utilizando un puerto de bloqueo
+const LOCK_PORT = 19999;
+const lockServer = net.createServer();
+lockServer.listen(LOCK_PORT, '127.0.0.1');
+lockServer.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    process.exit(0); // Ya está corriendo una instancia, salir silenciosamente
+  }
+});
 
 const databaseUrl = process.env.DATABASE_URL;
 
