@@ -74,6 +74,86 @@ app.get('/uploads/:type/:file', (req, res) => {
 
 // --- ROUTES ---
 
+// --- PRINTERS PROXY ENDPOINTS ---
+app.get('/api/impresoras', async (req, res) => {
+    try {
+        const config = await prisma.configuracion.findUnique({
+            where: { clave: 'impresoras_disponibles' }
+        });
+        const list = config ? JSON.parse(config.valor) : [];
+        res.json(list);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/impresoras/activa', async (req, res) => {
+    try {
+        const config = await prisma.configuracion.findUnique({
+            where: { clave: 'impresora_activa' }
+        });
+        res.json({ nombre: config ? config.valor : '' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/impresoras/seleccionar', async (req, res) => {
+    const { nombre } = req.body;
+    try {
+        await prisma.configuracion.upsert({
+            where: { clave: 'impresora_activa' },
+            update: { valor: nombre },
+            create: { clave: 'impresora_activa', valor: nombre }
+        });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/impresoras/solicitar-actualizacion', async (req, res) => {
+    try {
+        await prisma.configuracion.upsert({
+            where: { clave: 'solicitar_actualizacion_impresoras' },
+            update: { valor: 'true' },
+            create: { clave: 'solicitar_actualizacion_impresoras', valor: 'true' }
+        });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/impresoras/estado-solicitud', async (req, res) => {
+    try {
+        const config = await prisma.configuracion.findUnique({
+            where: { clave: 'solicitar_actualizacion_impresoras' }
+        });
+        res.json({ solicitando: config ? config.valor === 'true' : false });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/impresoras/imprimir', async (req, res) => {
+    const { mesaId, mozo, contenido } = req.body;
+    try {
+        const ticket = await prisma.ticketPendiente.create({
+            data: {
+                mesa_id: String(mesaId),
+                mozo: mozo || 'Sistema',
+                contenido: contenido,
+                impreso: false
+            }
+        });
+        res.json({ success: true, ticketId: ticket.id });
+    } catch (err) {
+        console.error("Error creating ticket:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // 1. Users (Auth placeholder)
 app.get('/api/users', async (req, res) => {
     try {

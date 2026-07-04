@@ -1545,7 +1545,7 @@ const CashierView = () => {
                       type="number"
                       step="0.01"
                       min="0"
-                      placeholder="0.00"
+                      placeholder="0"
                       value={initialAmount}
                       onChange={e => {
                         setInitialAmount(e.target.value);
@@ -1553,7 +1553,7 @@ const CashierView = () => {
                       }}
                       required
                       autoFocus
-                      className="glass-input block w-full py-3 text-center text-xl font-bold font-mono text-[var(--text-main)] bg-[var(--input-bg)]"
+                      className="glass-input block w-full py-3 text-center text-xl font-bold font-sans text-[var(--text-main)] bg-[var(--input-bg)]"
                     />
                   </div>
                   <button

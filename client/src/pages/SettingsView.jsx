@@ -1,18 +1,134 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal, Shield } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal, Shield, Printer, RefreshCw, Check, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PermissionsConfig from '../components/PermissionsConfig';
+import { useNotification } from '../context/NotificationContext';
+import { enqueueTicket } from '../utils/printer';
 
 const SettingsView = () => {
     const { user } = useAuth();
     const { theme, changeTheme, showAlerts, setShowAlerts } = useTheme();
     const navigate = useNavigate();
+    const { showToast } = useNotification();
 
     // Local state to handle Settings unsaved changes
     const [localShowAlerts, setLocalShowAlerts] = useState(showAlerts);
     const hasChanges = localShowAlerts !== showAlerts;
+
+    // Printer settings state
+    const [printers, setPrinters] = useState([]);
+    const [selectedPrinter, setSelectedPrinter] = useState('');
+    const [isScanning, setIsScanning] = useState(false);
+    const [testingPrint, setTestingPrint] = useState(false);
+
+    const loadPrintersData = async () => {
+        try {
+            // Fetch active printer
+            const activeRes = await fetch('/api/impresoras/activa');
+            if (activeRes.ok) {
+                const activeData = await activeRes.json();
+                setSelectedPrinter(activeData.nombre || '');
+            }
+
+            // Fetch available printers
+            const listRes = await fetch('/api/impresoras');
+            if (listRes.ok) {
+                const list = await listRes.json();
+                setPrinters(list);
+            }
+        } catch (err) {
+            console.error("Error al cargar impresoras:", err);
+        }
+    };
+
+    useEffect(() => {
+        loadPrintersData();
+    }, []);
+
+    const handleSelectPrinter = async (name) => {
+        try {
+            const res = await fetch('/api/impresoras/seleccionar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre: name })
+            });
+            if (res.ok) {
+                setSelectedPrinter(name);
+                showToast(`Impresora "${name}" seleccionada como activa.`, 'success');
+            } else {
+                throw new Error("Error en servidor");
+            }
+        } catch (err) {
+            showToast(`Error al seleccionar impresora: ${err.message}`, 'error');
+        }
+    };
+
+    const handleRefreshPrinters = async () => {
+        setIsScanning(true);
+        try {
+            const res = await fetch('/api/impresoras/solicitar-actualizacion', {
+                method: 'POST'
+            });
+            if (!res.ok) throw new Error("Error de conexión");
+
+            showToast('Solicitando escaneo de impresoras a Windows...', 'info');
+
+            // Comprobar estado de solicitud (polling de 10s máximo)
+            let attempts = 0;
+            const interval = setInterval(async () => {
+                attempts++;
+                try {
+                    const statusRes = await fetch('/api/impresoras/estado-solicitud');
+                    if (statusRes.ok) {
+                        const statusData = await statusRes.json();
+                        if (!statusData.solicitando) {
+                            clearInterval(interval);
+                            await loadPrintersData();
+                            setIsScanning(false);
+                            showToast('Lista de impresoras actualizada con éxito.', 'success');
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error comprobando estado:", e);
+                }
+
+                if (attempts >= 10) { // 10 intentos * 1.5s = 15s total
+                    clearInterval(interval);
+                    setIsScanning(false);
+                    showToast('El servidor local no respondió. Verifique que esté ejecutándose en Windows.', 'warning');
+                }
+            }, 1500);
+        } catch (err) {
+            setIsScanning(false);
+            showToast(`Error al solicitar escaneo: ${err.message}`, 'error');
+        }
+    };
+
+    const handleTestPrint = async () => {
+        if (!selectedPrinter) {
+            showToast('Seleccione una impresora activa primero.', 'warning');
+            return;
+        }
+        setTestingPrint(true);
+        try {
+            const testContent = {
+                type: 'precuenta',
+                total: 0,
+                totalLetras: 'cero soles y 00/100 céntimos',
+                items: [
+                    { nombre: 'Prueba de Impresión en la Nube', precio: 0, cantidad: 1 }
+                ]
+            };
+            await enqueueTicket('TEST', user?.nombre || 'Mozo', testContent);
+            showToast('Ticket de prueba encolado para impresión en la nube.', 'success');
+        } catch (err) {
+            showToast(`Error al imprimir: ${err.message}`, 'error');
+        } finally {
+            setTestingPrint(false);
+        }
+    };
 
     useEffect(() => {
         // Sync local state if global context changes externally
@@ -189,6 +305,126 @@ const SettingsView = () => {
                             boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
                         }} />
                     </div>
+                </div>
+            </section>
+
+            <section className="glass-panel" style={{ padding: 30, marginTop: 30 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Printer size={24} color="var(--primary)" />
+                        <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Conexión de Impresoras (QZ Tray)</h2>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: printers.length > 0 ? '#10b981' : '#ef4444',
+                            display: 'inline-block'
+                        }} />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>
+                            {printers.length > 0 ? 'Conectado' : 'Desconectado'}
+                        </span>
+                    </div>
+                </div>
+
+                <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: 20 }}>
+                    Permite enviar comandas y arqueos de caja directamente a tus impresoras térmicas o de escritorio utilizando el servicio local QZ Tray (puertos 8182/8183).
+                </p>
+
+                <h3 style={{ fontSize: '1rem', marginBottom: 15 }}>Selecciona la Impresora Activa:</h3>
+                
+                {printers.length === 0 ? (
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 20 }}>
+                        No se han sincronizado impresoras aún. Asegúrate de ejecutar el servidor local y presionar el botón "Actualizar" para escanear las impresoras de Windows.
+                    </p>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                        {printers.map((name) => {
+                            const isSelected = selectedPrinter === name;
+                            return (
+                                <div
+                                    key={name}
+                                    onClick={() => handleSelectPrinter(name)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '12px 20px',
+                                        background: isSelected ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.01)',
+                                        border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--glass-border)'}`,
+                                        borderRadius: 12,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <Printer size={16} color={isSelected ? 'var(--primary)' : 'var(--text-muted)'} />
+                                        <span style={{ fontSize: '0.9rem', fontWeight: isSelected ? 'bold' : 'normal' }}>
+                                            {name}
+                                        </span>
+                                    </div>
+                                    {isSelected && (
+                                        <span style={{
+                                            background: 'var(--primary)',
+                                            color: '#fff',
+                                            padding: '2px 8px',
+                                            borderRadius: 8,
+                                            fontSize: '0.7rem',
+                                            fontWeight: 'bold',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 4
+                                        }}>
+                                            <Check size={10} /> ACTIVA
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 15, marginTop: 15 }}>
+                    <button
+                        onClick={handleRefreshPrinters}
+                        disabled={isScanning}
+                        className="glass-button"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            fontSize: '0.85rem',
+                            padding: '10px 20px',
+                            cursor: 'pointer',
+                            opacity: isScanning ? 0.6 : 1,
+                            borderColor: 'var(--primary)',
+                            color: 'var(--primary)'
+                        }}
+                    >
+                        <RefreshCw size={16} className={isScanning ? 'animate-spin' : ''} />
+                        <span>{isScanning ? 'Actualizando...' : 'Actualizar'}</span>
+                    </button>
+
+                    {selectedPrinter && (
+                        <button
+                            onClick={handleTestPrint}
+                            disabled={testingPrint}
+                            className="glass-button"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                fontSize: '0.85rem',
+                                padding: '10px 20px',
+                                cursor: 'pointer',
+                                opacity: testingPrint ? 0.6 : 1
+                            }}
+                        >
+                            <Printer size={16} />
+                            <span>{testingPrint ? 'Enviando...' : 'Imprimir Ticket de Prueba'}</span>
+                        </button>
+                    )}
                 </div>
             </section>
 

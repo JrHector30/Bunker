@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Printer } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
+import { enqueueTicket } from '../utils/printer';
 
 export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
   const { showToast } = useNotification();
@@ -52,6 +53,21 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
       (data.ingresos?.izipay || 0) +
       (data.ingresos?.niubiz || 0)
     );
+  };
+
+  const handlePrint = async () => {
+    try {
+      const content = {
+        type: 'arqueo',
+        ...summaryData
+      };
+      await enqueueTicket(summaryData.id, 'Caja', content);
+      showToast('Resumen de caja encolado para impresión en la nube.', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast(`Error al imprimir en la nube: ${err.message}. Intentando impresión de navegador...`, 'warning');
+      window.print();
+    }
   };
 
   return (
@@ -179,7 +195,7 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
             {/* Print Button */}
             {!loading && summaryData && (
               <button
-                onClick={() => window.print()}
+                onClick={handlePrint}
                 className="mt-4 flex items-center justify-center gap-2 py-2 px-5 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-sm cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5" />

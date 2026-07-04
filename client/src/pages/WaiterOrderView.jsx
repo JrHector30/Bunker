@@ -4,6 +4,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Minus, Send, Trash2, ArrowLeft, Search, Image as ImageIcon, FileText, Info, X } from 'lucide-react';
 import { useCache, setOptimisticLock } from '../hooks/useCache';
+import { enqueueTicket } from '../utils/printer';
 
 const WaiterOrderView = () => {
     const { showToast } = useNotification();
@@ -148,6 +149,17 @@ const WaiterOrderView = () => {
             .then(async res => {
                 if (res.ok) {
                     showToast('Pedido enviado a cocina!', 'success');
+                    
+                    // Enqueue the ticket asynchronously for cloud printing
+                    const ticketContent = cart.map(item => ({
+                        cantidad: item.cantidad,
+                        nombre: item.nombre,
+                        observacion: item.observacion || ''
+                    }));
+                    
+                    enqueueTicket(tableInfo.numero || parsedTableId, user.nombre || 'Mozo', ticketContent)
+                        .catch(err => console.error("Error al encolar ticket en la nube:", err));
+
                     // Dispatch synchronization events
                     window.dispatchEvent(new CustomEvent('refreshTables'));
                     window.dispatchEvent(new CustomEvent('refreshKitchenQueue'));

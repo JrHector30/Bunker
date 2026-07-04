@@ -204,3 +204,14 @@ model Configuracion {
   valor String
 }
 
+model TicketPendiente {
+  id        Int      @id @default(autoincrement())
+  mesa_id   String
+  mozo      String
+  contenido Json
+  impreso   Boolean  @default(false)
+  creado_a  DateTime @default(now())
+
+  @@map("tickets_pendientes")
+}
+

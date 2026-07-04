@@ -7,6 +7,7 @@ import { numberToLetters } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 import { useCaja } from '../context/CajaContext';
+import { enqueueTicket } from '../utils/printer';
 
 const TablesView = () => {
     const { showConfirmation } = useConfirmation();
@@ -958,6 +959,27 @@ const TablesView = () => {
         const totalLetras = numberToLetters(total);
         const comandaId = selectedTable.comandas?.[0]?.id || "---";
 
+        const handlePrintPrecuenta = async () => {
+            try {
+                const content = {
+                    type: 'precuenta',
+                    total: total,
+                    totalLetras: totalLetras,
+                    items: groupedItems.map(item => ({
+                        nombre: item.nombre,
+                        precio: item.precio,
+                        cantidad: item.cantidad
+                    }))
+                };
+                await enqueueTicket(getTableDisplayName(selectedTable), user?.nombre || 'Mozo', content);
+                showToast(`Precuenta de Mesa ${getTableDisplayName(selectedTable)} encolada para impresión en la nube.`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast(`Error al encolar precuenta: ${err.message}. Intentando impresión de navegador...`, 'warning');
+                window.print();
+            }
+        };
+
         return (
             <div className="modal-overlay" onClick={() => setShowTicket(false)}>
                 <div className="modal-content print-ticket" onClick={e => e.stopPropagation()} style={{ background: 'white', color: 'black', width: 350, fontFamily: '"Courier New", monospace', padding: 20 }}>
@@ -1009,7 +1031,7 @@ const TablesView = () => {
                     </div>
 
                     <div className="no-print" style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>
-                        <button className="glass-button primary" onClick={() => window.print()} style={{ background: 'black', color: 'white' }}>
+                        <button className="glass-button primary" onClick={handlePrintPrecuenta} style={{ background: 'black', color: 'white' }}>
                             <Printer size={16} /> Imprimir
                         </button>
                     </div>

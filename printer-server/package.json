@@ -1,0 +1,13 @@
+{
+  "name": "bunker-printer-server",
+  "version": "1.0.0",
+  "description": "Mini-servidor local de impresión para Búnker usando base de datos PostgreSQL",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "pg": "^8.11.5",
+    "dotenv": "^16.4.5"
+  }
+}
