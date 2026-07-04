@@ -2954,24 +2954,51 @@ if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
         console.log(`🚀 Servidor backend corriendo en http://localhost:${PORT}`);
         
-        // --- INICIAR SERVIDOR DE IMPRESIÓN EN SEGUNDO PLANO AUTOMÁTICAMENTE ---
-        try {
-            const { spawn } = require('child_process');
-            const printerScript = path.join(__dirname, '..', 'printer-server', 'server.js');
-            const fs = require('fs');
-            
-            if (fs.existsSync(printerScript)) {
-                console.log("⚙️  Iniciando servidor de impresión local en segundo plano...");
-                const child = spawn('node', [printerScript], {
-                    detached: true,
-                    stdio: 'ignore'
-                });
-                child.unref();
-                console.log("✅ Servidor de impresión local iniciado en segundo plano.");
+        // --- RECICLAR E INICIAR SERVIDOR DE IMPRESIÓN EN SEGUNDO PLANO ---
+        const spawnPrinterServer = () => {
+            try {
+                const { spawn } = require('child_process');
+                const printerScript = path.join(__dirname, '..', 'printer-server', 'server.js');
+                const fs = require('fs');
+                
+                if (fs.existsSync(printerScript)) {
+                    console.log("⚙️  Iniciando servidor de impresión local en segundo plano...");
+                    const child = spawn('node', [printerScript], {
+                        detached: true,
+                        stdio: 'ignore'
+                    });
+                    child.unref();
+                    console.log("✅ Servidor de impresión local iniciado en segundo plano.");
+                }
+            } catch (e) {
+                console.error("❌ Error al iniciar el servidor de impresión en segundo plano:", e);
             }
-        } catch (e) {
-            console.error("❌ Error al iniciar el servidor de impresión en segundo plano:", e);
-        }
+        };
+
+        const { exec } = require('child_process');
+        exec('netstat -ano | findstr :19999', (err, stdout, stderr) => {
+            if (stdout) {
+                const lines = stdout.split('\n').filter(line => line.trim().length > 0);
+                let killed = false;
+                lines.forEach(line => {
+                    const parts = line.trim().split(/\s+/);
+                    const pid = parts[parts.length - 1];
+                    if (pid && pid !== '0' && !killed) {
+                        killed = true; // matar solo una vez
+                        console.log(`⚙️  Cerrando instancia fantasma anterior del servidor de impresión (PID: ${pid})...`);
+                        exec(`taskkill /f /pid ${pid}`, () => {
+                            // Esperar un instante y levantar la nueva
+                            setTimeout(spawnPrinterServer, 500);
+                        });
+                    }
+                });
+                if (!killed) {
+                    spawnPrinterServer();
+                }
+            } else {
+                spawnPrinterServer();
+            }
+        });
     });
 }
 

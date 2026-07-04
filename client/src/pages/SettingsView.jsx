@@ -312,7 +312,7 @@ const SettingsView = () => {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Printer size={24} color="var(--primary)" />
-                        <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Conexión de Impresoras (QZ Tray)</h2>
+                        <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Conexión de Impresoras</h2>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{
@@ -333,42 +333,64 @@ const SettingsView = () => {
                 </p>
 
                 <h3 style={{ fontSize: '1rem', marginBottom: 15 }}>Selecciona la Impresora Activa:</h3>
-                
+
                 {printers.length === 0 ? (
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 20 }}>
                         No se han sincronizado impresoras aún. Asegúrate de ejecutar el servidor local y presionar el botón "Actualizar" para escanear las impresoras de Windows.
                     </p>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-                        {printers.map((name) => {
-                            const isSelected = selectedPrinter === name;
+                        {printers.map((printer, index) => {
+                            const pName = typeof printer === 'string' ? printer : (printer?.name || '');
+                            const isOffline = typeof printer === 'string' ? false : (printer?.offline === true);
+                            const isSelected = selectedPrinter === pName;
                             return (
                                 <div
-                                    key={name}
-                                    onClick={() => handleSelectPrinter(name)}
+                                    key={pName || index}
+                                    onClick={() => handleSelectPrinter(pName)}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
                                         padding: '12px 20px',
-                                        background: isSelected ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.01)',
-                                        border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--glass-border)'}`,
+                                        background: isSelected
+                                            ? (isOffline ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)')
+                                            : 'rgba(255,255,255,0.01)',
+                                        border: `1px solid ${isSelected
+                                                ? (isOffline ? '#ef4444' : '#10b981')
+                                                : 'var(--glass-border)'
+                                            }`,
                                         borderRadius: 12,
                                         cursor: 'pointer',
                                         transition: 'all 0.2s ease',
+                                        opacity: isOffline ? 0.6 : 1
                                     }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <Printer size={16} color={isSelected ? 'var(--primary)' : 'var(--text-muted)'} />
-                                        <span style={{ fontSize: '0.9rem', fontWeight: isSelected ? 'bold' : 'normal' }}>
-                                            {name}
+                                        {isOffline ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                                                <Printer size={16} color="var(--text-muted)" />
+                                                <AlertTriangle size={10} color="#f59e0b" style={{ position: 'absolute', bottom: -4, right: -4 }} />
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                                                <Printer size={16} color={isSelected ? '#10b981' : 'var(--text-muted)'} />
+                                                {isSelected && <Check size={10} color="#10b981" style={{ position: 'absolute', bottom: -4, right: -4, fontWeight: 'bold' }} />}
+                                            </div>
+                                        )}
+                                        <span style={{
+                                            fontSize: '0.9rem',
+                                            fontWeight: isSelected ? 'bold' : 'normal',
+                                            color: isOffline ? 'var(--text-muted)' : 'var(--text-main)'
+                                        }}>
+                                            {pName} {isOffline && <span style={{ fontSize: '0.75rem', color: '#f87171', marginLeft: 6 }}>(Sin Conexión)</span>}
                                         </span>
                                     </div>
                                     {isSelected && (
                                         <span style={{
-                                            background: 'var(--primary)',
+                                            background: isOffline ? '#ef4444' : '#10b981',
                                             color: '#fff',
-                                            padding: '2px 8px',
+                                            padding: '3px 10px',
                                             borderRadius: 8,
                                             fontSize: '0.7rem',
                                             fontWeight: 'bold',
@@ -376,7 +398,8 @@ const SettingsView = () => {
                                             alignItems: 'center',
                                             gap: 4
                                         }}>
-                                            <Check size={10} /> ACTIVA
+                                            {isOffline ? <AlertTriangle size={10} /> : <Check size={10} />}
+                                            {isOffline ? 'SIN CONEXIÓN' : 'ACTIVA'}
                                         </span>
                                     )}
                                 </div>

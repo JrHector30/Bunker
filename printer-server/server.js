@@ -42,20 +42,32 @@ console.log("=================================================\n");
 // --- 1. Utilidad: Escanear Impresoras de Windows con PowerShell ---
 function getWindowsPrinters() {
   return new Promise((resolve) => {
-    // PowerShell command to list all installed printers
-    const command = `powershell -Command "Get-CimInstance -ClassName Win32_Printer | Select-Object -ExpandProperty Name"`;
+    const command = 'powershell -Command "Get-CimInstance -ClassName Win32_Printer | Select-Object Name, WorkOffline | ConvertTo-Json -Compress"';
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error("❌ Error al escanear impresoras con PowerShell:", error);
         return resolve([]);
       }
       
-      const list = stdout
-        .split('\r\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
+      try {
+        const raw = stdout.trim();
+        if (!raw) return resolve([]);
         
-      resolve(list);
+        let parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+          parsed = [parsed];
+        }
+        
+        const list = parsed.map(item => ({
+          name: item.Name || '',
+          offline: item.WorkOffline === true
+        }));
+        
+        resolve(list);
+      } catch (err) {
+        console.error("❌ Error al parsear JSON de impresoras:", err);
+        resolve([]);
+      }
     });
   });
 }
@@ -70,7 +82,7 @@ async function handlePrinterScanRequests() {
     if (shouldScan) {
       console.log("🔍 Solicitud de escaneo de impresoras detectada desde el frontend. Escaneando Windows...");
       const printersList = await getWindowsPrinters();
-      console.log(`🖨️  Impresoras encontradas: [${printersList.join(', ')}]`);
+      console.log(`🖨️  Impresoras encontradas: [${printersList.map(p => `${p.name} (${p.offline ? 'Sin conexión' : 'En línea'})`).join(', ')}]`);
       
       const jsonList = JSON.stringify(printersList);
 
