@@ -210,6 +210,7 @@ model TicketPendiente {
   mozo      String
   contenido Json
   impreso   Boolean  @default(false)
+  estacion  String   @default("Caja")
   creado_a  DateTime @default(now())
 
   @@map("tickets_pendientes")

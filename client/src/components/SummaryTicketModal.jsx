@@ -61,7 +61,7 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
         type: 'arqueo',
         ...summaryData
       };
-      await enqueueTicket(summaryData.id, 'Caja', content);
+      await enqueueTicket(summaryData.id, 'Caja', content, 'Caja');
       showToast('Resumen de caja encolado para impresión en la nube.', 'success');
     } catch (err) {
       console.error(err);

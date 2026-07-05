@@ -10,7 +10,7 @@
  * @param {string} mozoName - Name of the waiter or role
  * @param {object|array} contenido - JSON data of the ticket (items, total, type, etc.)
  */
-export async function enqueueTicket(mesaId, mozoName, contenido) {
+export async function enqueueTicket(mesaId, mozoName, contenido, estacion = 'Caja') {
   try {
     const res = await fetch('/api/impresoras/imprimir', {
       method: 'POST',
@@ -18,7 +18,8 @@ export async function enqueueTicket(mesaId, mozoName, contenido) {
       body: JSON.stringify({
         mesaId: String(mesaId),
         mozo: mozoName || 'Sistema',
-        contenido: contenido
+        contenido: contenido,
+        estacion: estacion
       })
     });
 
@@ -28,10 +29,10 @@ export async function enqueueTicket(mesaId, mozoName, contenido) {
     }
 
     const data = await res.json();
-    console.log("🎫 Ticket encolado con éxito:", data.ticketId);
+    console.log(`🎫 Ticket encolado con éxito para la estación "${estacion}":`, data.ticketId);
     return true;
   } catch (error) {
-    console.error("❌ Error al encolar el ticket:", error);
+    console.error(`❌ Error al encolar el ticket para la estación "${estacion}":`, error);
     throw error;
   }
 }

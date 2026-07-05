@@ -1,18 +1,35 @@
 const path = require('path');
-// Load environment variables from the parent project's .env file
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-const { Pool } = require('pg');
 const fs = require('fs');
+
+// Load environment variables: check local printer-server/.env first, fall back to parent project's .env
+const localEnv = path.join(__dirname, '.env');
+const parentEnv = path.join(__dirname, '..', '.env');
+if (fs.existsSync(localEnv)) {
+  require('dotenv').config({ path: localEnv });
+} else {
+  require('dotenv').config({ path: parentEnv });
+}
+
+const { Pool } = require('pg');
 const { exec } = require('child_process');
 const net = require('net');
 
-// Prevenir múltiples instancias en segundo plano utilizando un puerto de bloqueo
-const LOCK_PORT = 19999;
+const STATION_ID = process.env.STATION_ID || 'Caja';
+
+// Prevenir múltiples instancias de la misma estación en segundo plano utilizando un puerto de bloqueo dinámico
+const getLockPort = (station) => {
+  let hash = 0;
+  for (let i = 0; i < station.length; i++) {
+    hash += station.charCodeAt(i);
+  }
+  return 19900 + (hash % 99);
+};
+const LOCK_PORT = getLockPort(STATION_ID);
 const lockServer = net.createServer();
 lockServer.listen(LOCK_PORT, '127.0.0.1');
 lockServer.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    process.exit(0); // Ya está corriendo una instancia, salir silenciosamente
+    process.exit(0); // Ya está corriendo una instancia de esta estación, salir silenciosamente
   }
 });
 
@@ -31,11 +48,40 @@ const pool = new Pool({
   }
 });
 
+// --- Auto-Registro de la Estación de Impresión ---
+async function registerStation() {
+  let client;
+  try {
+    client = await pool.connect();
+    const res = await client.query(`SELECT valor FROM "Configuracion" WHERE clave = 'estaciones_impresion'`);
+    let list = [];
+    if (res.rows.length > 0) {
+      list = JSON.parse(res.rows[0].valor);
+    }
+    if (!list.includes(STATION_ID)) {
+      list.push(STATION_ID);
+      const jsonList = JSON.stringify(list);
+      await client.query(`
+        INSERT INTO "Configuracion" (clave, valor)
+        VALUES ('estaciones_impresion', $1)
+        ON CONFLICT (clave) DO UPDATE SET valor = $1
+      `, [jsonList]);
+      console.log(`📡 Estación "${STATION_ID}" registrada automáticamente en la base de datos.`);
+    }
+  } catch (err) {
+    console.error("❌ Error de conexión al auto-registrar la estación (verifique su conexión a internet):", err.message);
+  } finally {
+    if (client) client.release();
+  }
+}
+registerStation();
+
 const processedTickets = new Set();
 let isProcessing = false;
 
 console.log("=================================================");
 console.log("🚀 Servidor de Impresión Local de Búnker Iniciado");
+console.log(`🖥️  Estación Activa: "${STATION_ID}"`);
 console.log(`📡 Base de Datos: Conexión Exitosa`);
 console.log("=================================================\n");
 
@@ -74,24 +120,25 @@ function getWindowsPrinters() {
 
 // --- 2. Rutina: Procesar Escaneo Remoto solicitado desde el Móvil/Web ---
 async function handlePrinterScanRequests() {
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     const res = await client.query(`SELECT valor FROM "Configuracion" WHERE clave = 'solicitar_actualizacion_impresoras'`);
-    const shouldScan = res.rows[0]?.valor === 'true';
+    const shouldScan = res.rows[0]?.valor === STATION_ID;
 
     if (shouldScan) {
-      console.log("🔍 Solicitud de escaneo de impresoras detectada desde el frontend. Escaneando Windows...");
+      console.log(`🔍 Solicitud de escaneo de impresoras detectada para esta estación (${STATION_ID}). Escaneando Windows...`);
       const printersList = await getWindowsPrinters();
       console.log(`🖨️  Impresoras encontradas: [${printersList.map(p => `${p.name} (${p.offline ? 'Sin conexión' : 'En línea'})`).join(', ')}]`);
       
       const jsonList = JSON.stringify(printersList);
 
-      // Guardar impresoras disponibles
+      // Guardar impresoras disponibles para ESTA estación
       await client.query(`
         INSERT INTO "Configuracion" (clave, valor)
-        VALUES ('impresoras_disponibles', $1)
-        ON CONFLICT (clave) DO UPDATE SET valor = $1
-      `, [jsonList]);
+        VALUES ($1, $2)
+        ON CONFLICT (clave) DO UPDATE SET valor = $2
+      `, [`impresoras_disponibles_${STATION_ID}`, jsonList]);
 
       // Apagar la bandera de solicitud
       await client.query(`
@@ -100,12 +147,12 @@ async function handlePrinterScanRequests() {
         ON CONFLICT (clave) DO UPDATE SET valor = 'false'
       `);
 
-      console.log("✅ Lista de impresoras sincronizada con la base de datos.");
+      console.log(`✅ Lista de impresoras de la estación "${STATION_ID}" sincronizada con la base de datos.`);
     }
   } catch (err) {
     console.error("❌ Error al procesar solicitud de escaneo de impresoras:", err.message);
   } finally {
-    client.release();
+    if (client) client.release();
   }
 }
 
@@ -269,10 +316,14 @@ async function checkAndPrintQueue() {
   if (isProcessing) return;
   isProcessing = true;
 
-  const client = await pool.connect();
+  let client;
   try {
-    // 1. Obtener la impresora activa seleccionada en la web
-    const activeRes = await client.query(`SELECT valor FROM "Configuracion" WHERE clave = 'impresora_activa'`);
+    client = await pool.connect();
+    // 1. Obtener la impresora activa seleccionada en la web para ESTA estación
+    const activeRes = await client.query(
+      `SELECT valor FROM "Configuracion" WHERE clave = $1`,
+      [`impresora_activa_${STATION_ID}`]
+    );
     const printerName = activeRes.rows[0]?.valor;
 
     if (!printerName) {
@@ -281,8 +332,11 @@ async function checkAndPrintQueue() {
       return;
     }
 
-    // 2. Obtener tickets pendientes ordenados cronológicamente
-    const queueRes = await client.query(`SELECT * FROM tickets_pendientes WHERE impreso = false ORDER BY creado_a ASC`);
+    // 2. Obtener tickets pendientes asignados a esta estación ordenados cronológicamente
+    const queueRes = await client.query(
+      `SELECT * FROM tickets_pendientes WHERE impreso = false AND (estacion = $1 OR (estacion IS NULL AND $1 = 'Caja')) ORDER BY creado_a ASC`,
+      [STATION_ID]
+    );
     const tickets = queueRes.rows;
 
     for (const ticket of tickets) {
@@ -304,7 +358,7 @@ async function checkAndPrintQueue() {
         }
 
         // Ganamos el bloqueo, procedemos a imprimir físicamente
-        console.log(`⏳ Imprimiendo Ticket #${ticket.id} en "${printerName}"...`);
+        console.log(`⏳ Imprimiendo Ticket #${ticket.id} en "${printerName}" (Estación: ${STATION_ID})...`);
         const formattedText = formatTicket(lockRes.rows[0]);
         await printTicketText(formattedText, ticket.id, printerName);
         console.log(`✅ Ticket #${ticket.id} impreso con éxito.`);
@@ -314,9 +368,9 @@ async function checkAndPrintQueue() {
       }
     }
   } catch (err) {
-    console.error("❌ Error en bucle de cola de impresión:", err.message);
+    console.error("❌ Error de red en bucle de cola de impresión (reintentando en 2s):", err.message);
   } finally {
-    client.release();
+    if (client) client.release();
     isProcessing = false;
   }
 }

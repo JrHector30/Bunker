@@ -157,7 +157,7 @@ const WaiterOrderView = () => {
                         observacion: item.observacion || ''
                     }));
                     
-                    enqueueTicket(tableInfo.numero || parsedTableId, user.nombre || 'Mozo', ticketContent)
+                    enqueueTicket(tableInfo.numero || parsedTableId, user.nombre || 'Mozo', ticketContent, 'Cocina')
                         .catch(err => console.error("Error al encolar ticket en la nube:", err));
 
                     // Dispatch synchronization events

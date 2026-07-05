@@ -971,7 +971,7 @@ const TablesView = () => {
                         cantidad: item.cantidad
                     }))
                 };
-                await enqueueTicket(getTableDisplayName(selectedTable), user?.nombre || 'Mozo', content);
+                await enqueueTicket(getTableDisplayName(selectedTable), user?.nombre || 'Mozo', content, 'Caja');
                 showToast(`Precuenta de Mesa ${getTableDisplayName(selectedTable)} encolada para impresión en la nube.`, 'success');
             } catch (err) {
                 console.error(err);

@@ -76,9 +76,10 @@ app.get('/uploads/:type/:file', (req, res) => {
 
 // --- PRINTERS PROXY ENDPOINTS ---
 app.get('/api/impresoras', async (req, res) => {
+    const estacion = req.query.estacion || 'Caja';
     try {
         const config = await prisma.configuracion.findUnique({
-            where: { clave: 'impresoras_disponibles' }
+            where: { clave: `impresoras_disponibles_${estacion}` }
         });
         const list = config ? JSON.parse(config.valor) : [];
         res.json(list);
@@ -88,9 +89,10 @@ app.get('/api/impresoras', async (req, res) => {
 });
 
 app.get('/api/impresoras/activa', async (req, res) => {
+    const estacion = req.query.estacion || 'Caja';
     try {
         const config = await prisma.configuracion.findUnique({
-            where: { clave: 'impresora_activa' }
+            where: { clave: `impresora_activa_${estacion}` }
         });
         res.json({ nombre: config ? config.valor : '' });
     } catch (err) {
@@ -99,12 +101,13 @@ app.get('/api/impresoras/activa', async (req, res) => {
 });
 
 app.post('/api/impresoras/seleccionar', async (req, res) => {
-    const { nombre } = req.body;
+    const { nombre, estacion } = req.body;
+    const targetEstacion = estacion || 'Caja';
     try {
         await prisma.configuracion.upsert({
-            where: { clave: 'impresora_activa' },
+            where: { clave: `impresora_activa_${targetEstacion}` },
             update: { valor: nombre },
-            create: { clave: 'impresora_activa', valor: nombre }
+            create: { clave: `impresora_activa_${targetEstacion}`, valor: nombre }
         });
         res.json({ success: true });
     } catch (err) {
@@ -113,11 +116,13 @@ app.post('/api/impresoras/seleccionar', async (req, res) => {
 });
 
 app.post('/api/impresoras/solicitar-actualizacion', async (req, res) => {
+    const { estacion } = req.body;
+    const targetEstacion = estacion || 'Caja';
     try {
         await prisma.configuracion.upsert({
             where: { clave: 'solicitar_actualizacion_impresoras' },
-            update: { valor: 'true' },
-            create: { clave: 'solicitar_actualizacion_impresoras', valor: 'true' }
+            update: { valor: targetEstacion },
+            create: { clave: 'solicitar_actualizacion_impresoras', valor: targetEstacion }
         });
         res.json({ success: true });
     } catch (err) {
@@ -126,25 +131,43 @@ app.post('/api/impresoras/solicitar-actualizacion', async (req, res) => {
 });
 
 app.get('/api/impresoras/estado-solicitud', async (req, res) => {
+    const estacion = req.query.estacion || 'Caja';
     try {
         const config = await prisma.configuracion.findUnique({
             where: { clave: 'solicitar_actualizacion_impresoras' }
         });
-        res.json({ solicitando: config ? config.valor === 'true' : false });
+        res.json({ solicitando: config ? config.valor === estacion : false });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/impresoras/estaciones', async (req, res) => {
+    try {
+        const config = await prisma.configuracion.findUnique({
+            where: { clave: 'estaciones_impresion' }
+        });
+        const list = config ? JSON.parse(config.valor) : ['Caja'];
+        // Si por alguna razón la lista no incluye 'Caja', la forzamos como inicial
+        if (!list.includes('Caja')) {
+            list.unshift('Caja');
+        }
+        res.json(list);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 app.post('/api/impresoras/imprimir', async (req, res) => {
-    const { mesaId, mozo, contenido } = req.body;
+    const { mesaId, mozo, contenido, estacion } = req.body;
     try {
         const ticket = await prisma.ticketPendiente.create({
             data: {
                 mesa_id: String(mesaId),
                 mozo: mozo || 'Sistema',
                 contenido: contenido,
-                impreso: false
+                impreso: false,
+                estacion: estacion || 'Caja'
             }
         });
         res.json({ success: true, ticketId: ticket.id });
@@ -2965,10 +2988,11 @@ if (process.env.NODE_ENV !== 'production') {
                     console.log("⚙️  Iniciando servidor de impresión local en segundo plano...");
                     const child = spawn('node', [printerScript], {
                         detached: true,
-                        stdio: 'ignore'
+                        stdio: 'ignore',
+                        env: { ...process.env, STATION_ID: 'Caja' }
                     });
                     child.unref();
-                    console.log("✅ Servidor de impresión local iniciado en segundo plano.");
+                    console.log("✅ Servidor de impresión local iniciado en segundo plano (Estación: Caja).");
                 }
             } catch (e) {
                 console.error("❌ Error al iniciar el servidor de impresión en segundo plano:", e);

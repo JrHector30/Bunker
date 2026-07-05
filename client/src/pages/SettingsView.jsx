@@ -22,18 +22,32 @@ const SettingsView = () => {
     const [selectedPrinter, setSelectedPrinter] = useState('');
     const [isScanning, setIsScanning] = useState(false);
     const [testingPrint, setTestingPrint] = useState(false);
+    const [stations, setStations] = useState(['Caja']);
+    const [selectedStation, setSelectedStation] = useState('Caja');
 
-    const loadPrintersData = async () => {
+    const loadStations = async () => {
         try {
-            // Fetch active printer
-            const activeRes = await fetch('/api/impresoras/activa');
+            const res = await fetch('/api/impresoras/estaciones');
+            if (res.ok) {
+                const list = await res.json();
+                setStations(list);
+            }
+        } catch (err) {
+            console.error("Error al cargar estaciones:", err);
+        }
+    };
+
+    const loadPrintersData = async (station = selectedStation) => {
+        try {
+            // Fetch active printer for selected station
+            const activeRes = await fetch(`/api/impresoras/activa?estacion=${station}`);
             if (activeRes.ok) {
                 const activeData = await activeRes.json();
                 setSelectedPrinter(activeData.nombre || '');
             }
 
-            // Fetch available printers
-            const listRes = await fetch('/api/impresoras');
+            // Fetch available printers for selected station
+            const listRes = await fetch(`/api/impresoras?estacion=${station}`);
             if (listRes.ok) {
                 const list = await listRes.json();
                 setPrinters(list);
@@ -44,19 +58,25 @@ const SettingsView = () => {
     };
 
     useEffect(() => {
-        loadPrintersData();
+        loadStations();
+        loadPrintersData('Caja');
     }, []);
+
+    const handleStationChange = (station) => {
+        setSelectedStation(station);
+        loadPrintersData(station);
+    };
 
     const handleSelectPrinter = async (name) => {
         try {
             const res = await fetch('/api/impresoras/seleccionar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre: name })
+                body: JSON.stringify({ nombre: name, estacion: selectedStation })
             });
             if (res.ok) {
                 setSelectedPrinter(name);
-                showToast(`Impresora "${name}" seleccionada como activa.`, 'success');
+                showToast(`Impresora "${name}" seleccionada como activa para la estación "${selectedStation}".`, 'success');
             } else {
                 throw new Error("Error en servidor");
             }
@@ -69,25 +89,27 @@ const SettingsView = () => {
         setIsScanning(true);
         try {
             const res = await fetch('/api/impresoras/solicitar-actualizacion', {
-                method: 'POST'
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estacion: selectedStation })
             });
             if (!res.ok) throw new Error("Error de conexión");
 
-            showToast('Solicitando escaneo de impresoras a Windows...', 'info');
+            showToast(`Solicitando escaneo de impresoras a la estación "${selectedStation}"...`, 'info');
 
             // Comprobar estado de solicitud (polling de 10s máximo)
             let attempts = 0;
             const interval = setInterval(async () => {
                 attempts++;
                 try {
-                    const statusRes = await fetch('/api/impresoras/estado-solicitud');
+                    const statusRes = await fetch(`/api/impresoras/estado-solicitud?estacion=${selectedStation}`);
                     if (statusRes.ok) {
                         const statusData = await statusRes.json();
                         if (!statusData.solicitando) {
                             clearInterval(interval);
-                            await loadPrintersData();
+                            await loadPrintersData(selectedStation);
                             setIsScanning(false);
-                            showToast('Lista de impresoras actualizada con éxito.', 'success');
+                            showToast(`Lista de impresoras de la estación "${selectedStation}" actualizada con éxito.`, 'success');
                         }
                     }
                 } catch (e) {
@@ -97,7 +119,7 @@ const SettingsView = () => {
                 if (attempts >= 10) { // 10 intentos * 1.5s = 15s total
                     clearInterval(interval);
                     setIsScanning(false);
-                    showToast('El servidor local no respondió. Verifique que esté ejecutándose en Windows.', 'warning');
+                    showToast(`La estación "${selectedStation}" no respondió. Verifique que el servidor local esté ejecutándose en esa PC.`, 'warning');
                 }
             }, 1500);
         } catch (err) {
@@ -118,11 +140,11 @@ const SettingsView = () => {
                 total: 0,
                 totalLetras: 'cero soles y 00/100 céntimos',
                 items: [
-                    { nombre: 'Prueba de Impresión en la Nube', precio: 0, cantidad: 1 }
+                    { nombre: `Prueba en estación: ${selectedStation}`, precio: 0, cantidad: 1 }
                 ]
             };
-            await enqueueTicket('TEST', user?.nombre || 'Mozo', testContent);
-            showToast('Ticket de prueba encolado para impresión en la nube.', 'success');
+            await enqueueTicket('TEST', user?.nombre || 'Mozo', testContent, selectedStation);
+            showToast(`Ticket de prueba encolado para la estación "${selectedStation}".`, 'success');
         } catch (err) {
             showToast(`Error al imprimir: ${err.message}`, 'error');
         } finally {
@@ -329,10 +351,36 @@ const SettingsView = () => {
                 </div>
 
                 <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: 20 }}>
-                    Permite enviar comandas y arqueos de caja directamente a tus impresoras térmicas o de escritorio utilizando el servicio local QZ Tray (puertos 8182/8183).
+                    Permite enviar comandas y arqueos de caja directamente a tus impresoras térmicas.
                 </p>
 
-                <h3 style={{ fontSize: '1rem', marginBottom: 15 }}>Selecciona la Impresora Activa:</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 25 }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>Estación de Impresión:</span>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        {stations.map((st) => (
+                            <button
+                                key={st}
+                                onClick={() => handleStationChange(st)}
+                                className="glass-button"
+                                style={{
+                                    padding: '8px 16px',
+                                    borderRadius: 8,
+                                    fontSize: '0.85rem',
+                                    cursor: 'pointer',
+                                    background: selectedStation === st ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
+                                    color: selectedStation === st ? '#fff' : 'var(--text-main)',
+                                    borderColor: selectedStation === st ? 'var(--primary)' : 'var(--glass-border)',
+                                    fontWeight: selectedStation === st ? 'bold' : 'normal',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                {st}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <h3 style={{ fontSize: '1rem', marginBottom: 15 }}>Selecciona la Impresora Activa para esta Estación:</h3>
 
                 {printers.length === 0 ? (
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 20 }}>
@@ -357,8 +405,8 @@ const SettingsView = () => {
                                             ? (isOffline ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)')
                                             : 'rgba(255,255,255,0.01)',
                                         border: `1px solid ${isSelected
-                                                ? (isOffline ? '#ef4444' : '#10b981')
-                                                : 'var(--glass-border)'
+                                            ? (isOffline ? '#ef4444' : '#10b981')
+                                            : 'var(--glass-border)'
                                             }`,
                                         borderRadius: 12,
                                         cursor: 'pointer',
