@@ -94,21 +94,21 @@ function getWindowsPrinters() {
         console.error("❌ Error al escanear impresoras con PowerShell:", error);
         return resolve([]);
       }
-      
+
       try {
         const raw = stdout.trim();
         if (!raw) return resolve([]);
-        
+
         let parsed = JSON.parse(raw);
         if (!Array.isArray(parsed)) {
           parsed = [parsed];
         }
-        
+
         const list = parsed.map(item => ({
           name: item.Name || '',
           offline: item.WorkOffline === true
         }));
-        
+
         resolve(list);
       } catch (err) {
         console.error("❌ Error al parsear JSON de impresoras:", err);
@@ -130,7 +130,7 @@ async function handlePrinterScanRequests() {
       console.log(`🔍 Solicitud de escaneo de impresoras detectada para esta estación (${STATION_ID}). Escaneando Windows...`);
       const printersList = await getWindowsPrinters();
       console.log(`🖨️  Impresoras encontradas: [${printersList.map(p => `${p.name} (${p.offline ? 'Sin conexión' : 'En línea'})`).join(', ')}]`);
-      
+
       const jsonList = JSON.stringify(printersList);
 
       // Guardar impresoras disponibles para ESTA estación
@@ -188,7 +188,7 @@ function formatComanda(ticket, lineWidth) {
   text += separatorSingle;
   text += "CAN  PRODUCTO / OBSERVACIONES\n";
   text += separatorSingle;
-  
+
   const items = Array.isArray(ticket.contenido) ? ticket.contenido : (ticket.contenido.items || []);
   items.forEach(item => {
     const qty = String(item.cantidad).padEnd(4, ' ');
@@ -197,7 +197,7 @@ function formatComanda(ticket, lineWidth) {
       text += `    * OBS: ${item.observacion.toUpperCase()}\n`;
     }
   });
-  
+
   text += separatorSingle;
   text += "\n\n\n\n\n\n\n\n"; // Avance de papel
   return text;
@@ -241,7 +241,7 @@ function formatPrecuenta(ticket, lineWidth) {
   text += separatorSingle;
   const totalStr = `S/ ${Number(ticket.contenido.total || 0).toFixed(2)}`;
   text += alignLR("TOTAL:", totalStr);
-  
+
   if (ticket.contenido.totalLetras) {
     text += `(${ticket.contenido.totalLetras.toUpperCase()})\n`;
   }
@@ -290,7 +290,7 @@ function formatArqueo(ticket, lineWidth) {
   text += alignLR("  NIUBIZ:", `S/. ${(data.ingresos?.niubiz || 0).toFixed(2)}`);
   text += alignLR("  MANUALES:", `S/. ${(data.ingresos?.manual || 0).toFixed(2)}`);
   text += separatorSingle;
-  
+
   const getVentasTotal = () => {
     return (
       (data.ingresos?.efectivo || 0) +
@@ -314,37 +314,92 @@ function formatArqueo(ticket, lineWidth) {
   return text;
 }
 
-// --- 4. Enviar Ticket al Spooler de Windows ---
+// --- 4. Perfiles de Impresora y Enviar Ticket al Spooler de Windows ---
+const PRINTER_PROFILES = {
+  SPRT: {
+    codepage: 850,
+    initCmd: "27,64",           // ESC @
+    charTableCmd: "27,116,2",    // ESC t 2
+    cutCmd: "29,86,66,0",        // GS V 66 0
+    drawerCmd: "27,112,0,25,250" // ESC p 0 25 250
+  },
+  Epson: {
+    codepage: 850,
+    initCmd: "27,64",
+    charTableCmd: "27,116,2",
+    cutCmd: "29,86,66,0",
+    drawerCmd: "27,112,0,25,250"
+  },
+  Xprinter: {
+    codepage: 850,
+    initCmd: "27,64",
+    charTableCmd: "27,116,2",
+    cutCmd: "29,86,66,0",
+    drawerCmd: "27,112,0,25,250"
+  },
+  Rongta: {
+    codepage: 850,
+    initCmd: "27,64",
+    charTableCmd: "27,116,2",
+    cutCmd: "29,86,66,0",
+    drawerCmd: "27,112,0,25,250"
+  },
+  Generic: {
+    codepage: 850,
+    initCmd: "27,64",
+    charTableCmd: "27,116,2",
+    cutCmd: "29,86,66,0",
+    drawerCmd: "27,112,0,25,250"
+  }
+};
+
 async function printTicketText(ticketText, ticketId, printerName, paperSize = '80mm') {
+  let profileName = 'Generic';
+  try {
+    const res = await pool.query(
+      `SELECT valor FROM "Configuracion" WHERE clave = $1`,
+      [`impresora_perfiles_${STATION_ID}`]
+    );
+    if (res.rows.length > 0) {
+      const map = JSON.parse(res.rows[0].valor);
+      profileName = map[printerName] || 'Generic';
+    }
+  } catch (err) {
+    console.error("⚠️ Error al cargar el perfil de la impresora, usando Genérico:", err.message);
+  }
+
+  const profile = PRINTER_PROFILES[profileName] || PRINTER_PROFILES.Generic;
+
   return new Promise((resolve, reject) => {
     const tempDir = path.join(__dirname, 'temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
     const tempFilePath = path.join(tempDir, `ticket_${ticketId}.txt`);
-    
+
     // Escribir codificación limpia
     fs.writeFileSync(tempFilePath, ticketText, 'utf8');
 
-    const scriptPath = path.join(__dirname, 'print_raw.ps1');
-    
-    const anchosMM = { '80mm': 314, '58mm': 228, '50mm': 196 };
-    const anchoCalculado = anchosMM[paperSize] || 314;
-    const linesCount = ticketText.split('\n').length;
-    const altoCalculado = 100 + (linesCount * 20);
+    const scriptPath = path.join(__dirname, 'print_escpos.ps1');
 
-    const command = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -printerName "${printerName}" -filePath "${tempFilePath}" -anchoPapel ${anchoCalculado} -altoPapel ${altoCalculado}`;
+    const command = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" ` +
+      `-printerName "${printerName}" ` +
+      `-filePath "${tempFilePath}" ` +
+      `-codepage ${profile.codepage} ` +
+      `-initCmd "${profile.initCmd}" ` +
+      `-charTableCmd "${profile.charTableCmd}" ` +
+      `-cutCmd "${profile.cutCmd}"`;
 
     exec(command, (error, stdout, stderr) => {
       try {
         fs.unlinkSync(tempFilePath);
-      } catch (e) {}
+      } catch (e) { }
 
       if (error) {
         console.error(`❌ Error en Spooler de Windows para Impresora "${printerName}":`, error);
         return reject(error);
       }
-      console.log(`🖨️  Ticket #${ticketId} enviado al spooler ("${printerName}").`);
+      console.log(`🖨️  Ticket #${ticketId} enviado al spooler ("${printerName}") usando perfil ${profileName}.`);
       resolve();
     });
   });

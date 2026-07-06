@@ -25,6 +25,7 @@ const SettingsView = () => {
     const [stations, setStations] = useState(['Caja']);
     const [selectedStation, setSelectedStation] = useState('Caja');
     const [printerSizes, setPrinterSizes] = useState({});
+    const [printerProfiles, setPrinterProfiles] = useState({});
 
     const loadStations = async () => {
         try {
@@ -60,8 +61,40 @@ const SettingsView = () => {
                 const sizesData = await sizesRes.json();
                 setPrinterSizes(sizesData || {});
             }
+
+            // Fetch printer profiles mapping for selected station
+            const profilesRes = await fetch(`/api/impresoras/perfiles?estacion=${station}`);
+            if (profilesRes.ok) {
+                const profilesData = await profilesRes.json();
+                setPrinterProfiles(profilesData || {});
+            }
         } catch (err) {
             console.error("Error al cargar impresoras:", err);
+        }
+    };
+
+    const handleSavePrinterProfile = async (printerName, profile) => {
+        try {
+            const res = await fetch('/api/impresoras/perfil', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    impresora: printerName,
+                    perfil: profile,
+                    estacion: selectedStation
+                })
+            });
+            if (res.ok) {
+                setPrinterProfiles(prev => ({
+                    ...prev,
+                    [printerName]: profile
+                }));
+                showToast(`Perfil ${profile} guardado para la impresora "${printerName}".`, 'success');
+            } else {
+                throw new Error("Error en servidor");
+            }
+        } catch (err) {
+            showToast(`Error al guardar perfil: ${err.message}`, 'error');
         }
     };
 
@@ -494,44 +527,86 @@ const SettingsView = () => {
 
                                     {/* Selector de Medida de Papel (Solo si la impresora está ACTIVA) */}
                                     {isSelected && (
-                                        <div
-                                            onClick={(e) => e.stopPropagation()}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                marginTop: 10,
-                                                paddingTop: 10,
-                                                borderTop: '1px dashed rgba(255,255,255,0.08)'
-                                            }}
-                                        >
-                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                Ancho de impresión:
-                                            </span>
-                                            <div style={{ display: 'flex', gap: 6 }}>
-                                                {['80mm', '58mm', '50mm'].map((size) => {
-                                                    const currentSize = printerSizes[pName] || '80mm';
-                                                    const isSizeActive = currentSize === size;
-                                                    return (
-                                                        <button
-                                                            key={size}
-                                                            onClick={() => handleSavePrinterSize(pName, size)}
-                                                            style={{
-                                                                padding: '4px 12px',
-                                                                borderRadius: 6,
-                                                                fontSize: '0.75rem',
-                                                                cursor: 'pointer',
-                                                                background: isSizeActive ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
-                                                                color: isSizeActive ? '#fff' : 'var(--text-muted)',
-                                                                border: `1px solid ${isSizeActive ? 'var(--primary)' : 'var(--glass-border)'}`,
-                                                                fontWeight: isSizeActive ? 'bold' : 'normal',
-                                                                transition: 'all 0.15s ease'
-                                                            }}
-                                                        >
-                                                            {size}
-                                                        </button>
-                                                    );
-                                                })}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, paddingTop: 10, borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
+                                            {/* Selector de Ancho */}
+                                            <div
+                                                onClick={(e) => e.stopPropagation()}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    width: '100%'
+                                                }}
+                                            >
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                    Ancho de impresión:
+                                                </span>
+                                                <div style={{ display: 'flex', gap: 6 }}>
+                                                    {['80mm', '58mm', '50mm'].map((size) => {
+                                                        const currentSize = printerSizes[pName] || '80mm';
+                                                        const isSizeActive = currentSize === size;
+                                                        return (
+                                                            <button
+                                                                key={size}
+                                                                onClick={() => handleSavePrinterSize(pName, size)}
+                                                                style={{
+                                                                    padding: '4px 12px',
+                                                                    borderRadius: 6,
+                                                                    fontSize: '0.75rem',
+                                                                    cursor: 'pointer',
+                                                                    background: isSizeActive ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
+                                                                    color: isSizeActive ? '#fff' : 'var(--text-muted)',
+                                                                    border: `1px solid ${isSizeActive ? 'var(--primary)' : 'var(--glass-border)'}`,
+                                                                    fontWeight: isSizeActive ? 'bold' : 'normal',
+                                                                    transition: 'all 0.15s ease'
+                                                                }}
+                                                            >
+                                                                {size}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            {/* Selector de Perfil */}
+                                            <div
+                                                onClick={(e) => e.stopPropagation()}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    width: '100%',
+                                                    marginTop: 4
+                                                }}
+                                            >
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                    Perfil de Hardware:
+                                                </span>
+                                                <div style={{ display: 'flex', gap: 6 }}>
+                                                    {['Generic', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((profile) => {
+                                                        const currentProfile = printerProfiles[pName] || 'Generic';
+                                                        const isProfileActive = currentProfile === profile;
+                                                        return (
+                                                            <button
+                                                                key={profile}
+                                                                onClick={() => handleSavePrinterProfile(pName, profile)}
+                                                                style={{
+                                                                    padding: '4px 10px',
+                                                                    borderRadius: 6,
+                                                                    fontSize: '0.75rem',
+                                                                    cursor: 'pointer',
+                                                                    background: isProfileActive ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
+                                                                    color: isProfileActive ? '#fff' : 'var(--text-muted)',
+                                                                    border: `1px solid ${isProfileActive ? 'var(--primary)' : 'var(--glass-border)'}`,
+                                                                    fontWeight: isProfileActive ? 'bold' : 'normal',
+                                                                    transition: 'all 0.15s ease'
+                                                                }}
+                                                            >
+                                                                {profile === 'Generic' ? 'Genérico' : profile}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
                                     )}
