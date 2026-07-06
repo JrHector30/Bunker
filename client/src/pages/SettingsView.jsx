@@ -31,6 +31,8 @@ const SettingsView = () => {
     const [repairHistory, setRepairHistory] = useState([]);
     const [auditTicketEnabled, setAuditTicketEnabled] = useState(false);
 
+    const isAnyPrinterRepairing = Array.isArray(printers) && printers.some(p => p.ultimoEstado === 'RECOVERING');
+
     const loadStations = async () => {
         try {
             const res = await fetch('/api/impresoras/estaciones');
@@ -427,7 +429,6 @@ const SettingsView = () => {
             border: '#ffffff'
         }
     ];
-    const isAnyPrinterRepairing = Array.isArray(printers) && printers.some(p => p.ultimoEstado === 'RECOVERING');
 
     return (
         <div className="fade-in" style={{ padding: 20, maxWidth: 1000, margin: '0 auto' }}>
