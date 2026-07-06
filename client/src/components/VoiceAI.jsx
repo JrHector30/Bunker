@@ -304,6 +304,73 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
   const processVoiceCommand = (text) => {
     const lowerText = text.toLowerCase();
 
+    // D. Bunker Auto Recovery Intent ("repara", "arregla", "recupera")
+    if (lowerText.includes("repara") || lowerText.includes("arregla") || lowerText.includes("recupera")) {
+      let targetStation = 'Caja';
+      if (lowerText.includes("cocina")) {
+        targetStation = 'Cocina';
+      } else if (lowerText.includes("horno")) {
+        targetStation = 'Cocina';
+      }
+
+      const diagMsg = `Iniciando diagnóstico de la estación ${targetStation}...`;
+      setAiText(diagMsg);
+      speak(diagMsg, async () => {
+        try {
+          const listRes = await fetch(`/api/recovery/dispositivos?estacion=${targetStation}`);
+          const devices = listRes.ok ? await listRes.json() : [];
+          const printer = devices.find(d => d.tipo === 'impresora') || devices[0];
+
+          if (!printer) {
+            const noDeviceMsg = `No encontré ningún dispositivo de red registrado para la estación ${targetStation} en la base de datos de Búnker. Por favor, vincúlalo primero desde el administrador de dispositivos.`;
+            setAiText(noDeviceMsg);
+            speak(noDeviceMsg, () => listen());
+            return;
+          }
+
+          const reqRes = await fetch('/api/recovery/solicitar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deviceId: printer.id, estacion: targetStation })
+          });
+
+          if (!reqRes.ok) throw new Error("Fallo al solicitar");
+
+          const searchMsg = "La impresora no respondió en la dirección registrada. Buscando el dispositivo en la red local...";
+          setAiText(searchMsg);
+          speak(searchMsg, () => {
+            setTimeout(async () => {
+              try {
+                const checkRes = await fetch(`/api/impresoras?estacion=${targetStation}`);
+                if (checkRes.ok) {
+                  const list = await checkRes.json();
+                  const updatedDev = list.find(d => d.id === printer.id);
+                  if (updatedDev && updatedDev.ultimoEstado === 'ONLINE') {
+                    const successMsg = "Impresora encontrada con una nueva dirección IP. Actualizando configuración... Conexión restablecida correctamente.";
+                    setAiText(successMsg);
+                    speak(successMsg, () => listen());
+                  } else {
+                    const failMsg = `El escaneo concurrente finalizó, pero no se localizó ningún dispositivo con la dirección física registrada para la estación ${targetStation}. ¿Deseas que lo intente nuevamente?`;
+                    setAiText(failMsg);
+                    speak(failMsg, () => listen());
+                  }
+                }
+              } catch (e) {
+                const errMsg = "Ocurrió un inconveniente al comprobar el resultado de la auto recuperación.";
+                setAiText(errMsg);
+                speak(errMsg, () => listen());
+              }
+            }, 3500);
+          });
+        } catch (err) {
+          const errMsg = "Hubo un error de conexión al procesar la solicitud de auto recuperación.";
+          setAiText(errMsg);
+          speak(errMsg, () => listen());
+        }
+      });
+      return;
+    }
+
     // 1. Success confirmation: "todo correcto", "todo bien", "todo okey", "correcto"
     if (lowerText.includes("todo correcto") || lowerText.includes("todo bien") || lowerText.includes("correcto") || lowerText.includes("todo ok")) {
       const closeMsg = "¡Estupendo! Me alegra haber sido de utilidad para solucionar el inconveniente. Recuerde que la inteligencia de soporte de Búnker está siempre activa. Que tenga un excelente turno en el restobar. ¡Hasta luego!";
@@ -589,6 +656,12 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
             <div className="mb-4">
               <span className="text-[9px] font-bold text-[var(--text-muted)] block uppercase tracking-wider mb-1.5 text-center">Simular Comandos (Prueba de Iframe)</span>
               <div className="flex flex-wrap gap-1.5 justify-center">
+                <button
+                  onClick={() => handleSimulatedCommand("Repara la impresora de Cocina")}
+                  className="bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 text-[9px] px-2 py-1.5 rounded-lg text-sky-400 font-bold cursor-pointer transition-colors"
+                >
+                  "Búnker Auto Recovery"
+                </button>
                 <button
                   onClick={() => handleSimulatedCommand("Tengo problemas con la impresora de la cocina")}
                   className="bg-slate-800/80 hover:bg-slate-700/80 border border-zinc-700/40 text-[9px] px-2 py-1.5 rounded-lg text-[var(--text-main)] cursor-pointer transition-colors"

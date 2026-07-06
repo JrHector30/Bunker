@@ -13,6 +13,7 @@ if (fs.existsSync(localEnv)) {
 const { Pool } = require('pg');
 const { exec } = require('child_process');
 const net = require('net');
+const os = require('os');
 
 const STATION_ID = process.env.STATION_ID || 'Caja';
 
@@ -78,6 +79,35 @@ registerStation();
 
 const processedTickets = new Set();
 let isProcessing = false;
+let scanInProgress = false;
+let recoveryInProgress = false;
+
+// Helper to manage concurrency locks with automatic 15-second timeout release
+const acquireLockWithTimeout = (lockName, duration = 15000) => {
+  if (lockName === 'scan') {
+    if (scanInProgress) return false;
+    scanInProgress = true;
+    setTimeout(() => {
+      if (scanInProgress) {
+        console.warn("⚠️  [LockTimeout] Smart Scan superó los 15s. Liberando bloqueo automáticamente.");
+        scanInProgress = false;
+      }
+    }, duration);
+    return true;
+  }
+  if (lockName === 'recovery') {
+    if (recoveryInProgress) return false;
+    recoveryInProgress = true;
+    setTimeout(() => {
+      if (recoveryInProgress) {
+        console.warn("⚠️  [LockTimeout] Auto Recovery superó los 15s. Liberando bloqueo automáticamente.");
+        recoveryInProgress = false;
+      }
+    }, duration);
+    return true;
+  }
+  return false;
+};
 
 console.log("=================================================");
 console.log("🚀 Servidor de Impresión Local de Búnker Iniciado");
@@ -127,27 +157,93 @@ async function handlePrinterScanRequests() {
     const shouldScan = res.rows[0]?.valor === STATION_ID;
 
     if (shouldScan) {
-      console.log(`🔍 Solicitud de escaneo de impresoras detectada para esta estación (${STATION_ID}). Escaneando Windows...`);
-      const printersList = await getWindowsPrinters();
-      console.log(`🖨️  Impresoras encontradas: [${printersList.map(p => `${p.name} (${p.offline ? 'Sin conexión' : 'En línea'})`).join(', ')}]`);
+      // Intentar adquirir el bloqueo
+      const acquired = acquireLockWithTimeout('scan');
+      if (!acquired) {
+        console.log("⚠️  [SmartScan] Diagnóstico ya en progreso. Ignorando solicitud duplicada.");
+        // Apagar la bandera de solicitud de inmediato para no quedar en bucle
+        await client.query(`
+          INSERT INTO "Configuracion" (clave, valor)
+          VALUES ('solicitar_actualizacion_impresoras', 'false')
+          ON CONFLICT (clave) DO UPDATE SET valor = 'false'
+        `);
+        return;
+      }
 
-      const jsonList = JSON.stringify(printersList);
+      try {
+        console.log(`🔍 Solicitud de escaneo de impresoras detectada para esta estación (${STATION_ID}).`);
+        
+        // Escaneo concurrente de Windows y Smart Scan de Red
+        const [printersList, ethernetList] = await Promise.all([
+          getWindowsPrinters(),
+          smartScanNetwork()
+        ]);
 
-      // Guardar impresoras disponibles para ESTA estación
-      await client.query(`
-        INSERT INTO "Configuracion" (clave, valor)
-        VALUES ($1, $2)
-        ON CONFLICT (clave) DO UPDATE SET valor = $2
-      `, [`impresoras_disponibles_${STATION_ID}`, jsonList]);
+        console.log(`🖨️  Impresoras Windows encontradas: [${printersList.map(p => `${p.name} (${p.offline ? 'Sin conexión' : 'En línea'})`).join(', ')}]`);
+        console.log(`📡 Dispositivos Ethernet descubiertos en la subred: [${ethernetList.map(d => `${d.ip} (${d.mac})`).join(', ')}]`);
 
-      // Apagar la bandera de solicitud
-      await client.query(`
-        INSERT INTO "Configuracion" (clave, valor)
-        VALUES ('solicitar_actualizacion_impresoras', 'false')
-        ON CONFLICT (clave) DO UPDATE SET valor = 'false'
-      `);
+        const jsonList = JSON.stringify(printersList);
+        const jsonEthernet = JSON.stringify(ethernetList);
 
-      console.log(`✅ Lista de impresoras de la estación "${STATION_ID}" sincronizada con la base de datos.`);
+        // Guardar impresoras disponibles para ESTA estación
+        await client.query(`
+          INSERT INTO "Configuracion" (clave, valor)
+          VALUES ($1, $2)
+          ON CONFLICT (clave) DO UPDATE SET valor = $2
+        `, [`impresoras_disponibles_${STATION_ID}`, jsonList]);
+
+        // Guardar dispositivos de red descubiertos
+        await client.query(`
+          INSERT INTO "Configuracion" (clave, valor)
+          VALUES ($1, $2)
+          ON CONFLICT (clave) DO UPDATE SET valor = $2
+        `, [`impresoras_descubiertas_${STATION_ID}`, jsonEthernet]);
+
+        // Actualizar dinámicamente el estado y la IP de impresoras vinculadas con los resultados del smart scan
+        const dbDevsRes = await client.query(
+          `SELECT * FROM dispositivos_red WHERE estacion = $1`,
+          [STATION_ID]
+        );
+        const dbDevices = dbDevsRes.rows;
+
+        for (const dev of dbDevices) {
+          if (dev.transport === 'TCP9100') {
+            // No interrumpir si está en proceso de recuperación activa
+            if (dev.ultimo_estado === 'RECOVERING') continue;
+
+            const matchByMac = dev.mac ? ethernetList.find(e => e.mac === dev.mac) : null;
+            if (matchByMac) {
+              await client.query(
+                `UPDATE dispositivos_red 
+                 SET ultimo_estado = 'ONLINE', ultima_ip = $1, ultima_respuesta_ms = $2, ultimo_diag = NOW() 
+                 WHERE id = $3`,
+                [matchByMac.ip, matchByMac.latency, dev.id]
+              );
+            } else {
+              const isAlive = await checkPort9100(dev.ultima_ip);
+              const nextState = isAlive ? 'ONLINE' : 'OFFLINE';
+              await client.query(
+                `UPDATE dispositivos_red 
+                 SET ultimo_estado = $1, ultimo_diag = NOW() 
+                 WHERE id = $2`,
+                [nextState, dev.id]
+              );
+            }
+          }
+        }
+
+        // Apagar la bandera de solicitud
+        await client.query(`
+          INSERT INTO "Configuracion" (clave, valor)
+          VALUES ('solicitar_actualizacion_impresoras', 'false')
+          ON CONFLICT (clave) DO UPDATE SET valor = 'false'
+        `);
+
+        console.log(`✅ Lista de impresoras y dispositivos Ethernet de la estación "${STATION_ID}" sincronizada.`);
+      } finally {
+        // Liberar el bloqueo bajo cualquier circunstancia
+        scanInProgress = false;
+      }
     }
   } catch (err) {
     console.error("❌ Error al procesar solicitud de escaneo de impresoras:", err.message);
@@ -355,17 +451,32 @@ const PRINTER_PROFILES = {
 
 async function printTicketText(ticketText, ticketId, printerName, paperSize = '80mm') {
   let profileName = 'Generic';
+  let transport = 'USB';
+  let ipAddress = '';
+
   try {
     const res = await pool.query(
-      `SELECT valor FROM "Configuracion" WHERE clave = $1`,
-      [`impresora_perfiles_${STATION_ID}`]
+      `SELECT * FROM dispositivos_red WHERE nombre = $1 AND estacion = $2 LIMIT 1`,
+      [printerName, STATION_ID]
     );
     if (res.rows.length > 0) {
-      const map = JSON.parse(res.rows[0].valor);
-      profileName = map[printerName] || 'Generic';
+      const device = res.rows[0];
+      profileName = device.perfil || 'Generic';
+      transport = device.transport || 'USB';
+      ipAddress = device.ultima_ip || '';
+    } else {
+      // Fallback legacy
+      const legacyRes = await pool.query(
+        `SELECT valor FROM "Configuracion" WHERE clave = $1`,
+        [`impresora_perfiles_${STATION_ID}`]
+      );
+      if (legacyRes.rows.length > 0) {
+        const map = JSON.parse(legacyRes.rows[0].valor);
+        profileName = map[printerName] || 'Generic';
+      }
     }
   } catch (err) {
-    console.error("⚠️ Error al cargar el perfil de la impresora, usando Genérico:", err.message);
+    console.error("⚠️ Error al obtener datos del dispositivo para imprimir, usando Genérico/USB:", err.message);
   }
 
   const profile = PRINTER_PROFILES[profileName] || PRINTER_PROFILES.Generic;
@@ -388,7 +499,9 @@ async function printTicketText(ticketText, ticketId, printerName, paperSize = '8
       `-codepage ${profile.codepage} ` +
       `-initCmd "${profile.initCmd}" ` +
       `-charTableCmd "${profile.charTableCmd}" ` +
-      `-cutCmd "${profile.cutCmd}"`;
+      `-cutCmd "${profile.cutCmd}" ` +
+      `-transport "${transport}" ` +
+      `-ipAddress "${ipAddress}"`;
 
     exec(command, (error, stdout, stderr) => {
       try {
@@ -396,10 +509,10 @@ async function printTicketText(ticketText, ticketId, printerName, paperSize = '8
       } catch (e) { }
 
       if (error) {
-        console.error(`❌ Error en Spooler de Windows para Impresora "${printerName}":`, error);
+        console.error(`❌ Error al imprimir "${printerName}" (${transport}):`, error);
         return reject(error);
       }
-      console.log(`🖨️  Ticket #${ticketId} enviado al spooler ("${printerName}") usando perfil ${profileName}.`);
+      console.log(`🖨️  Ticket #${ticketId} enviado con éxito a "${printerName}" usando transporte ${transport} y perfil ${profileName}.`);
       resolve();
     });
   });
@@ -413,26 +526,46 @@ async function checkAndPrintQueue() {
   let client;
   try {
     client = await pool.connect();
-    // 1. Obtener la impresora activa seleccionada en la web para ESTA estación
-    const activeRes = await client.query(
-      `SELECT valor FROM "Configuracion" WHERE clave = $1`,
-      [`impresora_activa_${STATION_ID}`]
+    // 1. Obtener la impresora activa de la base de datos (con fallback heredado)
+    let activeDevice = null;
+    const activeDevRes = await client.query(
+      `SELECT * FROM dispositivos_red WHERE estacion = $1 AND activo = true LIMIT 1`,
+      [STATION_ID]
     );
-    const printerName = activeRes.rows[0]?.valor;
 
-    if (!printerName) {
-      // Si no hay impresora seleccionada, no podemos imprimir nada físicamente
+    if (activeDevRes.rows.length > 0) {
+      activeDevice = activeDevRes.rows[0];
+    } else {
+      // Fallback heredado
+      const legacyConfRes = await client.query(
+        `SELECT valor FROM "Configuracion" WHERE clave = $1`,
+        [`impresora_activa_${STATION_ID}`]
+      );
+      const legacyName = legacyConfRes.rows[0]?.valor;
+      if (legacyName) {
+        // Buscar medida heredada
+        const medidasRes = await client.query(
+          `SELECT valor FROM "Configuracion" WHERE clave = $1`,
+          [`impresora_medidas_${STATION_ID}`]
+        );
+        const medidasMap = medidasRes.rows[0]?.valor ? JSON.parse(medidasRes.rows[0].valor) : {};
+        activeDevice = {
+          nombre: legacyName,
+          medida: medidasMap[legacyName] || '80mm',
+          perfil: 'Generic',
+          transport: 'USB'
+        };
+      }
+    }
+
+    if (!activeDevice) {
+      // Si no hay impresora activa, no hacemos nada
       isProcessing = false;
       return;
     }
 
-    // Obtener configuración de medidas para esta estación
-    const medidasRes = await client.query(
-      `SELECT valor FROM "Configuracion" WHERE clave = $1`,
-      [`impresora_medidas_${STATION_ID}`]
-    );
-    const medidasMap = medidasRes.rows[0]?.valor ? JSON.parse(medidasRes.rows[0].valor) : {};
-    const paperSize = medidasMap[printerName] || '80mm';
+    const printerName = activeDevice.nombre;
+    const paperSize = activeDevice.medida || '80mm';
 
     // Determinar ancho de línea en caracteres monoespacio
     let lineWidth = 42; // por defecto 80mm
@@ -492,6 +625,350 @@ setInterval(checkAndPrintQueue, 2000);
 // Cada 3 segundos vigilar si hay solicitudes de escaneo de impresoras
 setInterval(handlePrinterScanRequests, 3000);
 
-// Ejecutar un barrido y comprobación inmediata al arrancar
+// Cada 2 segundos reportar latido de vida de la estación
+setInterval(writeStationHeartbeat, 2000);
+
+// Cada 3 segundos comprobar solicitudes de Auto Recovery
+setInterval(handleAutoRecoveryRequests, 3000);
+
+// Cada 10 segundos diagnosticar de forma periódica las impresoras de red vinculadas
+setInterval(runPeriodicHealthCheck, 10000);
+
+// Ejecutar barridos y latido inmediato al arrancar
 checkAndPrintQueue();
 handlePrinterScanRequests();
+writeStationHeartbeat();
+handleAutoRecoveryRequests();
+runPeriodicHealthCheck();
+
+
+// --- 7. Búnker Auto Recovery & Network Helpers ---
+
+// Bucle de Latido (Heartbeat) de la Estación
+async function writeStationHeartbeat() {
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query(`
+      INSERT INTO "Configuracion" (clave, valor)
+      VALUES ($1, $2)
+      ON CONFLICT (clave) DO UPDATE SET valor = $2
+    `, [`estacion_latido_${STATION_ID}`, Date.now().toString()]);
+  } catch (err) {
+    // Silencioso para no saturar consola
+  } finally {
+    if (client) client.release();
+  }
+}
+
+// Obtener rango de IPs de la subred local actual
+function getSubnetRange() {
+  const interfaces = os.networkInterfaces();
+  for (const name in interfaces) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        const ip = iface.address;
+        const netmask = iface.netmask;
+        
+        const ipParts = ip.split('.').map(Number);
+        const maskParts = netmask.split('.').map(Number);
+        
+        const ipInt = (ipParts[0] << 24) | (ipParts[1] << 16) | (ipParts[2] << 8) | ipParts[3];
+        const maskInt = (maskParts[0] << 24) | (maskParts[1] << 16) | (maskParts[2] << 8) | maskParts[3];
+        
+        const networkInt = ipInt & maskInt;
+        const broadcastInt = networkInt | ~maskInt;
+        
+        const ipRange = [];
+        // Si la máscara es muy grande (ej. Clase A/B), limitamos a /24 para velocidad
+        if ((maskInt >>> 0) < 0xffffff00) {
+          const prefix = ipParts.slice(0, 3).join('.');
+          for (let i = 1; i <= 254; i++) {
+            if (`${prefix}.${i}` !== ip) {
+              ipRange.push(`${prefix}.${i}`);
+            }
+          }
+        } else {
+          const firstHost = (networkInt + 1) >>> 0;
+          const lastHost = (broadcastInt - 1) >>> 0;
+          for (let host = firstHost; host <= lastHost; host++) {
+            const parts = [
+              (host >>> 24) & 255,
+              (host >>> 16) & 255,
+              (host >>> 8) & 255,
+              host & 255
+            ];
+            const ipStr = parts.join('.');
+            if (ipStr !== ip) {
+              ipRange.push(ipStr);
+            }
+          }
+        }
+        return ipRange;
+      }
+    }
+  }
+  return [];
+}
+
+// Verificar conexión TCP en puerto 9100 con 800ms timeout
+function checkPort9100(ip) {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    const socket = new net.Socket();
+    socket.setTimeout(800);
+    
+    socket.connect(9100, ip, () => {
+      const timeMs = Date.now() - startTime;
+      socket.destroy();
+      resolve({ ip, timeMs });
+    });
+    socket.on('error', () => {
+      socket.destroy();
+      resolve(null);
+    });
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(null);
+    });
+  });
+}
+
+// Resolver dirección MAC vía ARP (con ping previo) o fallback a Get-NetNeighbor
+function getMacAddress(ip) {
+  return new Promise((resolve) => {
+    exec(`ping -n 1 -w 200 ${ip}`, (pingErr) => {
+      exec(`arp -a ${ip}`, (arpErr, stdout) => {
+        if (arpErr || !stdout) {
+          // Fallback a powershell
+          exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-NetNeighbor -IPAddress ${ip} | Select-Object -ExpandProperty LinkLayerAddress"`, (psErr, psStdout) => {
+            if (psErr || !psStdout) return resolve(null);
+            const mac = psStdout.trim().replace(/-/g, ':').toLowerCase();
+            if (mac && mac.length >= 17) return resolve(mac);
+            resolve(null);
+          });
+          return;
+        }
+        const macRegex = /([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})/;
+        const match = stdout.match(macRegex);
+        if (match) {
+          const mac = match[0].replace(/-/g, ':').toLowerCase();
+          resolve(mac);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  });
+}
+
+// Smart Scan de Red concurrente
+async function smartScanNetwork() {
+  const ipRange = getSubnetRange();
+  if (ipRange.length === 0) return [];
+  
+  const foundDevices = [];
+  const CONCURRENCY = 50;
+  let currentIndex = 0;
+  
+  async function worker() {
+    while (currentIndex < ipRange.length) {
+      const ip = ipRange[currentIndex++];
+      const connectRes = await checkPort9100(ip);
+      if (connectRes) {
+        const mac = await getMacAddress(ip);
+        if (mac) {
+          foundDevices.push({
+            ip,
+            mac,
+            latency: connectRes.timeMs
+          });
+        }
+      }
+    }
+  }
+  
+  const workers = Array(CONCURRENCY).fill(null).map(() => worker());
+  await Promise.allSettled(workers);
+  return foundDevices;
+}
+
+// Verificación E2E de impresión en impresora Ethernet
+function verifyEthernetPrinter(ip) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(1500);
+    socket.connect(9100, ip, () => {
+      // Escribir comandos de prueba de diagnóstico ESC/POS (Reset + Mensaje + Avance + Corte)
+      const testBuffer = Buffer.from('\x1B\x40Bunker Auto Recovery\nDiagnostico completado correctamente\n\n\n\x1D\x56\x42\x00', 'ascii');
+      socket.write(testBuffer, () => {
+        socket.destroy();
+        resolve(true);
+      });
+    });
+    socket.on('error', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+  });
+}
+
+// Proceso asíncrono de Auto Recovery
+async function runAutoRecovery(deviceId) {
+  const acquired = acquireLockWithTimeout('recovery');
+  if (!acquired) {
+    console.log("⚠️  [AutoRecovery] Reparación ya en progreso. Ignorando solicitud duplicada.");
+    return;
+  }
+
+  const startTime = Date.now();
+  let client;
+  try {
+    client = await pool.connect();
+    
+    // 1. Obtener datos actuales del dispositivo
+    const devRes = await client.query(`SELECT * FROM dispositivos_red WHERE id = $1`, [deviceId]);
+    if (devRes.rows.length === 0) return;
+    const device = devRes.rows[0];
+    
+    console.log(`🔧 [AutoRecovery] Iniciando recuperación de "${device.nombre}" (MAC: ${device.mac})...`);
+    
+    // Poner estado en RECOVERING
+    await client.query(`UPDATE dispositivos_red SET ultimo_estado = 'RECOVERING' WHERE id = $1`, [deviceId]);
+    
+    // 2. Ejecutar Smart Scan
+    const scanResults = await smartScanNetwork();
+    const match = scanResults.find(d => d.mac === device.mac);
+    
+    if (match) {
+      const elapsedMs = Date.now() - startTime;
+      console.log(`✅ [AutoRecovery] Impresora encontrada en la nueva IP: ${match.ip} en ${elapsedMs}ms.`);
+      
+      // 3. Verificación física E2E (Configurable)
+      let isOperational = true;
+      const diagConfigRes = await client.query(`SELECT valor FROM "Configuracion" WHERE clave = 'imprimir_ticket_auditoria_recovery'`);
+      const shouldPrint = diagConfigRes.rows[0]?.valor === 'true';
+      
+      if (shouldPrint) {
+        // Enviar ticket de diagnóstico por hardware
+        isOperational = await verifyEthernetPrinter(match.ip);
+      } else {
+        // Validación TCP simple
+        const connCheck = await checkPort9100(match.ip);
+        isOperational = connCheck !== null;
+      }
+      
+      const finalState = isOperational ? 'ONLINE' : 'ERROR';
+      
+      // 4. Actualizar IP, estado y latencia
+      await client.query(`
+        UPDATE dispositivos_red 
+        SET ultima_ip = $1, ultimo_estado = $2, ultima_respuesta_ms = $3, ultimo_diag = NOW(), ultima_reparacion = NOW()
+        WHERE id = $4
+      `, [match.ip, finalState, match.latency || 0, deviceId]);
+      
+      // 5. Guardar en Historial de Reparaciones
+      const { randomUUID } = require('crypto');
+      const histId = randomUUID();
+      await client.query(`
+        INSERT INTO historial_reparaciones (id, dispositivo_id, estacion, ip_anterior, nueva_ip, tiempo_ms, motivo, creado_a)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      `, [histId, device.id, STATION_ID, device.ultima_ip || 'Desconocida', match.ip, elapsedMs, "IP no respondía (Auto Recovery)"]);
+      
+      // 6. Si se requería imprimir e imprimir ticket completo de auditoría
+      if (shouldPrint && isOperational) {
+        const formattedDate = new Date().toLocaleString('es-PE');
+        const auditText = 
+          "================================\n" +
+          "BUNKER AUTO RECOVERY\n" +
+          "Diagnostico Finalizado\n\n" +
+          `Estacion:     ${STATION_ID}\n` +
+          `Dispositivo:  ${device.nombre}\n` +
+          "Resultado:    Conectada Correctamente\n\n" +
+          `IP Anterior:  ${device.ultima_ip || 'Ninguna'}\n` +
+          `Nueva IP:     ${match.ip}\n` +
+          `Tiempo Recup: ${elapsedMs} ms\n` +
+          `Fecha:        ${formattedDate}\n` +
+          "================================\n\n\n\n\x1D\x56\x42\x00";
+        
+        await printTicketText(auditText, 'recovery_' + Date.now(), device.nombre);
+      }
+    } else {
+      console.log(`❌ [AutoRecovery] No se encontró ningún dispositivo con la MAC ${device.mac} en la subred.`);
+      await client.query(`UPDATE dispositivos_red SET ultimo_estado = 'OFFLINE', ultimo_diag = NOW() WHERE id = $1`, [deviceId]);
+    }
+  } catch (err) {
+    console.error("❌ Error en el proceso de Auto Recovery:", err.message);
+  } finally {
+    // Liberar el bloqueo bajo cualquier circunstancia
+    recoveryInProgress = false;
+    if (client) client.release();
+  }
+}
+
+// Bucle de solicitudes de Auto Recovery
+async function handleAutoRecoveryRequests() {
+  let client;
+  try {
+    client = await pool.connect();
+    const res = await client.query(`SELECT valor FROM "Configuracion" WHERE clave = 'solicitar_recovery_estacion'`);
+    if (res.rows.length === 0) return;
+    
+    const val = res.rows[0].valor;
+    if (val === 'false' || val === 'true') return;
+    
+    const request = JSON.parse(val);
+    if (request && request.estacion === STATION_ID) {
+      console.log(`📡 Solicitud de Auto Recovery detectada para esta estación (${STATION_ID}).`);
+      
+      // Desactivar el flag
+      await client.query(`
+        INSERT INTO "Configuracion" (clave, valor)
+        VALUES ('solicitar_recovery_estacion', 'false')
+        ON CONFLICT (clave) DO UPDATE SET valor = 'false'
+      `);
+      
+      // Lanzar recuperación de forma asíncrona
+      runAutoRecovery(request.deviceId);
+    }
+  } catch (err) {
+    console.error("❌ Error al comprobar solicitudes de auto recovery:", err.message);
+  } finally {
+    if (client) client.release();
+  }
+}
+
+// Bucle de diagnóstico periódico de dispositivos vinculados (cada 10 segundos)
+async function runPeriodicHealthCheck() {
+  let client;
+  try {
+    client = await pool.connect();
+    const res = await client.query(
+      `SELECT * FROM dispositivos_red WHERE estacion = $1 AND transport = 'TCP9100'`,
+      [STATION_ID]
+    );
+    const devices = res.rows;
+    for (const dev of devices) {
+      if (dev.ultimo_estado === 'RECOVERING') continue; // No interrumpir si está recuperándose
+
+      const isAlive = await checkPort9100(dev.ultima_ip);
+      const nextState = isAlive ? 'ONLINE' : 'OFFLINE';
+
+      if (dev.ultimo_estado !== nextState) {
+        console.log(`📡 [HealthCheck] Dispositivo ${dev.nombre} en ${dev.ultima_ip} cambió de estado a ${nextState}.`);
+        await client.query(
+          `UPDATE dispositivos_red SET ultimo_estado = $1, ultimo_diag = NOW() WHERE id = $2`,
+          [nextState, dev.id]
+        );
+      }
+    }
+  } catch (err) {
+    // Silencioso
+  } finally {
+    if (client) client.release();
+  }
+}

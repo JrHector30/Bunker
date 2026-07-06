@@ -216,3 +216,45 @@ model TicketPendiente {
   @@map("tickets_pendientes")
 }
 
+enum EstadoDispositivo {
+  ONLINE
+  OFFLINE
+  ERROR
+  RECOVERING
+}
+
+model DispositivoRed {
+  id                 String            @id @default(uuid())
+  nombre             String
+  estacion           String
+  tipo               String
+  transport          String
+  mac                String?
+  ultimaIp           String?           @map("ultima_ip")
+  activo             Boolean           @default(false)
+  medida             String            @default("80mm")
+  perfil             String            @default("Generic")
+  ultimoEstado       EstadoDispositivo @default(OFFLINE) @map("ultimo_estado")
+  ultimaRespuestaMs  Int?              @default(0) @map("ultima_respuesta_ms")
+  ultimoDiag         DateTime?         @map("ultimo_diag")
+  ultimaReparacion   DateTime?         @map("ultima_reparacion")
+  creadoA            DateTime          @default(now()) @map("creado_a")
+  actualizadoA       DateTime          @updatedAt @map("actualizado_a")
+
+  @@index([mac])
+  @@map("dispositivos_red")
+}
+
+model HistorialReparacion {
+  id             String   @id @default(uuid())
+  dispositivoId  String   @map("dispositivo_id")
+  estacion       String
+  ipAnterior     String   @map("ip_anterior")
+  nuevaIp        String   @map("nueva_ip")
+  tiempoMs       Int      @map("tiempo_ms")
+  motivo         String
+  creadoA        DateTime @default(now()) @map("creado_a")
+
+  @@map("historial_reparaciones")
+}
+

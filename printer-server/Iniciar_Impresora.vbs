@@ -5,8 +5,12 @@ Set objFSO = CreateObject("Scripting.FileSystemObject")
 Set objFile = objFSO.GetFile(strPath)
 strFolder = objFSO.GetParentFolderName(objFile)
 
-' Cambiar el directorio de trabajo a la carpeta del script
-WshShell.CurrentDirectory = strFolder
+' Obtener la carpeta principal del proyecto
+strParentFolder = objFSO.GetParentFolderName(strFolder)
 
-' Ejecutar el servidor de impresión en segundo plano (0 = ocultar ventana, false = no esperar a que termine)
-WshShell.Run "cmd.exe /c node server.js", 0, false
+' Cambiar el directorio de trabajo a la carpeta principal para ejecutar el backend
+WshShell.CurrentDirectory = strParentFolder
+
+' Ejecutar el servidor backend (api/index.js) en segundo plano (0 = ocultar ventana, false = no esperar)
+' El backend iniciará automáticamente el servidor de impresión local (server.js) de forma nativa.
+WshShell.Run "cmd.exe /c node api/index.js", 0, false

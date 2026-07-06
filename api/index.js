@@ -43,6 +43,10 @@ const upload = multer({
 });
 
 app.use(cors({ origin: '*' }));
+app.use((req, res, next) => {
+    console.log(`[HTTP] ${req.method} ${req.url}`);
+    next();
+});
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ limit: '5mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -75,14 +79,50 @@ app.get('/uploads/:type/:file', (req, res) => {
 // --- ROUTES ---
 
 // --- PRINTERS PROXY ENDPOINTS ---
+// --- PRINTERS PROXY ENDPOINTS ---
 app.get('/api/impresoras', async (req, res) => {
     const estacion = req.query.estacion || 'Caja';
     try {
+        // Fetch Windows printers from local station cache
         const config = await prisma.configuracion.findUnique({
             where: { clave: `impresoras_disponibles_${estacion}` }
         });
-        const list = config ? JSON.parse(config.valor) : [];
-        res.json(list);
+        const winPrinters = config ? JSON.parse(config.valor) : [];
+        const winPrintersMapped = winPrinters.map(p => ({
+            id: `usb_${p.name}`,
+            nombre: p.name,
+            estacion,
+            tipo: 'impresora',
+            transport: 'USB',
+            mac: null,
+            ultimaIp: null,
+            ultimoEstado: p.offline ? 'OFFLINE' : 'ONLINE',
+            ultimaRespuestaMs: 0
+        }));
+
+        // Fetch registered Ethernet/USB printers from DB
+        const netPrinters = await prisma.dispositivoRed.findMany({
+            where: { estacion }
+        });
+
+        // Merge real-time offline status for USB printers registered in DB
+        const combinedNet = netPrinters.map(dev => {
+            if (dev.transport === 'USB') {
+                const winMatch = winPrintersMapped.find(w => w.nombre === dev.nombre);
+                return {
+                    ...dev,
+                    ultimoEstado: winMatch ? winMatch.ultimoEstado : 'OFFLINE'
+                };
+            }
+            return dev;
+        });
+
+        // Combine with discovered Windows printers that are not yet registered
+        const netNames = new Set(netPrinters.map(n => n.nombre));
+        const newWin = winPrintersMapped.filter(w => !netNames.has(w.nombre));
+
+        const combined = [...combinedNet, ...newWin];
+        res.json(combined);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -91,24 +131,66 @@ app.get('/api/impresoras', async (req, res) => {
 app.get('/api/impresoras/activa', async (req, res) => {
     const estacion = req.query.estacion || 'Caja';
     try {
-        const config = await prisma.configuracion.findUnique({
-            where: { clave: `impresora_activa_${estacion}` }
+        const activeDevice = await prisma.dispositivoRed.findFirst({
+            where: { estacion, activo: true }
         });
-        res.json({ nombre: config ? config.valor : '' });
+        if (activeDevice) {
+            res.json({ nombre: activeDevice.nombre, transport: activeDevice.transport, ultimaIp: activeDevice.ultimaIp });
+        } else {
+            // Legacy fallback
+            const config = await prisma.configuracion.findUnique({
+                where: { clave: `impresora_activa_${estacion}` }
+            });
+            res.json({ nombre: config ? config.valor : '', transport: 'USB' });
+        }
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 app.post('/api/impresoras/seleccionar', async (req, res) => {
-    const { nombre, estacion } = req.body;
+    const { nombre, estacion, transport, ip, mac } = req.body;
     const targetEstacion = estacion || 'Caja';
+    const targetTransport = transport || 'USB';
     try {
+        // 1. Marcar todas las impresoras de la estación como inactivas
+        await prisma.dispositivoRed.updateMany({
+            where: { estacion: targetEstacion },
+            data: { activo: false }
+        });
+
+        // 2. Buscar o crear la impresora seleccionada en la base de datos
+        const existing = await prisma.dispositivoRed.findFirst({
+            where: { nombre: nombre, estacion: targetEstacion }
+        });
+
+        if (existing) {
+            await prisma.dispositivoRed.update({
+                where: { id: existing.id },
+                data: { activo: true }
+            });
+        } else {
+            await prisma.dispositivoRed.create({
+                data: {
+                    nombre,
+                    estacion: targetEstacion,
+                    tipo: 'impresora',
+                    transport: targetTransport,
+                    mac: mac || null,
+                    ultimaIp: ip || null,
+                    activo: true,
+                    ultimoEstado: 'ONLINE'
+                }
+            });
+        }
+
+        // Fallback legacy
         await prisma.configuracion.upsert({
             where: { clave: `impresora_activa_${targetEstacion}` },
             update: { valor: nombre },
             create: { clave: `impresora_activa_${targetEstacion}`, valor: nombre }
         });
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -146,6 +228,13 @@ app.post('/api/impresoras/medida', async (req, res) => {
             update: { valor: JSON.stringify(map) },
             create: { clave: configKey, valor: JSON.stringify(map) }
         });
+
+        // Sincronizar con la tabla de dispositivos de red si existe
+        await prisma.dispositivoRed.updateMany({
+            where: { nombre: impresora, estacion: targetEstacion },
+            data: { medida }
+        });
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -181,6 +270,13 @@ app.post('/api/impresoras/perfil', async (req, res) => {
             update: { valor: JSON.stringify(map) },
             create: { clave: configKey, valor: JSON.stringify(map) }
         });
+
+        // Sincronizar con la tabla de dispositivos de red si existe
+        await prisma.dispositivoRed.updateMany({
+            where: { nombre: impresora, estacion: targetEstacion },
+            data: { perfil }
+        });
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -218,11 +314,159 @@ app.get('/api/impresoras/estaciones', async (req, res) => {
             where: { clave: 'estaciones_impresion' }
         });
         const list = config ? JSON.parse(config.valor) : ['Caja'];
-        // Si por alguna razón la lista no incluye 'Caja', la forzamos como inicial
         if (!list.includes('Caja')) {
             list.unshift('Caja');
         }
         res.json(list);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- RECOVERY ENDPOINTS ---
+app.get('/api/recovery/dispositivos', async (req, res) => {
+    const estacion = req.query.estacion || 'Caja';
+    try {
+        const devices = await prisma.dispositivoRed.findMany({
+            where: { estacion }
+        });
+        res.json(devices);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/recovery/descubiertos', async (req, res) => {
+    const estacion = req.query.estacion || 'Caja';
+    try {
+        const config = await prisma.configuracion.findUnique({
+            where: { clave: `impresoras_descubiertas_${estacion}` }
+        });
+        const discovered = config ? JSON.parse(config.valor) : [];
+
+        // Traer dispositivos ya vinculados
+        const linked = await prisma.dispositivoRed.findMany({
+            where: { estacion }
+        });
+        const linkedMacs = new Set(linked.map(d => d.mac).filter(Boolean));
+
+        // Filtrar no vinculados
+        const filtered = discovered.filter(d => !linkedMacs.has(d.mac));
+        res.json(filtered);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/recovery/vincular', async (req, res) => {
+    const { nombre, estacion, ip, mac, perfil, medida } = req.body;
+    try {
+        const device = await prisma.dispositivoRed.create({
+            data: {
+                nombre,
+                estacion: estacion || 'Caja',
+                tipo: 'impresora',
+                transport: 'TCP9100',
+                mac,
+                ultimaIp: ip,
+                perfil: perfil || 'Generic',
+                medida: medida || '80mm',
+                ultimoEstado: 'ONLINE'
+            }
+        });
+        res.json({ success: true, device });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/recovery/desvincular', async (req, res) => {
+    const { deviceId } = req.body;
+    try {
+        await prisma.dispositivoRed.delete({
+            where: { id: deviceId }
+        });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/recovery/solicitar', async (req, res) => {
+    const { deviceId, estacion } = req.body;
+    try {
+        await prisma.dispositivoRed.update({
+            where: { id: deviceId },
+            data: { ultimoEstado: 'RECOVERING' }
+        });
+
+        const payload = {
+            estacion: estacion || 'Caja',
+            accion: 'reparar',
+            deviceId
+        };
+
+        await prisma.configuracion.upsert({
+            where: { clave: 'solicitar_recovery_estacion' },
+            update: { valor: JSON.stringify(payload) },
+            create: { clave: 'solicitar_recovery_estacion', valor: JSON.stringify(payload) }
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/recovery/historial', async (req, res) => {
+    const estacion = req.query.estacion || 'Caja';
+    try {
+        const history = await prisma.historialReparacion.findMany({
+            where: { estacion },
+            orderBy: { creadoA: 'desc' },
+            take: 10
+        });
+        res.json(history);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/recovery/estado-estacion', async (req, res) => {
+    const estacion = req.query.estacion || 'Caja';
+    try {
+        const latido = await prisma.configuracion.findUnique({
+            where: { clave: `estacion_latido_${estacion}` }
+        });
+        if (!latido) {
+            return res.json({ enLinea: false });
+        }
+        const diff = Date.now() - parseInt(latido.valor, 10);
+        res.json({ enLinea: diff < 6000 });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/configuracion/:clave', async (req, res) => {
+    try {
+        const config = await prisma.configuracion.findUnique({
+            where: { clave: req.params.clave }
+        });
+        res.json({ valor: config ? config.valor : null });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/configuracion/:clave', async (req, res) => {
+    try {
+        const config = await prisma.configuracion.upsert({
+            where: { clave: req.params.clave },
+            update: { valor: req.body.valor },
+            create: { clave: req.params.clave, valor: req.body.valor }
+        });
+        res.json({ success: true, config });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
