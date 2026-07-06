@@ -3303,10 +3303,10 @@ if (process.env.NODE_ENV !== 'production') {
                     const child = spawn('node', [printerScript], {
                         detached: true,
                         stdio: 'ignore',
-                        env: { ...process.env, STATION_ID: 'Caja' }
+                        env: { ...process.env, STATION_ID: process.env.STATION_ID || 'Caja' }
                     });
                     child.unref();
-                    console.log("✅ Servidor de impresión local iniciado en segundo plano (Estación: Caja).");
+                    console.log(`✅ Servidor de impresión local iniciado en segundo plano (Estación: ${process.env.STATION_ID || 'Caja'}).`);
                 }
             } catch (e) {
                 console.error("❌ Error al iniciar el servidor de impresión en segundo plano:", e);

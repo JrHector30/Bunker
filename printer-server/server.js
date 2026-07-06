@@ -711,26 +711,43 @@ function getSubnetRange() {
   return [];
 }
 
-// Verificar conexión TCP en puerto 9100 con 800ms timeout
+// Verificar conexión TCP en puerto 9100 con 1.5s timeout garantizado (evita bloqueos de OS)
 function checkPort9100(ip) {
   return new Promise((resolve) => {
+    if (!ip) return resolve(null);
     const startTime = Date.now();
     const socket = new net.Socket();
-    socket.setTimeout(800);
     
-    socket.connect(9100, ip, () => {
-      const timeMs = Date.now() - startTime;
-      socket.destroy();
-      resolve({ ip, timeMs });
-    });
-    socket.on('error', () => {
+    // Garantía manual de timeout de conexión a nivel de socket
+    const connTimeout = setTimeout(() => {
       socket.destroy();
       resolve(null);
-    });
-    socket.on('timeout', () => {
+    }, 1500);
+    
+    try {
+      socket.connect(9100, ip, () => {
+        clearTimeout(connTimeout);
+        const timeMs = Date.now() - startTime;
+        socket.destroy();
+        resolve({ ip, timeMs });
+      });
+      
+      socket.on('error', () => {
+        clearTimeout(connTimeout);
+        socket.destroy();
+        resolve(null);
+      });
+      
+      socket.on('timeout', () => {
+        clearTimeout(connTimeout);
+        socket.destroy();
+        resolve(null);
+      });
+    } catch (e) {
+      clearTimeout(connTimeout);
       socket.destroy();
       resolve(null);
-    });
+    }
   });
 }
 

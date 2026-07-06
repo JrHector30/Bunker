@@ -271,6 +271,16 @@ const SettingsView = () => {
         loadPrintersData('Caja');
     }, []);
 
+    useEffect(() => {
+        if (isScanning || isAnyPrinterRepairing) return;
+        
+        const interval = setInterval(() => {
+            loadPrintersData(selectedStation);
+        }, 7000);
+        
+        return () => clearInterval(interval);
+    }, [selectedStation, isScanning, isAnyPrinterRepairing]);
+
     const handleStationChange = (station) => {
         setSelectedStation(station);
         loadPrintersData(station);
