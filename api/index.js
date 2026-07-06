@@ -130,6 +130,41 @@ app.post('/api/impresoras/solicitar-actualizacion', async (req, res) => {
     }
 });
 
+app.post('/api/impresoras/medida', async (req, res) => {
+    const { impresora, medida, estacion } = req.body;
+    const targetEstacion = estacion || 'Caja';
+    try {
+        const configKey = `impresora_medidas_${targetEstacion}`;
+        const currentConfig = await prisma.configuracion.findUnique({
+            where: { clave: configKey }
+        });
+        const map = currentConfig ? JSON.parse(currentConfig.valor) : {};
+        map[impresora] = medida;
+
+        await prisma.configuracion.upsert({
+            where: { clave: configKey },
+            update: { valor: JSON.stringify(map) },
+            create: { clave: configKey, valor: JSON.stringify(map) }
+        });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/impresoras/medidas', async (req, res) => {
+    const estacion = req.query.estacion || 'Caja';
+    try {
+        const config = await prisma.configuracion.findUnique({
+            where: { clave: `impresora_medidas_${estacion}` }
+        });
+        const map = config ? JSON.parse(config.valor) : {};
+        res.json(map);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/api/impresoras/estado-solicitud', async (req, res) => {
     const estacion = req.query.estacion || 'Caja';
     try {

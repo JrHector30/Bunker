@@ -24,6 +24,7 @@ const SettingsView = () => {
     const [testingPrint, setTestingPrint] = useState(false);
     const [stations, setStations] = useState(['Caja']);
     const [selectedStation, setSelectedStation] = useState('Caja');
+    const [printerSizes, setPrinterSizes] = useState({});
 
     const loadStations = async () => {
         try {
@@ -52,8 +53,40 @@ const SettingsView = () => {
                 const list = await listRes.json();
                 setPrinters(list);
             }
+
+            // Fetch printer sizes mapping for selected station
+            const sizesRes = await fetch(`/api/impresoras/medidas?estacion=${station}`);
+            if (sizesRes.ok) {
+                const sizesData = await sizesRes.json();
+                setPrinterSizes(sizesData || {});
+            }
         } catch (err) {
             console.error("Error al cargar impresoras:", err);
+        }
+    };
+
+    const handleSavePrinterSize = async (printerName, size) => {
+        try {
+            const res = await fetch('/api/impresoras/medida', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    impresora: printerName,
+                    medida: size,
+                    estacion: selectedStation
+                })
+            });
+            if (res.ok) {
+                setPrinterSizes(prev => ({
+                    ...prev,
+                    [printerName]: size
+                }));
+                showToast(`Medida ${size} guardada para la impresora "${printerName}".`, 'success');
+            } else {
+                throw new Error("Error en servidor");
+            }
+        } catch (err) {
+            showToast(`Error al guardar medida: ${err.message}`, 'error');
         }
     };
 
@@ -395,11 +428,9 @@ const SettingsView = () => {
                             return (
                                 <div
                                     key={pName || index}
-                                    onClick={() => handleSelectPrinter(pName)}
                                     style={{
                                         display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
+                                        flexDirection: 'column',
                                         padding: '12px 20px',
                                         background: isSelected
                                             ? (isOffline ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)')
@@ -409,46 +440,100 @@ const SettingsView = () => {
                                             : 'var(--glass-border)'
                                             }`,
                                         borderRadius: 12,
-                                        cursor: 'pointer',
                                         transition: 'all 0.2s ease',
                                         opacity: isOffline ? 0.6 : 1
                                     }}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        {isOffline ? (
-                                            <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-                                                <Printer size={16} color="var(--text-muted)" />
-                                                <AlertTriangle size={10} color="#f59e0b" style={{ position: 'absolute', bottom: -4, right: -4 }} />
-                                            </div>
-                                        ) : (
-                                            <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-                                                <Printer size={16} color={isSelected ? '#10b981' : 'var(--text-muted)'} />
-                                                {isSelected && <Check size={10} color="#10b981" style={{ position: 'absolute', bottom: -4, right: -4, fontWeight: 'bold' }} />}
-                                            </div>
-                                        )}
-                                        <span style={{
-                                            fontSize: '0.9rem',
-                                            fontWeight: isSelected ? 'bold' : 'normal',
-                                            color: isOffline ? 'var(--text-muted)' : 'var(--text-main)'
-                                        }}>
-                                            {pName} {isOffline && <span style={{ fontSize: '0.75rem', color: '#f87171', marginLeft: 6 }}>(Sin Conexión)</span>}
-                                        </span>
-                                    </div>
-                                    {isSelected && (
-                                        <span style={{
-                                            background: isOffline ? '#ef4444' : '#10b981',
-                                            color: '#fff',
-                                            padding: '3px 10px',
-                                            borderRadius: 8,
-                                            fontSize: '0.7rem',
-                                            fontWeight: 'bold',
+                                    <div
+                                        onClick={() => handleSelectPrinter(pName)}
+                                        style={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: 4
-                                        }}>
-                                            {isOffline ? <AlertTriangle size={10} /> : <Check size={10} />}
-                                            {isOffline ? 'SIN CONEXIÓN' : 'ACTIVA'}
-                                        </span>
+                                            justifyContent: 'space-between',
+                                            cursor: 'pointer',
+                                            width: '100%'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            {isOffline ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                                                    <Printer size={16} color="var(--text-muted)" />
+                                                    <AlertTriangle size={10} color="#f59e0b" style={{ position: 'absolute', bottom: -4, right: -4 }} />
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                                                    <Printer size={16} color={isSelected ? '#10b981' : 'var(--text-muted)'} />
+                                                    {isSelected && <Check size={10} color="#10b981" style={{ position: 'absolute', bottom: -4, right: -4, fontWeight: 'bold' }} />}
+                                                </div>
+                                            )}
+                                            <span style={{
+                                                fontSize: '0.9rem',
+                                                fontWeight: isSelected ? 'bold' : 'normal',
+                                                color: isOffline ? 'var(--text-muted)' : 'var(--text-main)'
+                                            }}>
+                                                {pName} {isOffline && <span style={{ fontSize: '0.75rem', color: '#f87171', marginLeft: 6 }}>(Sin Conexión)</span>}
+                                            </span>
+                                        </div>
+                                        {isSelected && (
+                                            <span style={{
+                                                background: isOffline ? '#ef4444' : '#10b981',
+                                                color: '#fff',
+                                                padding: '3px 10px',
+                                                borderRadius: 8,
+                                                fontSize: '0.7rem',
+                                                fontWeight: 'bold',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 4
+                                            }}>
+                                                {isOffline ? <AlertTriangle size={10} /> : <Check size={10} />}
+                                                {isOffline ? 'SIN CONEXIÓN' : 'ACTIVA'}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Selector de Medida de Papel (Solo si la impresora está ACTIVA) */}
+                                    {isSelected && (
+                                        <div
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                marginTop: 10,
+                                                paddingTop: 10,
+                                                borderTop: '1px dashed rgba(255,255,255,0.08)'
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                Ancho de impresión:
+                                            </span>
+                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                {['80mm', '58mm', '50mm'].map((size) => {
+                                                    const currentSize = printerSizes[pName] || '80mm';
+                                                    const isSizeActive = currentSize === size;
+                                                    return (
+                                                        <button
+                                                            key={size}
+                                                            onClick={() => handleSavePrinterSize(pName, size)}
+                                                            style={{
+                                                                padding: '4px 12px',
+                                                                borderRadius: 6,
+                                                                fontSize: '0.75rem',
+                                                                cursor: 'pointer',
+                                                                background: isSizeActive ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
+                                                                color: isSizeActive ? '#fff' : 'var(--text-muted)',
+                                                                border: `1px solid ${isSizeActive ? 'var(--primary)' : 'var(--glass-border)'}`,
+                                                                fontWeight: isSizeActive ? 'bold' : 'normal',
+                                                                transition: 'all 0.15s ease'
+                                                            }}
+                                                        >
+                                                            {size}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             );

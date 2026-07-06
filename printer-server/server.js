@@ -157,30 +157,37 @@ async function handlePrinterScanRequests() {
 }
 
 // --- 3. Formateadores de Tickets (Texto Plano Monoespacio) ---
-function formatTicket(ticket) {
+function formatTicket(ticket, lineWidth) {
   const type = ticket.contenido?.type;
   if (type === 'arqueo') {
-    return formatArqueo(ticket);
+    return formatArqueo(ticket, lineWidth);
   } else if (type === 'precuenta') {
-    return formatPrecuenta(ticket);
+    return formatPrecuenta(ticket, lineWidth);
   } else {
-    return formatComanda(ticket);
+    return formatComanda(ticket, lineWidth);
   }
 }
 
-function formatComanda(ticket) {
+function formatComanda(ticket, lineWidth) {
   const dateStr = new Date(ticket.creado_a).toLocaleString('es-PE');
+  const separatorDouble = "=".repeat(lineWidth) + "\n";
+  const separatorSingle = "-".repeat(lineWidth) + "\n";
+  const center = (str) => {
+    const pad = Math.max(0, Math.floor((lineWidth - str.length) / 2));
+    return " ".repeat(pad) + str + "\n";
+  };
+
   let text = "";
-  text += "========================================\n";
-  text += "            BUNKER RESTOBAR             \n";
-  text += "            TICKET DE COCINA            \n";
-  text += "========================================\n";
+  text += separatorDouble;
+  text += center("BUNKER RESTOBAR");
+  text += center("TICKET DE COCINA");
+  text += separatorDouble;
   text += `FECHA: ${dateStr}\n`;
   text += `MESA:  MESA ${ticket.mesa_id}\n`;
   text += `MOZO:  ${ticket.mozo.toUpperCase()}\n`;
-  text += "----------------------------------------\n";
+  text += separatorSingle;
   text += "CAN  PRODUCTO / OBSERVACIONES\n";
-  text += "----------------------------------------\n";
+  text += separatorSingle;
   
   const items = Array.isArray(ticket.contenido) ? ticket.contenido : (ticket.contenido.items || []);
   items.forEach(item => {
@@ -191,55 +198,80 @@ function formatComanda(ticket) {
     }
   });
   
-  text += "----------------------------------------\n";
+  text += separatorSingle;
   text += "\n\n\n\n\n\n\n\n"; // Avance de papel
   return text;
 }
 
-function formatPrecuenta(ticket) {
+function formatPrecuenta(ticket, lineWidth) {
   const dateStr = new Date(ticket.creado_a).toLocaleString('es-PE');
+  const separatorDouble = "=".repeat(lineWidth) + "\n";
+  const separatorSingle = "-".repeat(lineWidth) + "\n";
+  const center = (str) => {
+    const pad = Math.max(0, Math.floor((lineWidth - str.length) / 2));
+    return " ".repeat(pad) + str + "\n";
+  };
+  const alignLR = (left, right) => {
+    const pad = lineWidth - left.length - right.length;
+    return left + " ".repeat(Math.max(1, pad)) + right + "\n";
+  };
+
   let text = "";
-  text += "========================================\n";
-  text += "            BUNKER RESTOBAR             \n";
-  text += "               PRECUENTA                \n";
-  text += "========================================\n";
+  text += separatorDouble;
+  text += center("BUNKER RESTOBAR");
+  text += center("PRECUENTA");
+  text += separatorDouble;
   text += `FECHA: ${dateStr}\n`;
   text += `MESA:  MESA ${ticket.mesa_id}\n`;
   text += `MOZO:  ${ticket.mozo.toUpperCase()}\n`;
-  text += "----------------------------------------\n";
-  text += "CAN  PRODUCTO                  TOTAL\n";
-  text += "----------------------------------------\n";
+  text += separatorSingle;
+  text += alignLR("CAN  PRODUCTO", "TOTAL");
+  text += separatorSingle;
 
   const items = ticket.contenido.items || [];
   items.forEach(item => {
     const qty = String(item.cantidad).padEnd(4, ' ');
-    const name = item.nombre.substring(0, 24).toUpperCase().padEnd(25, ' ');
-    const itemTotal = `S/ ${(item.precio * item.cantidad).toFixed(2)}`;
-    text += `${qty}${name}${itemTotal.padStart(10, ' ')}\n`;
+    const totalVal = `S/ ${(item.precio * item.cantidad).toFixed(2)}`;
+    // Dynamic padding: qty takes 4 chars, totalVal takes its length. Product name takes the rest.
+    const nameWidth = lineWidth - 4 - totalVal.length - 1;
+    const name = item.nombre.substring(0, nameWidth).toUpperCase().padEnd(nameWidth, ' ');
+    text += `${qty}${name} ${totalVal}\n`;
   });
 
-  text += "----------------------------------------\n";
+  text += separatorSingle;
   const totalStr = `S/ ${Number(ticket.contenido.total || 0).toFixed(2)}`;
-  text += `TOTAL: ${totalStr.padStart(33, ' ')}\n`;
+  text += alignLR("TOTAL:", totalStr);
+  
   if (ticket.contenido.totalLetras) {
     text += `(${ticket.contenido.totalLetras.toUpperCase()})\n`;
   }
-  text += "----------------------------------------\n";
-  text += "       NO POSEE VALIDEZ FISCAL.        \n";
-  text += "  ¡MUCHAS GRACIAS POR SU PREFERENCIA!  \n";
-  text += "========================================\n";
+  text += separatorSingle;
+  text += center("NO POSEE VALIDEZ FISCAL.");
+  text += center("¡MUCHAS GRACIAS POR SU PREFERENCIA!");
+  text += separatorDouble;
   text += "\n\n\n\n\n\n\n\n"; // Avance de papel
   return text;
 }
 
-function formatArqueo(ticket) {
+function formatArqueo(ticket, lineWidth) {
   const dateStr = new Date(ticket.creado_a).toLocaleString('es-PE');
   const data = ticket.contenido;
+  const separatorDouble = "=".repeat(lineWidth) + "\n";
+  const separatorSingle = "-".repeat(lineWidth) + "\n";
+  const center = (str) => {
+    const pad = Math.max(0, Math.floor((lineWidth - str.length) / 2));
+    return " ".repeat(pad) + str + "\n";
+  };
+  const alignLR = (left, right) => {
+    const pad = lineWidth - left.length - right.length;
+    return left + " ".repeat(Math.max(1, pad)) + right + "\n";
+  };
+
   let text = "";
-  text += "========================================\n";
-  text += "            BUNKER RESTOBAR             \n";
-  text += "            RESUMEN DE CAJA             \n";
-  text += "========================================\n";
+  text += separatorDouble;
+  text += center("BUNKER RESTOBAR");
+  text += center("RESUMEN DE CAJA");
+  text += separatorDouble;
   text += `FECHA IMP: ${dateStr}\n`;
   text += `TURNO N°:  ${data.id}\n`;
   text += `ESTADO:    ${data.estado.toUpperCase()}\n`;
@@ -247,17 +279,17 @@ function formatArqueo(ticket) {
   if (data.fechaFin) {
     text += `CIERRE:    ${new Date(data.fechaFin).toLocaleString('es-PE')}\n`;
   }
-  text += `M. INICIAL: S/. ${(data.montoInicial || 0).toFixed(2)}\n`;
-  text += "----------------------------------------\n";
+  text += alignLR("M. INICIAL:", `S/. ${(data.montoInicial || 0).toFixed(2)}`);
+  text += separatorSingle;
   text += "DESGLOSE DE INGRESOS:\n";
-  text += `  EFECTIVO:      S/. ${(data.ingresos?.efectivo || 0).toFixed(2)}\n`;
-  text += `  TARJETA (POS): S/. ${(data.ingresos?.tarjeta || 0).toFixed(2)}\n`;
-  text += `  YAPE:          S/. ${(data.ingresos?.yape || 0).toFixed(2)}\n`;
-  text += `  PLIN:          S/. ${(data.ingresos?.plin || 0).toFixed(2)}\n`;
-  text += `  IZIPAY:        S/. ${(data.ingresos?.izipay || 0).toFixed(2)}\n`;
-  text += `  NIUBIZ:        S/. ${(data.ingresos?.niubiz || 0).toFixed(2)}\n`;
-  text += `  MANUALES:      S/. ${(data.ingresos?.manual || 0).toFixed(2)}\n`;
-  text += "----------------------------------------\n";
+  text += alignLR("  EFECTIVO:", `S/. ${(data.ingresos?.efectivo || 0).toFixed(2)}`);
+  text += alignLR("  TARJETA (POS):", `S/. ${(data.ingresos?.tarjeta || 0).toFixed(2)}`);
+  text += alignLR("  YAPE:", `S/. ${(data.ingresos?.yape || 0).toFixed(2)}`);
+  text += alignLR("  PLIN:", `S/. ${(data.ingresos?.plin || 0).toFixed(2)}`);
+  text += alignLR("  IZIPAY:", `S/. ${(data.ingresos?.izipay || 0).toFixed(2)}`);
+  text += alignLR("  NIUBIZ:", `S/. ${(data.ingresos?.niubiz || 0).toFixed(2)}`);
+  text += alignLR("  MANUALES:", `S/. ${(data.ingresos?.manual || 0).toFixed(2)}`);
+  text += separatorSingle;
   
   const getVentasTotal = () => {
     return (
@@ -269,21 +301,21 @@ function formatArqueo(ticket) {
       (data.ingresos?.niubiz || 0)
     );
   };
-  text += `TOTAL VENTAS:    S/. ${getVentasTotal().toFixed(2)}\n`;
-  text += "----------------------------------------\n";
+  text += alignLR("TOTAL VENTAS:", `S/. ${getVentasTotal().toFixed(2)}`);
+  text += separatorSingle;
   text += "RESUMEN EFECTIVO NETO:\n";
-  text += `  INGRESO TOTAL: S/. ${((data.ingresos?.efectivo || 0) + (data.ingresos?.manual || 0)).toFixed(2)}\n`;
-  text += `  EGRESO TOTAL:  S/. ${(data.egresos || 0).toFixed(2)}\n`;
-  text += `  NETO EN CAJA:  S/. ${(data.totalCaja || 0).toFixed(2)}\n`;
-  text += "----------------------------------------\n";
-  text += "       NO POSEE VALIDEZ FISCAL.        \n";
-  text += "========================================\n";
+  text += alignLR("  INGRESO TOTAL:", `S/. ${((data.ingresos?.efectivo || 0) + (data.ingresos?.manual || 0)).toFixed(2)}`);
+  text += alignLR("  EGRESO TOTAL:", `S/. ${(data.egresos || 0).toFixed(2)}`);
+  text += alignLR("  NETO EN CAJA:", `S/. ${(data.totalCaja || 0).toFixed(2)}`);
+  text += separatorSingle;
+  text += center("NO POSEE VALIDEZ FISCAL.");
+  text += separatorDouble;
   text += "\n\n\n\n\n\n\n\n"; // Avance de papel
   return text;
 }
 
 // --- 4. Enviar Ticket al Spooler de Windows ---
-async function printTicketText(ticketText, ticketId, printerName) {
+async function printTicketText(ticketText, ticketId, printerName, paperSize = '80mm') {
   return new Promise((resolve, reject) => {
     const tempDir = path.join(__dirname, 'temp');
     if (!fs.existsSync(tempDir)) {
@@ -294,7 +326,8 @@ async function printTicketText(ticketText, ticketId, printerName) {
     // Escribir codificación limpia
     fs.writeFileSync(tempFilePath, ticketText, 'utf8');
 
-    const command = `powershell -Command "Get-Content -Path '${tempFilePath}' -Raw | Out-Printer -Name '${printerName}'"`;
+    const scriptPath = path.join(__dirname, 'print_raw.ps1');
+    const command = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -printerName "${printerName}" -filePath "${tempFilePath}"`;
 
     exec(command, (error, stdout, stderr) => {
       try {
@@ -332,6 +365,22 @@ async function checkAndPrintQueue() {
       return;
     }
 
+    // Obtener configuración de medidas para esta estación
+    const medidasRes = await client.query(
+      `SELECT valor FROM "Configuracion" WHERE clave = $1`,
+      [`impresora_medidas_${STATION_ID}`]
+    );
+    const medidasMap = medidasRes.rows[0]?.valor ? JSON.parse(medidasRes.rows[0].valor) : {};
+    const paperSize = medidasMap[printerName] || '80mm';
+
+    // Determinar ancho de línea en caracteres monoespacio
+    let lineWidth = 42; // por defecto 80mm
+    if (paperSize === '58mm') {
+      lineWidth = 32;
+    } else if (paperSize === '50mm') {
+      lineWidth = 28;
+    }
+
     // 2. Obtener tickets pendientes asignados a esta estación ordenados cronológicamente
     const queueRes = await client.query(
       `SELECT * FROM tickets_pendientes WHERE impreso = false AND (estacion = $1 OR (estacion IS NULL AND $1 = 'Caja')) ORDER BY creado_a ASC`,
@@ -358,9 +407,9 @@ async function checkAndPrintQueue() {
         }
 
         // Ganamos el bloqueo, procedemos a imprimir físicamente
-        console.log(`⏳ Imprimiendo Ticket #${ticket.id} en "${printerName}" (Estación: ${STATION_ID})...`);
-        const formattedText = formatTicket(lockRes.rows[0]);
-        await printTicketText(formattedText, ticket.id, printerName);
+        console.log(`⏳ Imprimiendo Ticket #${ticket.id} en "${printerName}" (${paperSize}) (Estación: ${STATION_ID})...`);
+        const formattedText = formatTicket(lockRes.rows[0], lineWidth);
+        await printTicketText(formattedText, ticket.id, printerName, paperSize);
         console.log(`✅ Ticket #${ticket.id} impreso con éxito.`);
       } catch (err) {
         console.error(`❌ Falló la impresión física del Ticket #${ticket.id}:`, err.message);
