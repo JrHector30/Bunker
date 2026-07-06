@@ -327,7 +327,13 @@ async function printTicketText(ticketText, ticketId, printerName, paperSize = '8
     fs.writeFileSync(tempFilePath, ticketText, 'utf8');
 
     const scriptPath = path.join(__dirname, 'print_raw.ps1');
-    const command = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -printerName "${printerName}" -filePath "${tempFilePath}"`;
+    
+    const anchosMM = { '80mm': 314, '58mm': 228, '50mm': 196 };
+    const anchoCalculado = anchosMM[paperSize] || 314;
+    const linesCount = ticketText.split('\n').length;
+    const altoCalculado = 100 + (linesCount * 20);
+
+    const command = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -printerName "${printerName}" -filePath "${tempFilePath}" -anchoPapel ${anchoCalculado} -altoPapel ${altoCalculado}`;
 
     exec(command, (error, stdout, stderr) => {
       try {
