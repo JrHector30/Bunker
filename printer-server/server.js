@@ -751,13 +751,37 @@ function checkPort9100(ip) {
   });
 }
 
-// Resolver dirección MAC vía ARP (con ping previo) o fallback a Get-NetNeighbor
-function getMacAddress(ip) {
+// Obtener tabla ARP completa de una sola vez
+function getAllArpEntries() {
   return new Promise((resolve) => {
-    exec(`ping -n 1 -w 200 ${ip}`, (pingErr) => {
+    exec('arp -a', (err, stdout) => {
+      if (err || !stdout) return resolve({});
+      const lines = stdout.split('\n');
+      const map = {};
+      const regex = /(\d+\.\d+\.\d+\.\d+)\s+([0-9a-fA-F]{2}[:-][0-9a-fA-F]{2}[:-][0-9a-fA-F]{2}[:-][0-9a-fA-F]{2}[:-][0-9a-fA-F]{2}[:-][0-9a-fA-F]{2})/i;
+      
+      for (const line of lines) {
+        const match = line.match(regex);
+        if (match) {
+          const ip = match[1];
+          const mac = match[2].replace(/-/g, ':').toLowerCase();
+          map[ip] = mac;
+        }
+      }
+      resolve(map);
+    });
+  });
+}
+
+// Fallback robusto en caso de que el caché ARP tarde en refrescarse
+function getMacAddressFallback(ip) {
+  return new Promise((resolve) => {
+    // Forzar registro ARP mediante ping con timeout razonable (1s)
+    exec(`ping -n 1 -w 1000 ${ip}`, (pingErr) => {
+      // Re-consultar ARP específico
       exec(`arp -a ${ip}`, (arpErr, stdout) => {
         if (arpErr || !stdout) {
-          // Fallback a powershell
+          // Fallback final a PowerShell
           exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-NetNeighbor -IPAddress ${ip} | Select-Object -ExpandProperty LinkLayerAddress"`, (psErr, psStdout) => {
             if (psErr || !psStdout) return resolve(null);
             const mac = psStdout.trim().replace(/-/g, ':').toLowerCase();
@@ -779,12 +803,12 @@ function getMacAddress(ip) {
   });
 }
 
-// Smart Scan de Red concurrente
+// Smart Scan de Red concurrente optimizado (Sin sobrecarga de procesos)
 async function smartScanNetwork() {
   const ipRange = getSubnetRange();
   if (ipRange.length === 0) return [];
   
-  const foundDevices = [];
+  const aliveIps = [];
   const CONCURRENCY = 50;
   let currentIndex = 0;
   
@@ -793,20 +817,37 @@ async function smartScanNetwork() {
       const ip = ipRange[currentIndex++];
       const connectRes = await checkPort9100(ip);
       if (connectRes) {
-        const mac = await getMacAddress(ip);
-        if (mac) {
-          foundDevices.push({
-            ip,
-            mac,
-            latency: connectRes.timeMs
-          });
-        }
+        aliveIps.push({ ip, latency: connectRes.timeMs });
       }
     }
   }
   
+  // 1. Barrido de puertos paralelo ultrarrápido para poblar caché ARP local
   const workers = Array(CONCURRENCY).fill(null).map(() => worker());
   await Promise.allSettled(workers);
+  
+  // 2. Extraer tabla ARP completa de una sola vez
+  const arpMap = await getAllArpEntries();
+  const foundDevices = [];
+  
+  // 3. Cruzar IPs activas con sus respectivas direcciones MAC
+  for (const item of aliveIps) {
+    let mac = arpMap[item.ip];
+    
+    // Si no está en el volcado principal, hacer un fallback rápido
+    if (!mac) {
+      mac = await getMacAddressFallback(item.ip);
+    }
+    
+    if (mac) {
+      foundDevices.push({
+        ip: item.ip,
+        mac,
+        latency: item.latency
+      });
+    }
+  }
+  
   return foundDevices;
 }
 
