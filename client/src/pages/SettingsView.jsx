@@ -30,8 +30,16 @@ const SettingsView = () => {
     const [discoveredDevices, setDiscoveredDevices] = useState([]);
     const [repairHistory, setRepairHistory] = useState([]);
     const [auditTicketEnabled, setAuditTicketEnabled] = useState(false);
+    const [now, setNow] = useState(Date.now());
 
     const isAnyPrinterRepairing = Array.isArray(printers) && printers.some(p => p.ultimoEstado === 'RECOVERING');
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setNow(Date.now());
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     const loadStations = async () => {
         try {
@@ -627,6 +635,10 @@ const SettingsView = () => {
                             const isError = state === 'ERROR';
                             const isRecovering = state === 'RECOVERING';
 
+                            const diagTime = printer.ultimoDiag ? new Date(printer.ultimoDiag).getTime() : 0;
+                            const cooldownRemaining = (isOffline && diagTime) ? Math.max(0, Math.ceil((15000 - (now - diagTime)) / 1000)) : 0;
+                            const isCooldownActive = cooldownRemaining > 0;
+
                             // Estilo de borde y fondo del card
                             let cardBorderColor = 'var(--glass-border)';
                             let cardBg = 'rgba(255,255,255,0.01)';
@@ -726,20 +738,20 @@ const SettingsView = () => {
                                                     {!isRecovering && (
                                                         <button
                                                             onClick={() => handleRequestRecovery(printer.id)}
-                                                            disabled={isScanning || isAnyPrinterRepairing}
+                                                            disabled={isScanning || isAnyPrinterRepairing || isCooldownActive}
                                                             style={{
                                                                 background: 'rgba(255,255,255,0.04)',
                                                                 border: '1px solid var(--glass-border)',
-                                                                color: 'var(--primary)',
+                                                                color: isCooldownActive ? 'var(--text-muted)' : 'var(--primary)',
                                                                 padding: '4px 10px',
                                                                 borderRadius: 6,
                                                                 fontSize: '0.75rem',
-                                                                cursor: 'pointer',
+                                                                cursor: isCooldownActive ? 'not-allowed' : 'pointer',
                                                                 fontWeight: 'bold',
-                                                                opacity: (isScanning || isAnyPrinterRepairing) ? 0.5 : 1
+                                                                opacity: (isScanning || isAnyPrinterRepairing || isCooldownActive) ? 0.5 : 1
                                                             }}
                                                         >
-                                                            Reparar
+                                                            {isCooldownActive ? `Espera ${cooldownRemaining}s` : 'Reparar'}
                                                         </button>
                                                     )}
                                                     <button
