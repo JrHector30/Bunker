@@ -94,7 +94,8 @@ export default function CategorizedCombobox({
     <div 
       id="combobox-container"
       ref={containerRef} 
-      className="relative w-full max-w-[420px] font-sans"
+      className="relative w-full max-w-[420px]"
+      style={{ fontFamily: 'var(--font-sans)' }}
       onKeyDown={handleKeyDown}
     >
       {/* Trigger Button */}
@@ -102,14 +103,25 @@ export default function CategorizedCombobox({
         id="combobox-trigger"
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 rounded-lg shadow-sm transition-all duration-155 text-left focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 text-sm cursor-pointer"
+        className="flex items-center justify-between w-full px-4 py-2.5 rounded-lg transition-all duration-150 text-left text-sm cursor-pointer"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          color: 'var(--text-main)',
+          borderColor: 'var(--glass-border)',
+          borderWidth: '1px',
+          borderStyle: 'solid',
+          fontFamily: 'var(--font-sans)',
+        }}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span className={selectedItem ? "text-slate-900 font-semibold" : "text-slate-400"}>
-          {selectedItem ? selectedItem.name : "Select item..."}
+        <span 
+          className={selectedItem ? "font-semibold" : ""}
+          style={{ color: selectedItem ? 'var(--text-main)' : 'var(--text-muted)' }}
+        >
+          {selectedItem ? selectedItem.name : "Seleccione plato..."}
         </span>
-        <ChevronsUpDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
+        <ChevronsUpDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--text-muted)' }} />
       </button>
 
       {/* Dropdown Panel */}
@@ -121,18 +133,35 @@ export default function CategorizedCombobox({
             animate={{ opacity: 1, y: 8, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute left-0 right-0 z-50 mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+            className="absolute left-0 right-0 z-50 mt-1 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+            style={{
+              backgroundColor: 'var(--bg-surface)',
+              borderColor: 'var(--glass-border)',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+            }}
           >
             {/* Search Header */}
-            <div className="flex items-center px-4 py-3 border-b border-slate-100 bg-white">
-              <Search className="w-5 h-5 text-slate-400 shrink-0" />
+            <div 
+              className="flex items-center px-4 py-3 border-b"
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                borderColor: 'var(--glass-border)',
+              }}
+            >
+              <Search className="w-5 h-5 shrink-0" style={{ color: 'var(--text-muted)' }} />
               <input
                 id="search-input"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search items or filter by category..."
-                className="ml-3 w-full outline-hidden text-sm placeholder-slate-400 bg-transparent text-slate-900 focus:outline-hidden border-none p-0"
+                placeholder="Buscar platos o filtrar por categoría..."
+                className="ml-3 w-full outline-hidden text-sm bg-transparent border-none p-0"
+                style={{
+                  color: 'var(--text-main)',
+                  fontFamily: 'var(--font-sans)',
+                  outline: 'none',
+                }}
                 autoFocus
               />
               {searchQuery && (
@@ -140,7 +169,8 @@ export default function CategorizedCombobox({
                   id="clear-search-button"
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+                  className="p-1 rounded-full hover:bg-zinc-800/50 shrink-0 transition-colors cursor-pointer"
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -148,8 +178,17 @@ export default function CategorizedCombobox({
             </div>
 
             {/* Category Filter Pills */}
-            <div className="px-4 py-2 bg-slate-50/50 border-b border-slate-100 flex flex-wrap gap-1.5 items-center">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 select-none">
+            <div 
+              className="px-4 py-2 border-b flex flex-wrap gap-1.5 items-center"
+              style={{
+                backgroundColor: 'var(--bg-secondary)',
+                borderColor: 'var(--glass-border)',
+              }}
+            >
+              <span 
+                className="text-[10px] font-bold uppercase tracking-wider mr-1 select-none"
+                style={{ color: 'var(--text-muted)' }}
+              >
                 Categoría:
               </span>
               {['Todos', ...categoriesList].map((cat) => {
@@ -160,11 +199,13 @@ export default function CategorizedCombobox({
                     key={cat}
                     type="button"
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-3 py-1 text-xs font-semibold rounded-full border transition-all cursor-pointer select-none ${
-                      isActive
-                        ? "bg-indigo-600 border-indigo-600 text-white shadow-xs"
-                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 shadow-2xs"
-                    }`}
+                    className="px-3 py-1 text-xs font-semibold rounded-full border transition-all cursor-pointer select-none hover:text-[var(--text-main)] hover:border-[var(--text-main)]"
+                    style={{
+                      backgroundColor: isActive ? 'var(--primary)' : 'var(--bg-surface)',
+                      borderColor: isActive ? 'var(--primary)' : 'var(--glass-border)',
+                      color: isActive ? 'var(--text-inverse)' : 'var(--text-muted)',
+                      fontFamily: 'var(--font-sans)',
+                    }}
                   >
                     {cat}
                   </button>
@@ -172,12 +213,13 @@ export default function CategorizedCombobox({
               })}
             </div>
 
-            {/* Options List grouped by categories */}
+            {/* Options List */}
             <div
               id="options-list"
               ref={listRef}
               role="listbox"
-              className="max-h-[280px] overflow-y-auto py-2 px-1 bg-white"
+              className="max-h-[280px] overflow-y-auto py-2 px-1"
+              style={{ backgroundColor: 'var(--bg-primary)' }}
             >
               {filteredItems.length > 0 ? (
                 categoriesList.map((cat) => {
@@ -189,7 +231,10 @@ export default function CategorizedCombobox({
 
                   return (
                     <div key={cat} className="px-2 py-1.5">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 block mb-1">
+                      <span 
+                        className="text-[10px] font-bold uppercase tracking-wider px-2 block mb-1"
+                        style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}
+                      >
                         {cat}
                       </span>
                       
@@ -199,6 +244,29 @@ export default function CategorizedCombobox({
                           const isSelected = selectedItem?.id === item.id;
                           const isHighlighted = globalIndex === highlightedIndex;
 
+                          let btnStyle = {
+                            backgroundColor: 'transparent',
+                            borderColor: 'transparent',
+                            color: 'var(--text-muted)',
+                            fontFamily: 'var(--font-sans)',
+                          };
+
+                          if (isSelected) {
+                            btnStyle = {
+                              backgroundColor: 'color-mix(in srgb, var(--primary) 15%, transparent)',
+                              borderColor: 'color-mix(in srgb, var(--primary) 25%, transparent)',
+                              color: 'var(--text-main)',
+                              fontFamily: 'var(--font-sans)',
+                            };
+                          } else if (isHighlighted) {
+                            btnStyle = {
+                              backgroundColor: 'var(--bg-secondary)',
+                              borderColor: 'var(--glass-border)',
+                              color: 'var(--text-main)',
+                              fontFamily: 'var(--font-sans)',
+                            };
+                          }
+
                           return (
                             <button
                               id={`option-${item.id}`}
@@ -207,27 +275,24 @@ export default function CategorizedCombobox({
                               aria-selected={isSelected}
                               onClick={() => handleSelect(item)}
                               onMouseEnter={() => setHighlightedIndex(globalIndex)}
-                              className={`flex items-center w-full px-2 py-1.5 rounded-md transition-all text-left cursor-pointer border ${
-                                isSelected
-                                  ? "bg-indigo-50 border-indigo-100 text-indigo-700 font-semibold"
-                                  : isHighlighted
-                                  ? "bg-slate-50 border-slate-50 text-slate-900"
-                                  : "bg-transparent border-transparent text-slate-700 hover:bg-slate-50/60"
-                              }`}
+                              className="flex items-center w-full px-2 py-1.5 rounded-md transition-all text-left cursor-pointer border"
+                              style={btnStyle}
                             >
                               <div className="w-5 flex justify-center shrink-0">
                                 {isSelected ? (
-                                  <Check className="w-4 h-4 text-indigo-600 font-bold" />
+                                  <Check className="w-4 h-4 font-bold" style={{ color: 'var(--primary)' }} />
                                 ) : (
-                                  <div className={`w-1.5 h-1.5 rounded-full bg-slate-300 transition-colors ${
-                                    isHighlighted ? "bg-indigo-400" : "opacity-0"
-                                  }`} />
+                                  <div 
+                                    className="w-1.5 h-1.5 rounded-full transition-colors" 
+                                    style={{ 
+                                      backgroundColor: 'var(--primary)',
+                                      opacity: isHighlighted ? 1 : 0
+                                    }}
+                                  />
                                 )}
                               </div>
 
-                              <span className={`ml-3 text-sm flex-1 ${
-                                isSelected ? "text-indigo-900" : "text-slate-700"
-                              }`}>
+                              <span className="ml-3 text-sm flex-1">
                                 {item.name}
                               </span>
                             </button>
@@ -238,24 +303,62 @@ export default function CategorizedCombobox({
                   );
                 })
               ) : (
-                <div className="py-8 text-center text-sm text-slate-400 font-normal">
-                  No items found.
+                <div 
+                  className="py-8 text-center text-sm font-normal"
+                  style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}
+                >
+                  No se encontraron platos.
                 </div>
               )}
             </div>
 
             {/* Selection Guide Footer */}
-            <div className="bg-slate-50 px-4 py-2 border-t border-slate-100 flex items-center justify-between">
+            <div 
+              className="px-4 py-2 border-t flex items-center justify-between"
+              style={{
+                backgroundColor: 'var(--bg-secondary)',
+                borderColor: 'var(--glass-border)',
+              }}
+            >
               <div className="flex space-x-3">
-                <div className="flex items-center text-[10px] text-slate-400 select-none">
-                  <span className="bg-white border border-slate-200 rounded px-1.5 py-0.5 shadow-2xs mr-1 font-semibold font-mono text-[9px]">↑↓</span> Navigate
+                <div 
+                  className="flex items-center text-[10px] select-none"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <span 
+                    className="border rounded px-1.5 py-0.5 mr-1 font-semibold font-mono text-[9px]"
+                    style={{
+                      backgroundColor: 'var(--bg-surface)',
+                      borderColor: 'var(--glass-border)',
+                      color: 'var(--text-main)',
+                    }}
+                  >
+                    ↑↓
+                  </span> 
+                  Navegar
                 </div>
-                <div className="flex items-center text-[10px] text-slate-400 select-none">
-                  <span className="bg-white border border-slate-200 rounded px-1.5 py-0.5 shadow-2xs mr-1 font-semibold font-mono text-[9px]">Enter</span> Select item
+                <div 
+                  className="flex items-center text-[10px] select-none"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <span 
+                    className="border rounded px-1.5 py-0.5 mr-1 font-semibold font-mono text-[9px]"
+                    style={{
+                      backgroundColor: 'var(--bg-surface)',
+                      borderColor: 'var(--glass-border)',
+                      color: 'var(--text-main)',
+                    }}
+                  >
+                    Enter
+                  </span> 
+                  Seleccionar
                 </div>
               </div>
-              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
-                Single Selection Mode
+              <div 
+                className="text-[10px] font-semibold uppercase tracking-wider select-none"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                Selección Única
               </div>
             </div>
 
