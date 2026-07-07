@@ -64,15 +64,8 @@ const SubCard = ({ children, className = "", style = {} }) => (
   </div>
 );
 
-// 1. MyCard Component (Simulated Weekly Earnings Ticking)
-const MyCardComponent = ({ weeklyEarnings, setWeeklyEarnings }) => {
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const increment = parseFloat((Math.random() * 0.75 + 0.10).toFixed(2));
-      setWeeklyEarnings(prev => prev + increment);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [setWeeklyEarnings]);
+// 1. MyCard Component (Real Weekly Earnings Static Display)
+const MyCardComponent = ({ weeklyEarnings }) => {
 
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -1244,7 +1237,6 @@ const HomeView = () => {
           <EditableWidget id="myCard" layout={layouts.myCard} onLayoutChange={updateLayout} designMode={designMode}>
             <MyCardComponent
               weeklyEarnings={weeklyEarnings}
-              setWeeklyEarnings={setWeeklyEarnings}
             />
           </EditableWidget>
 
@@ -1299,7 +1291,6 @@ const HomeView = () => {
                 <div id="widget-myCard" className="w-full">
                   <MyCardComponent
                     weeklyEarnings={weeklyEarnings}
-                    setWeeklyEarnings={setWeeklyEarnings}
                   />
                 </div>
 
