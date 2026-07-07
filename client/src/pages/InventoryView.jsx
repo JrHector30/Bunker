@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 import CategorizedCombobox from '../components/CategorizedCombobox';
+import SimpleCombobox from '../components/SimpleCombobox';
 
 const InventoryView = () => {
     const { showConfirmation } = useConfirmation();
@@ -570,13 +571,21 @@ const InventoryView = () => {
                                         {currentRecipe.map((item, index) => {
                                             const insu = item.insumo || insumos.find(i => i.id === parseInt(item.insumoId));
                                             const subtotal = insu && item.cantidad ? (insu.precioCompra * item.cantidad) : 0;
+                                            const insumoOptions = insumos.map(i => ({
+                                                id: i.id.toString(),
+                                                name: i.nombre
+                                            })).sort((a, b) => a.name.localeCompare(b.name));
+                                            const selectedInsumoOption = insumoOptions.find(opt => opt.id === item.insumoId?.toString()) || null;
+
                                             return (
                                                 <tr key={index} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
                                                     <td style={{ padding: 15 }}>
-                                                        <select className="glass-input" value={item.insumoId} onChange={e => handleIngredientChange(index, 'insumoId', e.target.value)}>
-                                                            <option value="">-- Seleccionar Insumo --</option>
-                                                            {[...insumos].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
-                                                        </select>
+                                                        <SimpleCombobox
+                                                            items={insumoOptions}
+                                                            selectedItem={selectedInsumoOption}
+                                                            onSelect={(opt) => handleIngredientChange(index, 'insumoId', opt ? opt.id : '')}
+                                                            placeholder="Seleccionar Insumo..."
+                                                        />
                                                     </td>
                                                     <td style={{ padding: 15 }} className="text-muted">{insu ? insu.unidadMedida : '-'}</td>
                                                     <td style={{ padding: 15 }}>
