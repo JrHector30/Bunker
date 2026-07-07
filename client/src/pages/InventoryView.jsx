@@ -8,6 +8,7 @@ import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
+import CategorizedCombobox from '../components/CategorizedCombobox';
 
 const InventoryView = () => {
     const { showConfirmation } = useConfirmation();
@@ -492,18 +493,31 @@ const InventoryView = () => {
 
         const isWarning = selectedPlatoObj && selectedPlatoObj.precio > 0 ? (draftCosto / selectedPlatoObj.precio) * 100 > 40 : false;
 
+        const comboboxItems = products.map(p => {
+            const cat = categories.find(c => c.id === p.categoriaId);
+            return {
+                id: p.id.toString(),
+                name: p.nombre,
+                category: cat ? cat.nombre : 'Otros',
+                precio: p.precio
+            };
+        });
+        const selectedComboboxItem = comboboxItems.find(item => item.id === selectedPlatoId) || null;
+        const categoriesList = categories.map(c => c.nombre);
+
         return (
             <div className="glass-panel" style={{ padding: 30 }}>
-                <div style={{ display: 'flex', gap: 30, marginBottom: 30, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 30, marginBottom: 30, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                     <div style={{ flex: '1 1 300px' }}>
                         <label style={{ display: 'block', marginBottom: 10, fontSize: '1.1rem', fontWeight: 'bold' }}>Seleccionar Plato del Menú</label>
-                        <select className="glass-input" style={{ fontSize: '1.1rem', padding: 15 }} value={selectedPlatoId} onChange={e => setSelectedPlatoId(e.target.value)}>
-                            <option value="">-- Elija un plato --</option>
-                            {[...products].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                        </select>
+                        <CategorizedCombobox
+                            items={comboboxItems}
+                            selectedItem={selectedComboboxItem}
+                            onSelect={(item) => setSelectedPlatoId(item ? item.id : '')}
+                            categoriesList={categoriesList}
+                        />
                         <p className="text-muted" style={{ marginTop: 10, fontSize: '0.9rem' }}>El costo se descontará del stock en Logística al venderse este plato.</p>
                     </div>
-
                     {selectedPlatoObj && (
                         <div style={{ flex: '1 1 300px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--glass-border)', padding: 20, borderRadius: 16 }}>
                             <h3 style={{ margin: '0 0 15px 0' }}>Análisis de Costos</h3>
