@@ -238,7 +238,7 @@ const PedidosAtendidosComponent = ({ waiters, topWaiter }) => {
       </div>
 
       <div
-        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between min-h-[310px] bg-[var(--bg-secondary)]"
+        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between bg-[var(--bg-secondary)]"
         style={{
           border: '1px solid rgb(228 228 231 / 0.5)',
           boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
@@ -343,7 +343,7 @@ const CierreMesasComponent = ({ transactions, onDownloadPDF }) => {
       </div>
 
       <div
-        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between min-h-[310px] bg-[var(--bg-secondary)]"
+        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between bg-[var(--bg-secondary)]"
         style={{
           border: '1px solid rgb(228 228 231 / 0.5)',
           boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
@@ -495,7 +495,7 @@ const StatisticsPanelComponent = ({
 
           {/* Floating Live Alerts Dropdown */}
           {showNotifications && (
-            <div 
+            <div
               className="absolute left-0 top-12 w-72 rounded-2xl p-4 shadow-2xl z-50 flex flex-col gap-3 bg-[var(--bg-secondary)]"
               style={{
                 border: '1px solid rgb(228 228 231 / 0.6)',
