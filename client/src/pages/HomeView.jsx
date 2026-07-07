@@ -790,7 +790,7 @@ const StatisticsPanelComponent = ({
 
             {/* Invisible Hover triggers */}
             {points.map((p, i) => {
-              const colWidth = chartWidth / (comparisonDays.length - 1);
+              const colWidth = chartWidth / (chartData.length - 1 || 1);
               const triggerX = p.x - colWidth / 2;
               return (
                 <rect
@@ -803,7 +803,7 @@ const StatisticsPanelComponent = ({
                   className="cursor-pointer"
                   onMouseEnter={() => setHoveredIdx(i)}
                   onMouseLeave={() => setHoveredIdx(null)}
-                  onClick={() => handlePointClick(p.date)}
+                  onClick={() => setSelectedDate(p.date)}
                 />
               );
             })}
