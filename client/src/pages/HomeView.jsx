@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
@@ -6,8 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   CreditCard, TrendingUp, MoreHorizontal, ChefHat, Clock, Layers,
   Award, Sparkles, Receipt, CheckCircle, Bell, MessageSquare,
-  Calendar, ChevronLeft, ChevronRight, Download, Utensils, Wine, Coffee
+  Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Utensils, Wine, Coffee
 } from 'lucide-react';
+import { Calendar } from '../components/ui/Calendar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -100,7 +101,9 @@ const MyCardComponent = ({ weeklyEarnings, setWeeklyEarnings }) => {
             </div>
           </div>
 
-          <span className="text-xs font-medium text-[var(--text-muted)]">06/26</span>
+          <span className="text-xs font-medium text-[var(--text-muted)]">
+            {new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </span>
         </div>
 
         {/* Middle divider */}
@@ -242,13 +245,13 @@ const PedidosAtendidosComponent = ({ waiters, topWaiter }) => {
       </div>
 
       <div
-        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between min-h-[290px] bg-[var(--bg-secondary)]"
+        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between min-h-[310px] bg-[var(--bg-secondary)]"
         style={{
           border: '1px solid rgb(228 228 231 / 0.5)',
           boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
         }}
       >
-        <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[160px] pr-1 scrollbar-none">
+        <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[185px] pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-700/50">
           {waiters.map((waiter, index) => {
             const isTop = topWaiter && waiter.id === topWaiter.id;
             const avatarUrl = `https://api.dicebear.com/7.x/adventurer/svg?seed=${waiter.nombre || waiter.id}`;
@@ -347,7 +350,7 @@ const CierreMesasComponent = ({ transactions, onDownloadPDF }) => {
       </div>
 
       <div
-        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between min-h-[290px] bg-[var(--bg-secondary)]"
+        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between min-h-[310px] bg-[var(--bg-secondary)]"
         style={{
           border: '1px solid rgb(228 228 231 / 0.5)',
           boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
@@ -408,48 +411,20 @@ const CierreMesasComponent = ({ transactions, onDownloadPDF }) => {
 };
 
 // 5. StatisticsPanel Component (Right sidebar panel)
-const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings, goalPercentage, currentEarning, onShowToast }) => {
-  const [hasNotifications, setHasNotifications] = useState(true);
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 5)); // Junio 2026
+const StatisticsPanelComponent = ({
+  selectedDate,
+  setSelectedDate,
+  goalPercentage,
+  currentEarning,
+  chartData = [],
+  fundFilter = 'week',
+  setFundFilter,
+  onShowToast,
+  unpaidTables = [],
+  lowStockInsumos = []
+}) => {
+  const [showNotifications, setShowNotifications] = useState(false);
   const [hoveredIdx, setHoveredIdx] = useState(null);
-
-  // Generate dynamic calendar
-  const year = currentMonth.getFullYear();
-  const month = currentMonth.getMonth();
-
-  const monthName = currentMonth.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
-  const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-
-  const totalDays = new Date(year, month + 1, 0).getDate();
-  const daysArray = Array.from({ length: totalDays }, (_, i) => i + 1);
-  const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7; // Monday = 0
-  const blanks = Array.from({ length: firstDayIndex }, () => null);
-  const gridCells = [...blanks, ...daysArray];
-
-  const handleDayClick = (dayNum) => {
-    if (dayNum === null) return;
-    const formattedDate = `${year}-${(month + 1).toString().padStart(2, '0')}-${dayNum.toString().padStart(2, '0')}`;
-    setSelectedDate(formattedDate);
-  };
-
-  const handlePrevMonth = () => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-  };
-
-  // Bar Chart comparison dates - June 24 to June 30
-  const comparisonDays = [
-    { label: 'Mié 24', date: '2026-06-24' },
-    { label: 'Jue 25', date: '2026-06-25' },
-    { label: 'Vie 26', date: '2026-06-26' },
-    { label: 'Sáb 27', date: '2026-06-27' },
-    { label: 'Dom 28', date: '2026-06-28' },
-    { label: 'Lun 29', date: '2026-06-29' },
-    { label: 'Mar 30', date: '2026-06-30' },
-  ];
 
   // Circle progress calculations
   const radius = 40;
@@ -467,15 +442,14 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
   const chartWidth = svgWidth - chartPaddingLeft - chartPaddingRight;
   const chartHeight = svgHeight - chartPaddingTop - chartPaddingBottom;
 
-  const maxAmount = Math.max(...comparisonDays.map(c => dailyEarnings.find(e => e.date === c.date)?.amount || 0));
+  const maxAmount = chartData.length > 0 ? Math.max(...chartData.map(c => c.amount)) : 1000;
 
   // Create coordinate points
-  const points = comparisonDays.map((comp, i) => {
-    const earning = dailyEarnings.find(e => e.date === comp.date)?.amount || 0;
-    const x = chartPaddingLeft + (i / (comparisonDays.length - 1)) * chartWidth;
-    const ratio = maxAmount > 0 ? (earning / maxAmount) : 0.5;
+  const points = chartData.map((item, i) => {
+    const x = chartPaddingLeft + (i / (chartData.length - 1 || 1)) * chartWidth;
+    const ratio = maxAmount > 0 ? (item.amount / maxAmount) : 0.5;
     const y = chartPaddingTop + chartHeight - ratio * chartHeight;
-    return { x, y, earning, date: comp.date, label: comp.label };
+    return { x, y, earning: item.amount, date: item.date, label: item.label };
   });
 
   // Hermite Spline Path
@@ -500,7 +474,7 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
   // Find active point
   const activeIdx = hoveredIdx !== null
     ? hoveredIdx
-    : comparisonDays.findIndex(c => c.date === selectedDate);
+    : chartData.findIndex(c => c.date === selectedDate);
 
   const activePoint = activeIdx !== -1 && points[activeIdx] !== undefined
     ? points[activeIdx]
@@ -513,25 +487,62 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
     <GlassCard className="flex flex-col gap-3 w-full p-4 h-full">
 
       {/* Header Profile & Notification row */}
-      <div className="flex items-center justify-between w-full">
+      <div className="flex items-center justify-between w-full relative">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setHasNotifications(false)}
+            onClick={() => setShowNotifications(!showNotifications)}
             className="relative w-10 h-10 rounded-2xl flex items-center justify-center transition-all cursor-pointer hover:bg-white/[0.04] text-[var(--text-muted)] hover:text-[var(--text-main)]"
             style={{ border: '1px solid rgb(228 228 231 / 0.5)' }}
           >
             <Bell className="w-5 h-5" />
-            {hasNotifications && (
+            {(unpaidTables.length + lowStockInsumos.length) > 0 && (
               <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[var(--primary)] ring-2 ring-[var(--bg-secondary)]"></span>
             )}
           </button>
 
-          <button
-            className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all cursor-pointer hover:bg-white/[0.04] text-[var(--text-muted)] hover:text-[var(--text-main)]"
-            style={{ border: '1px solid rgb(228 228 231 / 0.5)' }}
-          >
-            <MessageSquare className="w-5 h-5" />
-          </button>
+          {/* Floating Live Alerts Dropdown */}
+          {showNotifications && (
+            <div 
+              className="absolute left-0 top-12 w-72 rounded-2xl p-4 shadow-2xl z-50 flex flex-col gap-3 bg-[var(--bg-secondary)]"
+              style={{
+                border: '1px solid rgb(228 228 231 / 0.6)',
+                boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.3)',
+              }}
+            >
+              <div className="flex items-center justify-between border-b border-zinc-200/20 pb-2">
+                <span className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider">Alertas en Vivo</span>
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)]">
+                  {unpaidTables.length + lowStockInsumos.length} alertas
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
+                {unpaidTables.length === 0 && lowStockInsumos.length === 0 ? (
+                  <span className="text-[10px] text-[var(--text-muted)] py-3 text-center block">No hay alertas activas en este momento.</span>
+                ) : (
+                  <>
+                    {unpaidTables.map(t => (
+                      <div key={`table-${t.id}`} className="flex items-center justify-between p-2 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-amber-500">Mesa {t.numero}</span>
+                          <span className="text-[9px] text-[var(--text-muted)]">Falta pagar / Ocupada</span>
+                        </div>
+                        <span className="text-[8px] font-mono font-bold bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded">Pendiente</span>
+                      </div>
+                    ))}
+                    {lowStockInsumos.map(i => (
+                      <div key={`insumo-${i.id}`} className="flex items-center justify-between p-2 rounded-xl bg-red-500/5 border border-red-500/20">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-red-500">{i.nombre}</span>
+                          <span className="text-[9px] text-[var(--text-muted)]">Stock: {i.stock} {i.unidadMedida} (Min: {i.stockMinimo})</span>
+                        </div>
+                        <span className="text-[8px] font-mono font-bold bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded">Stock Crítico</span>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -599,50 +610,20 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
       </div>
 
       {/* Interactive Calendar */}
-      <div className="rounded-xl p-2.5 flex flex-col gap-1.5" style={{ background: 'rgba(var(--primary-rgb, 0 201 180) / 0.05)', border: '1px solid rgb(228 228 231 / 0.4)' }}>
-        <div className="flex items-center justify-between text-xs font-bold text-[var(--text-main)]">
-          <span className="flex items-center gap-1.5 uppercase tracking-wider font-sans">
-            <Calendar className="w-3.5 h-3.5 text-[var(--primary)]" />
-            {capitalizedMonthName}
-          </span>
-          <div className="flex gap-1">
-            <button onClick={handlePrevMonth} className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer bg-transparent border-none">
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={handleNextMonth} className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer bg-transparent border-none">
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-7 gap-1 mt-1 text-center text-[10px] font-sans">
-          {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, idx) => (
-            <span key={idx} className="font-extrabold text-[var(--text-muted)]">{day}</span>
-          ))}
-          {gridCells.map((day, idx) => {
-            if (day === null) {
-              return <div key={`empty-${idx}`} className="w-[22px] h-[22px]" />;
+      <div className="flex justify-center w-full relative z-30 select-none">
+        <Calendar
+          mode="single"
+          selected={selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date()}
+          onSelect={(date) => {
+            if (date) {
+              const yearVal = date.getFullYear();
+              const monthVal = String(date.getMonth() + 1).padStart(2, '0');
+              const dayVal = String(date.getDate()).padStart(2, '0');
+              setSelectedDate(`${yearVal}-${monthVal}-${dayVal}`);
             }
-            const formatted = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-            const isSelected = selectedDate === formatted;
-            const hasData = dailyEarnings.some(e => e.date === formatted);
-
-            return (
-              <button
-                key={`day-${day}`}
-                onClick={() => handleDayClick(day)}
-                className={`w-[22px] h-[22px] rounded-md text-center flex items-center justify-center text-[9px] font-bold font-sans transition-all cursor-pointer border-none bg-transparent ${isSelected
-                  ? 'bg-[var(--primary)] text-white dark:text-black shadow-md shadow-[var(--primary)]/20 scale-110'
-                  : hasData
-                    ? 'text-[var(--primary)] hover:bg-[var(--primary)]/10 font-extrabold'
-                    : 'text-[var(--text-muted)] hover:bg-white/[0.04]'
-                  }`}
-              >
-                {day}
-              </button>
-            );
-          })}
-        </div>
+          }}
+          className="w-full"
+        />
       </div>
 
       {/* PREMIUM INTERACTIVE 2D AREA CHART CARD: CASH FLOW */}
@@ -662,9 +643,13 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
           </div>
 
           <div className="relative">
-            <select className="bg-white/5 border border-zinc-500/20 rounded-xl px-2.5 py-1 text-[9px] font-extrabold text-[var(--text-main)] focus:outline-none cursor-pointer">
-              <option>Esta semana</option>
-              <option>Últimos 30 días</option>
+            <select
+              value={fundFilter}
+              onChange={(e) => setFundFilter(e.target.value)}
+              className="bg-white/5 border border-zinc-500/20 rounded-xl px-2.5 py-1 text-[9px] font-extrabold text-[var(--text-main)] focus:outline-none cursor-pointer"
+            >
+              <option value="week" className="bg-[#0b0b10]">Esta semana</option>
+              <option value="month" className="bg-[#0b0b10]">Últimos 30 días</option>
             </select>
           </div>
         </div>
@@ -736,20 +721,25 @@ const StatisticsPanelComponent = ({ selectedDate, setSelectedDate, dailyEarnings
             )}
 
             {/* X-Axis Labels */}
-            {points.map((p, i) => (
-              <text
-                key={i}
-                x={p.x}
-                y={chartPaddingTop + chartHeight + 11}
-                fill={activeIdx === i ? "var(--primary)" : "var(--text-muted)"}
-                fontSize="7"
-                fontWeight="900"
-                textAnchor="middle"
-                className="transition-colors duration-200"
-              >
-                {p.label.split(' ')[1]}
-              </text>
-            ))}
+            {points.map((p, i) => {
+              if (points.length > 7 && i % Math.ceil(points.length / 6) !== 0 && activeIdx !== i) {
+                return null;
+              }
+              return (
+                <text
+                  key={i}
+                  x={p.x}
+                  y={chartPaddingTop + chartHeight + 11}
+                  fill={activeIdx === i ? "var(--primary)" : "var(--text-muted)"}
+                  fontSize="7"
+                  fontWeight="900"
+                  textAnchor="middle"
+                  className="transition-colors duration-200"
+                >
+                  {p.label.split(' ')[1]}
+                </text>
+              );
+            })}
 
             {/* Glowing Active Point */}
             {activePoint && (
@@ -1036,8 +1026,13 @@ const HomeView = () => {
   };
 
   // Selected Date state
-  const [selectedDate, setSelectedDate] = useState('2026-06-30');
-  const [weeklyEarnings, setWeeklyEarnings] = useState(2485.50);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [weeklyEarnings, setWeeklyEarnings] = useState(0);
+  const [fundFilter, setFundFilter] = useState('week');
+  const [chartData, setChartData] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [lowStockInsumos, setLowStockInsumos] = useState([]);
+  const [unpaidTables, setUnpaidTables] = useState([]);
 
   // Active cashier state
   const [activeBalance, setActiveBalance] = useState(null);
@@ -1045,38 +1040,61 @@ const HomeView = () => {
   const [waitersList, setWaitersList] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Pre-populated comparison June earnings matching graph
-  const dailyEarnings = [
-    { date: '2026-06-24', amount: 450 },
-    { date: '2026-06-25', amount: 720 },
-    { date: '2026-06-26', amount: 980 },
-    { date: '2026-06-27', amount: 1420 },
-    { date: '2026-06-28', amount: 1650 },
-    { date: '2026-06-29', amount: 890 },
-    { date: '2026-06-30', amount: 1200 },
-  ];
+  // Fetch static data on mount & periodic sync
+  const loadStaticData = async () => {
+    try {
+      const [weeklyRes, alertsRes, balanceRes] = await Promise.all([
+        fetch('/api/stats/weekly-earnings'),
+        fetch('/api/insumos/alertas'),
+        fetch('/api/cashier/balance')
+      ]);
+
+      if (weeklyRes.ok) {
+        const data = await weeklyRes.json();
+        setWeeklyEarnings(data.total || 0);
+      }
+      if (alertsRes.ok) {
+        const data = await alertsRes.json();
+        setLowStockInsumos(data);
+      }
+      if (balanceRes.ok) {
+        const balanceData = await balanceRes.json();
+        setActiveBalance(balanceData);
+      }
+    } catch (e) {
+      console.error("Error al cargar datos estáticos del dashboard:", e);
+    }
+  };
 
   // Fetch live active data from server
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [balanceRes, tablesRes, staffRes] = await Promise.all([
-        fetch('/api/cashier/balance'),
+      const [tablesRes, staffRes, txRes, flowRes] = await Promise.all([
         fetch('/api/tables'),
-        fetch(`/api/staff/stats?date=${new Date().toISOString().split('T')[0]}`)
+        fetch(`/api/staff/stats?fecha=${selectedDate}`),
+        fetch(`/api/stats/transactions?fecha=${selectedDate}`),
+        fetch(`/api/stats/fund-flow?range=${fundFilter}`)
       ]);
 
-      if (balanceRes.ok) {
-        const balanceData = await balanceRes.json();
-        setActiveBalance(balanceData);
-      }
       if (tablesRes.ok) {
         const tablesData = await tablesRes.json();
         setTables(tablesData);
+        // Filtro de mesas ocupadas que faltan pagar
+        const unpaid = tablesData.filter(t => t.estado?.toLowerCase() === 'ocupada' || t.estado?.toLowerCase() === 'ocupado');
+        setUnpaidTables(unpaid);
       }
       if (staffRes.ok) {
         const staffData = await staffRes.json();
         setWaitersList(staffData.waiters || []);
+      }
+      if (txRes.ok) {
+        const txData = await txRes.json();
+        setTransactions(txData);
+      }
+      if (flowRes.ok) {
+        const flowData = await flowRes.json();
+        setChartData(flowData);
       }
     } catch (e) {
       console.error(e);
@@ -1086,9 +1104,18 @@ const HomeView = () => {
     }
   };
 
+  // Run on mount
+  useEffect(() => {
+    loadStaticData();
+    // Periodic refresh every 30 seconds for background notifications/alert monitoring
+    const interval = setInterval(loadStaticData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Reload when filters change
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [selectedDate, fundFilter]);
 
   // PDF Export for Cierre de Mesas
   const handleDownloadPDF = (transactionsToExport) => {
@@ -1132,70 +1159,45 @@ const HomeView = () => {
     }
   };
 
-  // --- DERIVE PROPERTIES & DYNAMIC SYNC CONDITIONAL ---
-
-  // 1. Daily goal & earnings
-  const getEarningForSelectedDate = () => {
-    // If the selected date is today (the active day), return the live totalCaja or totalBruto
-    const isTodaySelected = selectedDate === '2026-06-30'; // Or matching simulated day
-    if (isTodaySelected && activeBalance) {
-      // Use actual active cashier earnings if available, else standard June 30th value
-      return activeBalance.totalBruto > 0 ? activeBalance.totalBruto : 1200;
-    }
-    return dailyEarnings.find(e => e.date === selectedDate)?.amount || 400;
-  };
-
-  const currentEarning = getEarningForSelectedDate();
+  // --- DERIVE PROPERTIES & DYNAMIC SYNC ---
+  const currentTransactions = transactions;
+  const currentEarning = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
   const DAILY_GOAL = 1000;
   const goalPercentage = Math.min(100, Math.round((currentEarning / DAILY_GOAL) * 100));
 
-  // 2. Waiters list for selected date
-  const getWaitersForSelectedDate = () => {
-    // If there is real active sales data and we are looking at the current day
-    if (selectedDate === '2026-06-30' && waitersList.length > 0) {
-      const activeWaitersWithSales = waitersList.filter(w => w.totalSales > 0);
-      if (activeWaitersWithSales.length > 0) {
-        return activeWaitersWithSales.sort((a, b) => b.totalSales - a.totalSales);
+  const currentWaiters = waitersList && waitersList.length > 0
+    ? [...waitersList].sort((a, b) => (b.totalSales || 0) - (a.totalSales || 0))
+    : [];
+  const topWaiter = currentWaiters.length > 0 ? currentWaiters[0] : null;
+
+  // Category statistics derived from real tables count
+  const totalTablesCount = tables.length || 15;
+  const occupiedTables = tables.filter(t => t.estado?.toLowerCase() === 'ocupada' || t.estado?.toLowerCase() === 'ocupado');
+  const occupiedTablesCount = occupiedTables.length;
+  const activeOrdersCount = occupiedTablesCount;
+
+  // Real average wait time calculation
+  let averageWaitTime = 0;
+  let activeComandasWithTime = 0;
+  let totalWaitTime = 0;
+
+  occupiedTables.forEach(t => {
+    if (t.comandas && t.comandas.length > 0) {
+      const comandaDate = new Date(t.comandas[0].fecha);
+      const diffMs = Date.now() - comandaDate.getTime();
+      const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+      if (diffMins < 90) { // filter out stale ones
+        totalWaitTime += diffMins;
+        activeComandasWithTime++;
       }
     }
-    // Fallback/Mock list matching design
-    return [
-      { id: 1, nombre: 'Carlos Mendoza', totalSales: 450.00 },
-      { id: 2, nombre: 'Lucía Santos', totalSales: 380.00 },
-      { id: 3, nombre: 'Mateo Ortiz', totalSales: 290.00 },
-    ];
-  };
+  });
 
-  const currentWaiters = getWaitersForSelectedDate();
-  const topWaiter = currentWaiters[0];
-
-  // 3. Transactions / Closed Tables list for selected date
-  const getTransactionsForSelectedDate = () => {
-    if (selectedDate === '2026-06-30' && activeBalance?.ventas && activeBalance.ventas.length > 0) {
-      return activeBalance.ventas.map(v => ({
-        id: v.id,
-        tableName: v.mesaNum ? `Mesa ${v.mesaNum}` : 'Mesa',
-        closedAt: formatTime(v.hora),
-        waiterName: v.waiterName || 'Mesero',
-        total: v.total,
-        metodo: v.metodo
-      }));
-    }
-    // Mock transactions matching design
-    return [
-      { id: 101, tableName: 'Mesa 3', closedAt: '15:20', waiterName: 'Carlos Mendoza', total: 185.50 },
-      { id: 102, tableName: 'Mesa 8', closedAt: '14:45', waiterName: 'Lucía Santos', total: 320.00 },
-      { id: 103, tableName: 'Mesa 12', closedAt: '13:10', waiterName: 'Mateo Ortiz', total: 125.00 },
-    ];
-  };
-
-  const currentTransactions = getTransactionsForSelectedDate();
-
-  // 4. Category statistics derived from real tables count
-  const totalTablesCount = tables.length || 15;
-  const occupiedTablesCount = tables.filter(t => t.estado?.toLowerCase() === 'ocupada' || t.estado?.toLowerCase() === 'ocupado').length;
-  const activeOrdersCount = occupiedTablesCount;
-  const averageWaitTime = occupiedTablesCount > 0 ? 12 : 0; // Simulated dynamically
+  if (activeComandasWithTime > 0) {
+    averageWaitTime = Math.round(totalWaitTime / activeComandasWithTime);
+  } else {
+    averageWaitTime = occupiedTablesCount > 0 ? 12 : 0;
+  }
 
   const hasAbsoluteLayout = Object.values(layouts).some(l => l.absolute);
 
@@ -1273,10 +1275,14 @@ const HomeView = () => {
             <StatisticsPanelComponent
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
-              dailyEarnings={dailyEarnings}
               goalPercentage={goalPercentage}
               currentEarning={currentEarning}
+              chartData={chartData}
+              fundFilter={fundFilter}
+              setFundFilter={setFundFilter}
               onShowToast={showToast}
+              unpaidTables={unpaidTables}
+              lowStockInsumos={lowStockInsumos}
             />
           </EditableWidget>
         </>
@@ -1330,10 +1336,14 @@ const HomeView = () => {
               <StatisticsPanelComponent
                 selectedDate={selectedDate}
                 setSelectedDate={setSelectedDate}
-                dailyEarnings={dailyEarnings}
                 goalPercentage={goalPercentage}
                 currentEarning={currentEarning}
+                chartData={chartData}
+                fundFilter={fundFilter}
+                setFundFilter={setFundFilter}
                 onShowToast={showToast}
+                unpaidTables={unpaidTables}
+                lowStockInsumos={lowStockInsumos}
               />
             </div>
           </div>

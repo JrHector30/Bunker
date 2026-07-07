@@ -2948,11 +2948,165 @@ app.get('/api/staff/stats', async (req, res) => {
 
         res.json({ waiters: waitersStats, cooks: cooksStats });
 
-        res.json({ waiters: waitersStats, cooks: cooksStats });
-
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: "Error fetching staff stats" });
+    }
+});
+
+// New statistics endpoints for HomeView (Optimized read-only queries with index range filters)
+app.get('/api/stats/weekly-earnings', async (req, res) => {
+    try {
+        const now = new Date();
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+        const startOfWeek = new Date(now.setDate(diff));
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        
+        const comandas = await prisma.comanda.findMany({
+            where: {
+                estado: 'cerrada',
+                fecha: { gte: startOfWeek, lte: endOfWeek }
+            },
+            select: {
+                detalles: {
+                    where: { estado: { not: 'anulado' } },
+                    select: {
+                        cantidad: true,
+                        plato: { select: { precio: true } }
+                    }
+                }
+            }
+        });
+        
+        const total = comandas.reduce((acc, c) => {
+            return acc + c.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+        }, 0);
+        
+        res.json({ total });
+    } catch (err) {
+        console.error("Error en /api/stats/weekly-earnings:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/stats/transactions', async (req, res) => {
+    try {
+        const { fecha } = req.query;
+        let startDate, endDate;
+        if (fecha) {
+            startDate = new Date(fecha + "T00:00:00");
+            endDate = new Date(fecha + "T23:59:59.999");
+        } else {
+            const now = new Date();
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        }
+        
+        const comandas = await prisma.comanda.findMany({
+            where: {
+                estado: 'cerrada',
+                fecha: { gte: startDate, lte: endDate }
+            },
+            select: {
+                id: true,
+                fecha: true,
+                metodoPago: true,
+                mesa: { select: { numero: true } },
+                usuario: { select: { nombre: true } },
+                detalles: {
+                    where: { estado: { not: 'anulado' } },
+                    select: {
+                        cantidad: true,
+                        plato: { select: { precio: true } }
+                    }
+                }
+            },
+            orderBy: { fecha: 'desc' }
+        });
+        
+        const transactions = comandas.map(v => {
+            const total = v.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+            return {
+                id: v.id,
+                tableName: v.mesa ? `Mesa ${v.mesa.numero}` : 'Mesa',
+                closedAt: new Date(v.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
+                waiterName: v.usuario ? v.usuario.nombre : 'Mesero',
+                total: total,
+                metodo: v.metodoPago || 'Efectivo'
+            };
+        });
+        
+        res.json(transactions);
+    } catch (err) {
+        console.error("Error en /api/stats/transactions:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/stats/fund-flow', async (req, res) => {
+    try {
+        const { range } = req.query; // 'week' or 'month'
+        const now = new Date();
+        let startDate = new Date();
+        
+        if (range === 'month') {
+            startDate.setDate(now.getDate() - 29); // 30 days total
+        } else {
+            startDate.setDate(now.getDate() - 6); // 7 days total (week)
+        }
+        startDate.setHours(0, 0, 0, 0);
+        
+        const comandas = await prisma.comanda.findMany({
+            where: {
+                estado: 'cerrada',
+                fecha: { gte: startDate }
+            },
+            select: {
+                fecha: true,
+                detalles: {
+                    where: { estado: { not: 'anulado' } },
+                    select: {
+                        cantidad: true,
+                        plato: { select: { precio: true } }
+                    }
+                }
+            }
+        });
+        
+        const dailySum = {};
+        comandas.forEach(c => {
+            const dateStr = new Date(c.fecha).toISOString().split('T')[0];
+            const total = c.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+            dailySum[dateStr] = (dailySum[dateStr] || 0) + total;
+        });
+        
+        const result = [];
+        let current = new Date(startDate);
+        const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        
+        while (current <= now) {
+            const dateStr = current.toISOString().split('T')[0];
+            const dayName = daysOfWeek[current.getDay()];
+            const label = `${dayName} ${current.getDate()}`;
+            
+            result.push({
+                date: dateStr,
+                label,
+                amount: dailySum[dateStr] || 0
+            });
+            
+            current.setDate(current.getDate() + 1);
+        }
+        
+        res.json(result);
+    } catch (err) {
+        console.error("Error en /api/stats/fund-flow:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 
