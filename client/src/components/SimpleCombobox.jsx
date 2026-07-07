@@ -90,7 +90,7 @@ export default function SimpleCombobox({
   return (
     <div 
       ref={containerRef} 
-      className="relative w-full max-w-[420px]"
+      className={`relative w-full max-w-[420px] ${isOpen ? 'z-[100]' : 'z-auto'}`}
       style={{ fontFamily: 'var(--font-sans)' }}
       onKeyDown={handleKeyDown}
     >
@@ -127,7 +127,7 @@ export default function SimpleCombobox({
             animate={{ opacity: 1, y: 8, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute left-0 right-0 z-50 mt-1 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+            className="absolute left-0 right-0 z-[150] mt-1 rounded-xl shadow-2xl overflow-hidden flex flex-col"
             style={{
               backgroundColor: 'var(--bg-surface)',
               borderColor: 'var(--glass-border)',
