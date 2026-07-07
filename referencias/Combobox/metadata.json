@@ -1,0 +1,6 @@
+{
+  "name": "Categorized Combobox",
+  "description": "Un componente combobox interactivo con filtrado de búsqueda y selección de categoría única.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

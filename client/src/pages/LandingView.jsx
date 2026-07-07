@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import RevealOnScroll from '../components/RevealOnScroll';
 import HeroCarousel from '../components/HeroCarousel';
+import Aurora from '../components/Aurora';
 
 // Componente reusable de Botón Premium
 const SaasButton = ({ variant = "default", className = "", children, ...props }) => {
@@ -80,7 +81,17 @@ export default function LandingView() {
 
   return (
     <div className="landing-root min-h-screen bg-[#060609] text-white selection:bg-teal-500 selection:text-black overflow-x-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
-
+      {/* 🌟 CONTENEDOR DE LA AURORA (Arriba en la Web) */}
+      <div className="absolute top-0 left-0 w-full h-[50vh] overflow-hidden opacity-70 mask-image">
+        <Aurora
+          colorStops={["#00d0b8", "#000000", "#00d0b8"]}
+          blend={0.6}
+          amplitude={1.0}
+          speed={0.6}
+        />
+        {/* Un degradado negro abajo para que se fusione suavemente con el resto de la web */}
+        <div className="absolute inset-0 bg-gradient-to-t via-transparent to-transparent" />
+      </div>
       {/* HEADER */}
       <header className="fixed top-0 w-full z-50 border-b border-gray-900/40 bg-[#060609]/70 backdrop-blur-md">
         <nav className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -366,7 +377,19 @@ export default function LandingView() {
       </section>
 
       {/* CTA FINAL */}
+
       <section className="relative py-24 px-6 border-t border-gray-900/40 overflow-hidden text-center">
+        {/* 🌟 CONTENEDOR DE LA AURORA (Arriba en la Web) */}
+        <div className="absolute top-0 left-0 w-full h-[50vh] overflow-hidden opacity-70 mask-image">
+          <Aurora
+            colorStops={["#00d0b8", "#000000", "#00d0b8"]}
+            blend={0.6}
+            amplitude={1.0}
+            speed={0.6}
+          />
+          {/* Un degradado negro abajo para que se fusione suavemente con el resto de la web */}
+          <div className="absolute inset-0 bg-gradient-to-t via-transparent to-transparent" />
+        </div>
         <RevealOnScroll variant="scale" duration={1200}>
           <div className="absolute left-1/2 w-[70%] h-[80%] pointer-events-none z-0 opacity-20 blur-[140px] bottom-[-20%] -translate-x-1/2 bg-teal-500 rounded-full" />
           <div className="relative z-10 max-w-3xl mx-auto">
@@ -405,7 +428,7 @@ export default function LandingView() {
           <div className="text-center sm:text-left">
             &copy; {new Date().getFullYear()} Bunker. Todos los derechos reservados. Proyecto Académico de Simulación Comercial.
           </div>
-          <button 
+          <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center justify-center w-10 h-10 rounded-full text-white hover:-translate-y-1 active:translate-y-0 transition-all duration-300 group cursor-pointer"
             style={{

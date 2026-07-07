@@ -710,6 +710,81 @@ app.post('/api/products', async (req, res) => {
     }
 });
 
+app.post('/api/products/bulk', async (req, res) => {
+    const { products } = req.body;
+    if (!products || !Array.isArray(products)) {
+        return res.status(400).json({ error: "Invalid products array." });
+    }
+
+    try {
+        const categories = await prisma.categoria.findMany({ where: { deleted: false } });
+        const existingProducts = await prisma.plato.findMany({ where: { deleted: false } });
+
+        const normalize = (str) => {
+            if (!str) return '';
+            return str.toString()
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
+
+        const categoryMap = {};
+        categories.forEach(cat => {
+            categoryMap[normalize(cat.nombre)] = cat.id;
+        });
+
+        const productMap = {};
+        existingProducts.forEach(prod => {
+            productMap[normalize(prod.nombre)] = prod;
+        });
+
+        let createdCount = 0;
+        let updatedCount = 0;
+
+        for (const item of products) {
+            const normName = normalize(item.nombre);
+            const normCatName = normalize(item.categoriaNombre);
+            const catId = categoryMap[normCatName];
+
+            if (!catId) continue; // skip invalid categories
+
+            const isActivo = item.activo !== undefined ? item.activo : true;
+            const existingProduct = productMap[normName];
+
+            if (existingProduct) {
+                await prisma.plato.update({
+                    where: { id: existingProduct.id },
+                    data: {
+                        precio: parseFloat(item.precio),
+                        descripcion: item.descripcion || '',
+                        categoriaId: catId,
+                        activo: isActivo
+                    }
+                });
+                updatedCount++;
+            } else {
+                await prisma.plato.create({
+                    data: {
+                        nombre: item.nombre.toString().trim(),
+                        precio: parseFloat(item.precio),
+                        descripcion: item.descripcion || '',
+                        categoriaId: catId,
+                        activo: isActivo
+                    }
+                });
+                createdCount++;
+            }
+        }
+
+        res.json({ success: true, createdCount, updatedCount });
+    } catch (e) {
+        console.error("Error bulk importing products:", e);
+        res.status(500).json({ error: "Error al realizar importación masiva: " + e.message });
+    }
+});
+
 app.put('/api/products/:id', async (req, res) => {
     const { id } = req.params;
     const data = req.body;

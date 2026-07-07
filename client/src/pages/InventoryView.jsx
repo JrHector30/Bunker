@@ -2,14 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download, Upload, Check, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 import CategorizedCombobox from '../components/CategorizedCombobox';
 import SimpleCombobox from '../components/SimpleCombobox';
+import { motion } from 'motion/react';
 
 const InventoryView = () => {
     const { showConfirmation } = useConfirmation();
@@ -118,6 +120,365 @@ const InventoryView = () => {
     const [formData, setFormData] = useState({
         nombre: '', descripcion: '', precio: '', categoriaId: '', activo: true, imageFile: null, imagePreview: null
     });
+
+    // --- EXCEL BULK IMPORT STATES ---
+    const [importModalOpen, setImportModalOpen] = useState(false);
+    const [importAnalysisLoading, setImportAnalysisLoading] = useState(false);
+    const [importRows, setImportRows] = useState([]);
+    const [importStats, setImportStats] = useState({ newCount: 0, updateCount: 0, warningCount: 0, errorCount: 0 });
+    const [importTimeTaken, setImportTimeTaken] = useState(0);
+    const [importSuccessModalOpen, setImportSuccessModalOpen] = useState(false);
+    const [importTimeStart, setImportTimeStart] = useState(0);
+    const [isSavingImport, setIsSavingImport] = useState(false);
+    const [importStep1Status, setImportStep1Status] = useState('pending');
+    const [importStep2Status, setImportStep2Status] = useState('pending');
+    const [importStep3Status, setImportStep3Status] = useState('pending');
+    const [importStep4Status, setImportStep4Status] = useState('pending');
+    const fileInputRef = useRef(null);
+
+    const normalizeString = (str) => {
+        if (str === null || str === undefined) return '';
+        return str
+            .toString()
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
+
+    const levenshteinDistance = (a, b) => {
+        const matrix = [];
+        for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+        for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+        for (let i = 1; i <= b.length; i++) {
+            for (let j = 1; j <= a.length; j++) {
+                if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j] + 1
+                    );
+                }
+            }
+        }
+        return matrix[b.length][a.length];
+    };
+
+    const findClosestCategory = (inputCat) => {
+        const normInput = normalizeString(inputCat);
+        let closest = '';
+        let minDistance = 999;
+
+        categories.forEach(cat => {
+            const normCat = normalizeString(cat.nombre);
+            const dist = levenshteinDistance(normInput, normCat);
+            if (dist < minDistance && dist <= 3) {
+                minDistance = dist;
+                closest = cat.nombre;
+            }
+        });
+        return closest;
+    };
+
+    const handleDownloadTemplate = async () => {
+        try {
+            const workbook = new ExcelJS.Workbook();
+
+            // Sheet 1: Platos
+            const wsPlatos = workbook.addWorksheet('Platos');
+            wsPlatos.columns = [
+                { header: 'Nombre del Plato *', key: 'nombre', width: 25 },
+                { header: 'Descripción', key: 'descripcion', width: 40 },
+                { header: 'Categoría *', key: 'categoriaName', width: 20 },
+                { header: 'Precio Venta (S/.)', key: 'precio', width: 20 },
+                { header: 'Estado (Activo/Inactivo)', key: 'estado', width: 22 }
+            ];
+
+            wsPlatos.getRow(1).font = { bold: true };
+
+            wsPlatos.addRow({
+                nombre: 'Ceviche Mixto',
+                descripcion: 'Delicioso ceviche de pescado y mariscos',
+                categoriaName: categories[0]?.nombre || 'Marino',
+                precio: 35.00,
+                estado: 'Activo'
+            });
+
+            // Sheet 2: Categorías
+            const wsCategorias = workbook.addWorksheet('Categorías');
+            wsCategorias.columns = [
+                { header: 'Nombre', key: 'nombre', width: 25 }
+            ];
+            wsCategorias.getRow(1).font = { bold: true };
+
+            categories.forEach(cat => {
+                wsCategorias.addRow({ nombre: cat.nombre });
+            });
+
+            const numCats = categories.length;
+            const catRangeFormula = `Categorías!$A$2:$A$${numCats + 1}`;
+
+            for (let i = 2; i <= 200; i++) {
+                wsPlatos.getCell(`C${i}`).dataValidation = {
+                    type: 'list',
+                    allowBlank: true,
+                    formulae: [catRangeFormula],
+                    showErrorMessage: true,
+                    errorTitle: 'Categoría inválida',
+                    error: 'Por favor seleccione una categoría de la lista desplegable.'
+                };
+
+                wsPlatos.getCell(`E${i}`).dataValidation = {
+                    type: 'list',
+                    allowBlank: true,
+                    formulae: ['"Activo,Inactivo"'],
+                    showErrorMessage: true,
+                    errorTitle: 'Estado inválido',
+                    error: 'Por favor seleccione Activo o Inactivo.'
+                };
+            }
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Plantilla_Platos_Bunker.xlsx';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Plantilla descargada con éxito', 'success');
+        } catch (error) {
+            console.error('Error downloading template:', error);
+            showToast('Error al descargar plantilla', 'error');
+        }
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const timeStart = performance.now();
+        setImportTimeStart(timeStart);
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const data = evt.target.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+
+                const wsName = workbook.SheetNames[0];
+                const ws = workbook.Sheets[wsName];
+
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                if (rows.length <= 1) {
+                    showToast('El archivo Excel está vacío o no contiene filas de datos.', 'warning');
+                    return;
+                }
+
+                processImportRows(rows);
+            } catch (err) {
+                console.error(err);
+                showToast('Error al leer el archivo Excel.', 'error');
+            }
+        };
+        reader.readAsBinaryString(file);
+        e.target.value = '';
+    };
+
+    const processImportRows = (rows) => {
+        const headers = rows[0].map(h => h ? h.toString().trim() : '');
+
+        const nameIdx = headers.findIndex(h => h.toLowerCase().includes('nombre'));
+        const descIdx = headers.findIndex(h => h.toLowerCase().includes('descripc'));
+        const catIdx = headers.findIndex(h => h.toLowerCase().includes('categor'));
+        const priceIdx = headers.findIndex(h => h.toLowerCase().includes('precio'));
+        const statusIdx = headers.findIndex(h => h.toLowerCase().includes('estado'));
+
+        if (nameIdx === -1 || catIdx === -1 || priceIdx === -1) {
+            showToast('El archivo no posee las columnas obligatorias: Nombre, Categoría y Precio.', 'error');
+            return;
+        }
+
+        setImportModalOpen(true);
+        setImportAnalysisLoading(true);
+        setImportStep1Status('loading');
+        setImportStep2Status('pending');
+        setImportStep3Status('pending');
+        setImportStep4Status('pending');
+
+        const processed = [];
+        const categoryNamesMap = {};
+        categories.forEach(c => {
+            categoryNamesMap[normalizeString(c.nombre)] = c.nombre;
+        });
+
+        const productNamesMap = {};
+        products.forEach(p => {
+            productNamesMap[normalizeString(p.nombre)] = p;
+        });
+
+        let newCount = 0;
+        let updateCount = 0;
+        let warningCount = 0;
+        let errorCount = 0;
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0 || row.every(val => val === null || val === undefined || val === '')) {
+                continue;
+            }
+
+            const rawName = row[nameIdx];
+            const rawDesc = descIdx !== -1 ? row[descIdx] : '';
+            const rawCat = catIdx !== -1 ? row[catIdx] : '';
+            const rawPrice = priceIdx !== -1 ? row[priceIdx] : '';
+            const rawStatus = statusIdx !== -1 ? row[statusIdx] : 'Activo';
+
+            const name = rawName ? rawName.toString().trim() : '';
+            const desc = rawDesc ? rawDesc.toString().trim() : '';
+            const cat = rawCat ? rawCat.toString().trim() : '';
+            const status = rawStatus ? rawStatus.toString().trim() : 'Activo';
+
+            let error = '';
+            let warning = '';
+            let statusIcon = '✅';
+            let actionText = 'Nuevo';
+
+            if (!name) {
+                error = 'Nombre del plato es obligatorio.';
+                statusIcon = '❌';
+                actionText = 'Error';
+                errorCount++;
+            } else if (!cat) {
+                error = 'Categoría es obligatoria.';
+                statusIcon = '❌';
+                actionText = 'Error';
+                errorCount++;
+            } else if (rawPrice === null || rawPrice === undefined || rawPrice === '') {
+                error = 'Precio es obligatorio.';
+                statusIcon = '❌';
+                actionText = 'Error';
+                errorCount++;
+            } else {
+                const price = parseFloat(rawPrice);
+                if (Number.isNaN(price) || price <= 0) {
+                    error = 'Precio de venta debe ser un número mayor a cero.';
+                    statusIcon = '❌';
+                    actionText = 'Error';
+                    errorCount++;
+                } else {
+                    const normCat = normalizeString(cat);
+                    const matchedCatName = categoryNamesMap[normCat];
+
+                    if (!matchedCatName) {
+                        const suggestion = findClosestCategory(cat);
+                        if (suggestion) {
+                            warning = `Categoría no existe. ¿Quiso decir "${suggestion}"?`;
+                        } else {
+                            warning = `Categoría "${cat}" no existe en el sistema.`;
+                        }
+                        statusIcon = '⚠️';
+                        actionText = 'Omitir';
+                        warningCount++;
+                    } else {
+                        const normStatus = normalizeString(status);
+                        if (normStatus !== 'activo' && normStatus !== 'inactivo') {
+                            warning = `Estado "${status}" inválido (debe ser Activo o Inactivo).`;
+                            statusIcon = '⚠️';
+                            actionText = 'Omitir';
+                            warningCount++;
+                        } else {
+                            const normName = normalizeString(name);
+                            if (productNamesMap[normName]) {
+                                statusIcon = '✏️';
+                                actionText = 'Actualizar';
+                                updateCount++;
+                            } else {
+                                statusIcon = '✅';
+                                actionText = 'Nuevo';
+                                newCount++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            processed.push({
+                rowNumber: i + 1,
+                nombre: name,
+                descripcion: desc,
+                categoriaNombre: cat,
+                precio: rawPrice,
+                activo: normalizeString(status) !== 'inactivo',
+                statusIcon,
+                actionText,
+                error,
+                warning
+            });
+        }
+
+        setImportRows(processed);
+        setImportStats({ newCount, updateCount, warningCount, errorCount });
+
+        setTimeout(() => {
+            setImportStep1Status('completed');
+            setImportStep2Status('loading');
+        }, 600);
+
+        setTimeout(() => {
+            setImportStep2Status('completed');
+            setImportStep3Status('loading');
+        }, 1200);
+
+        setTimeout(() => {
+            setImportStep3Status('completed');
+            setImportStep4Status('loading');
+        }, 1800);
+
+        setTimeout(() => {
+            setImportStep4Status('completed');
+            setImportAnalysisLoading(false);
+        }, 2400);
+    };
+
+    const handleConfirmImport = async () => {
+        const validRows = importRows.filter(r => r.statusIcon === '✅' || r.statusIcon === '✏️');
+        if (validRows.length === 0) {
+            showToast('No hay filas válidas para importar.', 'warning');
+            return;
+        }
+
+        setIsSavingImport(true);
+        try {
+            const res = await fetch('/api/products/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ products: validRows })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                const timeEnd = performance.now();
+                const seconds = ((timeEnd - importTimeStart) / 1000).toFixed(1);
+                setImportTimeTaken(seconds);
+
+                setImportModalOpen(false);
+                setImportSuccessModalOpen(true);
+                fetchData();
+            } else {
+                showToast(data.error || 'Error al procesar la importación masiva.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Error de red al procesar la importación.', 'error');
+        } finally {
+            setIsSavingImport(false);
+        }
+    };
 
     const handleGenerateDescription = async () => {
         if (!formData.nombre) { showToast("Por favor, ingrese un nombre primero.", 'info'); return; }
@@ -347,16 +708,15 @@ const InventoryView = () => {
 
         return (
             <>
-                <div className="glass-panel" style={{ marginBottom: 20, display: 'flex', gap: 15, padding: 15, alignItems: 'center', textAlign: 'center' }}>
-                    <div className="search-container" style={{ flex: 1 }}>
+                <div className="glass-panel" style={{ position: 'relative', zIndex: 10, marginBottom: 20, display: 'flex', gap: 15, padding: 15, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="search-container" style={{ flex: '1 1 300px', maxWidth: '600px' }}>
                         <Search size={22} className="text-muted" />
                         <input
                             type="text" placeholder="Buscar plato..." className="search-input"
                             value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', height: 30 }} />
-                    <div style={{ width: 220, textAlign: 'left' }}>
+                    <div style={{ width: 200, textAlign: 'left' }}>
                         <SimpleCombobox
                             items={categoryOptions}
                             selectedItem={selectedCategoryOption}
@@ -364,7 +724,24 @@ const InventoryView = () => {
                             placeholder="Todas las categorías"
                         />
                     </div>
-                    <button className="glass-button primary" onClick={() => handleOpenModal()}><Plus size={20} /> Nuevo Plato</button>
+                    <div style={{ display: 'flex', gap: 10, marginLeft: 'auto', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <button className="glass-button flex items-center gap-1.5 px-3 py-2 text-xs font-semibold cursor-pointer h-9" onClick={handleDownloadTemplate}>
+                            <Download size={16} /> Descargar Plantilla
+                        </button>
+                        <button className="glass-button flex items-center gap-1.5 px-3 py-2 text-xs font-semibold cursor-pointer h-9" onClick={() => fileInputRef.current.click()}>
+                            <Upload size={16} /> Importar Excel
+                        </button>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            style={{ display: 'none' }}
+                            accept=".xlsx, .xls"
+                        />
+                        <button className="glass-button primary h-9 flex items-center gap-1.5 px-3 py-2 text-xs font-semibold" onClick={() => handleOpenModal()}>
+                            <Plus size={16} /> Nuevo Plato
+                        </button>
+                    </div>
                 </div>
 
                 <div className="glass-panel table-responsive" style={{ padding: 0 }}>
@@ -521,7 +898,7 @@ const InventoryView = () => {
 
         return (
             <div className="glass-panel" style={{ padding: 30 }}>
-                <div style={{ display: 'flex', gap: 30, marginBottom: 30, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <div style={{ position: 'relative', zIndex: 10, display: 'flex', gap: 30, marginBottom: 30, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                     <div style={{ flex: '1 1 300px' }}>
                         <label style={{ display: 'block', marginBottom: 10, fontSize: '1.1rem', fontWeight: 'bold' }}>Seleccionar Plato del Menú</label>
                         <CategorizedCombobox
@@ -1121,6 +1498,252 @@ const InventoryView = () => {
                                 <button type="submit" className="glass-button primary" style={{ width: '100%' }}><Save size={18} /> Registrar en Kardex</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Resumen de Importación */}
+            {importModalOpen && (
+                <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div className="modal-content glass-panel" style={{ maxWidth: '800px', width: '95%', padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px', background: 'var(--bg-surface)', border: '1px solid var(--glass-border)' }}>
+
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '15px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <Upload size={22} style={{ color: 'var(--primary)' }} />
+                                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--text-main)' }}>Resumen de Importación</h2>
+                            </div>
+                            <button className="glass-button" onClick={() => setImportModalOpen(false)} style={{ padding: 5, border: 'none', background: 'transparent', cursor: 'pointer' }}>
+                                <X size={20} style={{ color: 'var(--text-muted)' }} />
+                            </button>
+                        </div>
+
+                        {/* Analysis / Stepper Panel */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', padding: '10px 0' }}>
+                            {/* Platos nuevos */}
+                            <div className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Check size={16} style={{ color: '#10b981' }} />
+                                    </div>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>
+                                        {importStep1Status === 'pending' ? 'Analizando nuevos platos...' : `${importStats.newCount} platos nuevos serán creados.`}
+                                    </span>
+                                </div>
+                                <div>
+                                    {importStep1Status === 'pending' && (
+                                        <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--glass-border)', background: 'transparent' }} />
+                                    )}
+                                    {importStep1Status === 'loading' && (
+                                        <div className="w-5 h-5 border-2 border-t-[#10b981] border-slate-200/20 rounded-full animate-spin" />
+                                    )}
+                                    {importStep1Status === 'completed' && (
+                                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 10 }}>
+                                            <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Check size={12} style={{ color: '#ffffff' }} />
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Platos actualizados */}
+                            <div className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Edit size={14} style={{ color: '#10b981' }} />
+                                    </div>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>
+                                        {importStep2Status === 'pending' ? 'Buscando platos existentes para actualizar...' : `${importStats.updateCount} platos serán actualizados.`}
+                                    </span>
+                                </div>
+                                <div>
+                                    {importStep2Status === 'pending' && (
+                                        <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--glass-border)', background: 'transparent' }} />
+                                    )}
+                                    {importStep2Status === 'loading' && (
+                                        <div className="w-5 h-5 border-2 border-t-[#10b981] border-slate-200/20 rounded-full animate-spin" />
+                                    )}
+                                    {importStep2Status === 'completed' && (
+                                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 10 }}>
+                                            <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Check size={12} style={{ color: '#ffffff' }} />
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Filas omitidas */}
+                            <div className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: importStats.warningCount > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <AlertTriangle size={14} style={{ color: importStats.warningCount > 0 ? '#f59e0b' : '#10b981' }} />
+                                    </div>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>
+                                        {importStep3Status === 'pending' ? 'Analizando categorías y estados...' : `${importStats.warningCount} filas contienen errores leves (serán omitidas).`}
+                                    </span>
+                                </div>
+                                <div>
+                                    {importStep3Status === 'pending' && (
+                                        <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--glass-border)', background: 'transparent' }} />
+                                    )}
+                                    {importStep3Status === 'loading' && (
+                                        <div className={`w-5 h-5 border-2 ${importStats.warningCount > 0 ? 'border-t-[#f59e0b]' : 'border-t-[#10b981]'} border-slate-200/20 rounded-full animate-spin`} />
+                                    )}
+                                    {importStep3Status === 'completed' && (
+                                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 10 }}>
+                                            {importStats.warningCount > 0 ? (
+                                                <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <AlertTriangle size={12} style={{ color: '#ffffff' }} />
+                                                </div>
+                                            ) : (
+                                                <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Check size={12} style={{ color: '#ffffff' }} />
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Errores críticos */}
+                            <div className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: importStats.errorCount > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <X size={16} style={{ color: importStats.errorCount > 0 ? '#ef4444' : '#10b981' }} />
+                                    </div>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>
+                                        {importStep4Status === 'pending' ? 'Validando campos obligatorios y precios...' : `${importStats.errorCount} filas contienen errores críticos (no se importarán).`}
+                                    </span>
+                                </div>
+                                <div>
+                                    {importStep4Status === 'pending' && (
+                                        <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--glass-border)', background: 'transparent' }} />
+                                    )}
+                                    {importStep4Status === 'loading' && (
+                                        <div className={`w-5 h-5 border-2 ${importStats.errorCount > 0 ? 'border-t-[#ef4444]' : 'border-t-[#10b981]'} border-slate-200/20 rounded-full animate-spin`} />
+                                    )}
+                                    {importStep4Status === 'completed' && (
+                                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 10 }}>
+                                            {importStats.errorCount > 0 ? (
+                                                <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <X size={12} style={{ color: '#ffffff' }} />
+                                                </div>
+                                            ) : (
+                                                <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Check size={12} style={{ color: '#ffffff' }} />
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Vista previa Table */}
+                        {!importAnalysisLoading && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>VISTA PREVIA DE FILAS</span>
+                                <div className="glass-panel table-responsive" style={{ maxHeight: '220px', overflowY: 'auto', padding: 0, border: '1px solid var(--glass-border)' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                        <thead>
+                                            <tr style={{ background: 'var(--table-header-bg)', textAlign: 'left', borderBottom: '1px solid var(--table-row-border)' }}>
+                                                <th style={{ padding: '10px 15px', width: 60, textAlign: 'center' }}>Fila</th>
+                                                <th style={{ padding: '10px 15px', width: 80, textAlign: 'center' }}>Estado</th>
+                                                <th style={{ padding: '10px 15px' }}>Nombre</th>
+                                                <th style={{ padding: '10px 15px', width: 120 }}>Categoría</th>
+                                                <th style={{ padding: '10px 15px', width: 100, textAlign: 'right' }}>Precio</th>
+                                                <th style={{ padding: '10px 15px', width: 250 }}>Detalle de Análisis</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {importRows.map((r, idx) => (
+                                                <tr key={idx} style={{ borderBottom: '1px solid var(--table-row-border)', background: r.statusIcon === '❌' ? 'rgba(239, 68, 68, 0.05)' : r.statusIcon === '⚠️' ? 'rgba(245, 158, 11, 0.05)' : 'transparent' }}>
+                                                    <td style={{ padding: '10px 15px', textAlign: 'center', fontWeight: 'bold', color: 'var(--text-muted)' }}>{r.rowNumber}</td>
+                                                    <td style={{ padding: '10px 15px', textAlign: 'center', fontSize: '1.1rem' }}>{r.statusIcon}</td>
+                                                    <td style={{ padding: '10px 15px', color: 'var(--text-main)', fontWeight: '500' }}>{r.nombre || <span style={{ color: '#ef4444', fontStyle: 'italic' }}>Vacío</span>}</td>
+                                                    <td style={{ padding: '10px 15px', color: 'var(--text-main)' }}>{r.categoriaNombre || <span style={{ color: '#ef4444', fontStyle: 'italic' }}>Vacío</span>}</td>
+                                                    <td style={{ padding: '10px 15px', textAlign: 'right', fontFamily: 'Plus Jakarta Sans', fontWeight: 'bold', color: 'var(--text-main)' }}>
+                                                        {r.precio !== undefined && r.precio !== '' ? `S/. ${parseFloat(r.precio).toFixed(2)}` : <span style={{ color: '#ef4444' }}>-</span>}
+                                                    </td>
+                                                    <td style={{ padding: '10px 15px', color: r.error ? '#ef4444' : r.warning ? '#f59e0b' : 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '500' }}>
+                                                        {r.error || r.warning || (r.statusIcon === '✏️' ? 'El plato ya existe y se actualizarán sus datos.' : 'Plato nuevo listo para ser creado.')}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Footer */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid var(--glass-border)', paddingTop: '15px' }}>
+                            <button className="glass-button" onClick={() => setImportModalOpen(false)} style={{ padding: '10px 20px', fontSize: '0.85rem' }}>
+                                Cancelar
+                            </button>
+                            <button
+                                className="glass-button primary"
+                                onClick={handleConfirmImport}
+                                disabled={importAnalysisLoading || isSavingImport || (importStats.newCount + importStats.updateCount === 0)}
+                                style={{ padding: '10px 20px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', opacity: (importAnalysisLoading || isSavingImport || (importStats.newCount + importStats.updateCount === 0)) ? 0.5 : 1, cursor: (importAnalysisLoading || isSavingImport || (importStats.newCount + importStats.updateCount === 0)) ? 'not-allowed' : 'pointer' }}
+                            >
+                                {isSavingImport ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" /> Procesando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check size={16} /> Confirmar Importación
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Éxito de Importación */}
+            {importSuccessModalOpen && (
+                <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div className="modal-content glass-panel" style={{ maxWidth: '420px', width: '90%', padding: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', background: 'var(--bg-surface)', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: [0, 1.2, 1] }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                            style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}
+                        >
+                            <Check size={36} style={{ color: '#10b981', strokeWidth: 3 }} />
+                        </motion.div>
+
+                        <div>
+                            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 'black', color: 'var(--text-main)' }}>Importación Completada</h2>
+                            <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Proceso masivo realizado con éxito</p>
+                        </div>
+
+                        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12, padding: '15px 0', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', margin: '10px 0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>✅ Creados:</span>
+                                <span style={{ fontWeight: 'bold', color: '#10b981' }}>{importStats.newCount} platos</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>✏️ Actualizados:</span>
+                                <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>{importStats.updateCount} platos</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>⚠️ Omitidos:</span>
+                                <span style={{ fontWeight: 'bold', color: '#f59e0b' }}>{importStats.warningCount + importStats.errorCount} filas</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', paddingTop: 8, borderTop: '1px dashed var(--glass-border)' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>⏱️ Tiempo total:</span>
+                                <span style={{ fontWeight: 'bold', color: 'var(--text-main)', fontFamily: 'Plus Jakarta Sans' }}>{importTimeTaken} segundos</span>
+                            </div>
+                        </div>
+
+                        <button className="glass-button primary" onClick={() => setImportSuccessModalOpen(false)} style={{ width: '100%', padding: '12px' }}>
+                            Cerrar
+                        </button>
                     </div>
                 </div>
             )}

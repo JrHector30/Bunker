@@ -866,7 +866,7 @@ const CashierView = () => {
       <div className="flex-1 flex overflow-hidden">
 
         {/* Core Workspace Panel */}
-        <div className="flex-grow overflow-y-auto px-1 py-3 md:px-3 w-full space-y-3 bg-[#f8fafc]">
+        <div className="flex-grow overflow-y-auto px-1 py-3 md:px-3 w-full space-y-3 bg-[var(--bg-primary)]">
 
           {/* Header toolbar */}
           <div className="flex flex-col md:flex-row mr-10 md:items-center justify-between gap-3 pb-.5" style={{ borderBottom: '1px solid var(--glass-border)' }}>
@@ -965,11 +965,11 @@ const CashierView = () => {
           </div>
 
           {/* Arqueos sessions table list */}
-          <div className="glass-panel overflow-hidden">
+          <div className="glass-panel overflow-hidden" style={{ boxShadow: 'var(--panel-shadow, 0 8px 32px 0 rgba(0, 0, 0, 0.37)), -6px 0 25px -5px rgba(0, 0, 0, 0.3)' }}>
             <div className="p-3 bg-transparent flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" style={{ borderBottom: '1px solid var(--glass-border)', height: '57px', transition: 'none' }} data-selected="true" data-label-id="0">
               <div>
                 <h2 className="text-base font-bold text-[var(--text-main)] font-sans">Historial de Sesiones de Arqueo</h2>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5 font-sans">Auditoría completa de movimientos de caja registrados en el sistema.</p>
+                <p className="text-[12px] text-[var(--text-muted)] mt-0.5 font-sans">Auditoría completa de movimientos de caja registrados en el sistema.</p>
               </div>
 
               {/* Search bar */}
@@ -984,7 +984,7 @@ const CashierView = () => {
                     setSearchQuery(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-52 font-sans bg-white text-slate-700 border border-slate-200 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-hidden focus:border-slate-800 transition-all font-medium"
+                  className="w-52 font-sans bg-[var(--bg-secondary)] text-[var(--text-main)] border border-[var(--glass-border)] pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-hidden focus:border-[var(--primary)] transition-all font-medium"
                 />
                 {searchQuery && (
                   <button
@@ -1000,7 +1000,7 @@ const CashierView = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
-                  <tr className="text-xs font-bold uppercase tracking-widest" style={{ background: 'var(--table-header-bg)', color: 'var(--text-muted)', borderBottom: '1px solid var(--table-row-border)' }}>
+                  <tr className="text-xs font-bold uppercase tracking-widest" style={{ background: 'var(--primary)', color: '#ffffff', borderBottom: '1px solid var(--table-row-border)' }}>
                     <th className="py-2.5 px-4 !text-center w-12">N°</th>
                     <th className="py-2.5 px-4 !text-center w-48">Fechas Sesión</th>
                     <th className="py-2.5 px-4 !text-center">Inicio</th>
@@ -1037,7 +1037,7 @@ const CashierView = () => {
                         <tr
                           key={arq.id}
                           onClick={() => setSelectedArqueoId(arq.id)}
-                          className="transition-colors cursor-pointer group hover:bg-slate-50/60 "
+                          className="transition-colors cursor-pointer group hover:bg-[var(--item-hover)]"
                           style={{
                             borderBottom: '1px solid var(--table-row-border)',
                             background: isSelected ? 'var(--item-hover)' : 'transparent'
@@ -1140,7 +1140,7 @@ const CashierView = () => {
                           </td>
 
                           {/* Total Caja */}
-                          <td className="py-4 px-4 text-[14.5px] font-bold font-sans text-slate-700 !text-center">
+                           <td className="py-4 px-4 text-[14.5px] font-bold font-sans text-[var(--text-main)] !text-center">
                             S/. {(arq.totalCaja || 0).toFixed(2)}
                           </td>
 
@@ -1267,14 +1267,14 @@ const CashierView = () => {
                   </h3>
                   <p className="text-[10px] text-[var(--text-muted)] mt-0.5 font-sans">Control de mesas en salón activo</p>
                 </div>
-                <span className="bg-emerald-50 text-emerald-700 font-sans text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">
+                <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 font-sans text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/30">
                   {openTables.length} activa(s)
                 </span>
               </div>
 
               {/* Total floating pending (MOVED TO TOP) */}
               {/* Total floating pending (MOVED TO TOP) */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-0">
+              <div className="glass-panel p-4 mt-0">
                 <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
                   <span className="font-semibold">Por cobrar en salón:</span>
                   <span className="font-sans font-bold text-sm text-[var(--text-main)]">
@@ -1301,13 +1301,13 @@ const CashierView = () => {
                     return (
                       <div
                         key={cuenta.id}
-                        className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between group"
+                        className="glass-panel p-4 flex flex-col justify-between group hover:border-[var(--primary)] transition-all duration-300 shadow-xs"
                       >
                         <div className="flex justify-between items-start">
                           <span className="text-sm font-bold text-[var(--text-main)] font-sans">
                             Mesa {cuenta.mesa?.numero || ''}
                           </span>
-                          <span className="font-sans text-sm font-bold text-emerald-600 bg-emerald-50/50 px-2 py-0.5 rounded border border-emerald-100">
+                          <span className="font-sans text-sm font-bold text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/10 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/20">
                             S/. {comandaTotal.toFixed(2)}
                           </span>
                         </div>

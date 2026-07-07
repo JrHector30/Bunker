@@ -190,10 +190,15 @@ const WaiterOrderView = () => {
     };
 
     // Filter Products
-    const filteredProducts = products.filter(p => {
+    const activeProducts = products.filter(p => {
+        const cat = categories.find(c => c.id === p.categoriaId);
+        return p.activo && (!cat || cat.activo);
+    });
+
+    const filteredProducts = activeProducts.filter(p => {
         const matchesCategory = selectedCategoryId ? p.categoriaId === selectedCategoryId : true;
         const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesCategory && matchesSearch && p.activo;
+        return matchesCategory && matchesSearch;
     });
 
     const getProductQtyInCart = (prodId) => {
@@ -244,10 +249,10 @@ const WaiterOrderView = () => {
                         >
                             <span style={{ fontSize: '1.5rem' }}>♾️</span>
                             <span style={{ fontWeight: 600 }}>Todas</span>
-                            <span className="text-muted" style={{ fontSize: '0.8rem' }}>{products.length} items</span>
+                            <span className="text-muted" style={{ fontSize: '0.8rem' }}>{activeProducts.length} items</span>
                         </div>
 
-                        {categories.map(cat => (
+                        {categories.filter(cat => cat.activo).map(cat => (
                             <div
                                 key={cat.id}
                                 className={`glass-panel category-card mobile-category-item ${selectedCategoryId === cat.id ? 'active' : ''}`}

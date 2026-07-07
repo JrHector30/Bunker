@@ -245,20 +245,20 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity" onClick={onClose} />
 
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-lg transition-all sm:my-8 sm:w-full sm:max-w-md border border-slate-200">
+        <div className="relative transform overflow-hidden rounded-lg bg-[var(--bg-surface)] text-left shadow-lg transition-all sm:my-8 sm:w-full sm:max-w-md border border-[var(--glass-border)]">
 
           {/* Header */}
-          <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center text-slate-900">
+          <div className="bg-[var(--bg-surface)] border-b border-[var(--glass-border)] px-6 py-4 flex justify-between items-center text-[var(--text-main)]">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-slate-50 text-slate-700 border border-slate-200">
+              <div className="p-1.5 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-main)] border border-[var(--glass-border)]">
                 <Receipt className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900 font-sans">Cierre de Cuenta</h3>
-                <p className="text-[11px] text-slate-400 font-sans">
+                <h3 className="text-base font-bold text-[var(--text-main)] font-sans">Cierre de Cuenta</h3>
+                <p className="text-[11px] text-[var(--text-muted)] font-sans">
                   Mesa {order.mesa?.numero || order.tableNumero || ' '} •  Detalle y Facturación
                 </p>
               </div>
@@ -266,7 +266,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
             <button
               onClick={onClose}
               type="button"
-              className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer p-1 rounded-lg hover:bg-slate-50 border-none"
+              className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer p-1 rounded-lg hover:bg-[var(--bg-secondary)] border-none"
             >
               <X className="w-4 h-4" />
             </button>
@@ -288,20 +288,20 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
             )}
 
             {/* Products review */}
-            <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-200">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 font-sans">Resumen de Consumo</span>
+            <div className="bg-[var(--bg-secondary)] rounded-lg p-3.5 border border-[var(--glass-border)]">
+              <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2 font-sans">Resumen de Consumo</span>
               <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1 font-sans">
                 {order.detalles.map((d, index) => (
                   <div key={index} className="flex justify-between items-center text-xs">
-                    <span className="text-slate-600 truncate max-w-[250px]">
-                      <span className="font-mono font-bold text-slate-400 mr-1.5">{d.cantidad}x</span>
+                    <span className="text-[var(--text-muted)] truncate max-w-[250px]">
+                      <span className="font-mono font-bold text-[var(--text-muted)] mr-1.5">{d.cantidad}x</span>
                       {d.plato.nombre}
                     </span>
-                    <span className="font-mono font-medium text-slate-700">S/. {(d.cantidad * d.plato.precio).toFixed(2)}</span>
+                    <span className="font-mono font-medium text-[var(--text-main)]">S/. {(d.cantidad * d.plato.precio).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-slate-200 mt-2.5 pt-2 flex justify-between items-center text-xs font-bold text-slate-800 font-sans">
+              <div className="border-t border-[var(--glass-border)] mt-2.5 pt-2 flex justify-between items-center text-xs font-bold text-[var(--text-main)] font-sans">
                 <span>Subtotal Consumido:</span>
                 <span className="font-mono text-sm">S/. {subtotal.toFixed(2)}</span>
               </div>
@@ -309,7 +309,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
 
             {/* Payment Method Selector */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2 font-sans">Método de Cobro</label>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2 font-sans">Método de Cobro</label>
               <div className="grid grid-cols-3 gap-2 font-sans">
                 {[
                   { id: 'efectivo', name: 'Efectivo', icon: DollarSign, color: 'text-emerald-500' },
@@ -321,8 +321,8 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                     type="button"
                     onClick={() => setMetodo(item.id)}
                     className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border text-center transition-all cursor-pointer ${metodo === item.id
-                      ? 'bg-slate-900 border-slate-900 text-white font-bold'
-                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                      ? 'bg-[var(--primary)] border-[var(--primary)] text-white font-bold'
+                      : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
                       }`}
                   >
                     <item.icon className={`w-4 h-4 ${metodo === item.id ? 'text-white' : item.color}`} />
@@ -333,15 +333,15 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
             </div>
 
             {/* Detalle de Pago Section */}
-            <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 space-y-3 font-sans">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Detalle de Pago</span>
+            <div className="p-3.5 rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)]/50 space-y-3 font-sans">
+              <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Detalle de Pago</span>
 
               {/* If Efectivo selected */}
               {metodo === 'efectivo' && (
                 <div className="space-y-2">
                   <div className="relative rounded-lg">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                      <span className="text-slate-400 text-xs font-medium">S/.</span>
+                      <span className="text-[var(--text-muted)] text-xs font-medium">S/.</span>
                     </div>
                     <input
                       type="number"
@@ -350,12 +350,12 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                       placeholder={`0.00`}
                       value={montoPagado}
                       onChange={(e) => setMontoPagado(e.target.value)}
-                      className="block w-81 rounded-lg border border-slate-200 py-2 pl-8 pr-3 text-xs focus:outline-hidden focus:border-slate-800 transition-all text-slate-900 font-sans bg-white"
+                      className="block w-full rounded-lg border border-[var(--glass-border)] py-2 pl-8 pr-3 text-xs focus:outline-hidden focus:border-[var(--primary)] transition-all text-[var(--text-main)] font-sans bg-[var(--bg-secondary)]"
                     />
                   </div>
-                  <div className="flex justify-between items-center text-xs font-bold text-slate-700 font-sans pt-1">
+                  <div className="flex justify-between items-center text-xs font-bold text-[var(--text-main)] font-sans pt-1">
                     <span>Vuelto:</span>
-                    <span className={vuelto > 0 ? 'text-emerald-600 text-sm font-mono' : 'text-slate-500 font-mono'}>
+                    <span className={vuelto > 0 ? 'text-emerald-500 text-sm font-mono' : 'text-[var(--text-muted)] font-mono'}>
                       S/. {vuelto.toFixed(2)}
                     </span>
                   </div>
@@ -375,7 +375,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                       onClick={() => setTarjetaProveedor(item.id)}
                       className={`py-2 font-sans px-3 rounded-lg border text-xs font-bold text-center transition-all cursor-pointer ${tarjetaProveedor === item.id
                         ? 'bg-amber-500 border-amber-500 text-white font-bold'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
                         }`}
                     >
                       {item.name}
@@ -397,7 +397,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                       onClick={() => setBilleteraProveedor(item.id)}
                       className={`font-sans py-2 px-3 rounded-lg border text-xs font-bold text-center transition-all cursor-pointer ${billeteraProveedor === item.id
                         ? 'bg-blue-600 border-blue-600 text-white font-bold'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
                         }`}
                     >
                       {item.name}
@@ -409,7 +409,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
 
             {/* Tip (Propinas) Selector */}
             <div>
-              <label className="block text-xs font-semibold tracking-widest text-slate-400 mb-2 font-sans">AGREGAR PROPINA</label>
+              <label className="block text-xs font-semibold tracking-widest text-[var(--text-muted)] mb-2 font-sans">AGREGAR PROPINA</label>
               <div className="grid grid-cols-4 gap-1.5 text-center mb-2 font-sans">
                 {[0, 5, 10, 15].map((pct) => (
                   <button
@@ -420,8 +420,8 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                       setCustomPropina('');
                     }}
                     className={`font-sans py-1.5 rounded-lg border text-xs font-mono transition-all cursor-pointer ${propinaPct === pct
-                      ? 'bg-emerald-50 border-emerald-400 text-emerald-800 font-bold'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 font-bold'
+                      : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
                       }`}
                   >
                     {pct}%
@@ -433,8 +433,8 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                 type="button"
                 onClick={() => setPropinaPct('custom')}
                 className={`w-full py-1.5 px-3 rounded-lg border text-xs text-center transition-all cursor-pointer mb-2 font-sans ${propinaPct === 'custom'
-                  ? 'bg-emerald-50 border-emerald-400 text-emerald-800 font-bold'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 font-bold'
+                  : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
                   }`}
               >
                 Monto Personalizado
@@ -443,7 +443,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
               {propinaPct === 'custom' && (
                 <div className="relative rounded-lg font-sans">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <span className="text-slate-400 text-xs font-medium">S/.</span>
+                    <span className="text-[var(--text-muted)] text-xs font-medium">S/.</span>
                   </div>
                   <input
                     type="number"
@@ -452,20 +452,20 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                     placeholder="Monto de propina"
                     value={customPropina}
                     onChange={(e) => setCustomPropina(e.target.value)}
-                    className="block w-full rounded-lg border border-slate-200 py-1.5 pl-8 pr-3 text-xs focus:outline-hidden focus:border-slate-800 transition-all text-slate-900 font-sans"
+                    className="block w-full rounded-lg border border-[var(--glass-border)] py-1.5 pl-8 pr-3 text-xs focus:outline-hidden focus:border-[var(--primary)] transition-all text-[var(--text-main)] font-sans bg-[var(--bg-secondary)]"
                   />
                 </div>
               )}
 
-              <div className="flex justify-between text-[11px] text-slate-400 mt-1 font-mono">
+              <div className="flex justify-between text-[11px] text-[var(--text-muted)] mt-1 font-mono">
                 <span>Monto propina calculada:</span>
                 <span>S/. {propinaMonto.toFixed(2)}</span>
               </div>
             </div>
 
             {/* Comprobante Section */}
-            <div className="border-t border-slate-600 pt-3.5 space-y-3 font-sans">
-              <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400">Comprobante</label>
+            <div className="border-t border-[var(--glass-border)] pt-3.5 space-y-3 font-sans">
+              <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)]">Comprobante</label>
 
               <div className="grid grid-cols-3 gap-2">
                 {[
@@ -485,8 +485,8 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                       setDireccionFiscal('');
                     }}
                     className={`py-2 px-3 rounded-lg border text-xs font-semibold text-center transition-all cursor-pointer ${comprobanteTipo === item.id
-                      ? 'bg-slate-900 border-slate-900 text-white font-bold'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-[var(--primary)] border-[var(--primary)] text-white font-bold'
+                      : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
                       }`}
                   >
                     {item.name}
@@ -496,7 +496,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
 
               {/* Boleta extra options */}
               {comprobanteTipo === 'Boleta' && (
-                <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="space-y-3 p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--glass-border)]">
                   <div className="flex gap-2">
                     {[
                       { id: 'DNI', name: 'DNI (8 dígitos)' },
@@ -514,8 +514,8 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                           setDireccionFiscal('');
                         }}
                         className={`flex-1 py-1.5 px-2.5 rounded-md border text-xs font-semibold transition-all cursor-pointer ${docTipo === item.id
-                          ? 'bg-slate-700 border-slate-700 text-white font-bold'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                          ? 'bg-[var(--primary)] border-[var(--primary)] text-white font-bold'
+                          : 'bg-[var(--bg-surface)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
                           }`}
                       >
                         {item.name}
@@ -529,29 +529,29 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                       placeholder={`Ingrese ${docTipo}`}
                       value={docNumero}
                       onChange={handleDocNumeroChange}
-                      className={`block w-full rounded-lg border py-2 px-3 text-xs focus:outline-hidden transition-all font-mono text-slate-900 bg-white ${isValidated
-                        ? 'border-emerald-400 bg-emerald-50/20 focus:border-emerald-500'
+                      className={`block w-full rounded-lg border py-2 px-3 text-xs focus:outline-hidden transition-all font-mono text-[var(--text-main)] bg-[var(--bg-surface)] ${isValidated
+                        ? 'border-emerald-400 bg-emerald-500/10 focus:border-emerald-500'
                         : validationError
-                          ? 'border-rose-300 focus:border-rose-500 bg-rose-50/10'
-                          : 'border-slate-200 focus:border-slate-800'
+                          ? 'border-rose-300 focus:border-rose-500 bg-rose-500/5'
+                          : 'border-[var(--glass-border)] focus:border-[var(--primary)]'
                         }`}
                     />
                     {isValidated && (
-                      <span className="absolute right-3 top-2.5 text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                      <span className="absolute right-3 top-2.5 text-[10px] text-emerald-500 font-bold flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5" /> Validado
                       </span>
                     )}
                   </div>
 
                   {razonSocial && (
-                    <div className="p-2 bg-slate-100 border border-slate-200 rounded text-slate-700 text-[11px] space-y-0.5">
+                    <div className="p-2 bg-[var(--bg-secondary)] border border-[var(--glass-border)] rounded text-[var(--text-main)] text-[11px] space-y-0.5">
                       <div className="font-bold">{razonSocial}</div>
-                      {direccionFiscal && <div className="text-slate-500">{direccionFiscal}</div>}
+                      {direccionFiscal && <div className="text-[var(--text-muted)]">{direccionFiscal}</div>}
                     </div>
                   )}
 
                   {validationError && (
-                    <p className="text-[10px] text-rose-600 flex items-center gap-1 font-medium leading-none">
+                    <p className="text-[10px] text-rose-500 flex items-center gap-1 font-medium leading-none">
                       <AlertCircle className="w-3 h-3 shrink-0" /> {validationError}
                     </p>
                   )}
@@ -560,11 +560,11 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                     type="button"
                     onClick={handleValidateDoc}
                     disabled={isValidating || docNumero.length !== getRequiredLength()}
-                    className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold text-white shadow-xs transition-all ${isValidating
-                      ? 'bg-slate-400 cursor-not-allowed'
+                    className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold shadow-xs transition-all ${isValidating
+                      ? 'bg-zinc-500 text-white cursor-not-allowed'
                       : docNumero.length === getRequiredLength()
-                        ? 'bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 cursor-pointer'
-                        : 'bg-slate-300 cursor-not-allowed text-slate-500'
+                        ? 'bg-[var(--primary)] text-white hover:opacity-90 active:opacity-100 cursor-pointer'
+                        : 'bg-[var(--bg-secondary)] border border-[var(--glass-border)] text-[var(--text-muted)] cursor-not-allowed'
                       }`}
                   >
                     {isValidating ? (
@@ -581,8 +581,8 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
 
               {/* Factura RUC option */}
               {comprobanteTipo === 'Factura' && (
-                <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200 font-sans">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">RUC Facturación (11 dígitos)</span>
+                <div className="space-y-3 p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--glass-border)] font-sans">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest block">RUC Facturación (11 dígitos)</span>
 
                   <div className="relative">
                     <input
@@ -590,29 +590,29 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                       placeholder="Ingrese RUC"
                       value={docNumero}
                       onChange={handleDocNumeroChange}
-                      className={`block w-full rounded-lg border py-2 px-3 text-xs focus:outline-hidden transition-all font-mono text-slate-900 bg-white ${isValidated
-                        ? 'border-emerald-400 bg-emerald-50/20 focus:border-emerald-500'
+                      className={`block w-full rounded-lg border py-2 px-3 text-xs focus:outline-hidden transition-all font-mono text-[var(--text-main)] bg-[var(--bg-surface)] ${isValidated
+                        ? 'border-emerald-400 bg-emerald-500/10 focus:border-emerald-500'
                         : validationError
-                          ? 'border-rose-300 focus:border-rose-500 bg-rose-50/10'
-                          : 'border-slate-200 focus:border-slate-800'
+                          ? 'border-rose-350 focus:border-rose-500 bg-rose-500/5'
+                          : 'border-[var(--glass-border)] focus:border-[var(--primary)]'
                         }`}
                     />
                     {isValidated && (
-                      <span className="absolute right-3 top-2.5 text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                      <span className="absolute right-3 top-2.5 text-[10px] text-emerald-500 font-bold flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5" /> Validado
                       </span>
                     )}
                   </div>
 
                   {razonSocial && (
-                    <div className="p-2 bg-slate-100 border border-slate-200 rounded text-slate-700 text-[11px] space-y-0.5">
+                    <div className="p-2 bg-[var(--bg-secondary)] border border-[var(--glass-border)] rounded text-[var(--text-main)] text-[11px] space-y-0.5">
                       <div className="font-bold">{razonSocial}</div>
-                      {direccionFiscal && <div className="text-slate-500">{direccionFiscal}</div>}
+                      {direccionFiscal && <div className="text-[var(--text-muted)]">{direccionFiscal}</div>}
                     </div>
                   )}
 
                   {validationError && (
-                    <p className="text-[10px] text-rose-600 flex items-center gap-1 font-medium leading-none">
+                    <p className="text-[10px] text-rose-500 flex items-center gap-1 font-medium leading-none">
                       <AlertCircle className="w-3 h-3 shrink-0" /> {validationError}
                     </p>
                   )}
@@ -621,11 +621,11 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                     type="button"
                     onClick={handleValidateDoc}
                     disabled={isValidating || docNumero.length !== 11}
-                    className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold text-white shadow-xs transition-all ${isValidating
-                      ? 'bg-slate-400 cursor-not-allowed'
+                    className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold shadow-xs transition-all ${isValidating
+                      ? 'bg-zinc-500 text-white cursor-not-allowed'
                       : docNumero.length === 11
-                        ? 'bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 cursor-pointer'
-                        : 'bg-slate-300 cursor-not-allowed text-slate-500'
+                        ? 'bg-[var(--primary)] text-white hover:opacity-90 active:opacity-100 cursor-pointer'
+                        : 'bg-[var(--bg-secondary)] border border-[var(--glass-border)] text-[var(--text-muted)] cursor-not-allowed'
                       }`}
                   >
                     {isValidating ? (
@@ -642,26 +642,26 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
             </div>
 
             {/* Printable option toggle */}
-            <div className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 bg-slate-50 font-sans">
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)] font-sans">
               <div className="flex items-center gap-2">
-                <Printer className="w-4 h-4 text-slate-500" />
-                <span className="text-xs font-semibold text-slate-700">Imprimir Comprobante</span>
+                <Printer className="w-4 h-4 text-[var(--text-muted)]" />
+                <span className="text-xs font-semibold text-[var(--text-main)]">Imprimir Comprobante</span>
               </div>
               <input
                 type="checkbox"
                 checked={imprimirTicket}
                 onChange={(e) => setImprimirTicket(e.target.checked)}
-                className="w-4 h-4 text-slate-900 border-slate-300 rounded focus:ring-slate-800 cursor-pointer"
+                className="w-4 h-4 accent-[var(--primary)] border-[var(--glass-border)] text-[var(--text-main)] rounded cursor-pointer"
               />
             </div>
 
             {/* Total final display */}
-            <div className="border-t border-slate-200 pt-3 flex justify-between items-center font-sans">
+            <div className="border-t border-[var(--glass-border)] pt-3 flex justify-between items-center font-sans">
               <div>
-                <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Total a Cobrar</span>
-                <span className="text-xs text-slate-500">Subtotal + Propina</span>
+                <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Total a Cobrar</span>
+                <span className="text-xs text-[var(--text-muted)]">Subtotal + Propina</span>
               </div>
-              <span className="text-xl font-bold font-mono text-emerald-600">
+              <span className="text-xl font-bold font-mono text-emerald-500">
                 S/. {totalFinal.toFixed(2)}
               </span>
             </div>
@@ -669,7 +669,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
             {/* Checkout confirmation */}
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 transition-all cursor-pointer shadow-sm mt-2 font-sans"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 transition-all cursor-pointer shadow-xs mt-2 font-sans"
             >
               <span>Confirmar Pago e Imprimir</span>
               <ArrowRight className="w-4 h-4" />

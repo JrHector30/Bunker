@@ -238,7 +238,7 @@ const PedidosAtendidosComponent = ({ waiters, topWaiter }) => {
       </div>
 
       <div
-        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between bg-[var(--bg-secondary)]"
+        className="flex-1 rounded-[24px] p-4 flex flex-col bg-[var(--bg-secondary)]"
         style={{
           border: '1px solid rgb(228 228 231 / 0.5)',
           boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
@@ -298,7 +298,7 @@ const PedidosAtendidosComponent = ({ waiters, topWaiter }) => {
         </div>
 
         {/* Líder del Día widget */}
-        <div className="mt-4 p-3 rounded-2xl border flex items-center justify-between bg-[var(--primary)]/5 border-zinc-200/40">
+        <div className="mt-9 p-3 rounded-2xl border flex items-center justify-between bg-[var(--primary)]/5 border-zinc-200/40">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--primary)]/10 border border-[var(--primary)]/20 text-[var(--primary)]">
               <Sparkles className="w-4 h-4" />

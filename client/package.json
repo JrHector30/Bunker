@@ -9,12 +9,13 @@
     "vercel-build": "vite build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.43.5",
+    "exceljs": "^4.4.0",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.562.0",
     "motion": "^12.40.0",
     "react": "^19.2.0",
-    "@supabase/supabase-js": "^2.43.5",
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0",

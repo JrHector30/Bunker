@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { TrendingUp, BarChart3, CreditCard, DollarSign, Smartphone, Download, HelpCircle } from 'lucide-react';
 
 export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
+  // SVG refs for exporting
+  const chartASvgRef = useRef(null);
+  const chartBSvgRef = useRef(null);
+
   // Take last 8 sessions chronologically for a clean line chart trend
   const lastArqueos = [...arqueos]
     .slice(-8)
@@ -96,56 +100,136 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
 
   const totalMethods = methods.reduce((acc, m) => acc + m.val, 0) || 1;
 
-  // Export functions (visual alerts / success states)
+  // Export helper
   const [exportMessage, setExportMessage] = useState(null);
-  const triggerExport = (chartName) => {
-    setExportMessage(`Gráfico "${chartName}" exportado en formato PNG.`);
-    setTimeout(() => setExportMessage(null), 3000);
+
+  const handleExportChart = (svgRef, filename, titleText, extraDetails = []) => {
+    if (!svgRef.current) return;
+
+    try {
+      // Get SVG content
+      const svgElement = svgRef.current;
+      const svgString = new XMLSerializer().serializeToString(svgElement);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const URL = window.URL || window.webkitURL || window;
+      const blobURL = URL.createObjectURL(svgBlob);
+
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        const svgWidth = svgElement.viewBox?.baseVal?.width || svgElement.clientWidth || 500;
+        const svgHeight = svgElement.viewBox?.baseVal?.height || svgElement.clientHeight || 145;
+
+        const headerHeight = 65;
+        const footerHeight = 45 + (extraDetails.length * 18);
+
+        canvas.width = svgWidth + 40;
+        canvas.height = svgHeight + headerHeight + footerHeight;
+
+        const ctx = canvas.getContext('2d');
+
+        // Fill background
+        ctx.fillStyle = '#18181b'; // Dark color (zinc-900) to keep it high premium
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw title
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillText(titleText, 20, 35);
+
+        // Draw line separator
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(20, 50);
+        ctx.lineTo(canvas.width - 20, 50);
+        ctx.stroke();
+
+        // Draw the SVG image
+        ctx.drawImage(image, 20, headerHeight, svgWidth, svgHeight);
+
+        // Draw details in the footer
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.font = '11px sans-serif';
+        let currentY = headerHeight + svgHeight + 25;
+        extraDetails.forEach(detail => {
+          ctx.fillText(detail, 20, currentY);
+          currentY += 18;
+        });
+
+        // Trigger download
+        const pngURL = canvas.toDataURL('image/png');
+        const downloadLink = document.createElement('a');
+        downloadLink.href = pngURL;
+        downloadLink.download = filename;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(blobURL);
+
+        setExportMessage(`Gráfico "${titleText.split(' - ')[0]}" descargado con éxito.`);
+        setTimeout(() => setExportMessage(null), 3000);
+      };
+
+      image.src = blobURL;
+    } catch (e) {
+      console.error(e);
+      setExportMessage('Error al exportar el gráfico.');
+      setTimeout(() => setExportMessage(null), 3000);
+    }
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       {exportMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-lg shadow-md border border-slate-800 flex items-center space-x-2">
+        <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-lg shadow-md border border-slate-800 flex items-center space-x-2 animate-fade-in no-print">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
           <span>{exportMessage}</span>
         </div>
       )}
 
       {/* Gráfico A: Comparativa Ingresos vs Egresos */}
-      <div id="chart-a" className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col justify-between transition-all">
+      <div id="chart-a" className="glass-panel p-4 flex flex-col justify-between transition-all">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-sans">Análisis Histórico</span>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-1.5 mt-0.5 font-sans">
+            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Análisis Histórico</span>
+            <h3 className="text-base font-bold text-[var(--text-main)] tracking-tight flex items-center gap-1.5 mt-0.5 font-sans">
               <TrendingUp className="w-4 h-4 text-emerald-500" />
               Comparativa de Ingresos vs. Egresos
             </h3>
           </div>
           <button
-            onClick={() => triggerExport('Ingresos vs Egresos')}
-            className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm bg-white transition-colors cursor-pointer font-sans"
+            onClick={() => {
+              const details = [
+                `Historial de arqueos de caja (últimas ${lastArqueos.length} sesiones).`,
+                `Ingreso máximo registrado: S/. ${maxIngreso.toFixed(2)}`,
+                `Egreso máximo registrado: S/. ${maxEgreso.toFixed(2)}`,
+                `Fecha de exportación: ${new Date().toLocaleString()}`
+              ];
+              handleExportChart(chartASvgRef, 'Arqueos_Historial_Ingresos_Egresos.png', 'Comparativa de Ingresos vs. Egresos - ComandaGo', details);
+            }}
+            className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Exportar</span>
+            <Download className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            <span className="text-[var(--text-main)]">Exportar</span>
           </button>
         </div>
 
         {/* Legend */}
-        <div className="flex gap-4 text-xs mb-3 text-slate-500 font-medium font-sans">
+        <div className="flex gap-4 text-xs mb-3 text-[var(--text-muted)] font-medium font-sans">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 block"></span>
             <span>Ingresos (Bruto)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-400 block"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-450 block"></span>
             <span>Egresos</span>
           </div>
         </div>
 
         {/* Dynamic Interactive SVG Chart */}
         <div className="relative flex-1 min-h-[160px] select-none">
-          <svg className="w-full h-full" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet">
+          <svg ref={chartASvgRef} className="w-full h-full" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet">
             <defs>
               <linearGradient id="ingresoGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
@@ -168,7 +252,7 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                     y1={y}
                     x2={chartWidth - padding}
                     y2={y}
-                    stroke="#e2e8f0"
+                    stroke="var(--glass-border)"
                     strokeWidth="1"
                     strokeDasharray="4 4"
                   />
@@ -176,7 +260,8 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                     x={padding - 8}
                     y={y + 4}
                     textAnchor="end"
-                    className="font-mono text-[9px] fill-slate-400"
+                    style={{ fill: 'var(--text-muted)' }}
+                    className="font-mono text-[9px]"
                   >
                     S/. {val}
                   </text>
@@ -221,7 +306,7 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                       y1={padding}
                       x2={p.x}
                       y2={chartHeight - padding}
-                      stroke="#94a3b8"
+                      stroke="var(--text-muted)"
                       strokeWidth="1"
                       strokeDasharray="2 2"
                     />
@@ -280,7 +365,8 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                       x={p.x}
                       y={chartHeight - 12}
                       textAnchor="middle"
-                      className="font-sans text-[10px] fill-slate-500"
+                      style={{ fill: 'var(--text-muted)' }}
+                      className="font-sans text-[10px]"
                     >
                       N° {p.id}
                     </text>
@@ -293,20 +379,20 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
           {/* Floating dynamic HTML tooltip */}
           {tooltipContent && (
             <div
-              className="absolute z-10 bg-slate-900/95 backdrop-blur-xs text-white p-2.5 rounded-lg shadow-xl border border-slate-700/50 pointer-events-none text-xs transform -translate-x-1/2 -translate-y-full font-sans"
+              className="absolute z-10 bg-[var(--bg-surface)] text-[var(--text-main)] p-2.5 rounded-lg shadow-xl border border-[var(--glass-border)] pointer-events-none text-xs transform -translate-x-1/2 -translate-y-full font-sans"
               style={{
                 left: `${(tooltipPos.x / chartWidth) * 100}%`,
                 top: `${(tooltipPos.y / chartHeight) * 100 - 5}%`
               }}
             >
-              <div className="font-bold border-b border-slate-700 pb-1 mb-1">
+              <div className="font-bold border-b border-[var(--glass-border)] pb-1 mb-1">
                 {tooltipContent.label}
               </div>
-              <div className="flex justify-between gap-4 text-emerald-400">
+              <div className="flex justify-between gap-4 text-emerald-500">
                 <span>Ingreso:</span>
                 <span className="font-mono font-bold">S/. {tooltipContent.ingreso.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between gap-4 text-rose-400 mt-0.5">
+              <div className="flex justify-between gap-4 text-rose-500 mt-0.5">
                 <span>Egreso:</span>
                 <span className="font-mono font-bold">S/. {tooltipContent.egreso.toFixed(2)}</span>
               </div>
@@ -314,35 +400,46 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
           )}
         </div>
 
-        <div className="text-[11px] text-slate-400 text-center mt-2 flex items-center justify-center gap-1 font-sans">
+        <div className="text-[11px] text-[var(--text-muted)] text-center mt-2 flex items-center justify-center gap-1 font-sans">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
           <span>Tip: Haz clic en un arqueo para filtrar su desglose de pagos en el panel de distribución</span>
         </div>
       </div>
 
       {/* Gráfico B: Distribución de Métodos de Pago */}
-      <div id="chart-b" className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col justify-between transition-all">
+      <div id="chart-b" className="glass-panel p-4 flex flex-col justify-between transition-all">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-sans">Análisis del Arqueo Seleccionado</span>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-1.5 mt-0.5 font-sans">
+            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Análisis del Arqueo Seleccionado</span>
+            <h3 className="text-base font-bold text-[var(--text-main)] tracking-tight flex items-center gap-1.5 mt-0.5 font-sans">
               <BarChart3 className="w-4 h-4 text-emerald-500" />
               Distribución de Métodos de Pago (Arqueo N° {selectedArqueo.id})
             </h3>
           </div>
           <button
-            onClick={() => triggerExport(`Métodos Pago N° ${selectedArqueo.id}`)}
-            className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm bg-white transition-colors cursor-pointer font-sans"
+            onClick={() => {
+              const details = [
+                `Desglose del Arqueo de Caja N° ${selectedArqueo.id}.`,
+                `Monto Neto Total: S/. ${selectedArqueo.totalBruto.toFixed(2)}`,
+                `Efectivo en caja: S/. ${detailEfectivo.toFixed(2)} (${((detailEfectivo / totalMethods) * 100).toFixed(0)}%)`,
+                `Digital (Yape/Plin): S/. ${detailDigital.toFixed(2)} (${((detailDigital / totalMethods) * 100).toFixed(0)}%)`,
+                `Tarjeta (POS): S/. ${detailTarjeta.toFixed(2)} (${((detailTarjeta / totalMethods) * 100).toFixed(0)}%)`,
+                `Manual/Otros: S/. ${detailManual.toFixed(2)} (${((detailManual / totalMethods) * 100).toFixed(0)}%)`,
+                `Fecha de exportación: ${new Date().toLocaleString()}`
+              ];
+              handleExportChart(chartBSvgRef, `Arqueo_${selectedArqueo.id}_Distribucion_Pagos.png`, `Distribución de Métodos de Pago (Arqueo N° ${selectedArqueo.id}) - ComandaGo`, details);
+            }}
+            className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Exportar</span>
+            <Download className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            <span className="text-[var(--text-main)]">Exportar</span>
           </button>
         </div>
 
         {/* Selection Indicator Banner */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex justify-between items-center text-xs mb-4 font-sans">
-          <span className="text-slate-500">Monto Neto Analizado:</span>
-          <span className="font-sans font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-100">
+        <div className="bg-[var(--bg-secondary)] border border-[var(--glass-border)] rounded-xl px-3 py-2 flex justify-between items-center text-xs mb-4 font-sans">
+          <span className="text-[var(--text-muted)]">Monto Neto Analizado:</span>
+          <span className="font-sans font-bold text-[var(--text-main)] bg-[var(--bg-surface)] px-2 py-0.5 rounded-md border border-[var(--glass-border)]">
             S/. {(selectedArqueo.totalBruto || 0).toFixed(2)}
           </span>
         </div>
@@ -357,22 +454,22 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
               return (
                 <div
                   key={method.name}
-                  className={`p-1.5 rounded-xl border transition-all duration-150 ${isHovered ? 'bg-slate-50 border-slate-200' : 'border-transparent'
+                  className={`p-1.5 rounded-xl border transition-all duration-150 ${isHovered ? 'bg-[var(--item-hover)] border-[var(--glass-border)]' : 'border-transparent'
                     }`}
                   onMouseEnter={() => setHoveredMethod(method.name)}
                   onMouseLeave={() => setHoveredMethod(null)}
                 >
                   <div className="flex justify-between items-center text-xs mb-1">
-                    <div className="flex items-center gap-1.5 text-slate-700 font-medium">
+                    <div className="flex items-center gap-1.5 text-[var(--text-muted)] font-medium">
                       <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: method.color }} />
                       <span>{method.name.split(' ')[0]}</span>
                     </div>
-                    <div className="font-sans font-semibold text-slate-900 font-display">
+                    <div className="font-sans font-semibold text-[var(--text-main)]">
                       S/. {method.val.toFixed(2)}
-                      <span className="text-slate-400 text-[10px] ml-1">({percentage.toFixed(0)}%)</span>
+                      <span className="text-[var(--text-muted)] text-[10px] ml-1">({percentage.toFixed(0)}%)</span>
                     </div>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-[var(--bg-secondary)] rounded-full h-2 overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500 ease-out"
                       style={{
@@ -390,13 +487,13 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
           {/* Interactive Donut Graphic */}
           <div className="col-span-1 sm:col-span-6 flex flex-col items-center justify-center py-2 font-sans">
             <div className="relative w-28 h-28 flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <svg ref={chartBSvgRef} className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                 <circle
                   cx="18"
                   cy="18"
                   r="15.915"
                   fill="transparent"
-                  stroke="#f1f5f9"
+                  stroke="var(--glass-border)"
                   strokeWidth="3.2"
                 />
                 {(() => {
@@ -429,9 +526,9 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                 })()}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-1">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Arqueo</span>
-                <span className="text-sm font-bold text-slate-800">N° {selectedArqueo.id}</span>
-                <span className="text-[9px] text-slate-500 font-mono">
+                <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Arqueo</span>
+                <span className="text-sm font-bold text-[var(--text-main)]">N° {selectedArqueo.id}</span>
+                <span className="text-[9px] text-[var(--text-muted)] font-mono">
                   S/. {(selectedArqueo.totalBruto || 0).toFixed(0)}
                 </span>
               </div>
@@ -442,8 +539,8 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                 <div
                   key={m.name}
                   className={`text-[11px] px-1.5 py-0.5 rounded-full border flex items-center gap-1 font-sans transition-colors ${hoveredMethod === m.name
-                    ? 'bg-slate-50 border-slate-300 font-semibold'
-                    : 'bg-white border-slate-200 text-slate-500'
+                    ? 'bg-[var(--item-hover)] border-[var(--glass-border)] font-semibold text-[var(--text-main)]'
+                    : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)]'
                     }`}
                   style={{ borderColor: hoveredMethod === m.name ? m.color : undefined }}
                 >
