@@ -33,9 +33,10 @@ const OrderCard = React.memo(({ item }) => {
     return Math.floor((Date.now() - start) / 60000 + offset);
   }, [item.fechaCreacion, item.comanda?.fecha, item.id, timeOffsets]);
 
-  // Warning thresholds
-  const isYellow = elapsedMinutes > 10 && elapsedMinutes <= 20;
-  const isRed = elapsedMinutes > 20;
+  // Warning thresholds (only active if not in Listos/ready state)
+  const isFinished = item.estado === 'listo' || item.estado === 'lista';
+  const isYellow = !isFinished && elapsedMinutes > 10 && elapsedMinutes <= 20;
+  const isRed = !isFinished && elapsedMinutes > 20;
 
   // Visual classes and colors
   let timerTextColor = 'text-slate-500 dark:text-slate-400';
