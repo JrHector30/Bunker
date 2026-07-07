@@ -336,6 +336,15 @@ const InventoryView = () => {
             return matchesCategory && matchesSearch;
         });
 
+        const categoryOptions = [
+            { id: '', name: 'Todas las categorías' },
+            ...categories.map(c => ({
+                id: c.id.toString(),
+                name: `${c.icono || ''} ${c.nombre}`.trim()
+            }))
+        ];
+        const selectedCategoryOption = categoryOptions.find(opt => opt.id === filterCategory?.toString()) || categoryOptions[0];
+
         return (
             <>
                 <div className="glass-panel" style={{ marginBottom: 20, display: 'flex', gap: 15, padding: 15, alignItems: 'center', textAlign: 'center' }}>
@@ -347,10 +356,14 @@ const InventoryView = () => {
                         />
                     </div>
                     <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', height: 30 }} />
-                    <select className="glass-input" style={{ width: 200 }} value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
-                        <option value="">Todas las categorías</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.icono} {c.nombre}</option>)}
-                    </select>
+                    <div style={{ width: 220, textAlign: 'left' }}>
+                        <SimpleCombobox
+                            items={categoryOptions}
+                            selectedItem={selectedCategoryOption}
+                            onSelect={(opt) => setFilterCategory(opt ? opt.id : '')}
+                            placeholder="Todas las categorías"
+                        />
+                    </div>
                     <button className="glass-button primary" onClick={() => handleOpenModal()}><Plus size={20} /> Nuevo Plato</button>
                 </div>
 
@@ -589,7 +602,7 @@ const InventoryView = () => {
                                                     </td>
                                                     <td style={{ padding: 15 }} className="text-muted">{insu ? insu.unidadMedida : '-'}</td>
                                                     <td style={{ padding: 15 }}>
-                                                        <input type="number" step="0.01" className="glass-input" style={{ width: 120 }} placeholder="0.00" value={Number.isNaN(item.cantidad) ? '' : item.cantidad} onChange={e => handleIngredientChange(index, 'cantidad', e.target.valueAsNumber)} />
+                                                        <input type="number" step="0.01" className="glass-input font-sans text-xs" style={{ width: 120 }} placeholder="0.00" value={Number.isNaN(item.cantidad) ? '' : item.cantidad} onChange={e => handleIngredientChange(index, 'cantidad', e.target.valueAsNumber)} />
                                                     </td>
                                                     <td style={{ padding: 15 }} className="font-mono">{insu ? `S/. ${subtotal.toFixed(2)}` : '-'}</td>
                                                     <td style={{ padding: 15 }}>
