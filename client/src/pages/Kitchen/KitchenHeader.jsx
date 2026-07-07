@@ -47,7 +47,7 @@ export default function KitchenHeader() {
   // Construct items and selections for the custom SimpleCombobox dropdown
   const comboboxItems = useMemo(() => {
     const arr = [
-      { id: 'TODAS', name: 'TODAS LAS MESAS' }
+      { id: 'TODAS', name: 'Todas las Mesas' }
     ];
     uniqueTables.forEach(t => {
       arr.push({ id: t, name: `Mesa ${t}` });
@@ -91,11 +91,10 @@ export default function KitchenHeader() {
   return (
     <div className="flex flex-col gap-3 select-none">
       {/* 1. COLLAPSIBLE NEUMORPHIC HEADER */}
-      <header className={`flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 md:px-5 md:py-4 rounded-3xl border transition-all duration-300 ${
-        isDarkMode 
-          ? 'bg-[#161B22] border-[#30363D] shadow-2xl shadow-black/40' 
-          : 'bg-white border-slate-200 shadow-md shadow-slate-100/50'
-      }`}>
+      <header className={`flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 md:px-5 md:py-4 rounded-3xl border transition-all duration-300 ${isDarkMode
+        ? 'bg-[#161B22] border-[#30363D] shadow-2xl shadow-black/40'
+        : 'bg-white border-slate-200 shadow-md shadow-slate-100/50'
+        }`}>
         {/* Left Section: Brand Logo */}
         <div className="flex items-center gap-3.5 select-none md:w-1/3 justify-center md:justify-start">
           <div className="w-11 h-11 bg-[var(--primary)] rounded-2xl flex items-center justify-center shadow-lg shadow-[var(--primary)]/20 shrink-0">
@@ -122,19 +121,18 @@ export default function KitchenHeader() {
         {/* Right Section: Time Instruments & Collapser */}
         <div className="flex flex-col sm:flex-row items-center gap-5 justify-center md:justify-end select-none md:w-1/3 py-1">
           <KitchenTimers isCollapsed={!isHeaderExpanded} />
-          
+
           <button
             onClick={onCollapseToggle}
             title={isHeaderExpanded ? "Contraer panel" : "Expandir para configurar temporizador y cronómetro"}
-            className={`font-sans flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-black transition-all duration-200 active:scale-95 cursor-pointer shadow-sm shrink-0 ${
-              isHeaderExpanded
-                ? isDarkMode
-                  ? 'bg-[#1D2433] hover:bg-[#252E40] border-[#3A455C] text-slate-200'
-                  : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-650'
-                : isDarkMode
-                  ? 'bg-[var(--primary)]/20 hover:bg-[var(--primary)]/30 border-[var(--primary)]/30 text-[var(--primary)]'
-                  : 'bg-[var(--primary)]/10 hover:bg-[var(--primary)]/20 border-[var(--primary)]/20 text-[var(--primary)]'
-            }`}
+            className={`font-sans flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-black transition-all duration-200 active:scale-95 cursor-pointer shadow-sm shrink-0 ${isHeaderExpanded
+              ? isDarkMode
+                ? 'bg-[#1D2433] hover:bg-[#252E40] border-[#3A455C] text-slate-200'
+                : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-650'
+              : isDarkMode
+                ? 'bg-[var(--primary)]/20 hover:bg-[var(--primary)]/30 border-[var(--primary)]/30 text-[var(--primary)]'
+                : 'bg-[var(--primary)]/10 hover:bg-[var(--primary)]/20 border-[var(--primary)]/20 text-[var(--primary)]'
+              }`}
           >
             {isHeaderExpanded ? (
               <>
@@ -214,7 +212,7 @@ export default function KitchenHeader() {
                 items={comboboxItems}
                 selectedItem={selectedComboboxItem}
                 onSelect={handleComboboxSelect}
-                placeholder="TODAS LAS MESAS"
+                placeholder="Todas las Mesas"
               />
             </div>
           </div>

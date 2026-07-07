@@ -575,7 +575,7 @@ const TablesView = () => {
             enviada: { bg: 'rgba(0, 0, 255, 0.2)', color: '#4dabf7', icon: '🔵' },
             preparando: { bg: 'var(--warning)', color: '#ffffff', icon: '🟠' },
             lista: { bg: 'rgba(0, 0, 0, 0.05)', color: '#000000ff', icon: '✅' },
-            listo: { bg: 'rgba(0, 0, 0, 0.05)', color: '#000000ff', icon: '✅' },
+            listo: { bg: 'rgba(0, 0, 0, 0.05)', color: '#ffffffff', icon: '✅' },
             entregado: { bg: 'rgba(255, 255, 255, 0.1)', color: '#888', icon: '✅' }
         };
         const s = styles[status] || styles['pendiente'];
@@ -695,7 +695,7 @@ const TablesView = () => {
                                         setShowTransferMode(false);
                                     }}
                                     title="Unir mesas"
-                                    style={{ borderColor: 'var(--success)', backgroundColor: 'var(--success)', color: 'white' }}
+                                    style={{ borderColor: 'var(--success)', backgroundColor: 'var(--success)', color: 'white', fontWeight: 'bold' }}
                                 >
                                     🔗 Unir
                                 </button>
@@ -788,16 +788,16 @@ const TablesView = () => {
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--glass-border)', textAlign: 'left', color: 'var(--text-main)' }}>
-                                            <th style={{ padding: 10 }}>Cant.</th>
-                                            <th style={{ padding: 10 }}>Producto</th>
-                                            <th style={{ padding: 10 }}>Estado</th>
+                                            <th style={{ padding: 10, textAlign: 'center' }}>Cantidad</th>
+                                            <th style={{ padding: 10, textAlign: 'center' }}>Producto</th>
+                                            <th style={{ padding: 10, textAlign: 'center' }}>Estado</th>
                                             <th style={{ padding: 10, textAlign: 'center' }}>Acción</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {groupedItems.map((item) => (
                                             <tr key={item.key} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
-                                                <td style={{ padding: 10, verticalAlign: 'top' }}>
+                                                <td style={{ padding: 10, verticalAlign: 'top', textAlign: 'center' }}>
                                                     <span style={{
                                                         fontWeight: 'bold',
                                                         fontSize: '1.2rem',
@@ -806,7 +806,7 @@ const TablesView = () => {
                                                         {item.cantidad}x
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: 10 }}>
+                                                <td style={{ padding: 10, textAlign: 'center' }}>
                                                     <div style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-main)' }}>
                                                         {item.nombre}
                                                     </div>
@@ -816,12 +816,15 @@ const TablesView = () => {
                                                         </div>
                                                     )}
                                                     {item.cocineroNombre && (
-                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                            <ChefHat size={12} /> {item.cocineroNombre}
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4, textAlign: 'center' }}>
+                                                            <div style={{ width: '100%', textAlign: 'center' }}>
+                                                                <ChefHat size={12} /> {item.cocineroNombre}
+                                                            </div>
+
                                                         </div>
                                                     )}
                                                 </td>
-                                                <td style={{ padding: 10 }}>
+                                                <td style={{ padding: 10, textAlign: 'center' }}>
                                                     {getItemStatusBadge(item.estado)}
                                                 </td>
                                                 <td style={{ padding: 10, textAlign: 'center' }}>

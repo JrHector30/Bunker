@@ -1,0 +1,1920 @@
+[1mReact Doctor[22m [2mv0.7.1[22m
+
+[90m  [39m
+
+  [31m✖[39m [31mAccessibility: Image missing alt text[39m [90m×2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/alt-text[39m
+    Screen reader users cannot access this image without `alt`.
+    Add `alt="image_description"`, or `alt=""` if it is
+    decorative.
+[2m    → Give every meaningful image an `alt`, `aria-label`, or[22m
+[2m    `aria-labelledby`.[22m
+
+[90m    src/pages/InventoryView.jsx:1365[39m
+
+[90m    src/pages/WaiterOrderView.jsx:528[39m
+    [2m┌[22m[2m──────────────────────────────────────────────────────────────[22m[2m┐[22m
+    [2m│[22m [0m [90m 527 |[39m                                 {infoModalProduct[33m.[39mi[0m… [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 528 |[39m                                     [33m<[39m[33mimg[39m src[33m=[39m{infoM[0m… [2m│[22m
+    [2m│[22m  [90m     |[39m                                     [31m[1m^[22m[39m                [2m│[22m
+    [2m│[22m  [90m 529 |[39m                                 ) [33m:[39m ([0m                [2m│[22m
+    [2m└[22m[2m──────────────────────────────────────────────────────────────[22m[2m┘[22m
+
+  [31m✖[39m [31mSecurity: socket/low-supply-chain-score[39m
+    `jspdf@4.0.0 (lowest version "^4.0.0" allows)` scored
+    25/100 on Socket's vulnerability axis (minimum 50). This
+    points to known security vulnerabilities (CVEs) affecting
+    this version. Other axes — supply chain 98, maintenance 83,
+    quality 99, license 100.
+[2m    → Upgrade to a version with no known advisories (run `npm[22m
+[2m    audit` to find one), or replace it; update `"jspdf":[22m
+[2m    "^4.0.0"` in package.json. Full report:[22m
+[2m    https://socket.dev/npm/package/jspdf/overview/4.0.0. If[22m
+[2m    you've reviewed and accepted this package, raise[22m
+[2m    `supplyChain.minScore` (currently 50) or set[22m
+[2m    `supplyChain.severity: "warning"`.[22m
+
+[90m    package.json:14[39m
+    [2m┌[22m[2m──────────────────────────────────────────────────────────────[22m[2m┐[22m
+    [2m│[22m [0m [90m 13 |[39m     [32m"exceljs"[39m[33m:[39m [32m"^4.4.0"[39m[33m,[39m                              [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 14 |[39m     [32m"jspdf"[39m[33m:[39m [32m"^4.0.0"[39m[33m,[39m                                [2m│[22m
+    [2m│[22m  [90m    |[39m     [31m[1m^[22m[39m                                                 [2m│[22m
+    [2m│[22m  [90m 15 |[39m     [32m"jspdf-autotable"[39m[33m:[39m [32m"^5.0.7"[39m[33m,[39m[0m                      [2m│[22m
+    [2m└[22m[2m──────────────────────────────────────────────────────────────[22m[2m┘[22m
+
+  [31m✖[39m [31mAccessibility: react-doctor/require-reduced-motion[39m
+    Project uses a motion library but has no
+    prefers-reduced-motion handling — required for
+    accessibility (WCAG 2.3.3)
+[2m    → Add `useReducedMotion()` from your animation library, or[22m
+[2m    a `@media (prefers-reduced-motion: reduce)` CSS query[22m
+
+[90m    package.json[39m
+
+  [33m⚠[39m [33mPerformance: Component defined inside a component[39m [90m×2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-unstable-nested-components[39m
+    Your users lose this component's state on every render
+    because it's defined inside another component
+    (`CategoriesView`).
+[2m    → Move nested components to module scope so React does not[22m
+[2m    remount them and lose state on every render.[22m
+
+[90m    src/pages/CategoriesView.jsx:134[39m
+
+[90m    src/pages/InventoryView.jsx:103[39m
+
+  [33m⚠[39m [33mBugs: Missing effect dependencies[39m [90m×22[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/exhaustive-deps[39m
+    `useEffect` can run with a stale `colorStops.map, blend,
+    colorStops` & show your users old data.
+[2m    → Don't blindly add missing dependencies. Read the hook[22m
+[2m    callback first.[22m
+[2m    [22m
+[2m    Bad:[22m
+[2m    useEffect(() => {[22m
+[2m      setCount(count + 1);[22m
+[2m    }, [count]);[22m
+[2m    [22m
+[2m    Better:[22m
+[2m    useEffect(() => {[22m
+[2m      setCount((currentCount) => currentCount + 1);[22m
+[2m    }, []);[22m
+[2m    [22m
+[2m    If the missing value is recreated every render, move it[22m
+[2m    inside the hook or stabilize it before adding it to deps.[22m
+
+[90m    src/components/Aurora.jsx:199[39m
+[90m    ↳ oxlint matches plugin rules only by their full name, so `react-hooks/exhaustive-deps` in your eslint-disable comment does not silence `react-doctor/exhaustive-deps` — add `react-doctor/exhaustive-deps` to the comment (e.g. `react-hooks/exhaustive-deps, react-doctor/exhaustive-deps`).[39m
+
+[90m    src/components/DashboardLayout.jsx:71[39m
+
+[90m    src/components/DetailModal.jsx:32[39m
+
+[90m    src/components/PaloteoModal.jsx:32[39m
+
+[90m    src/components/RevealOnScroll.jsx:7[39m
+
+[90m    src/components/SummaryTicketModal.jsx:33[39m
+
+[90m    src/components/ui/Popover.jsx:27[39m
+
+[90m    src/components/ui/Select.jsx:75[39m
+
+[90m    src/context/ThemeContext.jsx:37[39m
+
+[90m    src/hooks/useCache.js:89[39m
+
+[90m    src/pages/CashierView.jsx:188[39m
+
+[90m    src/pages/HomeView.jsx:960[39m
+
+[90m    src/pages/HomeView.jsx:1111[39m
+
+[90m    src/pages/InventoryView.jsx:30[39m
+
+[90m    src/pages/InventoryView.jsx:73[39m
+
+[90m    src/pages/InventoryView.jsx:79[39m
+
+[90m    src/pages/Kitchen/hooks/useKitchenTimers.js:134[39m
+
+[90m    src/pages/LoginPage.jsx:34[39m
+
+[90m    src/pages/SettingsView.jsx:282[39m
+
+[90m    src/pages/SettingsView.jsx:292[39m
+
+[90m    src/pages/StaffStatsView.jsx:37[39m
+
+[90m    src/pages/TablesView.jsx:478[39m
+
+  [33m⚠[39m [33mBugs: Array index used as a key[39m [90m×14[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-array-index-as-key[39m
+    Your users can see & submit the wrong data when this list
+    reorders or filters, so use a stable id like
+    `key={item.id}`, not the array index "index".
+[2m    → Use a stable id from the item, like `key={item.id}` or[22m
+[2m    `key={item.slug}`. Index keys break when the list reorders[22m
+[2m    or filters.[22m
+
+[90m    src/components/CheckoutModal.jsx:295[39m
+
+[90m    src/pages/InventoryView.jsx:971[39m
+
+[90m    src/pages/InventoryView.jsx:1662[39m
+
+[90m    src/pages/LandingView.jsx:177[39m
+
+[90m    src/pages/LandingView.jsx:199[39m
+
+[90m    src/pages/LandingView.jsx:224[39m
+
+[90m    src/pages/LandingView.jsx:258[39m
+
+[90m    src/pages/LandingView.jsx:302[39m
+
+[90m    src/pages/LandingView.jsx:355[39m
+
+[90m    src/pages/SettingsView.jsx:878[39m
+
+[90m    src/pages/SettingsView.jsx:929[39m
+
+[90m    src/pages/StaffStatsView.jsx:186[39m
+
+[90m    src/pages/StaffStatsView.jsx:216[39m
+
+[90m    src/pages/TablesView.jsx:774[39m
+
+  [33m⚠[39m [33mBugs: Time or random value in JSX[39m [90m×8[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/rendering-hydration-mismatch-time[39m
+    This can cause a hydration mismatch because new Date()
+    reached from JSX gives a different value on the server than
+    in the browser. Move it into useEffect+useState to run only
+    in the browser, or add suppressHydrationWarning to the
+    parent if it's on purpose.
+[2m    → Move time or random values into useEffect+useState so[22m
+[2m    they only run in the browser, or add[22m
+[2m    suppressHydrationWarning to the parent if it's intentional[22m
+
+[90m    src/components/SummaryTicketModal.jsx:107[39m
+
+[90m    src/pages/HomeView.jsx:98[39m
+
+[90m    src/pages/HomeView.jsx:609[39m
+
+[90m    src/pages/LandingView.jsx:429[39m
+
+[90m    src/pages/TablesView.jsx:668[39m
+
+[90m    src/pages/TablesView.jsx:990[39m
+
+  [33m⚠[39m [33mAccessibility: Label missing associated control[39m [90m×37[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/label-has-associated-control[39m
+    Screen reader users can't tell which input this label names
+    because it's tied to none, so add `htmlFor` or wrap the
+    input inside it.
+[2m    → Tie every label to a control with `htmlFor`, or by[22m
+[2m    nesting the input.[22m
+
+[90m    src/components/CheckoutModal.jsx:312[39m
+
+[90m    src/components/CheckoutModal.jsx:412[39m
+
+[90m    src/components/CheckoutModal.jsx:468[39m
+
+[90m    src/components/MovimientoModal.jsx:105[39m
+
+[90m    src/components/MovimientoModal.jsx:139[39m
+
+[90m    src/components/MovimientoModal.jsx:167[39m
+
+[90m    src/components/MovimientoModal.jsx:210[39m
+
+[90m    src/components/MovimientoModal.jsx:235[39m
+
+[90m    src/components/PaymentModal.jsx:282[39m
+
+[90m    src/pages/CashierView.jsx:1541[39m
+
+[90m    src/pages/CategoriesView.jsx:226[39m
+
+[90m    src/pages/CategoriesView.jsx:238[39m
+
+[90m    src/pages/CategoriesView.jsx:250[39m
+
+[90m    src/pages/CategoriesView.jsx:269[39m
+
+[90m    src/pages/CategoriesView.jsx:281[39m
+
+[90m    src/pages/InventoryView.jsx:903[39m
+
+[90m    src/pages/InventoryView.jsx:1368[39m
+
+[90m    src/pages/InventoryView.jsx:1373[39m
+
+[90m    src/pages/InventoryView.jsx:1377[39m
+
+[90m    src/pages/InventoryView.jsx:1386-1387[39m
+
+[90m    src/pages/InventoryView.jsx:1409[39m
+
+[90m    src/pages/InventoryView.jsx:1414[39m
+
+[90m    src/pages/InventoryView.jsx:1418[39m
+
+[90m    src/pages/InventoryView.jsx:1430[39m
+
+[90m    src/pages/InventoryView.jsx:1442[39m
+
+[90m    src/pages/InventoryView.jsx:1473[39m
+
+[90m    src/pages/InventoryView.jsx:1481[39m
+
+[90m    src/pages/InventoryView.jsx:1489[39m
+
+[90m    src/pages/InventoryView.jsx:1494[39m
+
+[90m    src/pages/SupportView.jsx:100[39m
+
+[90m    src/pages/SupportView.jsx:110[39m
+
+[90m    src/pages/TablesView.jsx:1241[39m
+
+[90m    src/pages/UsersView.jsx:218[39m
+
+[90m    src/pages/UsersView.jsx:222[39m
+
+[90m    src/pages/UsersView.jsx:229[39m
+
+[90m    src/pages/UsersView.jsx:238[39m
+
+  [33m⚠[39m [33mBugs: Derived state stored in an effect[39m [90m×3[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-derived-state-effect[39m
+    Your users briefly see stale state on every prop change.
+[2m    → Work out derived values while rendering: `const x =[22m
+[2m    fn(dep)`. To reset a component's state when a prop changes,[22m
+[2m    give it a key prop: `<Component key={prop} />`. See[22m
+[2m    https://react.dev/learn/you-might-not-need-an-effect[22m
+
+[90m    src/components/CategorizedCombobox.jsx:39[39m
+
+[90m    src/components/SimpleCombobox.jsx:36[39m
+
+[90m    src/pages/SettingsView.jsx:384[39m
+
+  [33m⚠[39m [33mBugs: Prop derived into useState[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-derived-useState[39m
+    Your users see a stale value when prop "value" changes
+    because useState copies it once.
+[2m    → Compute the value inline so prop changes do not leave[22m
+[2m    `useState` holding a stale copy.[22m
+
+[90m    src/components/DropdownRangeDatePicker.jsx:21[39m
+
+  [33m⚠[39m [33mBugs: Effects chained together[39m [90m×2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-effect-chain[39m
+    Your screen redraws several times from a single action
+    because one useEffect changes "month", which sets off this
+    one.
+[2m    → Compute as much as possible during render (e.g. `const[22m
+[2m    isGameOver = round > 5`) and write all related state inside[22m
+[2m    the event handler that originally fires the chain. Each[22m
+[2m    effect link adds an extra render and makes the code rigid[22m
+[2m    as requirements evolve[22m
+
+[90m    src/components/DropdownRangeDatePicker.jsx:43[39m
+
+[90m    src/pages/InventoryView.jsx:75[39m
+
+  [33m⚠[39m [33mPerformance: Unstable context provider value[39m [90m×8[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/jsx-no-constructed-context-values[39m
+    Every reader of this context redraws on each render because
+    you build its `value` inline.
+[2m    → Wrap the context value in `useMemo` or move it outside[22m
+[2m    the component so consumers do not redraw every render.[22m
+
+[90m    src/components/ui/Popover.jsx:30[39m
+
+[90m    src/components/ui/Select.jsx:31[39m
+
+[90m    src/context/AuthContext.jsx:78[39m
+
+[90m    src/context/CajaContext.jsx:29[39m
+
+[90m    src/context/ConfirmationContext.jsx:55[39m
+
+[90m    src/context/NotificationContext.jsx:35[39m
+
+[90m    src/context/ThemeContext.jsx:54[39m
+
+[90m    src/pages/Kitchen/KitchenContext.jsx:213[39m
+
+  [33m⚠[39m [33mMaintainability: Component rendered by inline function call[39m [90m×7[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-render-in-render[39m
+    "renderHeaderContent()" hides a component behind an inline
+    call, so pull it into its own component and render it as
+    JSX so React can track it.
+[2m    → Make it a named component rendered as JSX so React can[22m
+[2m    track it and preserve its state.[22m
+
+[90m    src/pages/HomeView.jsx:1233[39m
+
+[90m    src/pages/HomeView.jsx:1284[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:306[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:413[39m
+
+[90m    src/pages/TablesView.jsx:1495-1497[39m
+
+  [33m⚠[39m [33mBugs: Hand-rolled external store subscription[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/prefer-use-sync-external-store[39m
+    Your users can see stale or torn values because useState
+    "windowWidth" syncs an outside store through a useEffect.
+[2m    → Replace the `useState(getSnapshot())` + `useEffect(() =>[22m
+[2m    store.subscribe(() => setSnapshot(getSnapshot())))` pair[22m
+[2m    with `useSyncExternalStore(store.subscribe, getSnapshot)`.[22m
+[2m    The hook gets this right during concurrent rendering and on[22m
+[2m    the server; the hand-rolled version doesn't.[22m
+
+[90m    src/pages/Kitchen/KitchenBoard.jsx:24[39m
+
+  [33m⚠[39m [33mPerformance: Heavy library loaded eagerly[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/prefer-dynamic-import[39m
+    "recharts" ships extra code to your users up front & slows
+    page load. Load it on demand with React.lazy() or
+    next/dynamic.
+[2m    → Load it only when needed: `const Component = dynamic(()[22m
+[2m    => import('library'), { ssr: false })` from next/dynamic,[22m
+[2m    or React.lazy().[22m
+
+[90m    src/pages/StaffStatsView.jsx:6[39m
+
+  [33m⚠[39m [33mBugs: Unknown DOM property[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-unknown-property[39m
+    React ignores this prop because it doesn't recognize the
+    name.
+[2m    → Use the prop name React expects, like `className`,[22m
+[2m    `htmlFor`, or `tabIndex`, so the attribute is applied[22m
+[2m    correctly.[22m
+
+[90m    src/pages/TablesView.jsx:1250[39m
+
+  [33m⚠[39m [33mPerformance: setState reads a stale value[39m [90m×2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/rerender-functional-setstate[39m
+    You can lose this update because setDinersCount(dinersCount
+    - ...) reads a stale value.
+[2m    → Use the callback form: `setState(prev => prev + 1)` to[22m
+[2m    always read the latest value[22m
+
+[90m    src/pages/TablesView.jsx:1519[39m
+
+[90m    src/pages/TablesView.jsx:1536[39m
+
+  [33m⚠[39m [33mAccessibility: Control missing accessible label[39m [90m×52[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/control-has-associated-label[39m
+    Blind users can't tell what this control does because
+    screen readers find no label, so add visible text,
+    `aria-label`, or `aria-labelledby`.
+[2m    → Give every interactive control a label screen readers can[22m
+[2m    read.[22m
+
+[90m    src/components/CategorizedCombobox.jsx:153[39m
+
+[90m    src/components/CheckoutModal.jsx:346[39m
+
+[90m    src/components/CheckoutModal.jsx:448[39m
+
+[90m    src/components/CheckoutModal.jsx:527[39m
+
+[90m    src/components/CheckoutModal.jsx:588[39m
+
+[90m    src/components/CheckoutModal.jsx:650[39m
+
+[90m    src/components/MovimientoModal.jsx:144[39m
+
+[90m    src/components/MovimientoModal.jsx:236[39m
+
+[90m    src/components/PaymentModal.jsx:268[39m
+
+[90m    src/components/PaymentModal.jsx:283[39m
+
+[90m    src/components/PaymentModal.jsx:369[39m
+
+[90m    src/components/PaymentModal.jsx:409[39m
+
+[90m    src/components/PaymentModal.jsx:419[39m
+
+[90m    src/components/PermissionsConfig.jsx:120-121[39m
+
+[90m    src/components/SimpleCombobox.jsx:147[39m
+
+[90m    src/context/ConfirmationContext.jsx:92[39m
+
+[90m    src/pages/CashierView.jsx:978[39m
+
+[90m    src/pages/CashierView.jsx:1544[39m
+
+[90m    src/pages/CategoriesView.jsx:185[39m
+
+[90m    src/pages/CategoriesView.jsx:227[39m
+
+[90m    src/pages/CategoriesView.jsx:239[39m
+
+[90m    src/pages/CategoriesView.jsx:252[39m
+
+[90m    src/pages/CategoriesView.jsx:263[39m
+
+[90m    src/pages/CategoriesView.jsx:275[39m
+
+[90m    src/pages/InventoryView.jsx:714[39m
+
+[90m    src/pages/InventoryView.jsx:734[39m
+
+[90m    src/pages/InventoryView.jsx:819[39m
+
+[90m    src/pages/InventoryView.jsx:857[39m
+
+[90m    src/pages/InventoryView.jsx:957[39m
+
+[90m    src/pages/InventoryView.jsx:981-982[39m
+
+[90m    src/pages/InventoryView.jsx:1293[39m
+
+[90m    src/pages/InventoryView.jsx:1369[39m
+
+[90m    src/pages/InventoryView.jsx:1374[39m
+
+[90m    src/pages/InventoryView.jsx:1382[39m
+
+[90m    src/pages/InventoryView.jsx:1387[39m
+
+[90m    src/pages/InventoryView.jsx:1410[39m
+
+[90m    src/pages/InventoryView.jsx:1415[39m
+
+[90m    src/pages/InventoryView.jsx:1431[39m
+
+[90m    src/pages/InventoryView.jsx:1443[39m
+
+[90m    src/pages/InventoryView.jsx:1490[39m
+
+[90m    src/pages/InventoryView.jsx:1495[39m
+
+[90m    src/pages/Kitchen/KitchenHeader.jsx:161[39m
+
+[90m    src/pages/SupportView.jsx:111[39m
+
+[90m    src/pages/TablesView.jsx:1242[39m
+
+[90m    src/pages/UsersView.jsx:146[39m
+
+[90m    src/pages/UsersView.jsx:219[39m
+
+[90m    src/pages/UsersView.jsx:223[39m
+
+[90m    src/pages/UsersView.jsx:239[39m
+
+[90m    src/pages/WaiterOrderView.jsx:226[39m
+
+[90m    src/pages/WaiterOrderView.jsx:442[39m
+
+  [33m⚠[39m [33mAccessibility: outline:none removes focus ring[39m [90m×2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-outline-none[39m
+    Your keyboard users can't tell where they are because
+    outline: none hides the focus ring, so style :focus-visible
+    instead, or add a box-shadow focus ring.
+[2m    → Style `:focus-visible { outline: 2px solid[22m
+[2m    var(--color-accent); outline-offset: 2px }` so the focus[22m
+[2m    ring shows for keyboard users but not mouse clicks.[22m
+
+[90m    src/components/CategorizedCombobox.jsx:163[39m
+
+[90m    src/components/SimpleCombobox.jsx:156[39m
+
+  [33m⚠[39m [33mBugs: Data fetching inside an effect[39m [90m×5[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-fetch-in-effect[39m
+    fetch() inside useEffect can race, double-fire, or leak.
+    Use a data-fetching layer or Server Component instead.
+[2m    → Use a data-fetching layer or Server Component so fetches[22m
+[2m    do not race, double-fire, or leak from `useEffect`.[22m
+
+[90m    src/components/DetailModal.jsx:10[39m
+
+[90m    src/components/PaloteoModal.jsx:10[39m
+
+[90m    src/components/SummaryTicketModal.jsx:11[39m
+
+[90m    src/pages/InventoryView.jsx:634[39m
+
+[90m    src/pages/WaiterOrderView.jsx:34[39m
+
+  [33m⚠[39m [33mBugs: Effect re-subscribes on a changing callback[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/prefer-use-effect-event[39m
+    Your effect re-subscribes whenever "onLayoutChange"
+    changes, even though it's only used inside
+    `addEventListener`.
+[2m    → Wrap the callback with `useEffectEvent(callback)` (React[22m
+[2m    19+) and call it inside the sub-handler. An Effect Event[22m
+[2m    always sees the latest props and state but isn't a[22m
+[2m    dependency, so the effect won't re-subscribe every time the[22m
+[2m    parent redraws. See[22m
+[2m    https://react.dev/reference/react/useEffectEvent[22m
+
+[90m    src/pages/HomeView.jsx:874[39m
+
+  [33m⚠[39m [33mBugs: Multiple setState calls in one effect[39m [90m×4[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-cascading-set-state[39m
+    14 setState calls in one useEffect redraw your screen each
+    time they run together.
+[2m    → Combine related updates in `useReducer` so one effect[22m
+[2m    does not redraw the screen once per `setState` call.[22m
+
+[90m    src/components/CheckoutModal.jsx:41[39m
+
+[90m    src/components/DropdownRangeDatePicker.jsx:27[39m
+
+[90m    src/pages/HomeView.jsx:836[39m
+
+[90m    src/pages/InventoryView.jsx:634[39m
+
+  [33m⚠[39m [33mBugs: Derived value copied into state[39m [90m×8[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-derived-state[39m
+    Storing "month" in state when you can derive it from other
+    values costs an extra render.
+[2m    → Work out the value while rendering (or with useMemo if[22m
+[2m    it's expensive) instead of copying it into useState through[22m
+[2m    a useEffect. See[22m
+[2m    https://react.dev/learn/you-might-not-need-an-effect#updating-state-based-on-props-or-state[22m
+
+[90m    src/components/DropdownRangeDatePicker.jsx:32-37[39m
+
+[90m    src/components/DropdownRangeDatePicker.jsx:44[39m
+
+[90m    src/pages/CashierView.jsx:138[39m
+
+[90m    src/pages/HomeView.jsx:971[39m
+
+[90m    src/pages/StaffStatsView.jsx:36[39m
+
+  [33m⚠[39m [33mPerformance: Full Framer Motion import[39m [90m×14[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/use-lazy-motion[39m
+    Importing "motion" ships about 30 kb of extra code and
+    slows page load. Use "m" with LazyMotion instead.
+[2m    → Use `import { LazyMotion, m } from "framer-motion"` with[22m
+[2m    `domAnimation` features. Saves about 30kb.[22m
+
+[90m    src/components/CategorizedCombobox.jsx:3[39m
+
+[90m    src/components/DashboardLayout.jsx:3[39m
+
+[90m    src/components/SimpleCombobox.jsx:3[39m
+
+[90m    src/components/VoiceAI.jsx:22[39m
+
+[90m    src/components/ui/SmoothDropdown.jsx:2[39m
+
+[90m    src/pages/HomeView.jsx:5[39m
+
+[90m    src/pages/InventoryView.jsx:14[39m
+
+[90m    src/pages/Kitchen/BatchSuggestion.jsx:2[39m
+
+[90m    src/pages/Kitchen/CuriousFactsSlider.jsx:2[39m
+
+[90m    src/pages/Kitchen/KitchenBoard.jsx:3[39m
+
+[90m    src/pages/Kitchen/KitchenColumn.jsx:2[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:2[39m
+
+[90m    src/pages/Kitchen/OrderCard.jsx:10[39m
+
+[90m    src/pages/SupportView.jsx:2[39m
+
+  [33m⚠[39m [33mAccessibility: Interaction on static element[39m [90m×35[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-static-element-interactions[39m
+    Screen reader users can't tell this click handler is
+    interactive because it has no `role`, so add a `role` or
+    use a button or link.
+[2m    → Give clickable static elements a `role`, or use a button[22m
+[2m    or link.[22m
+
+[90m    src/components/CategorizedCombobox.jsx:94[39m
+
+[90m    src/components/CheckoutModal.jsx:248[39m
+
+[90m    src/components/DashboardLayout.jsx:130[39m
+
+[90m    src/components/DashboardLayout.jsx:159[39m
+
+[90m    src/components/DashboardLayout.jsx:211[39m
+
+[90m    src/components/DashboardLayout.jsx:322[39m
+
+[90m    src/components/DashboardLayout.jsx:484[39m
+
+[90m    src/components/DetailModal.jsx:39[39m
+
+[90m    src/components/DetailModal.jsx:74[39m
+
+[90m    src/components/MovimientoModal.jsx:77[39m
+
+[90m    src/components/PaloteoModal.jsx:39[39m
+
+[90m    src/components/PaloteoModal.jsx:69[39m
+
+[90m    src/components/PaymentModal.jsx:182[39m
+
+[90m    src/components/SimpleCombobox.jsx:91[39m
+
+[90m    src/components/SummaryTicketModal.jsx:76[39m
+
+[90m    src/components/ui/Select.jsx:78[39m
+
+[90m    src/pages/CashierView.jsx:1381[39m
+
+[90m    src/pages/CashierView.jsx:1525[39m
+
+[90m    src/pages/HomeView.jsx:890[39m
+
+[90m    src/pages/LandingView.jsx:98[39m
+
+[90m    src/pages/LandingView.jsx:409[39m
+
+[90m    src/pages/LoginPage.jsx:128[39m
+
+[90m    src/pages/LoginPage.jsx:154[39m
+
+[90m    src/pages/SettingsView.jsx:464[39m
+
+[90m    src/pages/SettingsView.jsx:535[39m
+
+[90m    src/pages/SettingsView.jsx:674[39m
+
+[90m    src/pages/TablesView.jsx:662[39m
+
+[90m    src/pages/TablesView.jsx:984[39m
+
+[90m    src/pages/TablesView.jsx:1139[39m
+
+[90m    src/pages/TablesView.jsx:1318[39m
+
+[90m    src/pages/UsersView.jsx:193[39m
+
+[90m    src/pages/WaiterOrderView.jsx:240[39m
+
+[90m    src/pages/WaiterOrderView.jsx:256[39m
+
+[90m    src/pages/WaiterOrderView.jsx:504[39m
+
+[90m    src/pages/WaiterOrderView.jsx:517[39m
+
+  [33m⚠[39m [33mMaintainability: deslop/unused-file[39m
+    Unused file is not reachable from any entry point, so it
+    adds maintenance surface without shipping any code.
+[2m    → Delete the file if it is truly unreachable, or import it[22m
+[2m    from an entry point.[22m
+
+[90m    src/components/PaymentModal.jsx[39m
+
+  [31m✖[39m [31mBugs: State synced to a prop inside an effect[39m [90m×14[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-adjust-state-on-prop-change[39m
+    This effect adjusts state after a prop changes, so users
+    briefly see the stale value.
+[2m    → Adjust the state inline during render with a `prev`-prop[22m
+[2m    comparison (`if (prop !== prevProp) { setPrevProp(prop);[22m
+[2m    setX(...); }`), or refactor to remove the duplicated state.[22m
+[2m    Routing the adjustment through a useEffect forces an extra[22m
+[2m    render with a stale UI between the two commits. See[22m
+[2m    https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes[22m
+[2m    ↳ One fix clears all 14 findings.[22m
+
+[90m    src/components/CheckoutModal.jsx:43-56[39m
+    [2m┌[22m[2m──────────────────────────────────────────────────────────────[22m[2m┐[22m
+    [2m│[22m [0m [90m 42 |[39m     [36mif[39m (isOpen [33m&&[39m order) {                            [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 43 |[39m       setMetodo([32m'efectivo'[39m)[33m;[39m                          [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 44 |[39m       setMontoPagado([32m''[39m)[33m;[39m                             [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 45 |[39m       setTarjetaProveedor([32m'IZIPAY'[39m)[33m;[39m                  [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 46 |[39m       setBilleteraProveedor([32m'Yape'[39m)[33m;[39m                  [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 47 |[39m       setPropinaPct([35m10[39m)[33m;[39m                              [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 48 |[39m       setCustomPropina([32m''[39m)[33m;[39m                           [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 49 |[39m       setImprimirTicket([36mtrue[39m)[33m;[39m                        [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 50 |[39m       setComprobanteTipo([32m'Ticket'[39m)[33m;[39m                   [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 51 |[39m       setDocTipo([32m'DNI'[39m)[33m;[39m                              [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 52 |[39m       setDocNumero([32m''[39m)[33m;[39m                               [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 53 |[39m       setRazonSocial([32m''[39m)[33m;[39m                             [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 54 |[39m       setDireccionFiscal([32m''[39m)[33m;[39m                         [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 55 |[39m       setIsValidated([36mfalse[39m)[33m;[39m                          [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 56 |[39m       setValidationError([32m''[39m)[33m;[39m                         [2m│[22m
+    [2m│[22m  [90m 57 |[39m     }[0m                                                 [2m│[22m
+    [2m└[22m[2m──────────────────────────────────────────────────────────────[22m[2m┘[22m
+
+  [33m⚠[39m [33mAccessibility: Text is too small[39m [90m×12[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-tiny-text[39m
+    Your users strain to read 11.2px text, so use at least 12px
+    for body text, & 16px is best.
+[2m    → Use at least 12px for body text, and 16px is best. Small[22m
+[2m    text is hard to read, especially on phones.[22m
+
+[90m    src/pages/SettingsView.jsx:509[39m
+
+[90m    src/pages/SettingsView.jsx:695[39m
+
+[90m    src/pages/SettingsView.jsx:715[39m
+
+[90m    src/pages/SettingsView.jsx:720[39m
+
+[90m    src/pages/SettingsView.jsx:725[39m
+
+[90m    src/pages/SettingsView.jsx:730[39m
+
+[90m    src/pages/SettingsView.jsx:893[39m
+
+[90m    src/pages/SettingsView.jsx:944[39m
+
+[90m    src/pages/SettingsView.jsx:952[39m
+
+[90m    src/pages/TablesView.jsx:1408[39m
+
+[90m    src/pages/TablesView.jsx:1420[39m
+
+[90m    src/pages/TablesView.jsx:1445[39m
+
+  [33m⚠[39m [33mBugs: Button missing explicit type[39m [90m×193[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/button-has-type[39m
+    Your users can submit the form by accident because a
+    `<button>` with no `type` defaults to submit.
+[2m    → Set an explicit button `type` so plain buttons do not[22m
+[2m    submit forms by accident: `type="button"`, `"submit"`, or[22m
+[2m    `"reset"`.[22m
+
+[90m    src/components/CategorizedCombobox.jsx:271[39m
+
+[90m    src/components/CustomCharts.jsx:201[39m
+
+[90m    src/components/CustomCharts.jsx:419[39m
+
+[90m    src/components/DashboardLayout.jsx:354[39m
+
+[90m    src/components/DashboardLayout.jsx:420[39m
+
+[90m    src/components/DashboardLayout.jsx:440[39m
+
+[90m    src/components/DashboardLayout.jsx:491[39m
+
+[90m    src/components/DetailModal.jsx:90[39m
+
+[90m    src/components/DetailModal.jsx:219[39m
+
+[90m    src/components/HeroCarousel.jsx:56[39m
+
+[90m    src/components/HeroCarousel.jsx:63[39m
+
+[90m    src/components/HeroCarousel.jsx:76[39m
+
+[90m    src/components/MovimientoModal.jsx:93[39m
+
+[90m    src/components/PaloteoModal.jsx:80[39m
+
+[90m    src/components/PaymentModal.jsx:187[39m
+
+[90m    src/components/PaymentModal.jsx:355-357[39m
+
+[90m    src/components/PaymentModal.jsx:378[39m
+
+[90m    src/components/PaymentModal.jsx:430-433[39m
+
+[90m    src/components/PermissionsConfig.jsx:91[39m
+
+[90m    src/components/SimpleCombobox.jsx:209[39m
+
+[90m    src/components/SummaryTicketModal.jsx:88[39m
+
+[90m    src/components/SummaryTicketModal.jsx:197[39m
+
+[90m    src/components/VoiceAI.jsx:522[39m
+
+[90m    src/components/VoiceAI.jsx:546[39m
+
+[90m    src/components/VoiceAI.jsx:570[39m
+
+[90m    src/components/VoiceAI.jsx:589[39m
+
+[90m    src/components/VoiceAI.jsx:659[39m
+
+[90m    src/components/VoiceAI.jsx:665[39m
+
+[90m    src/components/VoiceAI.jsx:671[39m
+
+[90m    src/components/VoiceAI.jsx:677[39m
+
+[90m    src/components/VoiceAI.jsx:683[39m
+
+[90m    src/components/VoiceAI.jsx:694[39m
+
+[90m    src/components/VoiceAI.jsx:701[39m
+
+[90m    src/components/VoiceAI.jsx:711[39m
+
+[90m    src/components/ui/BackButton.jsx:9[39m
+
+[90m    src/context/ConfirmationContext.jsx:104-107[39m
+
+[90m    src/context/NotificationContext.jsx:57[39m
+
+[90m    src/pages/CashierView.jsx:882[39m
+
+[90m    src/pages/CashierView.jsx:897[39m
+
+[90m    src/pages/CashierView.jsx:918[39m
+
+[90m    src/pages/CashierView.jsx:939[39m
+
+[90m    src/pages/CashierView.jsx:948[39m
+
+[90m    src/pages/CashierView.jsx:990[39m
+
+[90m    src/pages/CashierView.jsx:1090[39m
+
+[90m    src/pages/CashierView.jsx:1102[39m
+
+[90m    src/pages/CashierView.jsx:1176[39m
+
+[90m    src/pages/CashierView.jsx:1185[39m
+
+[90m    src/pages/CashierView.jsx:1328[39m
+
+[90m    src/pages/CashierView.jsx:1359[39m
+
+[90m    src/pages/CashierView.jsx:1394[39m
+
+[90m    src/pages/CashierView.jsx:1451[39m
+
+[90m    src/pages/CashierView.jsx:1482[39m
+
+[90m    src/pages/CashierView.jsx:1507[39m
+
+[90m    src/pages/CashierView.jsx:1530[39m
+
+[90m    src/pages/CategoriesView.jsx:157[39m
+
+[90m    src/pages/CategoriesView.jsx:162[39m
+
+[90m    src/pages/CategoriesView.jsx:206-207[39m
+
+[90m    src/pages/CategoriesView.jsx:222[39m
+
+[90m    src/pages/HomeView.jsx:74[39m
+
+[90m    src/pages/HomeView.jsx:235[39m
+
+[90m    src/pages/HomeView.jsx:335[39m
+
+[90m    src/pages/HomeView.jsx:485[39m
+
+[90m    src/pages/HomeView.jsx:561[39m
+
+[90m    src/pages/HomeView.jsx:1204[39m
+
+[90m    src/pages/InventoryView.jsx:728-731[39m
+
+[90m    src/pages/InventoryView.jsx:741[39m
+
+[90m    src/pages/InventoryView.jsx:787-788[39m
+
+[90m    src/pages/InventoryView.jsx:824[39m
+
+[90m    src/pages/InventoryView.jsx:864-865[39m
+
+[90m    src/pages/InventoryView.jsx:940[39m
+
+[90m    src/pages/InventoryView.jsx:986[39m
+
+[90m    src/pages/InventoryView.jsx:997[39m
+
+[90m    src/pages/InventoryView.jsx:1124[39m
+
+[90m    src/pages/InventoryView.jsx:1128[39m
+
+[90m    src/pages/InventoryView.jsx:1180-1182[39m
+
+[90m    src/pages/InventoryView.jsx:1264[39m
+
+[90m    src/pages/InventoryView.jsx:1343[39m
+
+[90m    src/pages/InventoryView.jsx:1360[39m
+
+[90m    src/pages/InventoryView.jsx:1404[39m
+
+[90m    src/pages/InventoryView.jsx:1468[39m
+
+[90m    src/pages/InventoryView.jsx:1516[39m
+
+[90m    src/pages/InventoryView.jsx:1683-1686[39m
+
+[90m    src/pages/InventoryView.jsx:1744[39m
+
+[90m    src/pages/Kitchen/BatchSuggestion.jsx:74[39m
+
+[90m    src/pages/Kitchen/CuriousFactsSlider.jsx:116[39m
+
+[90m    src/pages/Kitchen/CuriousFactsSlider.jsx:141[39m
+
+[90m    src/pages/Kitchen/KitchenBoard.jsx:76[39m
+
+[90m    src/pages/Kitchen/KitchenBoard.jsx:90[39m
+
+[90m    src/pages/Kitchen/KitchenBoard.jsx:104[39m
+
+[90m    src/pages/Kitchen/KitchenBoard.jsx:124[39m
+
+[90m    src/pages/Kitchen/KitchenBoard.jsx:133[39m
+
+[90m    src/pages/Kitchen/KitchenHeader.jsx:126[39m
+
+[90m    src/pages/Kitchen/KitchenHeader.jsx:172[39m
+
+[90m    src/pages/Kitchen/KitchenHeader.jsx:184[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:151[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:174[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:186[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:193[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:242[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:261[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:272[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:333[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:350[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:362[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:369[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:388[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:439[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:468[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:479[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:521[39m
+
+[90m    src/pages/Kitchen/OrderCard.jsx:211[39m
+
+[90m    src/pages/Kitchen/OrderCard.jsx:228[39m
+
+[90m    src/pages/Kitchen/OrderCard.jsx:239[39m
+
+[90m    src/pages/LandingView.jsx:112[39m
+
+[90m    src/pages/LandingView.jsx:250-251[39m
+
+[90m    src/pages/LandingView.jsx:357[39m
+
+[90m    src/pages/LandingView.jsx:431[39m
+
+[90m    src/pages/LoginPage.jsx:210[39m
+
+[90m    src/pages/LoginPage.jsx:227[39m
+
+[90m    src/pages/LoginPage.jsx:240[39m
+
+[90m    src/pages/LoginPage.jsx:256[39m
+
+[90m    src/pages/LoginPage.jsx:270[39m
+
+[90m    src/pages/SettingsView.jsx:444[39m
+
+[90m    src/pages/SettingsView.jsx:592[39m
+
+[90m    src/pages/SettingsView.jsx:739[39m
+
+[90m    src/pages/SettingsView.jsx:757[39m
+
+[90m    src/pages/SettingsView.jsx:799[39m
+
+[90m    src/pages/SettingsView.jsx:840[39m
+
+[90m    src/pages/SettingsView.jsx:897[39m
+
+[90m    src/pages/SettingsView.jsx:965[39m
+
+[90m    src/pages/SettingsView.jsx:986[39m
+
+[90m    src/pages/SettingsView.jsx:1008[39m
+
+[90m    src/pages/SettingsView.jsx:1048[39m
+
+[90m    src/pages/SettingsView.jsx:1055[39m
+
+[90m    src/pages/StaffStatsView.jsx:123[39m
+
+[90m    src/pages/StaffStatsView.jsx:141[39m
+
+[90m    src/pages/TablesView.jsx:673[39m
+
+[90m    src/pages/TablesView.jsx:691[39m
+
+[90m    src/pages/TablesView.jsx:703[39m
+
+[90m    src/pages/TablesView.jsx:716[39m
+
+[90m    src/pages/TablesView.jsx:741[39m
+
+[90m    src/pages/TablesView.jsx:830[39m
+
+[90m    src/pages/TablesView.jsx:838[39m
+
+[90m    src/pages/TablesView.jsx:847[39m
+
+[90m    src/pages/TablesView.jsx:872[39m
+
+[90m    src/pages/TablesView.jsx:895[39m
+
+[90m    src/pages/TablesView.jsx:939-941[39m
+
+[90m    src/pages/TablesView.jsx:1034[39m
+
+[90m    src/pages/TablesView.jsx:1143[39m
+
+[90m    src/pages/TablesView.jsx:1150[39m
+
+[90m    src/pages/TablesView.jsx:1169[39m
+
+[90m    src/pages/TablesView.jsx:1173[39m
+
+[90m    src/pages/TablesView.jsx:1216[39m
+
+[90m    src/pages/TablesView.jsx:1275[39m
+
+[90m    src/pages/TablesView.jsx:1433-1436[39m
+
+[90m    src/pages/TablesView.jsx:1462[39m
+
+[90m    src/pages/TablesView.jsx:1471[39m
+
+[90m    src/pages/TablesView.jsx:1517[39m
+
+[90m    src/pages/TablesView.jsx:1534[39m
+
+[90m    src/pages/TablesView.jsx:1553[39m
+
+[90m    src/pages/TablesView.jsx:1558[39m
+
+[90m    src/pages/UsersView.jsx:132[39m
+
+[90m    src/pages/UsersView.jsx:137[39m
+
+[90m    src/pages/UsersView.jsx:180-183[39m
+
+[90m    src/pages/UsersView.jsx:197[39m
+
+[90m    src/pages/WaiterOrderView.jsx:221[39m
+
+[90m    src/pages/WaiterOrderView.jsx:297[39m
+
+[90m    src/pages/WaiterOrderView.jsx:336[39m
+
+[90m    src/pages/WaiterOrderView.jsx:359[39m
+
+[90m    src/pages/WaiterOrderView.jsx:368[39m
+
+[90m    src/pages/WaiterOrderView.jsx:390[39m
+
+[90m    src/pages/WaiterOrderView.jsx:412[39m
+
+[90m    src/pages/WaiterOrderView.jsx:417[39m
+
+[90m    src/pages/WaiterOrderView.jsx:425[39m
+
+[90m    src/pages/WaiterOrderView.jsx:433[39m
+
+[90m    src/pages/WaiterOrderView.jsx:473[39m
+
+[90m    src/pages/WaiterOrderView.jsx:485[39m
+
+[90m    src/pages/WaiterOrderView.jsx:521[39m
+
+[90m    src/views/NotFoundView.jsx:41[39m
+
+  [33m⚠[39m [33mPerformance: State only used in handlers[39m [90m×11[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/rerender-state-only-in-handlers[39m
+    Each update to "micPermissionGranted" redraws your
+    component for nothing because this useState is set but
+    never shown on screen.
+[2m    → Use useRef instead of useState when the value is only set[22m
+[2m    and never shown on screen. `ref.current = ...` updates it[22m
+[2m    without redrawing the component.[22m
+
+[90m    src/components/VoiceAI.jsx:39[39m
+
+[90m    src/pages/CashierView.jsx:67[39m
+
+[90m    src/pages/CashierView.jsx:79[39m
+
+[90m    src/pages/HomeView.jsx:815-816[39m
+
+[90m    src/pages/HomeView.jsx:1031-1034[39m
+
+[90m    src/pages/InventoryView.jsx:131[39m
+
+[90m    src/pages/StaffStatsView.jsx:21[39m
+
+[90m    src/pages/TablesView.jsx:52-53[39m
+
+  [33m⚠[39m [33mBugs: State updates chained through effects[39m [90m×9[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-chain-state-updates[39m
+    Chaining state updates triggers an extra render each step.
+[2m    → Set all the related state together in the event handler[22m
+[2m    that starts it, instead of having one useEffect react to a[22m
+[2m    state change and set more state. See[22m
+[2m    https://react.dev/learn/you-might-not-need-an-effect#chains-of-computations[22m
+
+[90m    src/components/CategorizedCombobox.jsx:40[39m
+
+[90m    src/components/DropdownRangeDatePicker.jsx:44[39m
+
+[90m    src/components/SimpleCombobox.jsx:37[39m
+
+[90m    src/pages/CashierView.jsx:136[39m
+
+[90m    src/pages/HomeView.jsx:973[39m
+
+[90m    src/pages/InventoryView.jsx:644-647[39m
+
+[90m    src/pages/TablesView.jsx:79[39m
+
+  [33m⚠[39m [33mBugs: Event logic handled in an effect[39m [90m×21[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-event-handler[39m
+    Faking an event handler with a prop plus a useEffect costs
+    an extra render & runs late.
+[2m    → Run the side effect in the event handler that triggers[22m
+[2m    it, instead of watching its state from a useEffect. See[22m
+[2m    https://react.dev/learn/you-might-not-need-an-effect#sharing-logic-between-event-handlers[22m
+
+[90m    src/components/CheckoutModal.jsx:42[39m
+
+[90m    src/components/DetailModal.jsx:11[39m
+
+[90m    src/components/DropdownRangeDatePicker.jsx:34[39m
+
+[90m    src/components/PaloteoModal.jsx:11[39m
+
+[90m    src/components/SummaryTicketModal.jsx:12[39m
+
+[90m    src/pages/CashierView.jsx:121[39m
+
+[90m    src/pages/CashierView.jsx:137[39m
+
+[90m    src/pages/InventoryView.jsx:27[39m
+
+[90m    src/pages/InventoryView.jsx:70[39m
+
+[90m    src/pages/InventoryView.jsx:78[39m
+
+[90m    src/pages/Kitchen/KitchenContext.jsx:98-101[39m
+
+[90m    src/pages/LoginPage.jsx:31[39m
+
+[90m    src/pages/TablesView.jsx:72[39m
+
+  [33m⚠[39m [33mPerformance: Animating layout properties[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-layout-transition-inline[39m
+    Your users see janky, stuttering animation because "width"
+    relayouts the page every frame, so animate transform &
+    opacity instead.
+[2m    → Animate `transform` and `opacity` instead, since they're[22m
+[2m    cheap for the browser. For height, animate[22m
+[2m    `grid-template-rows` from `0fr` to `1fr`.[22m
+
+[90m    src/pages/InventoryView.jsx:859[39m
+
+  [33m⚠[39m [33mAccessibility: Click handler missing keyboard handler[39m [90m×32[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/click-events-have-key-events[39m
+    Keyboard users can't trigger this click handler because
+    there's no keyboard one, so add `onKeyUp`, `onKeyDown`, or
+    `onKeyPress`.
+[2m    → Pair `onClick` with a key handler so keyboard users can[22m
+[2m    trigger it.[22m
+
+[90m    src/components/CheckoutModal.jsx:248[39m
+
+[90m    src/components/DashboardLayout.jsx:130[39m
+
+[90m    src/components/DashboardLayout.jsx:159[39m
+
+[90m    src/components/DashboardLayout.jsx:211[39m
+
+[90m    src/components/DashboardLayout.jsx:322[39m
+
+[90m    src/components/DashboardLayout.jsx:484[39m
+
+[90m    src/components/DetailModal.jsx:39[39m
+
+[90m    src/components/DetailModal.jsx:74[39m
+
+[90m    src/components/MovimientoModal.jsx:77[39m
+
+[90m    src/components/PaloteoModal.jsx:39[39m
+
+[90m    src/components/PaloteoModal.jsx:69[39m
+
+[90m    src/components/PaymentModal.jsx:182[39m
+
+[90m    src/components/SummaryTicketModal.jsx:76[39m
+
+[90m    src/components/ui/Select.jsx:78[39m
+
+[90m    src/pages/CashierView.jsx:1381[39m
+
+[90m    src/pages/CashierView.jsx:1525[39m
+
+[90m    src/pages/LandingView.jsx:98[39m
+
+[90m    src/pages/LandingView.jsx:409[39m
+
+[90m    src/pages/LoginPage.jsx:128[39m
+
+[90m    src/pages/LoginPage.jsx:154[39m
+
+[90m    src/pages/SettingsView.jsx:464[39m
+
+[90m    src/pages/SettingsView.jsx:535[39m
+
+[90m    src/pages/SettingsView.jsx:674[39m
+
+[90m    src/pages/TablesView.jsx:662[39m
+
+[90m    src/pages/TablesView.jsx:984[39m
+
+[90m    src/pages/TablesView.jsx:1139[39m
+
+[90m    src/pages/TablesView.jsx:1318[39m
+
+[90m    src/pages/UsersView.jsx:193[39m
+
+[90m    src/pages/WaiterOrderView.jsx:240[39m
+
+[90m    src/pages/WaiterOrderView.jsx:256[39m
+
+[90m    src/pages/WaiterOrderView.jsx:504[39m
+
+[90m    src/pages/WaiterOrderView.jsx:517[39m
+
+  [33m⚠[39m [33mBugs: State initialized from a mount effect[39m [90m×2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-initialize-state[39m
+    Your users see an extra render with empty "isSidebarDocked"
+    because a useEffect sets its starting value.
+[2m    → Pass the initial value directly to useState() instead of[22m
+[2m    setting it from a mount-only useEffect. For SSR hydration,[22m
+[2m    prefer useSyncExternalStore().[22m
+
+[90m    src/pages/CashierView.jsx:91[39m
+
+[90m    src/pages/HomeView.jsx:958[39m
+
+  [33m⚠[39m [33mPerformance: Empty default prop breaks memo[39m [90m×4[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/rerender-memo-with-default-value[39m
+    This keeps redrawing children that compare props because
+    default prop value {} makes a brand new object every
+    render, so move it to a constant at the top of the file
+[2m    → Move it to the top of the file: `const EMPTY_ITEMS:[22m
+[2m    Item[] = []`, then use that as the default value[22m
+
+[90m    src/pages/HomeView.jsx:54[39m
+
+[90m    src/pages/HomeView.jsx:412[39m
+
+[90m    src/pages/HomeView.jsx:416-417[39m
+
+  [31m✖[39m [31mBugs: Component defined inside another component[39m [90m×2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-nested-component-definition[39m
+    Your users lose all state in "SortHeader" on every render
+    because it's defined inside "CategoriesView", so move it
+    out to the top of the file.
+[2m    → Move it to module scope or a separate file so React does[22m
+[2m    not recreate the component and erase its state on every[22m
+[2m    parent render.[22m
+
+[90m    src/pages/CategoriesView.jsx:134[39m
+    [2m┌[22m[2m──────────────────────────────────────────────────────────────[22m[2m┐[22m
+    [2m│[22m [0m [90m 133 |[39m                                                      [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 134 |[39m     [36mconst[39m [33mSortHeader[39m [33m=[39m ({ label[33m,[39m sortKey }) [33m=>[39m {     [2m│[22m
+    [2m│[22m  [90m     |[39m           [31m[1m^[22m[39m                                          [2m│[22m
+    [2m│[22m  [90m 135 |[39m         [36mconst[39m isActive [33m=[39m sortConfig[33m.[39mkey [33m===[39m sortKey[33m;[39m[0m [2m│[22m
+    [2m└[22m[2m──────────────────────────────────────────────────────────────[22m[2m┘[22m
+
+[90m    src/pages/InventoryView.jsx:103[39m
+    [2m┌[22m[2m──────────────────────────────────────────────────────────────[22m[2m┐[22m
+    [2m│[22m [0m [90m 102 |[39m                                                      [2m│[22m
+    [2m│[22m [31m[1m>[22m[39m[90m 103 |[39m     [36mconst[39m [33mSortHeader[39m [33m=[39m ({ label[33m,[39m sortKey }) [33m=>[39m {     [2m│[22m
+    [2m│[22m  [90m     |[39m           [31m[1m^[22m[39m                                          [2m│[22m
+    [2m│[22m  [90m 104 |[39m         [36mconst[39m isActive [33m=[39m sortConfig[33m.[39mkey [33m===[39m sortKey[33m;[39m[0m [2m│[22m
+    [2m└[22m[2m──────────────────────────────────────────────────────────────[22m[2m┘[22m
+
+  [33m⚠[39m [33mBugs: Effect used as an event handler[39m [90m×3[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-effect-event-handler[39m
+    This useEffect is simulating an event handler, which costs
+    an extra render & runs late.
+[2m    → Move event logic into the handler that starts it so the[22m
+[2m    side effect does not run late after an extra render.[22m
+
+[90m    src/components/DetailModal.jsx:10[39m
+
+[90m    src/components/PaloteoModal.jsx:10[39m
+
+[90m    src/components/SummaryTicketModal.jsx:11[39m
+
+  [33m⚠[39m [33mPerformance: State initializer runs on every render[39m [90m×4[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/rerender-lazy-state-init[39m
+    useState(getMonth()) re-runs getMonth() on every render &
+    throws the result away.
+[2m    → Wrap expensive initial state in an arrow function so the[22m
+[2m    initializer does not rerun and get thrown away on every[22m
+[2m    render.[22m
+
+[90m    src/components/DropdownRangeDatePicker.jsx:22-23[39m
+
+[90m    src/pages/Kitchen/KitchenClock.jsx:8[39m
+
+[90m    src/pages/SettingsView.jsx:33[39m
+
+  [33m⚠[39m [33mMaintainability: Static value rebuilt every render[39m [90m×19[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/prefer-module-scope-static-value[39m
+    `menuItems` inside `DashboardLayout` uses no local state
+    but is rebuilt every render, so it looks new each time &
+    breaks memoized children. Move it to the top of the file,
+    outside the component.
+[2m    → Move the value above the component, at the top of the[22m
+[2m    file. It doesn't use local state, so rebuilding it each[22m
+[2m    update is wasted and makes it look new every time.[22m
+
+[90m    src/components/DashboardLayout.jsx:82[39m
+
+[90m    src/components/PermissionsConfig.jsx:10[39m
+
+[90m    src/components/PermissionsConfig.jsx:20[39m
+
+[90m    src/components/RevealOnScroll.jsx:31[39m
+
+[90m    src/components/ui/Button.jsx:13[39m
+
+[90m    src/components/ui/Button.jsx:19[39m
+
+[90m    src/components/ui/Calendar.jsx:19[39m
+
+[90m    src/context/ThemeContext.jsx:7[39m
+
+[90m    src/pages/LandingView.jsx:15[39m
+
+[90m    src/pages/LandingView.jsx:33[39m
+
+[90m    src/pages/LandingView.jsx:40[39m
+
+[90m    src/pages/LandingView.jsx:49[39m
+
+[90m    src/pages/LandingView.jsx:55[39m
+
+[90m    src/pages/LandingView.jsx:68[39m
+
+[90m    src/pages/LandingView.jsx:74[39m
+
+[90m    src/pages/LandingView.jsx:80[39m
+
+[90m    src/pages/SettingsView.jsx:398[39m
+
+[90m    src/pages/StaffStatsView.jsx:114-117[39m
+
+  [33m⚠[39m [33mPerformance: Ref initializer runs on every render[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/rerender-lazy-ref-init[39m
+    useRef(new AlarmSoundPlayer()) rebuilds this value on every
+    render & throws it away.
+[2m    → Initialize the ref lazily so expensive values are not[22m
+[2m    rebuilt and discarded on every render.[22m
+
+[90m    src/pages/Kitchen/hooks/useKitchenTimers.js:68[39m
+
+  [33m⚠[39m [33mPerformance: transition: all animates everything[39m [90m×13[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-transition-all[39m
+    This can stutter because transition: "all" animates every
+    property, even slow layout ones, so list only the
+    properties you actually change
+[2m    → List the specific properties: `transition: "opacity[22m
+[2m    200ms, transform 200ms"`. In Tailwind, use[22m
+[2m    `transition-colors`, `transition-opacity`, or[22m
+[2m    `transition-transform`[22m
+
+[90m    src/pages/LoginPage.jsx:283[39m
+
+[90m    src/pages/SettingsView.jsx:605[39m
+
+[90m    src/pages/SettingsView.jsx:671[39m
+
+[90m    src/pages/SettingsView.jsx:811[39m
+
+[90m    src/pages/SettingsView.jsx:852[39m
+
+[90m    src/pages/SettingsView.jsx:1019[39m
+
+[90m    src/pages/SettingsView.jsx:1035[39m
+
+[90m    src/pages/TablesView.jsx:1238[39m
+
+[90m    src/pages/TablesView.jsx:1394[39m
+
+[90m    src/pages/TablesView.jsx:1527[39m
+
+[90m    src/pages/TablesView.jsx:1544[39m
+
+[90m    src/pages/WaiterOrderView.jsx:245[39m
+
+[90m    src/pages/WaiterOrderView.jsx:263[39m
+
+  [33m⚠[39m [33mAccessibility: Autofocus on an element[39m [90m×4[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-autofocus[39m
+    `autoFocus` moves focus on load, which can disrupt screen
+    reader and keyboard users. Remove it and let users choose
+    where to focus.
+[2m    → Do not use `autoFocus`. It disorients users on load.[22m
+
+[90m    src/components/CategorizedCombobox.jsx:165[39m
+
+[90m    src/components/SimpleCombobox.jsx:158[39m
+
+[90m    src/context/ConfirmationContext.jsx:99[39m
+
+[90m    src/pages/CashierView.jsx:1555[39m
+
+  [33m⚠[39m [33mPerformance: Large animated blur[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-large-animated-blur[39m
+    Large animated blurs can use significant GPU memory on
+    phones because blur(15px) gets heavier as the blur and
+    element grow. Use a smaller blur or a smaller element.
+[2m    → Keep the blur under 10px, or blur a smaller element. Big[22m
+[2m    blurs use a lot more GPU memory as the element grows[22m
+
+[90m    src/components/DashboardLayout.jsx:485[39m
+
+  [33m⚠[39m [33mPerformance: Permanent will-change wastes GPU[39m [90m×2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-permanent-will-change[39m
+    This wastes GPU memory because will-change is left on all
+    the time, so add it right before the animation & remove it
+    when the animation ends
+[2m    → Add will-change when the animation starts[22m
+[2m    (`onMouseEnter`) and remove it when it ends[22m
+[2m    (`onAnimationEnd`). Leaving it on all the time wastes GPU[22m
+[2m    memory and can slow things down[22m
+
+[90m    src/components/ui/SmoothDropdown.jsx:83[39m
+
+[90m    src/components/ui/SmoothDropdown.jsx:104[39m
+
+  [33m⚠[39m [33mPerformance: Spread copy before sort()[39m [90m×7[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/js-tosorted-immutable[39m
+    This wastes work because [...array].sort() copies the array
+    just to sort it, so use array.toSorted() to sort without
+    the extra copy (ES2023)
+[2m    → Use `array.toSorted()` (ES2023) instead of[22m
+[2m    `[...array].sort()` so you sort without copying the array[22m
+[2m    first[22m
+
+[90m    src/pages/CashierView.jsx:364[39m
+
+[90m    src/pages/CashierView.jsx:708[39m
+
+[90m    src/pages/CategoriesView.jsx:110[39m
+
+[90m    src/pages/HomeView.jsx:1162[39m
+
+[90m    src/pages/InventoryView.jsx:92[39m
+
+[90m    src/pages/InventoryView.jsx:1246[39m
+
+[90m    src/pages/TablesView.jsx:177[39m
+
+  [33m⚠[39m [33mMaintainability: Large inline style object rebuilds every render[39m [90m×55[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-inline-exhaustive-style[39m
+    This inline style has 9 properties, which is hard to read &
+    rebuilds every render. Move it to a CSS class, CSS module,
+    or styled component.
+[2m    → Move the styles to a CSS class, CSS module, Tailwind[22m
+[2m    utilities, or a styled component. Big inline objects are[22m
+[2m    hard to read and rebuild on every update.[22m
+
+[90m    src/components/PaymentModal.jsx:194[39m
+
+[90m    src/context/NotificationContext.jsx:38[39m
+
+[90m    src/pages/InventoryView.jsx:711[39m
+
+[90m    src/pages/InventoryView.jsx:778[39m
+
+[90m    src/pages/InventoryView.jsx:928[39m
+
+[90m    src/pages/InventoryView.jsx:1364[39m
+
+[90m    src/pages/InventoryView.jsx:1378[39m
+
+[90m    src/pages/InventoryView.jsx:1508[39m
+
+[90m    src/pages/InventoryView.jsx:1710[39m
+
+[90m    src/pages/InventoryView.jsx:1715[39m
+
+[90m    src/pages/InventoryView.jsx:1725[39m
+
+[90m    src/pages/LoginPage.jsx:87[39m
+
+[90m    src/pages/LoginPage.jsx:100[39m
+
+[90m    src/pages/LoginPage.jsx:115[39m
+
+[90m    src/pages/LoginPage.jsx:130[39m
+
+[90m    src/pages/LoginPage.jsx:137[39m
+
+[90m    src/pages/LoginPage.jsx:152[39m
+
+[90m    src/pages/LoginPage.jsx:164[39m
+
+[90m    src/pages/LoginPage.jsx:186[39m
+
+[90m    src/pages/LoginPage.jsx:213[39m
+
+[90m    src/pages/LoginPage.jsx:229[39m
+
+[90m    src/pages/LoginPage.jsx:242[39m
+
+[90m    src/pages/LoginPage.jsx:258[39m
+
+[90m    src/pages/LoginPage.jsx:274[39m
+
+[90m    src/pages/SettingsView.jsx:467[39m
+
+[90m    src/pages/SettingsView.jsx:502[39m
+
+[90m    src/pages/SettingsView.jsx:547[39m
+
+[90m    src/pages/SettingsView.jsx:596[39m
+
+[90m    src/pages/SettingsView.jsx:730[39m
+
+[90m    src/pages/SettingsView.jsx:742[39m
+
+[90m    src/pages/SettingsView.jsx:760[39m
+
+[90m    src/pages/SettingsView.jsx:802[39m
+
+[90m    src/pages/SettingsView.jsx:843[39m
+
+[90m    src/pages/SettingsView.jsx:900[39m
+
+[90m    src/pages/SettingsView.jsx:969[39m
+
+[90m    src/pages/SettingsView.jsx:1010[39m
+
+[90m    src/pages/SettingsView.jsx:1029[39m
+
+[90m    src/pages/TablesView.jsx:583[39m
+
+[90m    src/pages/TablesView.jsx:1189[39m
+
+[90m    src/pages/TablesView.jsx:1230[39m
+
+[90m    src/pages/TablesView.jsx:1330[39m
+
+[90m    src/pages/TablesView.jsx:1383[39m
+
+[90m    src/pages/TablesView.jsx:1439[39m
+
+[90m    src/pages/UsersView.jsx:168[39m
+
+[90m    src/pages/UsersView.jsx:203[39m
+
+[90m    src/pages/WaiterOrderView.jsx:239-242[39m
+
+[90m    src/pages/WaiterOrderView.jsx:259[39m
+
+[90m    src/pages/WaiterOrderView.jsx:289[39m
+
+[90m    src/pages/WaiterOrderView.jsx:303[39m
+
+[90m    src/pages/WaiterOrderView.jsx:412[39m
+
+[90m    src/pages/WaiterOrderView.jsx:417[39m
+
+[90m    src/pages/WaiterOrderView.jsx:475[39m
+
+[90m    src/pages/WaiterOrderView.jsx:492[39m
+
+[90m    src/pages/WaiterOrderView.jsx:507[39m
+
+  [33m⚠[39m [33mMaintainability: Pure function rebuilt every render[39m [90m×34[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/prefer-module-scope-pure-function[39m
+    `getAreaPath` inside `CustomCharts` uses no local state but
+    is rebuilt on every render, so it wastes work & breaks
+    memoized children. Move it to the top of the file, outside
+    the component.
+[2m    → Move the function above the component, at the top of the[22m
+[2m    file. It doesn't use local state, so rebuilding it each[22m
+[2m    update is wasted work.[22m
+
+[90m    src/components/CustomCharts.jsx:54[39m
+
+[90m    src/components/CustomCharts.jsx:69[39m
+
+[90m    src/components/DashboardLayout.jsx:98[39m
+
+[90m    src/components/DetailModal.jsx:53[39m
+
+[90m    src/components/DropdownRangeDatePicker.jsx:49[39m
+
+[90m    src/components/SummaryTicketModal.jsx:37[39m
+
+[90m    src/components/SummaryTicketModal.jsx:47[39m
+
+[90m    src/pages/CashierView.jsx:294[39m
+
+[90m    src/pages/CashierView.jsx:362[39m
+
+[90m    src/pages/CategoriesView.jsx:12[39m
+
+[90m    src/pages/HomeView.jsx:322[39m
+
+[90m    src/pages/InventoryView.jsx:38-41[39m
+
+[90m    src/pages/InventoryView.jsx:139[39m
+
+[90m    src/pages/InventoryView.jsx:150[39m
+
+[90m    src/pages/Kitchen/KitchenClock.jsx:17[39m
+
+[90m    src/pages/Kitchen/KitchenClock.jsx:29[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:33[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:43[39m
+
+[90m    src/pages/Kitchen/OrderCard.jsx:79[39m
+
+[90m    src/pages/LoginPage.jsx:19[39m
+
+[90m    src/pages/TablesView.jsx:16[39m
+
+[90m    src/pages/TablesView.jsx:83[39m
+
+[90m    src/pages/TablesView.jsx:363[39m
+
+[90m    src/pages/TablesView.jsx:371[39m
+
+[90m    src/pages/TablesView.jsx:480[39m
+
+[90m    src/pages/TablesView.jsx:572[39m
+
+[90m    src/pages/TablesView.jsx:630[39m
+
+[90m    src/pages/UsersView.jsx:12[39m
+
+[90m    src/pages/UsersView.jsx:119[39m
+
+[90m    src/pages/WaiterOrderView.jsx:17-18[39m
+
+  [33m⚠[39m [33mMaintainability: deslop/unused-dependency[39m
+    Unused dependency: `@supabase/supabase-js`
+[2m    → An unused dependency adds install time and supply-chain[22m
+[2m    surface without being used; remove it from package.json if[22m
+[2m    it is genuinely unused.[22m
+
+  [33m⚠[39m [33mMaintainability: Large component is hard to read and change[39m [90m×15[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-giant-component[39m
+    Component "CategorizedCombobox" is 366 lines long, which is
+    hard to read & change. Split it into a few smaller
+    components.
+[2m    → Pull each section into its own component so the parent is[22m
+[2m    easier to read, test, and change.[22m
+
+[90m    src/components/CategorizedCombobox.jsx:5[39m
+
+[90m    src/components/CheckoutModal.jsx:7[39m
+
+[90m    src/components/CustomCharts.jsx:4[39m
+
+[90m    src/components/DashboardLayout.jsx:34[39m
+
+[90m    src/components/PaymentModal.jsx:7[39m
+
+[90m    src/components/VoiceAI.jsx:24[39m
+
+[90m    src/pages/CashierView.jsx:36[39m
+
+[90m    src/pages/HomeView.jsx:407[39m
+
+[90m    src/pages/HomeView.jsx:916[39m
+
+[90m    src/pages/InventoryView.jsx:16[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:7[39m
+
+[90m    src/pages/LandingView.jsx:27[39m
+
+[90m    src/pages/SettingsView.jsx:10[39m
+
+[90m    src/pages/TablesView.jsx:12[39m
+
+[90m    src/pages/WaiterOrderView.jsx:9[39m
+
+  [33m⚠[39m [33mBugs: Unversioned localStorage key[39m [90m×6[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/client-localstorage-no-version[39m
+    localStorage.setItem("tables", JSON.stringify(...)) has no
+    version, so changing the data shape later crashes your
+    users' saved sessions. Add one to the key (e.g.
+    "tables:v1").
+[2m    → Put a version in the storage key (e.g. "myKey:v1"). If[22m
+[2m    you change the data shape later, old saved data can be[22m
+[2m    ignored instead of crashing the app.[22m
+
+[90m    src/components/CheckoutModal.jsx:187[39m
+
+[90m    src/components/PaymentModal.jsx:110[39m
+
+[90m    src/context/AuthContext.jsx:53[39m
+
+[90m    src/pages/HomeView.jsx:980[39m
+
+[90m    src/pages/HomeView.jsx:1010[39m
+
+[90m    src/pages/WaiterOrderView.jsx:125[39m
+
+  [33m⚠[39m [33mPerformance: Chained array iterations[39m [90m×4[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/js-combine-iterations[39m
+    This loops over your list twice because .filter().map()
+    makes two passes, so do it in one pass with .reduce() or a
+    for...of loop
+[2m    → Combine `.map().filter()` style chains into one pass with[22m
+[2m    `.reduce()` or a `for...of` loop, so you only loop over the[22m
+[2m    list once[22m
+
+[90m    src/components/PermissionsConfig.jsx:56[39m
+
+[90m    src/pages/Kitchen/hooks/useKitchenBatch.js:54[39m
+
+[90m    src/pages/TablesView.jsx:738[39m
+
+[90m    src/pages/WaiterOrderView.jsx:255[39m
+
+  [33m⚠[39m [33mMaintainability: React 19 API migration can break callers[39m [90m×8[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-react19-deprecated-apis[39m
+    useContext is replaced by `use()` in React 19, which reads
+    context inside ifs & loops too, so switch to `import { use
+    } from 'react'`.
+[2m    → Pass `ref` as a normal prop on function components, since[22m
+[2m    `forwardRef` isn't needed in React 19. Replace[22m
+[2m    `useContext(X)` with `use(X)`. Only runs on React 19+[22m
+[2m    projects.[22m
+
+[90m    src/components/ui/Popover.jsx:1[39m
+
+[90m    src/components/ui/Select.jsx:1[39m
+
+[90m    src/context/AuthContext.jsx:1[39m
+
+[90m    src/context/CajaContext.jsx:1[39m
+
+[90m    src/context/ConfirmationContext.jsx:1[39m
+
+[90m    src/context/NotificationContext.jsx:1[39m
+
+[90m    src/context/ThemeContext.jsx:1[39m
+
+[90m    src/pages/Kitchen/KitchenContext.jsx:1[39m
+
+  [33m⚠[39m [33mBugs: Many related useState calls[39m [90m×5[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/prefer-useReducer[39m
+    "CheckoutModal" updates 14 separate useState values in one
+    place — state that changes together is easier to keep
+    consistent as a single useReducer action.
+[2m    → Group state that always changes together into[22m
+[2m    `useReducer` so one dispatched action describes the whole[22m
+[2m    transition instead of a list of setter calls.[22m
+
+[90m    src/components/CheckoutModal.jsx:7[39m
+
+[90m    src/components/MovimientoModal.jsx:4[39m
+
+[90m    src/components/VoiceAI.jsx:24[39m
+
+[90m    src/pages/InventoryView.jsx:16[39m
+
+[90m    src/pages/TablesView.jsx:12[39m
+
+  [33m⚠[39m [33mMaintainability: Multiple components in one file[39m [90m×2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-multi-comp[39m
+    This file declares several components, so each component is
+    harder to find, test, and change.
+[2m    → Move secondary components into their own files so each[22m
+[2m    component stays easier to find, test, and change.[22m
+
+[90m    src/components/ui/Popover.jsx:38[39m
+
+[90m    src/components/ui/Popover.jsx:60[39m
+
+  [33m⚠[39m [33mPerformance: Bouncy easing animation[39m [90m×7[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-inline-bounce-easing[39m
+    Your users see a dated, tacky animate-bounce, so use a
+    subtle ease-out transform for a smoother finish.
+[2m    → Use `cubic-bezier(0.16, 1, 0.3, 1)` (ease-out-expo) for a[22m
+[2m    natural finish. Real objects don't bounce.[22m
+
+[90m    src/pages/CashierView.jsx:1265[39m
+
+[90m    src/pages/CashierView.jsx:1389[39m
+
+[90m    src/pages/Kitchen/KitchenHeader.jsx:146[39m
+
+[90m    src/pages/Kitchen/KitchenTimers.jsx:362[39m
+
+[90m    src/pages/Kitchen/OrderCard.jsx:134[39m
+
+[90m    src/pages/LandingView.jsx:133[39m
+
+[90m    src/pages/LandingView.jsx:450[39m
+
+  [33m⚠[39m [33mPerformance: Animating scale from zero[39m [90m×5[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-scale-from-zero[39m
+    This looks abrupt to your users because scale: 0 pops the
+    element in from a single point, so use scale: 0.95 with
+    opacity: 0 for a smoother entrance
+[2m    → Use `initial={{ scale: 0.95, opacity: 0 }}`. Elements[22m
+[2m    should gently shrink and fade, not vanish into a point[22m
+
+[90m    src/pages/InventoryView.jsx:1541[39m
+
+[90m    src/pages/InventoryView.jsx:1568[39m
+
+[90m    src/pages/InventoryView.jsx:1595[39m
+
+[90m    src/pages/InventoryView.jsx:1628[39m
+
+[90m    src/pages/InventoryView.jsx:1712[39m
+
+
+[2m  ────────────────────────────────────────────────────────────[22m
+
+  [1mAll 732 issues[22m
+
+  [1mSecurity[22m [2m›[22m [31m1 error[39m
+  [1mBugs[22m [2m›[22m [31m16 errors[39m[2m, [22m[33m[2m309 warnings[22m[39m
+  [1mPerformance[22m [2m›[22m [33m[2m87 warnings[22m[39m
+  [1mAccessibility[22m [2m›[22m [31m3 errors[39m[2m, [22m[33m[2m174 warnings[22m[39m
+  [1mMaintainability[22m [2m›[22m [33m[2m142 warnings[22m[39m
+
+  [31m┌─────┐[39m  [31m0[39m [2m/ 100[22m [31mCritical[39m
+  [31m│ x x │[39m  [31m[39m[2m[31m▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓[39m[22m[2m░░░░░░░░░░░░░░░░░░░░░░░░░░░░[22m
+  [31m│  ▽  │[39m  React Doctor [2m(https://react.doctor)[22m
+  [31m└─────┘[39m
+
+[90m  You could improve [39m[31m+44%[39m[90m by fixing the top 3 issues[39m
+[90m  Full diagnostics written to C:\Users\JrHector\AppData\Local\Temp\react-doctor-94399d2e-8bba-4d5c-b5ed-14040706d962[39m
+
+[2m  ────────────────────────────────────────────────────────────[22m
+
+  [1mShare:[22m [36mhttps://react.doctor/share?p=client&s=0&e=20&w=712&f=53[39m
+[2m  Tell others how you did on socials[22m
+
+  [1mDocs:[22m [36mhttps://react.doctor/docs[39m
+[2m  Learn more about fixing issues, setting up CI/CD, and[22m
+[2m  configuring rules with a config file[22m
+
+  [1mGitHub:[22m [36mhttps://github.com/millionco/react-doctor[39m
+[2m  Report issues and star the repository![22m
+

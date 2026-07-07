@@ -1140,7 +1140,7 @@ const CashierView = () => {
                           </td>
 
                           {/* Total Caja */}
-                           <td className="py-4 px-4 text-[14.5px] font-bold font-sans text-[var(--text-main)] !text-center">
+                          <td className="py-4 px-4 text-[14.5px] font-bold font-sans text-[var(--text-main)] !text-center">
                             S/. {(arq.totalCaja || 0).toFixed(2)}
                           </td>
 
@@ -1267,7 +1267,7 @@ const CashierView = () => {
                   </h3>
                   <p className="text-[10px] text-[var(--text-muted)] mt-0.5 font-sans">Control de mesas en salón activo</p>
                 </div>
-                <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 font-sans text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/30">
+                <span className="dark:bg-black dark:text-emerald-400 font-sans text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/30">
                   {openTables.length} activa(s)
                 </span>
               </div>

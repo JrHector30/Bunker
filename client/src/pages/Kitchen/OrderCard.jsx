@@ -39,7 +39,7 @@ const OrderCard = React.memo(({ item }) => {
   const isRed = !isFinished && elapsedMinutes > 20;
 
   // Visual classes and colors
-  let timerTextColor = 'text-slate-500 dark:text-slate-400';
+  let timerTextColor = 'text-slate-500 dark:text-white';
   let timerBgColor = 'bg-slate-100 dark:bg-slate-900/60';
   let pulseBorder = false;
 
@@ -131,7 +131,7 @@ const OrderCard = React.memo(({ item }) => {
     >
       {/* Floating Critical Alert Badge */}
       {isRed && (
-        <div 
+        <div
           style={{ position: 'absolute', top: '-8px', right: '-8px', zIndex: 20 }}
           className="bg-red-500 text-white text-[10px] font-semibold px-2.5 py-0.5 rounded-full shadow-md select-none uppercase tracking-wider animate-bounce"
         >
@@ -238,11 +238,10 @@ const OrderCard = React.memo(({ item }) => {
               {item.estado === 'preparando' && (
                 <button
                   onClick={() => updateItemStatus(item.id, 'listo')}
-                  className={`border-none h-8 px-3.5 rounded-full flex items-center justify-center gap-1 active:scale-95 text-white font-black text-[10px] tracking-wide transition-all cursor-pointer shadow-md uppercase ${
-                    isRed 
-                      ? 'bg-orange-600 hover:bg-orange-550' 
-                      : 'bg-[var(--primary)] hover:bg-[var(--primary)]/90'
-                  }`}
+                  className={`border-none h-8 px-3.5 rounded-full flex items-center justify-center gap-1 active:scale-95 text-white font-black text-[10px] tracking-wide transition-all cursor-pointer shadow-md uppercase ${isRed
+                    ? 'bg-orange-600 hover:bg-orange-550'
+                    : 'bg-[var(--primary)] hover:bg-[var(--primary)]/90'
+                    }`}
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3px]" />
                   <span>{isRed ? 'URGENTE: LISTO' : 'LISTO'}</span>
@@ -250,11 +249,10 @@ const OrderCard = React.memo(({ item }) => {
               )}
 
               {(item.estado === 'lista' || item.estado === 'listo') && (
-                <span className={`h-8 px-3 rounded-full flex items-center gap-1 font-extrabold text-[10px] tracking-wider select-none uppercase transition-colors duration-250 ${
-                  isDarkMode 
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                    : 'bg-[#0ed396] text-white hover:bg-[#0bb37f]'
-                }`}>
+                <span className={`h-8 px-3 rounded-full flex items-center gap-1 font-extrabold text-[10px] tracking-wider select-none uppercase transition-colors duration-250 ${isDarkMode
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-[#0ed396] text-white hover:bg-[#0bb37f]'
+                  }`}>
                   <Check className="w-3.5 h-3.5 stroke-[3px]" />
                   <span>LISTO</span>
                 </span>
