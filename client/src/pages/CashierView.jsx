@@ -18,6 +18,8 @@ import { useCache } from '../hooks/useCache';
 import { useCaja } from '../context/CajaContext';
 
 import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
+import DeleteButton from '../components/ui/DeleteButton';
+import CloseButton from '../components/ui/CloseButton';
 import { CustomCharts } from '../components/CustomCharts';
 import { CheckoutModal } from '../components/CheckoutModal';
 import { MovimientoModal } from '../components/MovimientoModal';
@@ -1325,7 +1327,7 @@ const CashierView = () => {
                         </div>
 
                         <div className="flex items-center gap-2 mt-4 font-sans">
-                          <button
+                          <DeleteButton
                             onClick={async () => {
                               const motivo = await showConfirmation("Motivo de Anulación", {
                                 message: "Por favor, detalle la razón por la cual se está cancelando la comanda total:",
@@ -1352,10 +1354,8 @@ const CashierView = () => {
                               }
                             }}
                             title="Anular Pedido Total"
-                            className="glass-button p-2 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 cursor-pointer"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                            className="scale-75 -my-2 -mx-1"
+                          />
                           <button
                             onClick={() => handleOpenCheckout(cuenta)}
                             className="glass-button primary flex-1 py-2 px-3 text-[13px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
@@ -1391,9 +1391,7 @@ const CashierView = () => {
                     </h3>
                     <p className="text-[10px] text-[var(--text-muted)] font-sans">Control de mesas en salón activo</p>
                   </div>
-                  <button onClick={() => setIsSidebarOpen(false)} className="text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer">
-                    <X className="w-5 h-5" />
-                  </button>
+                  <CloseButton onClick={() => setIsSidebarOpen(false)} className="scale-90" />
                 </div>
 
                 {/* Total floating pending (MOVED TO TOP) */}
@@ -1448,7 +1446,7 @@ const CashierView = () => {
                           </div>
 
                           <div className="flex items-center gap-2 mt-4 font-sans">
-                            <button
+                            <DeleteButton
                               onClick={async () => {
                                 const motivo = await showConfirmation("Motivo de Anulación", {
                                   message: "Por favor, detalle la razón por la cual se está cancelando la comanda total:",
@@ -1475,10 +1473,9 @@ const CashierView = () => {
                                   console.error(e);
                                 }
                               }}
-                              className="glass-button p-2 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 cursor-pointer"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
+                              title="Anular Pedido Total"
+                              className="scale-75 -my-2 -mx-1"
+                            />
                             <button
                               onClick={() => {
                                 handleOpenCheckout(cuenta);
@@ -1527,9 +1524,7 @@ const CashierView = () => {
               <div className="glass-panel relative transform overflow-hidden text-left shadow-xl transition-all w-full max-w-sm font-sans" style={{ background: 'var(--bg-surface)' }}>
                 <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: '1px solid var(--glass-border)' }}>
                   <h3 className="text-base font-bold text-[var(--text-main)] font-sans">Apertura de Caja</h3>
-                  <button onClick={() => setShowInitialAmountModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer">
-                    <X className="w-5 h-5" />
-                  </button>
+                  <CloseButton onClick={() => setShowInitialAmountModal(false)} className="scale-90" />
                 </div>
                 <form onSubmit={confirmOpenShift} className="p-6 space-y-4">
                   {formError && (

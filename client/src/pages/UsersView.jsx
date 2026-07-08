@@ -4,6 +4,9 @@ import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, Search, X, User, Save, Upload, ArrowLeft } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
+import DeleteButton from '../components/ui/DeleteButton';
+import EditButton from '../components/ui/EditButton';
+import CloseButton from '../components/ui/CloseButton';
 
 const UsersView = () => {
     const { showConfirmation } = useConfirmation();
@@ -176,13 +179,9 @@ const UsersView = () => {
                             <div className="text-muted">@{user.usuario}</div>
                         </div>
 
-                        <div style={{ padding: 15, background: 'rgba(0,0,0,0.2)', display: 'flex', gap: 10, justifyContent: 'center' }}>
-                            <button className="glass-button" onClick={() => handleOpenModal(user)}>
-                                <Edit size={16} /> Editar
-                            </button>
-                            <button className="glass-button" style={{ color: 'var(--danger)', borderColor: 'transparent' }} onClick={() => handleDelete(user.id)}>
-                                <Trash2 size={16} />
-                            </button>
+                        <div style={{ padding: 15, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
+                            <EditButton onClick={() => handleOpenModal(user)} className="scale-75 -my-2 -mx-1" />
+                            <DeleteButton onClick={() => handleDelete(user.id)} className="scale-75 -my-2 -mx-1" />
                         </div>
                     </div>
                 ))}
@@ -194,7 +193,7 @@ const UsersView = () => {
                     <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: 500 }}>
                         <div className="modal-header">
                             <h2>{editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
-                            <button className="glass-button" onClick={() => setShowModal(false)}><X size={20} /></button>
+                            <CloseButton onClick={() => setShowModal(false)} className="scale-90" />
                         </div>
                         <form onSubmit={handleSubmit} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
 

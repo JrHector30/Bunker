@@ -8,6 +8,8 @@ import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 import { useCaja } from '../context/CajaContext';
 import { enqueueTicket } from '../utils/printer';
+import DeleteButton from '../components/ui/DeleteButton';
+import CloseButton from '../components/ui/CloseButton';
 
 const TablesView = () => {
     const { showConfirmation } = useConfirmation();
@@ -700,9 +702,7 @@ const TablesView = () => {
                                     🔗 Unir
                                 </button>
                             )}
-                            <button className="glass-button" style={{ padding: 5 }} onClick={closeModal}>
-                                <X size={20} />
-                            </button>
+                            <CloseButton onClick={closeModal} className="scale-90" />
                         </div>
                     </div>
 
@@ -847,13 +847,10 @@ const TablesView = () => {
                                                                 ✓ Listo
                                                             </button>
                                                         ) : (
-                                                            <button
-                                                                className="glass-button"
-                                                                style={{ color: 'var(--danger)', padding: 5, borderColor: 'transparent' }}
+                                                            <DeleteButton
                                                                 onClick={() => deleteItem(item.detailIds[0])}
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
+                                                                className="scale-75 -my-2 -mx-1"
+                                                            />
                                                         )}
                                                     </div>
                                                 </td>
@@ -1143,9 +1140,7 @@ const TablesView = () => {
                 <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, width: '90%' }}>
                     <div className="modal-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '15px' }}>
                         <h2 style={{ color: 'var(--text-main)', margin: 0 }}>🔗 Selecciona las mesas a unir:</h2>
-                        <button className="glass-button" style={{ padding: 5 }} onClick={handleCancel}>
-                            <X size={20} />
-                        </button>
+                        <CloseButton onClick={handleCancel} className="scale-90" />
                     </div>
                     <div className="modal-body" style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 15 }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 10, maxHeight: '350px', overflowY: 'auto', paddingRight: '5px' }}>

@@ -2135,3 +2135,209 @@ body {
   width: 100%;
   height: 100%;
 }
+
+/* From Uiverse.io */
+.checkbox-container {
+  display: inline-block;
+  position: relative;
+  padding-left: 35px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  user-select: none;
+}
+
+.custom-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: #eee;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 9px;
+  top: 5px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}
+
+.custom-checkbox:checked~.checkmark {
+  background-color: #2196F3;
+  box-shadow: 0 3px 7px rgba(33, 150, 243, 0.3);
+}
+
+.custom-checkbox:checked~.checkmark:after {
+  display: block;
+}
+
+@keyframes checkAnim {
+  0% {
+    height: 0;
+  }
+
+  100% {
+    height: 10px;
+  }
+}
+
+.custom-checkbox:checked~.checkmark:after {
+  animation: checkAnim 0.2s forwards;
+}
+
+/* CloseButton Namespaced Styles */
+.close-button-container {
+  display: inline-block;
+  vertical-align: middle;
+}
+.close-button-container .button {
+  position: relative;
+  width: 2.2em;
+  height: 2.2em;
+  border: none;
+  background: rgba(180, 83, 107, 0.11);
+  border-radius: 5px;
+  transition: background 0.5s;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.close-button-container .X {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.2em;
+  height: 1.5px;
+  background-color: rgb(255, 255, 255);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.close-button-container .Y {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.2em;
+  height: 1.5px;
+  background-color: #fff;
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+.close-button-container .close {
+  position: absolute;
+  display: flex;
+  padding: 0.4rem 0.8rem;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+  top: -110%;
+  left: 50%;
+  width: 4em;
+  height: 1.7em;
+  font-size: 10px;
+  background-color: rgb(19, 22, 24);
+  color: rgb(187, 229, 236);
+  border: none;
+  border-radius: 3px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 100;
+  transition: opacity 0.2s ease-out, top 0.2s ease-out;
+}
+.close-button-container .button:hover {
+  background-color: rgb(211, 21, 21);
+}
+.close-button-container .button:active {
+  background-color: rgb(130, 0, 0);
+}
+.close-button-container .button:hover > .close {
+  opacity: 1;
+  top: -95%;
+}
+
+/* EditButton CSS styles */
+.editBtn-container {
+  display: inline-block;
+  vertical-align: middle;
+}
+.editBtn {
+  width: 55px;
+  height: 55px;
+  border-radius: 20px;
+  border: none;
+  background-color: rgb(93, 93, 116);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.123);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+.editBtn::before {
+  content: "";
+  width: 200%;
+  height: 200%;
+  background-color: rgb(102, 102, 141);
+  position: absolute;
+  z-index: 1;
+  transform: scale(0);
+  transition: all 0.3s;
+  border-radius: 50%;
+  filter: blur(10px);
+}
+.editBtn:hover::before {
+  transform: scale(1);
+}
+.editBtn:hover {
+  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.336);
+}
+.editBtn svg {
+  height: 17px;
+  fill: white;
+  z-index: 3;
+  transition: all 0.2s;
+  transform-origin: bottom;
+}
+.editBtn:hover svg {
+  transform: rotate(-15deg) translateX(5px);
+}
+.editBtn::after {
+  content: "";
+  width: 25px;
+  height: 1.5px;
+  position: absolute;
+  bottom: 19px;
+  left: -5px;
+  background-color: white;
+  border-radius: 2px;
+  z-index: 2;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s ease-out;
+}
+.editBtn:hover::after {
+  transform: scaleX(1);
+  left: 0px;
+  transform-origin: right;
+}

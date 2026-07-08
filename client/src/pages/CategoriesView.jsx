@@ -4,6 +4,10 @@ import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash, Save, X, ChefHat, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
+import { CustomCheckbox } from '../components/ui/CustomCheckbox';
+import { DeleteButton } from '../components/ui/DeleteButton';
+import { CloseButton } from '../components/ui/CloseButton';
+import { EditButton } from '../components/ui/EditButton';
 
 const CategoriesView = () => {
     const { showConfirmation } = useConfirmation();
@@ -15,6 +19,7 @@ const CategoriesView = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
     const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
+    const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -57,14 +62,41 @@ const CategoriesView = () => {
             });
             if (res.ok) {
                 // Optimistic Local Update
-                setCategories(prev => prev.filter(c => c.id !== id));
-                fetchCategories(); // Sync with server
+                fetchCategories(categories.filter(c => c.id !== id)); // Sync and update optimistically
+                setSelectedCategoryIds(prev => prev.filter(selectedId => selectedId !== id));
             } else {
                 const err = await res.json();
                 showToast(err.error, 'error');
             }
         } catch (error) {
             console.error(error);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        const count = selectedCategoryIds.length;
+        if (!await showConfirmation(`¿Estás seguro? Se eliminarán las ${count} categorías seleccionadas y TODOS los productos dentro de ellas. Esta acción no se puede deshacer.`, { type: 'danger' })) return;
+
+        try {
+            const results = await Promise.all(
+                selectedCategoryIds.map(async (id) => {
+                    const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+                    return res.ok;
+                })
+            );
+
+            const allOk = results.every(ok => ok);
+            if (allOk) {
+                showToast('Categorías seleccionadas eliminadas exitosamente', 'success');
+            } else {
+                showToast('Algunas categorías no pudieron ser eliminadas', 'warning');
+            }
+
+            setSelectedCategoryIds([]);
+            fetchCategories();
+        } catch (error) {
+            console.error(error);
+            showToast('Error al eliminar categorías seleccionadas', 'error');
         }
     };
 
@@ -159,15 +191,36 @@ const CategoriesView = () => {
                     </button>
                     <h1 className="high-end-title" style={{ margin: 0 }}>Gestión de Categorías</h1>
                 </div>
-                <button className="glass-button primary" onClick={() => handleOpenModal()}>
-                    <Plus size={20} /> Nueva Categoría
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {selectedCategoryIds.length > 0 && (
+                        <DeleteButton
+                            onClick={handleBulkDelete}
+                            title={`Eliminar seleccionadas (${selectedCategoryIds.length})`}
+                            className="scale-90"
+                        />
+                    )}
+                    <button className="glass-button primary" onClick={() => handleOpenModal()}>
+                        <Plus size={20} /> Nueva Categoría
+                    </button>
+                </div>
             </div>
 
             <div className="glass-panel table-responsive" style={{ padding: 0 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left' }}>
+                            <th style={{ padding: 15, width: 50, textAlign: 'center' }}>
+                                <CustomCheckbox
+                                    checked={sortedCategories.length > 0 && selectedCategoryIds.length === sortedCategories.length}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedCategoryIds(sortedCategories.map(c => c.id));
+                                        } else {
+                                            setSelectedCategoryIds([]);
+                                        }
+                                    }}
+                                />
+                            </th>
                             <SortHeader label="Nombre" sortKey="nombre" />
                             <th style={{ padding: 15 }}>Icono</th>
                             <th style={{ padding: 15 }}>Color</th>
@@ -180,6 +233,18 @@ const CategoriesView = () => {
                     <tbody>
                         {sortedCategories.map(cat => (
                             <tr key={cat.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <td style={{ padding: 15, width: 50, textAlign: 'center' }}>
+                                    <CustomCheckbox
+                                        checked={selectedCategoryIds.includes(cat.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedCategoryIds(prev => [...prev, cat.id]);
+                                            } else {
+                                                setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                                            }
+                                        }}
+                                    />
+                                </td>
                                 <td style={{ padding: 15, fontWeight: 'bold' }}>{cat.nombre}</td>
                                 <td style={{ padding: 15, fontSize: '1.5rem' }}>{cat.icono}</td>
                                 <td style={{ padding: 15 }}>
@@ -202,9 +267,13 @@ const CategoriesView = () => {
                                     {cat.activo ? <span className="badge status-ok">Activo</span> : <span className="badge status-error">Inactivo</span>}
                                 </td>
                                 <td style={{ padding: 15 }}>
-                                    <div style={{ display: 'flex', gap: 10 }}>
-                                        <button className="glass-button" onClick={() => handleOpenModal(cat)}><Edit size={16} /></button>
-                                        <button className="glass-button" onClick={() => handleDelete(cat.id)}><Trash size={16} /></button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <EditButton onClick={() => handleOpenModal(cat)} className="scale-75 -my-2 -mx-1" />
+                                        <DeleteButton
+                                            onClick={() => handleDelete(cat.id)}
+                                            title="Eliminar categoría"
+                                            className="scale-75 -my-2 -mx-1"
+                                        />
                                     </div>
                                 </td>
                             </tr>
@@ -219,7 +288,7 @@ const CategoriesView = () => {
                     <div className="modal-content">
                         <div className="modal-header">
                             <h2>{editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}</h2>
-                            <button className="glass-button" onClick={() => setIsModalOpen(false)}><X size={24} /></button>
+                            <CloseButton onClick={() => setIsModalOpen(false)} className="scale-90" />
                         </div>
                         <form onSubmit={handleSubmit} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
                             <div>
@@ -260,25 +329,22 @@ const CategoriesView = () => {
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <input
-                                    type="checkbox"
+                                <CustomCheckbox
                                     checked={formData.enviarCocina}
                                     onChange={e => setFormData({ ...formData, enviarCocina: e.target.checked })}
-                                    style={{ width: 20, height: 20 }}
-                                />
-                                <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <ChefHat size={16} /> Enviar a Cocina
-                                </label>
+                                >
+                                    <span className="ml-2 text-sm flex items-center gap-1.5 select-none" style={{ color: 'var(--text-main)' }}>
+                                        <ChefHat size={16} /> Enviar a Cocina
+                                    </span>
+                                </CustomCheckbox>
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <input
-                                    type="checkbox"
+                                <CustomCheckbox
                                     checked={formData.activo}
                                     onChange={e => setFormData({ ...formData, activo: e.target.checked })}
-                                    style={{ width: 20, height: 20 }}
+                                    labelText="Categoría Activa"
                                 />
-                                <label>Categoría Activa</label>
                             </div>
 
                             <button type="submit" className="glass-button primary" style={{ marginTop: 10 }}>

@@ -142,7 +142,7 @@ export default function KitchenHeader() {
             ) : (
               <>
                 <ChevronDown className="w-4 h-4 text-[var(--primary)] animate-bounce" />
-                <span>CONFIGURAR</span>
+                <span>EXPANDIR</span>
               </>
             )}
           </button>

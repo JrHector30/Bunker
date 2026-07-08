@@ -453,14 +453,7 @@ export default function KitchenTimers({ isCollapsed = false }) {
           </button>
         </div>
 
-        <div className="mt-4 mb-2 flex flex-col items-center justify-center w-full px-2 py-[1.125rem] select-none text-center">
-          <span className="text-[9px] font-extrabold text-slate-450 dark:text-slate-500 uppercase tracking-widest">
-            TIEMPO ACUMULADO
-          </span>
-          <span className={`text-xs font-black font-sans mt-1 ${isDarkMode ? 'text-[var(--primary)]' : 'text-black'}`}>
-            {Math.floor(stopwatchTime / 3600)}h {Math.floor((stopwatchTime % 3600) / 60)}m {stopwatchTime % 60}s
-          </span>
-        </div>
+
 
 
 

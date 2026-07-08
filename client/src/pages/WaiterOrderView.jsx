@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { Plus, Minus, Send, Trash2, ArrowLeft, Search, Image as ImageIcon, FileText, Info, X } from 'lucide-react';
 import { useCache, setOptimisticLock } from '../hooks/useCache';
 import { enqueueTicket } from '../utils/printer';
+import DeleteButton from '../components/ui/DeleteButton';
+import CloseButton from '../components/ui/CloseButton';
 
 const WaiterOrderView = () => {
     const { showToast } = useNotification();
@@ -387,9 +389,7 @@ const WaiterOrderView = () => {
                         <span className="text-muted">{user?.nombre || 'Mozo'}</span>
                     </div>
                     {/* Mobile Only Close Button for Cart Drawer */}
-                    <button className="glass-button mobile-cart-close" style={{ height: 40, width: 40, padding: 0, display: 'none', alignItems: 'center', justifyContent: 'center' }} onClick={() => setMobileCartOpen(false)}>
-                        <X size={20} />
-                    </button>
+                    <CloseButton onClick={() => setMobileCartOpen(false)} className="mobile-cart-close scale-90" style={{ display: 'none' }} />
                     {/* Desktop dummy icon */}
                     <div className="glass-button" style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                         <span style={{ fontSize: '1.2rem' }}>📝</span>
@@ -430,9 +430,7 @@ const WaiterOrderView = () => {
                                         >
                                             <FileText size={16} />
                                         </button>
-                                        <button className="glass-button" style={{ width: 30, height: 30, padding: 0, borderRadius: 5, color: 'var(--danger)', borderColor: 'transparent' }} onClick={() => removeFromCart(item.tempId)}>
-                                            <Trash2 size={16} />
-                                        </button>
+                                         <DeleteButton onClick={() => removeFromCart(item.tempId)} className="scale-[0.67] -mx-2 -my-2" />
                                     </div>
                                 </div>
 
@@ -518,7 +516,7 @@ const WaiterOrderView = () => {
                     <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
                         <div className="modal-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
                             <h2 style={{ fontSize: '1.2rem' }}>Detalle del Producto</h2>
-                            <button className="glass-button" onClick={() => setInfoModalProduct(null)}><X size={20} /></button>
+                            <CloseButton onClick={() => setInfoModalProduct(null)} className="scale-90" />
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 15, marginTop: 15 }}>

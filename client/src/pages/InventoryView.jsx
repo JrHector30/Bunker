@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -11,6 +11,9 @@ import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 import CategorizedCombobox from '../components/CategorizedCombobox';
 import SimpleCombobox from '../components/SimpleCombobox';
+import DeleteButton from '../components/ui/DeleteButton';
+import EditButton from '../components/ui/EditButton';
+import CloseButton from '../components/ui/CloseButton';
 import { motion } from 'motion/react';
 
 const InventoryView = () => {
@@ -120,6 +123,163 @@ const InventoryView = () => {
     const [formData, setFormData] = useState({
         nombre: '', descripcion: '', precio: '', categoriaId: '', activo: true, imageFile: null, imagePreview: null
     });
+
+    // Autocomplete & Mode Switch states
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [highlightedIndex, setHighlightedIndex] = useState(0);
+    const [debouncedNombre, setDebouncedNombre] = useState('');
+    const [modalMode, setModalMode] = useState('create');
+
+    const normalizeText = (text) => {
+        if (!text) return '';
+        return text
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // remove accents
+            .replace(/\s+/g, ' ') // collapse multiple spaces
+            .trim()
+            .toLowerCase();
+    };
+
+    // Debounce Name input by 200ms
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedNombre(formData.nombre);
+        }, 200);
+        return () => clearTimeout(timer);
+    }, [formData.nombre]);
+
+    // Priority-based sorting (starts with vs contains) & name/code scalable search
+    const suggestions = useMemo(() => {
+        const query = normalizeText(debouncedNombre);
+        if (query.length < 2) return [];
+
+        const startsWithMatches = [];
+        const containsMatches = [];
+
+        products.forEach(p => {
+            const normalizedName = normalizeText(p.nombre);
+            const normalizedCode = p.codigoInterno ? normalizeText(p.codigoInterno) : '';
+
+            const nameStartsWith = normalizedName.startsWith(query);
+            const codeStartsWith = normalizedCode.startsWith(query);
+            const nameContains = normalizedName.includes(query);
+            const codeContains = normalizedCode.includes(query);
+
+            if (nameStartsWith || codeStartsWith) {
+                startsWithMatches.push(p);
+            } else if (nameContains || codeContains) {
+                containsMatches.push(p);
+            }
+        });
+
+        return [...startsWithMatches, ...containsMatches].slice(0, 10);
+    }, [debouncedNombre, products]);
+
+    // Exact Match Lookup
+    const exactMatchProduct = useMemo(() => {
+        const query = normalizeText(formData.nombre);
+        if (!query) return null;
+        return products.find(p => normalizeText(p.nombre) === query);
+    }, [formData.nombre, products]);
+
+    // Prioritized autocompletion load order: Name -> Description -> Price -> Category -> Image
+    const autocompleteProduct = (item) => {
+        setFormData(prev => ({
+            ...prev,
+            nombre: item.nombre
+        }));
+
+        setTimeout(() => {
+            setFormData(prev => ({
+                ...prev,
+                descripcion: item.descripcion || ''
+            }));
+        }, 30);
+
+        setTimeout(() => {
+            setFormData(prev => ({
+                ...prev,
+                precio: item.precio
+            }));
+        }, 60);
+
+        setTimeout(() => {
+            setFormData(prev => ({
+                ...prev,
+                categoriaId: item.categoriaId
+            }));
+        }, 90);
+
+        setTimeout(() => {
+            setFormData(prev => ({
+                ...prev,
+                activo: item.activo,
+                imageFile: null,
+                imagePreview: item.imagen || null
+            }));
+            setEditingProduct(item);
+        }, 120);
+
+        setShowSuggestions(false);
+    };
+
+    // Auto-autocomplete on exact match
+    useEffect(() => {
+        if (exactMatchProduct) {
+            if (!editingProduct || editingProduct.id !== exactMatchProduct.id) {
+                autocompleteProduct(exactMatchProduct);
+            }
+        } else {
+            if (modalMode === 'create' && editingProduct) {
+                setEditingProduct(null);
+            }
+        }
+    }, [exactMatchProduct]);
+
+    // Keyboard handlers
+    const handleKeyDownSuggestions = (e) => {
+        if (!showSuggestions || suggestions.length === 0) return;
+        const maxIndex = suggestions.length;
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                setHighlightedIndex(prev => (prev + 1) % (maxIndex + 1));
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setHighlightedIndex(prev => (prev - 1 + maxIndex + 1) % (maxIndex + 1));
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (highlightedIndex < suggestions.length) {
+                    autocompleteProduct(suggestions[highlightedIndex]);
+                } else if (highlightedIndex === suggestions.length) {
+                    setEditingProduct(null);
+                    setShowSuggestions(false);
+                }
+                break;
+            case 'Escape':
+                e.preventDefault();
+                setShowSuggestions(false);
+                break;
+            default:
+                break;
+        }
+    };
+
+    // Text highlighting for matches
+    const highlightMatch = (text, query) => {
+        if (!query) return <span>{text}</span>;
+        const normalizedQuery = normalizeText(query);
+        const parts = text.split(new RegExp(`(${normalizedQuery.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'));
+        return (
+            <span>
+                {parts.map((part, i) => 
+                    normalizeText(part) === normalizedQuery ? <strong key={i} style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{part}</strong> : part
+                )}
+            </span>
+        );
+    };
 
     // --- EXCEL BULK IMPORT STATES ---
     const [importModalOpen, setImportModalOpen] = useState(false);
@@ -504,12 +664,14 @@ const InventoryView = () => {
     const handleOpenModal = (product = null) => {
         if (product) {
             setEditingProduct(product);
+            setModalMode('edit');
             setFormData({
                 nombre: product.nombre, descripcion: product.descripcion || '', precio: product.precio,
                 categoriaId: product.categoriaId, activo: product.activo, imageFile: null, imagePreview: product.imagen ? product.imagen : null
             });
         } else {
             setEditingProduct(null);
+            setModalMode('create');
             setFormData({
                 nombre: '', descripcion: '', precio: '', categoriaId: categories.length > 0 ? categories[0].id : '',
                 activo: true, imageFile: null, imagePreview: null
@@ -783,9 +945,9 @@ const InventoryView = () => {
                                             )}
                                         </td>
                                         <td style={{ padding: 15 }}>
-                                            <div style={{ display: 'flex', gap: 10 }}>
-                                                <button className="glass-button" onClick={() => handleOpenModal(prod)}><Edit size={16} /></button>
-                                                <button className="glass-button" onClick={() => handleDeleteProduct(prod.id)}><Trash size={16} /></button>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
+                                                <EditButton onClick={() => handleOpenModal(prod)} className="scale-75 -my-2 -mx-1" />
+                                                <DeleteButton onClick={() => handleDeleteProduct(prod.id)} className="scale-75 -my-2 -mx-1" />
                                             </div>
                                         </td>
                                     </tr>
@@ -860,9 +1022,9 @@ const InventoryView = () => {
                                             </div>
                                         </td>
                                         <td style={{ padding: 15 }}>
-                                            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                                                <button className="glass-button" onClick={() => handleOpenInsumoModal(insumo)}><Edit size={16} /></button>
-                                                <button className="glass-button" onClick={() => handleDeleteInsumo(insumo.id)}><Trash size={16} /></button>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
+                                                <EditButton onClick={() => handleOpenInsumoModal(insumo)} className="scale-75 -my-2 -mx-1" />
+                                                <DeleteButton onClick={() => handleDeleteInsumo(insumo.id)} className="scale-75 -my-2 -mx-1" />
                                             </div>
                                         </td>
                                     </tr>
@@ -983,7 +1145,7 @@ const InventoryView = () => {
                                                     </td>
                                                     <td style={{ padding: 15 }} className="font-mono">{insu ? `S/. ${subtotal.toFixed(2)}` : '-'}</td>
                                                     <td style={{ padding: 15 }}>
-                                                        <button className="glass-button" onClick={() => handleRemoveIngredient(index)} style={{ padding: 8, borderColor: 'transparent' }}><Trash size={18} color="var(--danger)" /></button>
+                                                        <DeleteButton onClick={() => handleRemoveIngredient(index)} className="scale-75 -my-2 -mx-1" />
                                                     </td>
                                                 </tr>
                                             );
@@ -1357,7 +1519,7 @@ const InventoryView = () => {
                     <div className="modal-content">
                         <div className="modal-header">
                             <h2>{editingProduct ? 'Editar Plato' : 'Nuevo Plato'}</h2>
-                            <button className="glass-button" onClick={() => setIsModalOpen(false)} style={{ padding: 5, border: 'none' }}><X size={24} /></button>
+                            <CloseButton onClick={() => setIsModalOpen(false)} className="scale-90" />
                         </div>
                         <form onSubmit={handleSubmitProduct} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
                             <div style={{ display: 'flex', gap: 20 }}>
@@ -1369,9 +1531,117 @@ const InventoryView = () => {
                                     <input type="file" onChange={handleImageChange} accept="image/*" className="glass-input" />
                                 </div>
                             </div>
-                            <div>
+                            <div style={{ position: 'relative' }}>
                                 <label>Nombre del Plato</label>
-                                <input type="text" className="glass-input" value={formData.nombre} onChange={e => setFormData({ ...formData, nombre: e.target.value })} required />
+                                <input 
+                                    type="text" 
+                                    className="glass-input" 
+                                    value={formData.nombre} 
+                                    onChange={e => setFormData({ ...formData, nombre: e.target.value })} 
+                                    onFocus={() => setShowSuggestions(true)}
+                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
+                                    onKeyDown={handleKeyDownSuggestions}
+                                    required 
+                                />
+
+                                {/* Suggestions dropdown list */}
+                                {showSuggestions && formData.nombre.length >= 2 && (
+                                    <div 
+                                        className="absolute left-0 right-0 z-50 rounded-lg shadow-2xl overflow-hidden flex flex-col"
+                                        style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            right: 0,
+                                            zIndex: 1000,
+                                            backgroundColor: 'var(--bg-surface)',
+                                            borderColor: 'var(--glass-border)',
+                                            borderWidth: '1px',
+                                            borderStyle: 'solid',
+                                            marginTop: '4px',
+                                            maxHeight: '220px',
+                                            overflowY: 'auto',
+                                            padding: '4px',
+                                            backdropFilter: 'blur(12px)',
+                                            WebkitBackdropFilter: 'blur(12px)'
+                                        }}
+                                    >
+                                        {/* Match counter header */}
+                                        <div style={{ padding: '6px 10px', fontSize: '0.75rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Sugerencias de Platos</span>
+                                            <span>{suggestions.length} {suggestions.length === 1 ? 'coincidencia' : 'coincidencias'}</span>
+                                        </div>
+
+                                        {/* Items list */}
+                                        <div style={{ padding: '4px 0' }}>
+                                            {suggestions.map((item, index) => {
+                                                const isHighlighted = index === highlightedIndex;
+                                                return (
+                                                    <button
+                                                        key={item.id}
+                                                        type="button"
+                                                        className="flex items-center w-full px-3 py-2 rounded-md text-left cursor-pointer transition-all"
+                                                        style={{
+                                                            backgroundColor: isHighlighted ? 'var(--bg-secondary)' : 'transparent',
+                                                            border: isHighlighted ? '1px solid var(--glass-border)' : '1px solid transparent',
+                                                            color: 'var(--text-main)',
+                                                            fontFamily: 'var(--font-sans)',
+                                                            fontSize: '0.875rem',
+                                                        }}
+                                                        onMouseEnter={() => setHighlightedIndex(index)}
+                                                        onClick={() => autocompleteProduct(item)}
+                                                    >
+                                                        <div style={{ marginRight: '10px', fontSize: '1rem' }}>🍲</div>
+                                                        <div style={{ flex: 1 }}>
+                                                            {highlightMatch(item.nombre, formData.nombre)}
+                                                            {item.codigoInterno && (
+                                                                <span style={{ marginLeft: 8, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                                    ({item.codigoInterno})
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+
+                                            {/* Force Create option */}
+                                            <button
+                                                type="button"
+                                                className="flex items-center w-full px-3 py-2 rounded-md text-left cursor-pointer transition-all"
+                                                style={{
+                                                    backgroundColor: highlightedIndex === suggestions.length ? 'var(--bg-secondary)' : 'transparent',
+                                                    border: highlightedIndex === suggestions.length ? '1px solid var(--glass-border)' : '1px solid transparent',
+                                                    color: 'var(--text-main)',
+                                                    fontFamily: 'var(--font-sans)',
+                                                    fontSize: '0.875rem',
+                                                    borderTop: '1px solid var(--glass-border)',
+                                                    marginTop: 4,
+                                                    fontWeight: '500'
+                                                }}
+                                                onMouseEnter={() => setHighlightedIndex(suggestions.length)}
+                                                onClick={() => {
+                                                    setEditingProduct(null);
+                                                    setShowSuggestions(false);
+                                                }}
+                                            >
+                                                <div style={{ marginRight: '10px', fontSize: '1rem' }}>✨</div>
+                                                <span>Crear nuevo plato: "{formData.nombre}"</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Exact Match Alert & Badge */}
+                                {exactMatchProduct && (
+                                    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(59, 130, 246, 0.1)', color: 'rgb(96, 165, 250)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                            <span>✓ Plato existente. Se actualizará este registro.</span>
+                                        </div>
+                                        <span style={{ fontSize: '0.75rem', color: 'color-mix(in srgb, var(--primary) 70%, white)', fontWeight: '500' }}>
+                                            ✓ Este plato ya existe. Guardar actualizará el plato existente.
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                                 <label>Descripción</label>
@@ -1401,7 +1671,7 @@ const InventoryView = () => {
                     <div className="modal-content">
                         <div className="modal-header">
                             <h2>{editingInsumo ? 'Editar Insumo' : 'Nuevo Insumo'}</h2>
-                            <button className="glass-button" onClick={() => setIsInsumoModalOpen(false)} style={{ padding: 5, border: 'none' }}><X size={24} /></button>
+                            <CloseButton onClick={() => setIsInsumoModalOpen(false)} className="scale-90" />
                         </div>
                         <form onSubmit={handleSubmitInsumo} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
                             {formError && <div style={{ color: 'white', background: 'var(--danger)', padding: 10, borderRadius: 8, marginBottom: 15 }}>{formError}</div>}
@@ -1465,7 +1735,7 @@ const InventoryView = () => {
                     <div className="modal-content">
                         <div className="modal-header">
                             <h2>Registrar Movimiento Manual</h2>
-                            <button className="glass-button" onClick={() => setIsKardexModalOpen(false)} style={{ padding: 5, border: 'none' }}><X size={24} /></button>
+                            <CloseButton onClick={() => setIsKardexModalOpen(false)} className="scale-90" />
                         </div>
                         <form onSubmit={handleSaveKardexManual} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
                             {formError && <div style={{ color: 'white', background: 'var(--danger)', padding: 10, borderRadius: 8 }}>{formError}</div>}
@@ -1513,9 +1783,7 @@ const InventoryView = () => {
                                 <Upload size={22} style={{ color: 'var(--primary)' }} />
                                 <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--text-main)' }}>Resumen de Importación</h2>
                             </div>
-                            <button className="glass-button" onClick={() => setImportModalOpen(false)} style={{ padding: 5, border: 'none', background: 'transparent', cursor: 'pointer' }}>
-                                <X size={20} style={{ color: 'var(--text-muted)' }} />
-                            </button>
+                            <CloseButton onClick={() => setImportModalOpen(false)} className="scale-90" />
                         </div>
 
                         {/* Analysis / Stepper Panel */}
