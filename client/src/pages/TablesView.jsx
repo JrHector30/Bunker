@@ -10,25 +10,130 @@ import { useCaja } from '../context/CajaContext';
 import { enqueueTicket } from '../utils/printer';
 import DeleteButton from '../components/ui/DeleteButton';
 import CloseButton from '../components/ui/CloseButton';
+import { networkStatus, NetworkState, db, offlineOrderService, offlineSnapshotService } from '../offline';
 
 const TablesView = () => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const { user } = useAuth();
-    const fetcher = () => fetch('/api/tables')
-        .then(res => res.json())
-        .then(data => {
-            if (Array.isArray(data)) {
-                // Filtrar mesas 100 y 101, y limpiar cualquier elemento nulo o undefinido
+    const fetcher = async () => {
+        if (networkStatus.isOffline()) {
+            try {
+                const localTables = await db.table('tables').toArray();
+                const [localOrders, localOrderItems, localProducts] = await Promise.all([
+                    db.orders.toArray(),
+                    db.orderItems.toArray(),
+                    db.products.toArray()
+                ]);
+
+                const productMap = new Map(localProducts.map(p => [p.id, p]));
+                const orderItemMap = new Map();
+                localOrderItems.forEach(item => {
+                    if (!orderItemMap.has(item.comandaId)) {
+                        orderItemMap.set(item.comandaId, []);
+                    }
+                    orderItemMap.get(item.comandaId).push({
+                        ...item,
+                        plato: productMap.get(item.platoId) || { id: item.platoId, nombre: 'Plato Desconocido', precio: 0 }
+                    });
+                });
+
+                const activeOrdersMap = new Map();
+                localOrders.forEach(order => {
+                    const isClosed = order.estado === 'cerrada' || order.status === 'cerrada';
+                    const isCancelled = order.estado === 'anulada' || order.status === 'anulada';
+                    if (!isClosed && !isCancelled) {
+                        if (!activeOrdersMap.has(Number(order.mesaId))) {
+                            activeOrdersMap.set(Number(order.mesaId), []);
+                        }
+                        activeOrdersMap.get(Number(order.mesaId)).push({
+                            ...order,
+                            detalles: orderItemMap.get(order.id) || []
+                        });
+                    }
+                });
+
+                // Normalizar campos y construir mesasHijas dinámicamente
+                const tablesWithFields = localTables.map(t => ({
+                    ...t,
+                    mesaPadreId: t.mesaPadreId !== undefined && t.mesaPadreId !== null ? Number(t.mesaPadreId) : null,
+                    mesasHijas: []
+                }));
+
+                const tablesMap = new Map(tablesWithFields.map(t => [t.id, t]));
+
+                // Asociar hijas a sus respectivos padres
+                tablesWithFields.forEach(t => {
+                    if (t.mesaPadreId !== null) {
+                        const padre = tablesMap.get(t.mesaPadreId);
+                        if (padre) {
+                            padre.mesasHijas.push(t);
+                        }
+                    }
+                });
+
+                const data = tablesWithFields.map(t => {
+                    const orders = activeOrdersMap.get(t.id) || [];
+                    return {
+                        ...t,
+                        comandas: orders
+                    };
+                });
+
                 const filteredData = data.filter(t => t && t.numero !== '100' && t.numero !== '101');
-                // Asegurar orden numérico correcto
                 filteredData.sort((a, b) => parseInt(a.numero, 10) - parseInt(b.numero, 10));
                 return filteredData;
+            } catch (err) {
+                console.error('[TablesView] Error cargando mesas locales offline:', err);
+                return [];
             }
-            return [];
-        });
+        }
+
+        // Flujo ONLINE habitual
+        return fetch('/api/tables')
+            .then(res => {
+                if (!res.ok) throw new Error('Error al conectar');
+                return res.json();
+            })
+            .then(data => {
+                if (Array.isArray(data)) {
+                    const filteredData = data.filter(t => t && t.numero !== '100' && t.numero !== '101');
+                    filteredData.sort((a, b) => parseInt(a.numero, 10) - parseInt(b.numero, 10));
+                    // Hidratar en IndexedDB de fondo sin bloquear el renderizado
+                    offlineSnapshotService.hydrateTablesFromData(data).catch(() => {});
+                    return filteredData;
+                }
+                return [];
+            })
+            .catch(async (err) => {
+                console.warn('[TablesView] Fetcher online falló. Conmutando a local offline.');
+                networkStatus.setStatus(NetworkState.OFFLINE_CONFIRMED);
+                return fetcher();
+            });
+    };
 
     const { data: tables, mutate: fetchTables } = useCache('tables', fetcher, []);
+
+    // Reactividad multi-pestaña y local para sincronización de UI
+    useEffect(() => {
+        const channel = new BroadcastChannel('bunker-offline-tables');
+        const handleMessage = (e) => {
+            if (e.data === 'refreshTables') {
+                fetchTables();
+            }
+        };
+        channel.addEventListener('message', handleMessage);
+
+        const handleCustomEvent = () => {
+            fetchTables();
+        };
+        window.addEventListener('refreshTables', handleCustomEvent);
+
+        return () => {
+            channel.close();
+            window.removeEventListener('refreshTables', handleCustomEvent);
+        };
+    }, [fetchTables]);
 
     const [selectedTableId, setSelectedTableId] = useState(null);
     const { isCajaAbierta } = useCaja();
@@ -913,6 +1018,22 @@ const TablesView = () => {
                                             if (motivo === null || motivo.trim() === '') return;
 
                                             try {
+                                                if (networkStatus.isOffline()) {
+                                                    await offlineOrderService.cancelOrder(comandaId);
+                                                    showToast("Pedido anulado y mesa liberada (Modo Offline).", 'success');
+                                                    closeModal();
+                                                    fetchTables();
+                                                    // Notificar cambios para que la caja se actualice también
+                                                    window.dispatchEvent(new CustomEvent('refreshCashCount'));
+                                                    try {
+                                                        const channel = new BroadcastChannel('bunker');
+                                                        channel.postMessage('refreshTables');
+                                                        channel.postMessage('refreshCashCount');
+                                                        channel.close();
+                                                    } catch (e) {}
+                                                    return;
+                                                }
+
                                                 const res = await fetch(`/api/orders/${comandaId}/cancel`, {
                                                     method: 'PUT',
                                                     headers: { 'Content-Type': 'application/json' },

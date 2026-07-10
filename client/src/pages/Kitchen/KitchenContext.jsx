@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useKitchenPolling from './hooks/useKitchenPolling';
 import { soundPlayer } from './KitchenSounds';
+import { networkStatus, NetworkState, offlineKitchenService } from '../../offline';
 
 const KitchenContext = createContext();
 
@@ -65,9 +66,36 @@ export const KitchenProvider = ({ children }) => {
         fetchCounter.current += 1;
         const currentFetchId = fetchCounter.current;
 
+        if (networkStatus.isOffline()) {
+            offlineKitchenService.getQueue()
+                .then(data => {
+                    if (currentFetchId < lastAppliedFetchId.current) return;
+                    lastAppliedFetchId.current = currentFetchId;
+
+                    // Merge in-flight optimistic updates
+                    const mergedData = data.map(item => {
+                        const pending = pendingUpdates.current[item.id];
+                        return pending ? { ...item, ...pending } : item;
+                    });
+                    updateGlobalCache(mergedData);
+                })
+                .catch(err => console.error("[KitchenContext] Error leyendo cola local offline:", err));
+            return;
+        }
+
         fetch('/api/kitchen/queue')
-            .then(res => res.json())
+            .then(res => {
+                // Tratar HTTP 500 / !ok igual que error de red → usar fallback offline
+                if (!res.ok) {
+                    console.warn(`[KitchenContext] Backend respondió ${res.status}. Activando fallback offline.`);
+                    networkStatus.setStatus(NetworkState.OFFLINE_CONFIRMED);
+                    fetchQueue();
+                    return null;
+                }
+                return res.json();
+            })
             .then(data => {
+                if (!data) return; // Fallback offline ya fue disparado
                 if (currentFetchId < lastAppliedFetchId.current) return;
                 lastAppliedFetchId.current = currentFetchId;
 
@@ -78,7 +106,11 @@ export const KitchenProvider = ({ children }) => {
                 });
                 updateGlobalCache(mergedData);
             })
-            .catch(err => console.error("Error polling KDS queue", err));
+            .catch(err => {
+                console.warn("[KitchenContext] Polling online falló (error de red). Conmutando a offline local.");
+                networkStatus.setStatus(NetworkState.OFFLINE_CONFIRMED);
+                fetchQueue();
+            });
     }, []);
 
     // Start Polling (Visibility API smart polling is managed inside hook)
@@ -162,6 +194,32 @@ export const KitchenProvider = ({ children }) => {
             }
             return item;
         }));
+
+        if (networkStatus.isOffline()) {
+            try {
+                await offlineKitchenService.updateItemStatus(itemId, status, {
+                    id: user.id,
+                    nombre: user.nombre
+                });
+                delete pendingUpdates.current[itemId];
+                fetchQueue();
+
+                // Notificar cambios de cocina locales
+                window.dispatchEvent(new CustomEvent('refreshKitchenQueue'));
+                window.dispatchEvent(new CustomEvent('refreshTables'));
+                try {
+                    const channel = new BroadcastChannel('bunker');
+                    channel.postMessage('refreshKitchenQueue');
+                    channel.postMessage('refreshTables');
+                    channel.close();
+                } catch (e) {}
+            } catch (err) {
+                console.error('[KitchenContext] Error al actualizar plato en cocina local:', err);
+                delete pendingUpdates.current[itemId];
+                fetchQueue();
+            }
+            return;
+        }
 
         try {
             const res = await fetch(`/api/orders/details/${itemId}`, {

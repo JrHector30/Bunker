@@ -258,3 +258,20 @@ model HistorialReparacion {
   @@map("historial_reparaciones")
 }
 
+model SyncOperation {
+  id             Int       @id @default(autoincrement())
+  operationId    String    @unique
+  entity         String
+  entityId       String
+  operation      String
+  status         String
+  requestPayload Json
+  resultPayload  Json?
+  errorPayload   Json?
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
+
+  @@index([operationId])
+  @@index([status, createdAt])
+}
+

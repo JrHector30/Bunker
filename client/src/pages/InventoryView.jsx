@@ -15,6 +15,7 @@ import DeleteButton from '../components/ui/DeleteButton';
 import EditButton from '../components/ui/EditButton';
 import CloseButton from '../components/ui/CloseButton';
 import { motion } from 'motion/react';
+import { safeRecordProductShadow } from '../offline';
 
 const InventoryView = () => {
     const { showConfirmation } = useConfirmation();
@@ -274,7 +275,7 @@ const InventoryView = () => {
         const parts = text.split(new RegExp(`(${normalizedQuery.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'));
         return (
             <span>
-                {parts.map((part, i) => 
+                {parts.map((part, i) =>
                     normalizeText(part) === normalizedQuery ? <strong key={i} style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{part}</strong> : part
                 )}
             </span>
@@ -352,7 +353,7 @@ const InventoryView = () => {
             const wsPlatos = workbook.addWorksheet('Platos');
             wsPlatos.columns = [
                 { header: 'Nombre del Plato *', key: 'nombre', width: 25 },
-                { header: 'Descripción', key: 'descripcion', width: 40 },
+                { header: 'Descripción (Opcional)', key: 'descripcion', width: 40 },
                 { header: 'Categoría *', key: 'categoriaName', width: 20 },
                 { header: 'Precio Venta (S/.)', key: 'precio', width: 20 },
                 { header: 'Estado (Activo/Inactivo)', key: 'estado', width: 22 }
@@ -680,10 +681,14 @@ const InventoryView = () => {
         setIsModalOpen(true);
     };
 
-    const handleDeleteProduct = async (id) => {
+    const handleDeleteProduct = async (product) => {
+        const id = product.id;
         if (!await showConfirmation('¿Seguro que desea eliminar este producto?', { type: 'danger' })) return;
         const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
-        if (res.ok) fetchData();
+        if (res.ok) {
+            safeRecordProductShadow('DELETE', product);
+            fetchData();
+        }
     };
 
     const handleSubmitProduct = async (e) => {
@@ -710,7 +715,18 @@ const InventoryView = () => {
         const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
         const method = editingProduct ? 'PUT' : 'POST';
         const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (res.ok) { showToast('Plato guardado exitosamente', 'success'); setIsModalOpen(false); fetchData(); }
+        if (res.ok) {
+            try {
+                // Clonamos para no consumir el stream del response original, evitando efectos colaterales
+                const savedProduct = await res.clone().json();
+                safeRecordProductShadow(method === 'POST' ? 'CREATE' : 'UPDATE', savedProduct);
+            } catch (err) {
+                console.error('[ShadowIntegration] Error al procesar respuesta del servidor:', err);
+            }
+            showToast('Plato guardado exitosamente', 'success');
+            setIsModalOpen(false);
+            fetchData();
+        }
     };
 
     // --- TAB 2: INSUMOS ---
@@ -947,7 +963,7 @@ const InventoryView = () => {
                                         <td style={{ padding: 15 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
                                                 <EditButton onClick={() => handleOpenModal(prod)} className="scale-75 -my-2 -mx-1" />
-                                                <DeleteButton onClick={() => handleDeleteProduct(prod.id)} className="scale-75 -my-2 -mx-1" />
+                                                <DeleteButton onClick={() => handleDeleteProduct(prod)} className="scale-75 -my-2 -mx-1" />
                                             </div>
                                         </td>
                                     </tr>
@@ -1533,20 +1549,20 @@ const InventoryView = () => {
                             </div>
                             <div style={{ position: 'relative' }}>
                                 <label>Nombre del Plato</label>
-                                <input 
-                                    type="text" 
-                                    className="glass-input" 
-                                    value={formData.nombre} 
-                                    onChange={e => setFormData({ ...formData, nombre: e.target.value })} 
+                                <input
+                                    type="text"
+                                    className="glass-input"
+                                    value={formData.nombre}
+                                    onChange={e => setFormData({ ...formData, nombre: e.target.value })}
                                     onFocus={() => setShowSuggestions(true)}
                                     onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
                                     onKeyDown={handleKeyDownSuggestions}
-                                    required 
+                                    required
                                 />
 
                                 {/* Suggestions dropdown list */}
                                 {showSuggestions && formData.nombre.length >= 2 && (
-                                    <div 
+                                    <div
                                         className="absolute left-0 right-0 z-50 rounded-lg shadow-2xl overflow-hidden flex flex-col"
                                         style={{
                                             position: 'absolute',

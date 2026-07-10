@@ -7,6 +7,7 @@ import { useCache, setOptimisticLock } from '../hooks/useCache';
 import { enqueueTicket } from '../utils/printer';
 import DeleteButton from '../components/ui/DeleteButton';
 import CloseButton from '../components/ui/CloseButton';
+import { networkStatus, NetworkState, offlineOrderService, offlineSnapshotService } from '../offline';
 
 const WaiterOrderView = () => {
     const { showToast } = useNotification();
@@ -133,22 +134,51 @@ const WaiterOrderView = () => {
         // 2. Navigate immediately to Tables view
         navigate('/tables');
 
-        // 3. Perform the fetch in the background
-        fetch('/api/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+        // 3. Perform the creation (Offline-First hybrid logic)
+        if (networkStatus.isOffline()) {
+            offlineOrderService.createOrder({
                 mesaId: parsedTableId,
                 usuarioId: user.id,
-                comensales: tableInfo.comensales, // Send captured count
+                comensales: tableInfo.comensales,
                 detalles: cart.map(item => ({
                     platoId: item.platoId,
                     cantidad: item.cantidad,
                     observacion: item.observacion
                 }))
             })
-        })
-            .then(async res => {
+                .then(() => {
+                    showToast('Pedido enviado a cocina (Modo Offline)!', 'success');
+                    window.dispatchEvent(new CustomEvent('refreshTables'));
+                    window.dispatchEvent(new CustomEvent('refreshKitchenQueue'));
+                    window.dispatchEvent(new CustomEvent('refreshCashCount'));
+                    try {
+                        const channel = new BroadcastChannel('bunker');
+                        channel.postMessage('refreshKitchenQueue');
+                        channel.postMessage('refreshTables');
+                        channel.postMessage('refreshCashCount');
+                        channel.close();
+                    } catch (e) {}
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Error al registrar pedido localmente: ' + err.message, 'error');
+                });
+        } else {
+            fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    mesaId: parsedTableId,
+                    usuarioId: user.id,
+                    comensales: tableInfo.comensales, // Send captured count
+                    detalles: cart.map(item => ({
+                        platoId: item.platoId,
+                        cantidad: item.cantidad,
+                        observacion: item.observacion
+                    }))
+                })
+            })
+                .then(async res => {
                 if (res.ok) {
                     showToast('Pedido enviado a cocina!', 'success');
                     
@@ -161,6 +191,9 @@ const WaiterOrderView = () => {
                     
                     enqueueTicket(tableInfo.numero || parsedTableId, user.nombre || 'Mozo', ticketContent, 'Cocina')
                         .catch(err => console.error("Error al encolar ticket en la nube:", err));
+
+                    // Hidratar snapshot de fondo para incorporar comanda recién creada
+                    offlineSnapshotService.hydrateOperationalSnapshot().catch(() => {});
 
                     // Dispatch synchronization events
                     window.dispatchEvent(new CustomEvent('refreshTables'));
@@ -189,6 +222,7 @@ const WaiterOrderView = () => {
             .finally(() => {
                 setLoading(false);
             });
+        }
     };
 
     // Filter Products

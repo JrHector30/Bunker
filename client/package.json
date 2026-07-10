@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.43.5",
+    "dexie": "^4.4.4",
     "exceljs": "^4.4.0",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",

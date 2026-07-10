@@ -181,7 +181,7 @@ const CategoryPanelComponent = ({ activeOrdersCount, averageWaitTime, occupiedTa
         {/* Ver Todo removed per User Request */}
       </div>
 
-      <div className="grid grid-cols-3 gap-3 w-full">
+      <div className="grid grid-cols-3 gap-3 w-full home-categories-grid">
         {categories.map((cat) => {
           const Icon = cat.icon;
           return (

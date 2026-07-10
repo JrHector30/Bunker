@@ -691,6 +691,169 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
+app.post('/api/sync/operations', async (req, res) => {
+    const { operationId, entity, entityId, operation, payload } = req.body;
+
+    // 1. Validar campos mínimos de sincronización
+    if (!operationId || !entity || !entityId || !operation || !payload) {
+        return res.status(400).json({ error: "Faltan campos obligatorios en el contrato de sincronización." });
+    }
+
+    // 2. Restricción estricta de alcance (Solo PRODUCT CREATE en Fase 5B)
+    if (entity !== 'PRODUCT' || operation !== 'CREATE') {
+        return res.status(400).json({ error: `La combinación de entidad "${entity}" y operación "${operation}" no está soportada en la Fase 5B.` });
+    }
+
+    // 3. Validar payload mínimo del producto (no confiar en el cliente)
+    const { nombre, precio, categoriaId, descripcion, imagen } = payload;
+    if (!nombre || nombre.toString().trim() === '') {
+        return res.status(400).json({ error: "El nombre del plato es obligatorio." });
+    }
+    const parsedPrecio = parseFloat(precio);
+    if (Number.isNaN(parsedPrecio) || parsedPrecio <= 0) {
+        return res.status(400).json({ error: "El precio del plato debe ser un número positivo válido." });
+    }
+    const parsedCategoriaId = parseInt(categoriaId);
+    if (Number.isNaN(parsedCategoriaId)) {
+        return res.status(400).json({ error: "Debe seleccionar una categoría válida." });
+    }
+
+    try {
+        // Verificar que la categoría realmente exista en el servidor
+        const categoryExists = await prisma.categoria.findUnique({
+            where: { id: parsedCategoriaId }
+        });
+        if (!categoryExists) {
+            return res.status(400).json({ error: `La categoría con ID ${parsedCategoriaId} no existe.` });
+        }
+
+        // 4. Procesar dentro de una transacción interactiva de Prisma
+        const syncResult = await prisma.$transaction(async (tx) => {
+            // A. Intentar insertar el registro de idempotencia en estado PROCESSING
+            // Lanza error Prisma P2002 si el operationId ya está tomado
+            const syncOp = await tx.syncOperation.create({
+                data: {
+                    operationId,
+                    entity,
+                    entityId,
+                    operation,
+                    status: 'PROCESSING',
+                    requestPayload: payload
+                }
+            });
+
+            // B. Aplicar mutación de negocio (Crear Plato)
+            const product = await tx.plato.create({
+                data: {
+                    nombre: nombre.toString().trim(),
+                    precio: parsedPrecio,
+                    categoriaId: parsedCategoriaId,
+                    descripcion: descripcion || '',
+                    imagen: imagen || null
+                }
+            });
+
+            const businessResult = {
+                localEntityId: entityId,
+                remoteEntityId: product.id,
+                product
+            };
+
+            // C. Actualizar estado a COMPLETED y guardar el payload de resultado
+            await tx.syncOperation.update({
+                where: { id: syncOp.id },
+                data: {
+                    status: 'COMPLETED',
+                    resultPayload: businessResult,
+                    completedAt: new Date()
+                }
+            });
+
+            return businessResult;
+        });
+
+        return res.json({
+            success: true,
+            duplicate: false,
+            result: syncResult
+        });
+
+    } catch (error) {
+        // 5. Manejo seguro de violación de restricción UNIQUE (Prisma P2002) fuera de la transacción abortada
+        if (error.code === 'P2002') {
+            try {
+                const existingOp = await prisma.syncOperation.findUnique({
+                    where: { operationId }
+                });
+
+                if (!existingOp) {
+                    return res.status(500).json({ error: "Error de consistencia en el log de idempotencia." });
+                }
+
+                // Caso A: Operación ya completada exitosamente -> retornar resultado persistido
+                if (existingOp.status === 'COMPLETED') {
+                    return res.json({
+                        success: true,
+                        duplicate: true,
+                        result: existingOp.resultPayload
+                    });
+                }
+
+                // Caso B: Operación en procesamiento remoto
+                if (existingOp.status === 'PROCESSING') {
+                    const threshold = 10 * 60 * 1000; // 10 minutos
+                    const opTime = new Date(existingOp.createdAt).getTime();
+
+                    // Política de PROCESSING remoto atascado: liberar si superó el timeout de 10 minutos
+                    if (Date.now() - opTime > threshold) {
+                        await prisma.syncOperation.update({
+                            where: { id: existingOp.id },
+                            data: {
+                                status: 'FAILED',
+                                errorPayload: { message: "Operación remota liberada tras expirar en PROCESSING por más de 10 minutos." }
+                            }
+                        });
+                        return res.status(409).json({
+                            error: "La operación concurrente anterior expiró. Se ha liberado el bloqueo lógico. Por favor, reintente.",
+                            pendingProcessing: true
+                        });
+                    }
+
+                    // En procesamiento normal concurrentemente
+                    return res.status(409).json({
+                        error: "La operación ya está siendo procesada de forma concurrente.",
+                        pendingProcessing: true
+                    });
+                }
+
+                // Caso C: Falló previamente
+                return res.status(500).json({
+                    error: "La operación de sincronización falló previamente en el servidor.",
+                    errorPayload: existingOp.errorPayload
+                });
+            } catch (errDb) {
+                return res.status(500).json({ error: "Fallo al consultar registro de idempotencia existente: " + errDb.message });
+            }
+        }
+
+        // 6. Si es otro error inesperado de negocio, marcar la operación como FAILED para no dejarla colgada en PROCESSING
+        try {
+            await prisma.syncOperation.update({
+                where: { operationId },
+                data: {
+                    status: 'FAILED',
+                    errorPayload: { message: error.message }
+                }
+            });
+        } catch (e) {
+            // Ignorar si no se alcanzó a crear la fila o el fallo ocurrió antes del insert
+        }
+
+        console.error("Error en sync endpoint:", error);
+        return res.status(500).json({ error: "Error interno al sincronizar operación: " + error.message });
+    }
+});
+
 app.post('/api/products', async (req, res) => {
     const { nombre, precio, categoriaId, descripcion, imagen } = req.body;
     try {
@@ -1525,7 +1688,7 @@ app.get('/api/staff/stats', async (req, res) => {
         // 1. Waiters Stats (Users with 'comandas')
         // We group by usuarioId in Comanda
         const waiters = await prisma.user.findMany({
-            where: { rol: 'mozo' },
+            where: { rol: { in: ['mozo', 'admin'] } },
             include: {
                 comandas: {
                     where: {
@@ -1555,7 +1718,7 @@ app.get('/api/staff/stats', async (req, res) => {
 
         // 2. Kitchen Stats (Users with 'detallesCocina')
         const cooks = await prisma.user.findMany({
-            where: { rol: 'cocina' },
+            where: { rol: { in: ['cocina', 'admin'] } },
             include: {
                 detallesCocina: {
                     where: {
@@ -2956,7 +3119,7 @@ app.get('/api/staff/stats', async (req, res) => {
         }
 
         const waiters = await prisma.user.findMany({
-            where: { rol: 'mozo' },
+            where: { rol: { in: ['mozo', 'admin'] } },
             include: {
                 comandas: {
                     where: {
@@ -2983,7 +3146,7 @@ app.get('/api/staff/stats', async (req, res) => {
         });
 
         const cooks = await prisma.user.findMany({
-            where: { rol: 'cocina' },
+            where: { rol: { in: ['cocina', 'admin'] } },
             include: {
                 detallesCocina: {
                     where: {

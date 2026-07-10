@@ -31,9 +31,10 @@ export default function KitchenBoard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isDesktop = windowWidth >= 1200;
-  const isTabletLandscape = windowWidth >= 768 && windowWidth < 1200;
-  const isTabbedMode = windowWidth < 768;
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const isDesktop = windowWidth >= 900 && !isPortrait;
+  const isTabletLandscape = windowWidth >= 640 && windowWidth < 900 && !isPortrait;
+  const isTabbedMode = windowWidth < 640 || isPortrait;
 
   // Local selector for tablet landscape columns toggle (since we can only show 2 at a time)
   const [tabletActivePair, setTabletActivePair] = useState('active'); // 'active' (Pendiente+Proceso) or 'ready' (Listo)

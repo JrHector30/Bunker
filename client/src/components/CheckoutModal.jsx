@@ -3,6 +3,7 @@ import { X, DollarSign, Smartphone, CreditCard, Receipt, Printer, ArrowRight, Ch
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { setOptimisticLock } from '../hooks/useCache';
+import { networkStatus, NetworkState, offlineCheckoutService, offlineSnapshotService } from '../offline';
 
 export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
   const { showConfirmation } = useConfirmation();
@@ -193,26 +194,20 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
 
       setOptimisticLock(parseInt(targetTableId), 'libre');
 
-      // Send checkout details to backend
-      fetch(`/api/checkout/${targetTableId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Checkout Logic (Offline-First hybrid logic)
+      if (networkStatus.isOffline()) {
+        offlineCheckoutService.checkout(targetTableId, {
           paymentMethod: resolvedPaymentMethod,
           docType: resolvedDocType,
           totalReceived: metodo === 'efectivo' ? paidAmountNum : totalFinal,
           tip: propinaMonto,
-          observation: '',
-          email: '',
           tipoComprobante: comprobanteTipo.toLowerCase(),
           documentoCliente: comprobanteTipo !== 'Ticket' ? docNumero : null,
           razonSocial: comprobanteTipo !== 'Ticket' ? razonSocial : null,
           direccionFiscal: comprobanteTipo !== 'Ticket' ? direccionFiscal : null
         })
-      })
-        .then(async res => {
-          if (res.ok) {
-            showToast('Pago registrado correctamente.', 'success');
+          .then(() => {
+            showToast('Pago registrado correctamente (Modo Offline).', 'success');
             window.dispatchEvent(new CustomEvent('refreshCashCount'));
             window.dispatchEvent(new CustomEvent('refreshTables'));
             try {
@@ -220,23 +215,65 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
               channel.postMessage('refreshTables');
               channel.postMessage('refreshCashCount');
               channel.close();
-            } catch (e) { }
-          } else {
-            showToast('Error al registrar pago. Verifica en Caja.', 'error');
+            } catch (e) {}
+            if (onSuccess) onSuccess();
+          })
+          .catch(err => {
+            console.error(err);
+            showToast('Error al registrar pago localmente: ' + err.message, 'error');
             if (previousTables) {
               localStorage.setItem('tables', previousTables);
               window.dispatchEvent(new CustomEvent('refreshTables'));
             }
-          }
+          });
+      } else {
+        // Send checkout details to backend
+        fetch(`/api/checkout/${targetTableId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentMethod: resolvedPaymentMethod,
+            docType: resolvedDocType,
+            totalReceived: metodo === 'efectivo' ? paidAmountNum : totalFinal,
+            tip: propinaMonto,
+            observation: '',
+            email: '',
+            tipoComprobante: comprobanteTipo.toLowerCase(),
+            documentoCliente: comprobanteTipo !== 'Ticket' ? docNumero : null,
+            razonSocial: comprobanteTipo !== 'Ticket' ? razonSocial : null,
+            direccionFiscal: comprobanteTipo !== 'Ticket' ? direccionFiscal : null
+          })
         })
-        .catch(e => {
-          console.error(e);
-          showToast('Error de conexión al registrar pago.', 'error');
-          if (previousTables) {
-            localStorage.setItem('tables', previousTables);
-            window.dispatchEvent(new CustomEvent('refreshTables'));
-          }
-        });
+          .then(async res => {
+            if (res.ok) {
+              showToast('Pago registrado correctamente.', 'success');
+              // Hidratar balance y mesas de fondo
+              offlineSnapshotService.hydrateOperationalSnapshot().catch(() => {});
+
+              window.dispatchEvent(new CustomEvent('refreshCashCount'));
+              window.dispatchEvent(new CustomEvent('refreshTables'));
+              try {
+                const channel = new BroadcastChannel('bunker');
+                channel.postMessage('refreshTables');
+                channel.postMessage('refreshCashCount');
+                channel.close();
+              } catch (e) { }
+              if (onSuccess) onSuccess();
+            } else {
+              showToast('Error al registrar pago. Verifica en Caja.', 'error');
+              if (previousTables) {
+                localStorage.setItem('tables', previousTables);
+                window.dispatchEvent(new CustomEvent('refreshTables'));
+              }
+            }
+          })
+          .catch(e => {
+            console.warn('[CheckoutModal] Registro online falló. Conmutando a offline local.');
+            networkStatus.setStatus(NetworkState.OFFLINE_CONFIRMED);
+            // Volver a intentar de forma offline
+            handleCheckout();
+          });
+      }
 
       onClose();
     }

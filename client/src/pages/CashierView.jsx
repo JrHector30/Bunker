@@ -23,6 +23,7 @@ import CloseButton from '../components/ui/CloseButton';
 import { CustomCharts } from '../components/CustomCharts';
 import { CheckoutModal } from '../components/CheckoutModal';
 import { MovimientoModal } from '../components/MovimientoModal';
+import { networkStatus, NetworkState, db, offlineCashService } from '../offline';
 import { PaloteoModal } from '../components/PaloteoModal';
 import { SummaryTicketModal } from '../components/SummaryTicketModal';
 import { DetailModal } from '../components/DetailModal';
@@ -95,11 +96,122 @@ const CashierView = () => {
   }, []);
 
   // API Call: Fetch open accounts
-  const openAccountsFetcher = useCallback(() => fetch('/api/cashier/open-accounts').then(res => res.json()), []);
+  const openAccountsFetcher = useCallback(async () => {
+    if (networkStatus.isOffline()) {
+      try {
+        const localOrders = await db.orders
+          .filter(o => o.status !== 'cerrada' && o.status !== 'anulada')
+          .toArray();
+        const [localOrderItems, localProducts, localTables] = await Promise.all([
+          db.orderItems.toArray(),
+          db.products.toArray(),
+          db.table('tables').toArray()
+        ]);
+
+        const productMap = new Map();
+        localProducts.forEach(p => {
+          if (p.id != null) productMap.set(String(p.id), p);
+          if (p.remoteId != null) productMap.set(String(p.remoteId), p);
+        });
+
+        // tableMap con clave String para evitar NaN al hacer Number(UUID)
+        const tableMap = new Map(localTables.map(t => [String(t.id), t]));
+
+        const orderItemMap = new Map();
+        localOrderItems.forEach(item => {
+          // Soportar ambos nombres de campo para la relación con la comanda
+          const parentId = String(item.comandaId || item.orderId || '');
+          if (!parentId) return;
+          if (!orderItemMap.has(parentId)) orderItemMap.set(parentId, []);
+
+          const productKey = String(item.platoId || item.productId || '');
+          const product = productMap.get(productKey);
+
+          // Resolver precio defensivamente: precio ?? precioVenta del item, luego del producto
+          const unitPrice = item.precio != null ? Number(item.precio)
+                          : item.precioVenta != null ? Number(item.precioVenta)
+                          : product?.precio != null ? Number(product.precio)
+                          : product?.precioVenta != null ? Number(product.precioVenta)
+                          : 0;
+
+          orderItemMap.get(parentId).push({
+            ...item,
+            _unitPrice: unitPrice,
+            plato: product
+              ? { ...product, precio: unitPrice }
+              : { id: productKey, nombre: 'Plato sin datos', precio: unitPrice }
+          });
+        });
+
+        // Filtrar órdenes activas usando ambos campos de estado
+        const activeOrders = localOrders.filter(o => {
+          const est = (o.estado || o.status || '').toLowerCase();
+          return est !== 'cerrada' && est !== 'anulada';
+        });
+
+        return activeOrders.map(order => {
+          const details = orderItemMap.get(String(order.id)) || [];
+
+          // Resolver mesaId: mesaId ?? tableId, normalizar a String
+          const resolvedTableId = order.mesaId != null ? String(order.mesaId)
+                                : order.tableId != null ? String(order.tableId)
+                                : null;
+          const mesa = resolvedTableId ? tableMap.get(resolvedTableId) : null;
+
+          // Número visible: numero ?? name (nunca Number(uuid))
+          const mesaNumero = mesa
+            ? (mesa.numero ?? mesa.name ?? resolvedTableId)
+            : (resolvedTableId ?? '?');
+
+          return {
+            ...order,
+            detalles: details,
+            mesa: { id: resolvedTableId, numero: mesaNumero }
+          };
+        });
+      } catch (err) {
+        console.error('[CashierView] Error al cargar open accounts offline:', err);
+        return [];
+      }
+    }
+
+    return fetch('/api/cashier/open-accounts')
+      .then(res => {
+        if (!res.ok) throw new Error('Error al conectar');
+        return res.json();
+      })
+      .catch(err => {
+        console.warn('[CashierView] openAccountsFetcher falló. Conmutando a offline.');
+        networkStatus.setStatus(NetworkState.OFFLINE_CONFIRMED);
+        return openAccountsFetcher();
+      });
+  }, []);
+
   const { data: openTables, mutate: fetchTables } = useCache('openTables', openAccountsFetcher, []);
 
   // API Call: Fetch current cashier status balance
-  const statusFetcher = useCallback(() => fetch('/api/cashier/balance').then(res => res.json()), []);
+  const statusFetcher = useCallback(async () => {
+    if (networkStatus.isOffline()) {
+      try {
+        return await offlineCashService.getBalance();
+      } catch (err) {
+        console.error('[CashierView] Error al cargar balance local offline:', err);
+        return null;
+      }
+    }
+
+    return fetch('/api/cashier/balance')
+      .then(res => {
+        if (!res.ok) throw new Error('Error al conectar');
+        return res.json();
+      })
+      .catch(err => {
+        console.warn('[CashierView] statusFetcher falló. Conmutando a offline.');
+        networkStatus.setStatus(NetworkState.OFFLINE_CONFIRMED);
+        return statusFetcher();
+      });
+  }, []);
+
   const { data: currentStatus, mutate: fetchStatus } = useCache('cashier_balance', statusFetcher, null);
 
   const shiftStatus = currentStatus?.estado || 'cerrado';
@@ -213,6 +325,26 @@ const CashierView = () => {
   };
 
   const executeToggle = (montoInicial) => {
+    const accion = currentStatus?.estado === 'abierto' ? 'close' : 'open';
+
+    if (networkStatus.isOffline()) {
+      offlineCashService.toggleCashSession({
+        usuarioId: user.id,
+        montoInicial: accion === 'open' ? montoInicial : 0,
+        montoFinal: accion === 'close' ? 0 : 0, // En local asumimos cero al toggle, se calcula
+        accion
+      })
+        .then(async () => {
+          fetchStatus();
+          setCurrentPage(1);
+          setShowInitialAmountModal(false);
+          if (refreshCajaStatus) await refreshCajaStatus();
+          showToast("Estado de caja cambiado localmente (Modo Offline).", "success");
+        })
+        .catch(err => showToast(err.message, 'error'));
+      return;
+    }
+
     fetch('/api/cashier/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -224,6 +356,9 @@ const CashierView = () => {
         return body;
       })
       .then(async () => {
+        // Hidratar snapshot de fondo para incorporar el cambio de sesión
+        offlineSnapshotService.hydrateOperationalSnapshot().catch(() => {});
+
         fetchStatus();
         setCurrentPage(1);
         fetchHistory();
@@ -236,6 +371,28 @@ const CashierView = () => {
 
   // Manual movements submit handler
   const handleAddMovimiento = (payload) => {
+    if (networkStatus.isOffline()) {
+      if (!currentStatus?.id) {
+        showToast('No hay una sesión de caja activa para registrar movimientos.', 'error');
+        return;
+      }
+      offlineCashService.createMovement({
+        arqueoId: currentStatus.id,
+        tipo: payload.tipo,
+        monto: payload.monto,
+        concepto: payload.concepto,
+        metodoPago: payload.metodoPago || 'efectivo',
+        observacion: payload.observacion || ''
+      })
+        .then(() => {
+          showToast('Movimiento registrado con éxito localmente (Modo Offline).', 'success');
+          fetchStatus();
+          window.dispatchEvent(new Event('refreshCashCount'));
+        })
+        .catch(err => showToast(err.message, 'error'));
+      return;
+    }
+
     fetch('/api/cashier/movimientos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -244,6 +401,9 @@ const CashierView = () => {
       .then(async res => {
         if (res.ok) {
           showToast('Movimiento registrado con éxito.', 'success');
+          // Hidratar snapshot de fondo para incorporar el movimiento de caja
+          offlineSnapshotService.hydrateOperationalSnapshot().catch(() => {});
+
           fetchStatus();
           fetchHistory();
           window.dispatchEvent(new Event('refreshCashCount'));
@@ -1199,7 +1359,7 @@ const CashierView = () => {
 
           {/* KPI Analytics Cards */}
           {currentStatus && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 font-sans">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 font-sans cashier-kpi-grid">
               <div className="glass-panel p-3.5 flex flex-col justify-between shadow-xs">
                 <div>
                   <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Total en Caja</p>

@@ -163,7 +163,7 @@ const CategoriesView = () => {
         return 0;
     });
 
-    const SortHeader = ({ label, sortKey }) => {
+    const SortHeader = ({ label, sortKey, className }) => {
         const isActive = sortConfig.key === sortKey;
         const Icon = isActive
             ? (sortConfig.direction === 'asc' ? ArrowUp : ArrowDown)
@@ -171,6 +171,7 @@ const CategoriesView = () => {
 
         return (
             <th
+                className={className}
                 style={{ padding: 15, cursor: 'pointer', userSelect: 'none', color: isActive ? 'var(--primary)' : 'inherit' }}
                 onClick={() => handleSort(sortKey)}
             >
@@ -222,10 +223,10 @@ const CategoriesView = () => {
                                 />
                             </th>
                             <SortHeader label="Nombre" sortKey="nombre" />
-                            <th style={{ padding: 15 }}>Icono</th>
-                            <th style={{ padding: 15 }}>Color</th>
-                            <SortHeader label="Cocina" sortKey="enviarCocina" />
-                            <SortHeader label="Productos" sortKey="productos" />
+                            <th className="col-optional" style={{ padding: 15 }}>Icono</th>
+                            <th className="col-optional" style={{ padding: 15 }}>Color</th>
+                            <SortHeader label="Cocina" sortKey="enviarCocina" className="col-optional" />
+                            <SortHeader label="Productos" sortKey="productos" className="col-optional" />
                             <th style={{ padding: 15 }}>Estado</th>
                             <th style={{ padding: 15 }}>Acciones</th>
                         </tr>
@@ -246,14 +247,14 @@ const CategoriesView = () => {
                                     />
                                 </td>
                                 <td style={{ padding: 15, fontWeight: 'bold' }}>{cat.nombre}</td>
-                                <td style={{ padding: 15, fontSize: '1.5rem' }}>{cat.icono}</td>
-                                <td style={{ padding: 15 }}>
+                                <td className="col-optional" style={{ padding: 15, fontSize: '1.5rem' }}>{cat.icono}</td>
+                                <td className="col-optional" style={{ padding: 15 }}>
                                     <div style={{
                                         width: 24, height: 24, borderRadius: '50%',
                                         background: cat.color, border: '1px solid rgba(255,255,255,0.2)'
                                     }} />
                                 </td>
-                                <td style={{ padding: 15 }}>
+                                <td className="col-optional" style={{ padding: 15 }}>
                                     {cat.enviarCocina !== false ? (
                                         <span style={{ color: 'var(--success)', display: 'flex', gap: 5, alignItems: 'center' }}>
                                             <ChefHat size={16} /> SÍ
@@ -262,7 +263,7 @@ const CategoriesView = () => {
                                         <span style={{ color: 'var(--text-muted)', opacity: 0.5 }}>NO</span>
                                     )}
                                 </td>
-                                <td style={{ padding: 15 }}>{cat._count?.platos || 0} items</td>
+                                <td className="col-optional" style={{ padding: 15 }}>{cat._count?.platos || 0} items</td>
                                 <td style={{ padding: 15 }}>
                                     {cat.activo ? <span className="badge status-ok">Activo</span> : <span className="badge status-error">Inactivo</span>}
                                 </td>
