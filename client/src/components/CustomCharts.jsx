@@ -206,7 +206,7 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                 `Egreso máximo registrado: S/. ${maxEgreso.toFixed(2)}`,
                 `Fecha de exportación: ${new Date().toLocaleString()}`
               ];
-              handleExportChart(chartASvgRef, 'Arqueos_Historial_Ingresos_Egresos.png', 'Comparativa de Ingresos vs. Egresos - ComandaGo', details);
+              handleExportChart(chartASvgRef, 'Arqueos_Historial_Ingresos_Egresos.png', 'Comparativa de Ingresos vs. Egresos - Bunker', details);
             }}
             className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans"
           >
@@ -427,7 +427,7 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                 `Manual/Otros: S/. ${detailManual.toFixed(2)} (${((detailManual / totalMethods) * 100).toFixed(0)}%)`,
                 `Fecha de exportación: ${new Date().toLocaleString()}`
               ];
-              handleExportChart(chartBSvgRef, `Arqueo_${selectedArqueo.id}_Distribucion_Pagos.png`, `Distribución de Métodos de Pago (Arqueo N° ${selectedArqueo.id}) - ComandaGo`, details);
+              handleExportChart(chartBSvgRef, `Arqueo_${selectedArqueo.id}_Distribucion_Pagos.png`, `Distribución de Métodos de Pago (Arqueo N° ${selectedArqueo.id}) - Bunker`, details);
             }}
             className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans"
           >

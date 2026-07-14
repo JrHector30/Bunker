@@ -14,8 +14,10 @@ import SimpleCombobox from '../components/SimpleCombobox';
 import DeleteButton from '../components/ui/DeleteButton';
 import EditButton from '../components/ui/EditButton';
 import CloseButton from '../components/ui/CloseButton';
+import { CustomCheckbox } from '../components/ui/CustomCheckbox';
 import { motion } from 'motion/react';
 import { safeRecordProductShadow } from '../offline';
+
 
 const InventoryView = () => {
     const { showConfirmation } = useConfirmation();
@@ -130,6 +132,18 @@ const InventoryView = () => {
     const [highlightedIndex, setHighlightedIndex] = useState(0);
     const [debouncedNombre, setDebouncedNombre] = useState('');
     const [modalMode, setModalMode] = useState('create');
+    const [selectedProductIds, setSelectedProductIds] = useState([]);
+
+    useEffect(() => {
+        setSelectedProductIds([]);
+    }, [searchTerm, filterCategory]);
+
+    useEffect(() => {
+        setSelectedProductIds([]);
+    }, [activeTab]);
+
+
+
 
     const normalizeText = (text) => {
         if (!text) return '';
@@ -691,6 +705,74 @@ const InventoryView = () => {
         }
     };
 
+    const handleBulkDeleteProducts = async () => {
+        const count = selectedProductIds.length;
+        if (!await showConfirmation(`¿Seguro que desea eliminar los ${count} productos seleccionados?`, { type: 'danger' })) return;
+
+        try {
+            const results = await Promise.all(
+                selectedProductIds.map(async (id) => {
+                    const prod = products.find(p => p.id === id);
+                    const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                    if (res.ok && prod) {
+                        safeRecordProductShadow('DELETE', prod);
+                    }
+                    return res.ok;
+                })
+            );
+
+            const allOk = results.every(ok => ok);
+            if (allOk) {
+                showToast('Productos seleccionados eliminados exitosamente', 'success');
+            } else {
+                showToast('Algunos productos no pudieron ser eliminados', 'warning');
+            }
+
+            setSelectedProductIds([]);
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            showToast('Error al eliminar productos seleccionados', 'error');
+        }
+    };
+
+    const handleBulkToggleStatus = async (active) => {
+        const count = selectedProductIds.length;
+        const actionName = active ? 'activar' : 'desactivar';
+        if (!await showConfirmation(`¿Desea ${actionName} los ${count} productos seleccionados?`, { type: 'info' })) return;
+
+        try {
+            const results = await Promise.all(
+                selectedProductIds.map(async (id) => {
+                    const prod = products.find(p => p.id === id);
+                    const res = await fetch(`/api/products/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ activo: active })
+                    });
+                    if (res.ok && prod) {
+                        safeRecordProductShadow('UPDATE', { ...prod, activo: active });
+                    }
+                    return res.ok;
+                })
+            );
+
+            const allOk = results.every(ok => ok);
+            if (allOk) {
+                showToast(`Productos seleccionados ${active ? 'activados' : 'desactivados'} exitosamente`, 'success');
+            } else {
+                showToast('Algunos productos no pudieron actualizarse', 'warning');
+            }
+
+            setSelectedProductIds([]);
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            showToast('Error al actualizar productos seleccionados', 'error');
+        }
+    };
+
+
     const handleSubmitProduct = async (e) => {
         e.preventDefault();
         setFormError(null);
@@ -903,6 +985,21 @@ const InventoryView = () => {
                         />
                     </div>
                     <div style={{ display: 'flex', gap: 10, marginLeft: 'auto', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {selectedProductIds.length > 0 && (
+                            <div style={{ display: 'flex', gap: 8, marginRight: 10 }}>
+                                <button className="glass-button flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-green-400 cursor-pointer h-9" style={{ borderColor: 'rgba(74, 222, 128, 0.3)' }} onClick={() => handleBulkToggleStatus(true)}>
+                                    Activar ({selectedProductIds.length})
+                                </button>
+                                <button className="glass-button flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-red-400 cursor-pointer h-9" style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }} onClick={() => handleBulkToggleStatus(false)}>
+                                    Desactivar ({selectedProductIds.length})
+                                </button>
+                                <DeleteButton
+                                    onClick={handleBulkDeleteProducts}
+                                    title={`Eliminar seleccionados (${selectedProductIds.length})`}
+                                    className="scale-90"
+                                />
+                            </div>
+                        )}
                         <button className="glass-button flex items-center gap-1.5 px-3 py-2 text-xs font-semibold cursor-pointer h-9" onClick={handleDownloadTemplate}>
                             <Download size={16} /> Descargar Plantilla
                         </button>
@@ -926,12 +1023,25 @@ const InventoryView = () => {
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ background: 'var(--table-header-bg)', textAlign: 'left' }}>
+                                <th style={{ padding: 15, width: 50, textAlign: 'center' }}>
+                                    <CustomCheckbox
+                                        checked={filteredProducts.length > 0 && selectedProductIds.length === filteredProducts.length}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedProductIds(filteredProducts.map(p => p.id));
+                                            } else {
+                                                setSelectedProductIds([]);
+                                            }
+                                        }}
+                                    />
+                                </th>
                                 <th style={{ padding: 15 }}>Imagen</th>
                                 <SortHeader label="Nombre" sortKey="nombre" />
                                 <SortHeader label="Categoría" sortKey="categoria" />
                                 <SortHeader label="Precio Venta" sortKey="precio" />
                                 <th style={{ padding: 15, textAlign: 'center' }}>Costo Prod.</th>
                                 <th style={{ padding: 15, textAlign: 'center' }}>Costo %</th>
+                                <th style={{ padding: 15, textAlign: 'center' }}>Estado</th>
                                 <th style={{ padding: 15 }}>Acciones</th>
                             </tr>
                         </thead>
@@ -943,6 +1053,18 @@ const InventoryView = () => {
 
                                 return (
                                     <tr key={prod.id} style={{ borderBottom: '1px solid var(--table-row-border)', textAlign: 'center' }}>
+                                        <td style={{ padding: 15, width: 50, textAlign: 'center' }}>
+                                            <CustomCheckbox
+                                                checked={selectedProductIds.includes(prod.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedProductIds(prev => [...prev, prod.id]);
+                                                    } else {
+                                                        setSelectedProductIds(prev => prev.filter(id => id !== prod.id));
+                                                    }
+                                                }}
+                                            />
+                                        </td>
                                         <td style={{ padding: 15 }}>
                                             {prod.imagen ? <img src={prod.imagen} alt={prod.nombre} style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 8 }} />
                                                 : <div style={{ width: 50, height: 50, background: 'var(--item-hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={20} className="text-muted" /></div>}
@@ -961,6 +1083,18 @@ const InventoryView = () => {
                                             )}
                                         </td>
                                         <td style={{ padding: 15 }}>
+                                            <span style={{
+                                                padding: '4px 8px',
+                                                borderRadius: 6,
+                                                fontSize: '0.75rem',
+                                                fontWeight: 'bold',
+                                                background: prod.activo ? 'rgba(74, 222, 128, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                                color: prod.activo ? 'rgb(74, 222, 128)' : 'rgb(239, 68, 68)'
+                                            }}>
+                                                {prod.activo ? 'Activo' : 'Inactivo'}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: 15 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
                                                 <EditButton onClick={() => handleOpenModal(prod)} className="scale-75 -my-2 -mx-1" />
                                                 <DeleteButton onClick={() => handleDeleteProduct(prod)} className="scale-75 -my-2 -mx-1" />
@@ -969,6 +1103,7 @@ const InventoryView = () => {
                                     </tr>
                                 );
                             })}
+
                         </tbody>
                     </table>
                 </div>
