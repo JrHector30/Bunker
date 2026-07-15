@@ -1,6 +1,6 @@
 {
-  "name": "Módulo de Caja - ComandaGo",
-  "description": "Rediseño y modernización del panel de arqueo de caja y control financiero para el sistema de comandas ComandaGo.",
+  "name": "Módulo de Caja - Bunker",
+  "description": "Rediseño y modernización del panel de arqueo de caja y control financiero para el sistema de comandas Bunker.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -272,7 +272,7 @@ export default function App() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `comandago_reporte_caja_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `bunker_reporte_caja_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1146,7 +1146,7 @@ export default function App() {
       {/* Footer copyright */}
       <footer className="bg-slate-900 text-slate-500 py-4 text-center text-[11px] border-t border-slate-800 font-mono mt-auto select-none">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
-          <span>ComandaGo v2.4 ERP • Módulo de Caja Registradora</span>
+          <span>Bunker v2.4 ERP • Módulo de Caja Registradora</span>
           <span>© 2026 Todos los derechos reservados. Diseñado por Senior UX/UI Studio.</span>
         </div>
       </footer>

@@ -102,7 +102,7 @@ const LoginPage = () => {
                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 30 }}>
                             <img src={logoMinimalista} alt="Logo" style={{ width: 100, height: 100, objectFit: 'contain' }} />
                         </div>
-                        <h1 style={{ fontFamily: '"Montserrat", sans-serif', fontWeight: 300, fontSize: '2.5rem', letterSpacing: '8px', margin: 0, textTransform: 'uppercase', color: '#000000' }}>
+                        <h1 style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 300, fontSize: '2.5rem', letterSpacing: '8px', margin: 0, textTransform: 'uppercase', color: '#000000' }}>
                             BUNKER
                         </h1>
                         <p style={{ marginTop: 15, fontSize: '0.9rem', color: '#555555', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 400, fontFamily: '"Inter", sans-serif' }}>
