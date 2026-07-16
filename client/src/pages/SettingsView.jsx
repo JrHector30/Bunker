@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal, Shield, Printer, RefreshCw, Check, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal, Shield, Printer, RefreshCw, Check, AlertTriangle, Wifi, WifiOff, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PermissionsConfig from '../components/PermissionsConfig';
 import { useNotification } from '../context/NotificationContext';
 import { enqueueTicket } from '../utils/printer';
+import { networkStatus, NetworkState } from '../offline/network/networkStatus';
 
 const SettingsView = () => {
     const { user } = useAuth();
@@ -31,6 +32,40 @@ const SettingsView = () => {
     const [repairHistory, setRepairHistory] = useState([]);
     const [auditTicketEnabled, setAuditTicketEnabled] = useState(false);
     const [now, setNow] = useState(Date.now());
+
+    // ─── Estado de modo de red manual ─────────────────────────────────────────
+    const [netOverride, setNetOverride] = useState(networkStatus.isManualOverride());
+    const [netState, setNetState] = useState(networkStatus.getStatus());
+
+    useEffect(() => {
+        return networkStatus.subscribe((state) => {
+            setNetState(state);
+            setNetOverride(networkStatus.isManualOverride());
+        });
+    }, []);
+
+    const handleToggleOfflineMode = useCallback(() => {
+        if (!netOverride) {
+            // Activar override manual en OFFLINE
+            networkStatus.setManualOverride(NetworkState.OFFLINE_CONFIRMED);
+            showToast('Modo Offline activado manualmente. El sistema no cambiará de modo automáticamente.', 'info');
+        } else {
+            // Desactivar override → volver a auto-detección
+            networkStatus.clearManualOverride();
+            showToast('Control automático de red restaurado.', 'success');
+        }
+    }, [netOverride, showToast]);
+
+    const handleSwitchToOnline = useCallback(() => {
+        networkStatus.setManualOverride(NetworkState.ONLINE);
+        showToast('Modo Online forzado manualmente.', 'success');
+    }, [showToast]);
+
+    const handleSwitchToOffline = useCallback(() => {
+        networkStatus.setManualOverride(NetworkState.OFFLINE_CONFIRMED);
+        showToast('Modo Offline forzado manualmente.', 'info');
+    }, [showToast]);
+    // ──────────────────────────────────────────────────────────────────────────
 
     const isAnyPrinterRepairing = Array.isArray(printers) && printers.some(p => p.ultimoEstado === 'RECOVERING');
 
@@ -515,6 +550,126 @@ const SettingsView = () => {
                         </div>
                     ))}
                 </div>
+            </section>
+
+            {/* ─── SECCIÓN: MODO DE RED ─────────────────────────────────────── */}
+            <section className="glass-panel" style={{ padding: 30, marginTop: 30 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                    {netOverride
+                        ? <Lock size={20} color="var(--primary)" />
+                        : <Wifi size={20} color="var(--text-muted)" />
+                    }
+                    <h2 style={{ margin: 0 }}>Modo de Red</h2>
+                    {netOverride && (
+                        <span style={{
+                            fontSize: '0.72rem', fontWeight: 700, letterSpacing: 1,
+                            padding: '2px 8px', borderRadius: 20,
+                            background: 'rgba(255,200,0,0.15)',
+                            color: '#f5c518',
+                            border: '1px solid rgba(255,200,0,0.3)'
+                        }}>CONTROL MANUAL</span>
+                    )}
+                </div>
+
+                {/* Estado actual */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '12px 16px', borderRadius: 10, marginBottom: 20,
+                    background: netState === NetworkState.ONLINE
+                        ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+                    border: `1px solid ${netState === NetworkState.ONLINE ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+                }}>
+                    {netState === NetworkState.ONLINE
+                        ? <Wifi size={18} color="#10b981" />
+                        : <WifiOff size={18} color="#ef4444" />
+                    }
+                    <span style={{ fontWeight: 600, fontSize: '0.95rem', color: netState === NetworkState.ONLINE ? '#10b981' : '#ef4444' }}>
+                        {netState === NetworkState.ONLINE ? 'ONLINE — Conectado al backend' : 'OFFLINE — Operando con IndexedDB local'}
+                    </span>
+                    {!netOverride && (
+                        <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Auto-detección activa</span>
+                    )}
+                </div>
+
+                {/* Toggle override */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 20px', background: 'rgba(0,0,0,0.1)', borderRadius: 12, border: '1px solid var(--glass-border)', marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Lock size={18} color={netOverride ? 'var(--primary)' : 'var(--text-muted)'} />
+                        </div>
+                        <div>
+                            <h3 style={{ margin: '0 0 4px 0', fontSize: '1.05rem' }}>Control manual de red</h3>
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                {netOverride
+                                    ? 'El sistema NO cambiará de modo automáticamente. Tú decides.'
+                                    : 'El sistema detecta automáticamente la conectividad con el backend.'}
+                            </p>
+                        </div>
+                    </div>
+                    {/* Toggle switch */}
+                    <div
+                        onClick={handleToggleOfflineMode}
+                        title={netOverride ? 'Desactivar control manual' : 'Activar control manual'}
+                        style={{
+                            width: 50, height: 28, borderRadius: 14,
+                            background: netOverride ? 'var(--primary)' : 'rgba(255,255,255,0.2)',
+                            cursor: 'pointer', position: 'relative',
+                            transition: 'background 0.3s ease', flexShrink: 0
+                        }}
+                    >
+                        <div style={{
+                            width: 24, height: 24, borderRadius: '50%', background: '#fff',
+                            position: 'absolute', top: 2,
+                            left: netOverride ? 24 : 2,
+                            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                        }} />
+                    </div>
+                </div>
+
+                {/* Botones de modo — solo visibles cuando override está activo */}
+                {netOverride && (
+                    <div style={{ display: 'flex', gap: 12 }}>
+                        <button
+                            onClick={handleSwitchToOnline}
+                            disabled={netState === NetworkState.ONLINE}
+                            style={{
+                                flex: 1, padding: '12px 0', borderRadius: 10, fontWeight: 700,
+                                cursor: netState === NetworkState.ONLINE ? 'default' : 'pointer',
+                                border: '1px solid rgba(16,185,129,0.4)',
+                                background: netState === NetworkState.ONLINE ? 'rgba(16,185,129,0.2)' : 'transparent',
+                                color: '#10b981', opacity: netState === NetworkState.ONLINE ? 1 : 0.6,
+                                transition: 'all 0.2s',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                            }}
+                        >
+                            <Wifi size={16} />
+                            Forzar ONLINE
+                            {netState === NetworkState.ONLINE && <Check size={14} />}
+                        </button>
+                        <button
+                            onClick={handleSwitchToOffline}
+                            disabled={netState === NetworkState.OFFLINE_CONFIRMED}
+                            style={{
+                                flex: 1, padding: '12px 0', borderRadius: 10, fontWeight: 700,
+                                cursor: netState === NetworkState.OFFLINE_CONFIRMED ? 'default' : 'pointer',
+                                border: '1px solid rgba(239,68,68,0.4)',
+                                background: netState === NetworkState.OFFLINE_CONFIRMED ? 'rgba(239,68,68,0.2)' : 'transparent',
+                                color: '#ef4444', opacity: netState === NetworkState.OFFLINE_CONFIRMED ? 1 : 0.6,
+                                transition: 'all 0.2s',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                            }}
+                        >
+                            <WifiOff size={16} />
+                            Forzar OFFLINE
+                            {netState === NetworkState.OFFLINE_CONFIRMED && <Check size={14} />}
+                        </button>
+                    </div>
+                )}
+
+                <p style={{ margin: '16px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                    <strong>⚠ Importante:</strong> El control manual persiste al recargar la página. Desactívalo cuando termines tus pruebas para que el sistema detecte la conectividad automáticamente.
+                </p>
             </section>
 
             <section className="glass-panel" style={{ padding: 30, marginTop: 30 }}>
