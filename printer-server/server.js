@@ -10,10 +10,15 @@ if (fs.existsSync(localEnv)) {
   require('dotenv').config({ path: parentEnv });
 }
 
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const { exec } = require('child_process');
 const net = require('net');
 const os = require('os');
+
+// Configurar parser para TIMESTAMP (tipo 1114 en Postgres) para que se interprete en UTC y no local del servidor Node
+types.setTypeParser(1114, function(stringValue) {
+  return new Date(stringValue.replace(' ', 'T') + 'Z');
+});
 
 const STATION_ID = process.env.STATION_ID || 'Caja';
 

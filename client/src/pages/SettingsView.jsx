@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal, Shield, Printer, RefreshCw, Check, AlertTriangle, Wifi, WifiOff, Lock } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal, Shield, Printer, RefreshCw, Check, AlertTriangle, Wifi, WifiOff, Lock, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PermissionsConfig from '../components/PermissionsConfig';
 import { useNotification } from '../context/NotificationContext';
@@ -36,6 +36,18 @@ const SettingsView = () => {
     // ─── Estado de modo de red manual ─────────────────────────────────────────
     const [netOverride, setNetOverride] = useState(networkStatus.isManualOverride());
     const [netState, setNetState] = useState(networkStatus.getStatus());
+
+    // ─── Estado de impresoras ocultadas temporalmente ──────────────────────────
+    const [hiddenPrinterNames, setHiddenPrinterNames] = useState(new Set());
+
+    const handleHidePrinter = (pName) => {
+        setHiddenPrinterNames(prev => {
+            const next = new Set(prev);
+            next.add(pName);
+            return next;
+        });
+        showToast(`Impresora "${pName}" ocultada de la vista.`, 'info');
+    };
 
     useEffect(() => {
         return networkStatus.subscribe((state) => {
@@ -373,6 +385,8 @@ const SettingsView = () => {
                             clearInterval(interval);
                             await loadPrintersData(selectedStation);
                             setIsScanning(false);
+                            // Restaurar visualización de todas las impresoras al actualizar
+                            setHiddenPrinterNames(new Set());
                             showToast(`Lista de impresoras de la estación "${selectedStation}" actualizada con éxito.`, 'success');
                         }
                     }
@@ -766,260 +780,344 @@ const SettingsView = () => {
                     </div>
                 </div>
 
-                <h3 style={{ fontSize: '1.05rem', marginBottom: 15, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>
-                    Dispositivos Vinculados:
-                </h3>
-
+                {/* Paneles de Dispositivos Separados por Interfaz */}
                 {printers.length === 0 ? (
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 20 }}>
                         No hay dispositivos vinculados para esta estación. Presiona "Actualizar" para detectar puertos USB locales o escanear impresoras en la red.
                     </p>
-                ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-                        {printers.map((printer, index) => {
-                            const pName = printer.nombre || printer;
-                            const isSelected = selectedPrinter === pName;
-                            const transport = printer.transport || 'USB';
-                            const state = printer.ultimoEstado || 'ONLINE';
-                            const ip = printer.ultimaIp || '';
-                            const mac = printer.mac || '';
-                            const latency = printer.ultimaRespuestaMs || 0;
+                ) : (() => {
+                    const usbPrinters = printers.filter(p => {
+                        const transport = p.transport || 'USB';
+                        const pName = p.nombre || p;
+                        return transport === 'USB' && !hiddenPrinterNames.has(pName);
+                    });
 
-                            const isOnline = state === 'ONLINE';
-                            const isOffline = state === 'OFFLINE';
-                            const isError = state === 'ERROR';
-                            const isRecovering = state === 'RECOVERING';
+                    const ethernetPrinters = printers.filter(p => {
+                        const transport = p.transport || 'USB';
+                        const pName = p.nombre || p;
+                        return transport === 'TCP9100' && !hiddenPrinterNames.has(pName);
+                    });
 
-                            const diagTime = printer.ultimoDiag ? new Date(printer.ultimoDiag).getTime() : 0;
-                            const cooldownRemaining = (isOffline && diagTime) ? Math.max(0, Math.ceil((15000 - (now - diagTime)) / 1000)) : 0;
-                            const isCooldownActive = cooldownRemaining > 0;
+                    const renderPrinterCard = (printer, index) => {
+                        const pName = printer.nombre || printer;
+                        const isSelected = selectedPrinter === pName;
+                        const transport = printer.transport || 'USB';
+                        const state = printer.ultimoEstado || 'ONLINE';
+                        const ip = printer.ultimaIp || '';
+                        const mac = printer.mac || '';
+                        const latency = printer.ultimaRespuestaMs || 0;
 
-                            // Estilo de borde y fondo del card
-                            let cardBorderColor = 'var(--glass-border)';
-                            let cardBg = 'rgba(255,255,255,0.01)';
-                            if (isSelected) {
-                                if (isOnline) {
-                                    cardBorderColor = '#10b981';
-                                    cardBg = 'rgba(16, 185, 129, 0.04)';
-                                } else if (isOffline) {
-                                    cardBorderColor = '#ef4444';
-                                    cardBg = 'rgba(239, 68, 68, 0.04)';
-                                } else if (isError) {
-                                    cardBorderColor = '#f59e0b';
-                                    cardBg = 'rgba(245, 158, 11, 0.04)';
-                                } else if (isRecovering) {
-                                    cardBorderColor = '#3b82f6';
-                                    cardBg = 'rgba(59, 130, 246, 0.04)';
-                                }
+                        const isOnline = state === 'ONLINE';
+                        const isOffline = state === 'OFFLINE';
+                        const isError = state === 'ERROR';
+                        const isRecovering = state === 'RECOVERING';
+
+                        const diagTime = printer.ultimoDiag ? new Date(printer.ultimoDiag).getTime() : 0;
+                        const cooldownRemaining = (isOffline && diagTime) ? Math.max(0, Math.ceil((15000 - (now - diagTime)) / 1000)) : 0;
+                        const isCooldownActive = cooldownRemaining > 0;
+
+                        // Estilo de borde y fondo del card
+                        let cardBorderColor = 'var(--glass-border)';
+                        let cardBg = 'rgba(255,255,255,0.01)';
+                        if (isSelected) {
+                            if (isOnline) {
+                                cardBorderColor = '#10b981';
+                                cardBg = 'rgba(16, 185, 129, 0.04)';
+                            } else if (isOffline) {
+                                cardBorderColor = '#ef4444';
+                                cardBg = 'rgba(239, 68, 68, 0.04)';
+                            } else if (isError) {
+                                cardBorderColor = '#f59e0b';
+                                cardBg = 'rgba(245, 158, 11, 0.04)';
+                            } else if (isRecovering) {
+                                cardBorderColor = '#3b82f6';
+                                cardBg = 'rgba(59, 130, 246, 0.04)';
                             }
+                        }
 
-                            return (
+                        return (
+                            <div
+                                key={pName || index}
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    padding: '16px 20px',
+                                    background: cardBg,
+                                    border: `1px solid ${cardBorderColor}`,
+                                    borderRadius: 12,
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
                                 <div
-                                    key={pName || index}
+                                    onClick={() => handleSelectPrinter(pName)}
                                     style={{
                                         display: 'flex',
-                                        flexDirection: 'column',
-                                        padding: '16px 20px',
-                                        background: cardBg,
-                                        border: `1px solid ${cardBorderColor}`,
-                                        borderRadius: 12,
-                                        transition: 'all 0.2s ease'
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        cursor: 'pointer',
+                                        width: '100%'
                                     }}
                                 >
-                                    <div
-                                        onClick={() => handleSelectPrinter(pName)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            cursor: 'pointer',
-                                            width: '100%'
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <Printer size={18} color={isSelected ? 'var(--primary)' : 'var(--text-muted)'} />
-                                                <span style={{
-                                                    fontSize: '0.95rem',
-                                                    fontWeight: isSelected ? 'bold' : 'normal',
-                                                    color: 'var(--text-main)'
-                                                }}>
-                                                    {pName}
-                                                </span>
-                                                <span style={{
-                                                    fontSize: '0.7rem',
-                                                    background: 'rgba(255,255,255,0.06)',
-                                                    color: 'var(--text-muted)',
-                                                    padding: '2px 8px',
-                                                    borderRadius: 6,
-                                                    fontWeight: '600'
-                                                }}>
-                                                    {transport === 'USB' ? 'USB' : 'ETHERNET'}
-                                                </span>
-                                            </div>
-                                            {transport === 'TCP9100' && (
-                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                    IP: <strong style={{ color: 'var(--text-main)' }}>{ip}</strong> | MAC: <strong style={{ color: 'var(--text-main)' }}>{mac}</strong> {isOnline && `| Latencia: ${latency}ms`}
-                                                </span>
-                                            )}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                            <Printer size={18} color={isSelected ? 'var(--primary)' : 'var(--text-muted)'} />
+                                            <span style={{
+                                                fontSize: '0.95rem',
+                                                fontWeight: isSelected ? 'bold' : 'normal',
+                                                color: 'var(--text-main)'
+                                            }}>
+                                                {pName}
+                                            </span>
+                                            <span style={{
+                                                fontSize: '0.7rem',
+                                                background: 'rgba(255,255,255,0.06)',
+                                                color: 'var(--text-muted)',
+                                                padding: '2px 8px',
+                                                borderRadius: 6,
+                                                fontWeight: '600'
+                                            }}>
+                                                {transport === 'USB' ? 'USB' : 'ETHERNET'}
+                                            </span>
                                         </div>
+                                        {transport === 'TCP9100' && (
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                IP: <strong style={{ color: 'var(--text-main)' }}>{ip}</strong> | MAC: <strong style={{ color: 'var(--text-main)' }}>{mac}</strong> {isOnline && `| Latencia: ${latency}ms`}
+                                            </span>
+                                        )}
+                                    </div>
 
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            {/* Badges de Estado */}
-                                            {isOnline && (
-                                                <span style={{ background: '#10b981', color: '#fff', padding: '3px 10px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 'bold' }}>
-                                                    🟢 CONECTADA
-                                                </span>
-                                            )}
-                                            {isOffline && (
-                                                <span style={{ background: '#ef4444', color: '#fff', padding: '3px 10px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 'bold' }}>
-                                                    🔴 SIN CONEXIÓN
-                                                </span>
-                                            )}
-                                            {isError && (
-                                                <span style={{ background: '#f59e0b', color: '#fff', padding: '3px 10px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 'bold' }}>
-                                                    🟡 NO OPERATIVA
-                                                </span>
-                                            )}
-                                            {isRecovering && (
-                                                <span style={{ background: '#3b82f6', color: '#fff', padding: '3px 10px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                    <RefreshCw size={10} className="animate-spin" /> REPARANDO...
-                                                </span>
-                                            )}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }} onClick={(e) => e.stopPropagation()}>
+                                        {/* Badges de Estado */}
+                                        {isOnline && (
+                                            <span style={{ background: '#10b981', color: '#fff', padding: '3px 10px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 'bold' }}>
+                                                🟢 CONECTADA
+                                            </span>
+                                        )}
+                                        {isOffline && (
+                                            <span style={{ background: '#ef4444', color: '#fff', padding: '3px 10px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 'bold' }}>
+                                                🔴 SIN CONEXIÓN
+                                            </span>
+                                        )}
+                                        {isError && (
+                                            <span style={{ background: '#f59e0b', color: '#fff', padding: '3px 10px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 'bold' }}>
+                                                🟡 NO OPERATIVA
+                                            </span>
+                                        )}
+                                        {isRecovering && (
+                                            <span style={{ background: '#3b82f6', color: '#fff', padding: '3px 10px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <RefreshCw size={10} className="animate-spin" /> REPARANDO...
+                                            </span>
+                                        )}
 
-                                            {/* Botones de acción específicos */}
-                                            {transport === 'TCP9100' && (
-                                                <div style={{ display: 'flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                                                    {!isRecovering && (
-                                                        <button
-                                                            onClick={() => handleRequestRecovery(printer.id)}
-                                                            disabled={isScanning || isAnyPrinterRepairing || isCooldownActive}
-                                                            style={{
-                                                                background: 'rgba(255,255,255,0.04)',
-                                                                border: '1px solid var(--glass-border)',
-                                                                color: isCooldownActive ? 'var(--text-muted)' : 'var(--primary)',
-                                                                padding: '4px 10px',
-                                                                borderRadius: 6,
-                                                                fontSize: '0.75rem',
-                                                                cursor: isCooldownActive ? 'not-allowed' : 'pointer',
-                                                                fontWeight: 'bold',
-                                                                opacity: (isScanning || isAnyPrinterRepairing || isCooldownActive) ? 0.5 : 1
-                                                            }}
-                                                        >
-                                                            {isCooldownActive ? `Espera ${cooldownRemaining}s` : 'Reparar'}
-                                                        </button>
-                                                    )}
+                                        {/* Botones de acción específicos */}
+                                        {transport === 'TCP9100' && (
+                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                {!isRecovering && (
                                                     <button
-                                                        onClick={() => handleUnlinkDevice(printer.id)}
-                                                        disabled={isScanning || isAnyPrinterRepairing}
+                                                        onClick={() => handleRequestRecovery(printer.id)}
+                                                        disabled={isScanning || isAnyPrinterRepairing || isCooldownActive}
                                                         style={{
-                                                            background: 'rgba(239, 68, 68, 0.1)',
-                                                            border: '1px solid rgba(239, 68, 68, 0.2)',
-                                                            color: '#f87171',
+                                                            background: 'rgba(255,255,255,0.04)',
+                                                            border: '1px solid var(--glass-border)',
+                                                            color: isCooldownActive ? 'var(--text-muted)' : 'var(--primary)',
                                                             padding: '4px 10px',
                                                             borderRadius: 6,
                                                             fontSize: '0.75rem',
-                                                            cursor: 'pointer',
-                                                            opacity: (isScanning || isAnyPrinterRepairing) ? 0.5 : 1
+                                                            cursor: isCooldownActive ? 'not-allowed' : 'pointer',
+                                                            fontWeight: 'bold',
+                                                            opacity: (isScanning || isAnyPrinterRepairing || isCooldownActive) ? 0.5 : 1
                                                         }}
                                                     >
-                                                        Desvincular
+                                                        {isCooldownActive ? `Espera ${cooldownRemaining}s` : 'Reparar'}
                                                     </button>
-                                                </div>
-                                            )}
+                                                )}
+                                                <button
+                                                    onClick={() => handleUnlinkDevice(printer.id)}
+                                                    disabled={isScanning || isAnyPrinterRepairing}
+                                                    style={{
+                                                        background: 'rgba(239, 68, 68, 0.1)',
+                                                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                                                        color: '#f87171',
+                                                        padding: '4px 10px',
+                                                        borderRadius: 6,
+                                                        fontSize: '0.75rem',
+                                                        cursor: 'pointer',
+                                                        opacity: (isScanning || isAnyPrinterRepairing) ? 0.5 : 1
+                                                    }}
+                                                >
+                                                    Desvincular
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Ocultar temporalmente */}
+                                        <button
+                                            onClick={() => handleHidePrinter(pName)}
+                                            title="Ocultar de la vista"
+                                            style={{
+                                                background: 'rgba(255,255,255,0.03)',
+                                                border: '1px solid var(--glass-border)',
+                                                color: 'var(--text-muted)',
+                                                padding: '5px 7px',
+                                                borderRadius: 6,
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.2s',
+                                                outline: 'none'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.color = '#ef4444';
+                                                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+                                                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.color = 'var(--text-muted)';
+                                                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                                                e.currentTarget.style.borderColor = 'var(--glass-border)';
+                                            }}
+                                        >
+                                            <EyeOff size={13} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Selector de Medida de Papel y Perfil (Solo si el dispositivo está ACTIVO) */}
+                                {isSelected && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
+                                        {/* Selector de Ancho */}
+                                        <div
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                width: '100%'
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                Ancho de impresión:
+                                            </span>
+                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                {['80mm', '58mm', '50mm'].map((size) => {
+                                                    const currentSize = printerSizes[pName] || '80mm';
+                                                    const isSizeActive = currentSize === size;
+                                                    return (
+                                                        <button
+                                                            key={size}
+                                                            onClick={() => handleSavePrinterSize(pName, size)}
+                                                            style={{
+                                                                padding: '4px 12px',
+                                                                borderRadius: 6,
+                                                                fontSize: '0.75rem',
+                                                                cursor: 'pointer',
+                                                                background: isSizeActive ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
+                                                                color: isSizeActive ? '#fff' : 'var(--text-muted)',
+                                                                border: `1px solid ${isSizeActive ? 'var(--primary)' : 'var(--glass-border)'}`,
+                                                                fontWeight: isSizeActive ? 'bold' : 'normal',
+                                                                transition: 'all 0.15s ease'
+                                                            }}
+                                                        >
+                                                            {size}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Selector de Perfil */}
+                                        <div
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                width: '100%',
+                                                marginTop: 4
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                Perfil de Hardware:
+                                            </span>
+                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                {['Generic', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((profile) => {
+                                                    const currentProfile = printerProfiles[pName] || 'Generic';
+                                                    const isProfileActive = currentProfile === profile;
+                                                    return (
+                                                        <button
+                                                            key={profile}
+                                                            onClick={() => handleSavePrinterProfile(pName, profile)}
+                                                            style={{
+                                                                padding: '4px 10px',
+                                                                borderRadius: 6,
+                                                                fontSize: '0.75rem',
+                                                                cursor: 'pointer',
+                                                                background: isProfileActive ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
+                                                                color: isProfileActive ? '#fff' : 'var(--text-muted)',
+                                                                border: `1px solid ${isProfileActive ? 'var(--primary)' : 'var(--glass-border)'}`,
+                                                                fontWeight: isProfileActive ? 'bold' : 'normal',
+                                                                transition: 'all 0.15s ease'
+                                                            }}
+                                                        >
+                                                            {profile === 'Generic' ? 'Genérico' : profile}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
+                                )}
+                            </div>
+                        );
+                    };
 
-                                    {/* Selector de Medida de Papel y Perfil (Solo si el dispositivo está ACTIVO) */}
-                                    {isSelected && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
-                                            {/* Selector de Ancho */}
-                                            <div
-                                                onClick={(e) => e.stopPropagation()}
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    width: '100%'
-                                                }}
-                                            >
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                    Ancho de impresión:
-                                                </span>
-                                                <div style={{ display: 'flex', gap: 6 }}>
-                                                    {['80mm', '58mm', '50mm'].map((size) => {
-                                                        const currentSize = printerSizes[pName] || '80mm';
-                                                        const isSizeActive = currentSize === size;
-                                                        return (
-                                                            <button
-                                                                key={size}
-                                                                onClick={() => handleSavePrinterSize(pName, size)}
-                                                                style={{
-                                                                    padding: '4px 12px',
-                                                                    borderRadius: 6,
-                                                                    fontSize: '0.75rem',
-                                                                    cursor: 'pointer',
-                                                                    background: isSizeActive ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
-                                                                    color: isSizeActive ? '#fff' : 'var(--text-muted)',
-                                                                    border: `1px solid ${isSizeActive ? 'var(--primary)' : 'var(--glass-border)'}`,
-                                                                    fontWeight: isSizeActive ? 'bold' : 'normal',
-                                                                    transition: 'all 0.15s ease'
-                                                                }}
-                                                            >
-                                                                {size}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-
-                                            {/* Selector de Perfil */}
-                                            <div
-                                                onClick={(e) => e.stopPropagation()}
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    width: '100%',
-                                                    marginTop: 4
-                                                }}
-                                            >
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                    Perfil de Hardware:
-                                                </span>
-                                                <div style={{ display: 'flex', gap: 6 }}>
-                                                    {['Generic', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((profile) => {
-                                                        const currentProfile = printerProfiles[pName] || 'Generic';
-                                                        const isProfileActive = currentProfile === profile;
-                                                        return (
-                                                            <button
-                                                                key={profile}
-                                                                onClick={() => handleSavePrinterProfile(pName, profile)}
-                                                                style={{
-                                                                    padding: '4px 10px',
-                                                                    borderRadius: 6,
-                                                                    fontSize: '0.75rem',
-                                                                    cursor: 'pointer',
-                                                                    background: isProfileActive ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
-                                                                    color: isProfileActive ? '#fff' : 'var(--text-muted)',
-                                                                    border: `1px solid ${isProfileActive ? 'var(--primary)' : 'var(--glass-border)'}`,
-                                                                    fontWeight: isProfileActive ? 'bold' : 'normal',
-                                                                    transition: 'all 0.15s ease'
-                                                                }}
-                                                            >
-                                                                {profile === 'Generic' ? 'Genérico' : profile}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
+                    return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 25, marginBottom: 20 }}>
+                            {/* Panel Impresoras USB (Windows) */}
+                            <div className="glass-panel" style={{ padding: '20px 24px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--glass-border)', borderRadius: 16 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 10 }}>
+                                    <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        🔌 Impresoras USB (Windows)
+                                    </h4>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                        {usbPrinters.length} dispositivo(s)
+                                    </span>
                                 </div>
-                            );
-                        })}
-                    </div>
-                )}
+                                {usbPrinters.length === 0 ? (
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: '10px 0' }}>
+                                        No hay impresoras USB visibles.
+                                    </p>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                        {usbPrinters.map((p, idx) => renderPrinterCard(p, idx))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Panel Impresoras Ethernet (Red) */}
+                            <div className="glass-panel" style={{ padding: '20px 24px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--glass-border)', borderRadius: 16 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 10 }}>
+                                    <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        📡 Impresoras Ethernet (Red Directa)
+                                    </h4>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                        {ethernetPrinters.length} dispositivo(s)
+                                    </span>
+                                </div>
+                                {ethernetPrinters.length === 0 ? (
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: '10px 0' }}>
+                                        No hay impresoras Ethernet visibles en la subred.
+                                    </p>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                        {ethernetPrinters.map((p, idx) => renderPrinterCard(p, idx))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {/* Sección de Dispositivos Ethernet Descubiertos en Red */}
                 {discoveredDevices.length > 0 && (
