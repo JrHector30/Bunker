@@ -682,10 +682,10 @@ const StaffStatsView = () => {
             {/* Report Content */}
             {!loading && arqueoInfo && (
                 <div>
-                    <div className="glass-panel" style={{ padding: '12px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 15, border: '1px solid var(--glass-border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 15, width: '100%', maxWidth: '580px', flexWrap: 'wrap' }}>
+                    <div className="glass-panel" style={{ padding: '12px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 15, border: '1px solid var(--glass-border)', position: 'relative', zIndex: 100 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 15, width: '100%', maxWidth: '580px', flexWrap: 'wrap', position: 'relative', zIndex: 101 }}>
                             <span style={{ fontSize: 13, fontWeight: 'bold', color: 'var(--text-muted)' }}>Filtrar reporte por día de caja:</span>
-                            <div style={{ flex: 1, minWidth: '240px' }}>
+                            <div style={{ flex: 1, minWidth: '240px', position: 'relative', zIndex: 102 }}>
                                 <SimpleCombobox
                                     items={comboboxItems}
                                     selectedItem={selectedComboboxItem}

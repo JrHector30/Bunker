@@ -2257,7 +2257,8 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
                 tipoMovimiento: 'VENTA',
                 cantidad: round2(-1 * data.change),
                 motivo: `Venta automática Comanda ID: ${order.id} - ${data.motivos.join(', ')}`,
-                usuarioId: order.usuarioId
+                usuarioId: order.usuarioId,
+                fecha: order.fecha
             }));
 
             if (movimientosData.length > 0) {
