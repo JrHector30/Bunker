@@ -149,7 +149,13 @@ export function DropdownRangeDatePicker({
             <Calendar
               mode={mode}
               selected={tempSelected}
-              onSelect={setTempSelected}
+              onSelect={(val) => {
+                setTempSelected(val);
+                if (mode === "single" && val) {
+                  onChange(val);
+                  setOpen(false);
+                }
+              }}
               month={displayMonth}
               onMonthChange={(date) => {
                 setMonth(date.getMonth());

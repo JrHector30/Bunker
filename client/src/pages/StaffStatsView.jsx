@@ -107,7 +107,7 @@ const StaffStatsView = () => {
 
         let interval = null;
         const checkAndStartInterval = () => {
-            const currentArqueo = sessions.find(s => s.id === selectedArqueoId) || arqueoInfo;
+            const currentArqueo = sessions.find(s => s.id === selectedArqueoId);
             if (currentArqueo && currentArqueo.estado === 'abierto') {
                 interval = setInterval(() => {
                     fetchArqueoStats(selectedArqueoId, false);
@@ -121,7 +121,7 @@ const StaffStatsView = () => {
             clearTimeout(timeout);
             if (interval) clearInterval(interval);
         };
-    }, [selectedArqueoId, sessions, arqueoInfo, fetchArqueoStats]);
+    }, [selectedArqueoId, fetchArqueoStats]);
 
     // 4. Generate continuous array of natural days in cashier range
     const rangeDays = useMemo(() => {
@@ -130,16 +130,21 @@ const StaffStatsView = () => {
         const start = new Date(arqueoInfo.fechaInicio);
         const end = arqueoInfo.fechaFin ? new Date(arqueoInfo.fechaFin) : new Date();
 
-        const current = new Date(start);
-        while (current <= end || current.toDateString() === end.toDateString()) {
-            const y = current.getFullYear();
-            const m = String(current.getMonth() + 1).padStart(2, '0');
-            const d = String(current.getDate()).padStart(2, '0');
+        // Normalizar a medianoche local de la PC
+        const currentDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        const endDate = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+        let safetyCounter = 0;
+        while (currentDate <= endDate && safetyCounter < 100) {
+            const y = currentDate.getFullYear();
+            const m = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const d = String(currentDate.getDate()).padStart(2, '0');
             const key = `${y}-${m}-${d}`;
             if (!days.includes(key)) {
                 days.push(key);
             }
-            current.setDate(current.getDate() + 1);
+            currentDate.setDate(currentDate.getDate() + 1);
+            safetyCounter++;
         }
         return days;
     }, [arqueoInfo]);
