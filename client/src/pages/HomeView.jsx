@@ -946,7 +946,7 @@ const HomeView = () => {
     };
     setLayouts(defaultLayouts);
     localStorage.removeItem('bunker_dashboard_layouts');
-    showToast('Diseño restablecido al grid original.', 'info');
+    // showToast('Diseño restablecido al grid original.', 'info');
   };
 
   // Run a layout migration on first render to clear any broken states in the user's browser local storage

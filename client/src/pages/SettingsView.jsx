@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal, Shield, Printer, RefreshCw, Check, AlertTriangle, Wifi, WifiOff, Lock, EyeOff } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal, Shield, Printer, RefreshCw, Check, AlertTriangle, Wifi, WifiOff, Lock, EyeOff, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PermissionsConfig from '../components/PermissionsConfig';
 import { useNotification } from '../context/NotificationContext';
@@ -39,6 +39,26 @@ const SettingsView = () => {
 
     // ─── Estado de impresoras ocultadas temporalmente ──────────────────────────
     const [hiddenPrinterNames, setHiddenPrinterNames] = useState(new Set());
+
+    // ─── Estado de visualización del historial de reparaciones ─────────────────
+    const [showRepairHistory, setShowRepairHistory] = useState(() => {
+        try {
+            const saved = localStorage.getItem('bunker_show_repair_history');
+            return saved !== null ? saved === 'true' : true;
+        } catch {
+            return true;
+        }
+    });
+
+    const handleToggleRepairHistory = () => {
+        setShowRepairHistory(prev => {
+            const next = !prev;
+            try {
+                localStorage.setItem('bunker_show_repair_history', String(next));
+            } catch { /* ignore */ }
+            return next;
+        });
+    };
 
     const handleHidePrinter = (pName) => {
         setHiddenPrinterNames(prev => {
@@ -1107,42 +1127,66 @@ const SettingsView = () => {
                 {/* Historial de Recuperaciones */}
                 {repairHistory.length > 0 && (
                     <div style={{ marginTop: 25, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                        <h3 style={{ fontSize: '1rem', color: 'var(--text-main)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            🔄 Historial de Reparaciones (Búnker Auto Recovery):
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {repairHistory.map((hist, i) => (
-                                <div
-                                    key={i}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        padding: '8px 12px',
-                                        background: 'rgba(16, 185, 129, 0.02)',
-                                        border: '1px solid rgba(16, 185, 129, 0.1)',
-                                        borderRadius: 8
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontWeight: 'bold' }}>
-                                            ✅ Recuperación Exitosa
-                                        </span>
-                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                            IP: {hist.ipAnterior} ➔ {hist.nuevaIp} ({hist.motivo})
-                                        </span>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                                        <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>
-                                            {(hist.tiempoMs / 1000).toFixed(2)}s
-                                        </span>
-                                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                                            {new Date(hist.creadoA).toLocaleTimeString()}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                            <h3 style={{ fontSize: '1rem', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                🔄 Historial de Reparaciones (Búnker Auto Recovery):
+                            </h3>
+                            <button
+                                onClick={handleToggleRepairHistory}
+                                title={showRepairHistory ? "Ocultar Historial" : "Mostrar Historial"}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: 4,
+                                    borderRadius: 4,
+                                    transition: 'color 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                            >
+                                {showRepairHistory ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
+                        {showRepairHistory && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {repairHistory.map((hist, i) => (
+                                    <div
+                                        key={i}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '8px 12px',
+                                            background: 'rgba(16, 185, 129, 0.02)',
+                                            border: '1px solid rgba(16, 185, 129, 0.1)',
+                                            borderRadius: 8
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontWeight: 'bold' }}>
+                                                ✅ Recuperación Exitosa
+                                            </span>
+                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                                IP: {hist.ipAnterior} ➔ {hist.nuevaIp} ({hist.motivo})
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                                            <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>
+                                                {(hist.tiempoMs / 1000).toFixed(2)}s
+                                            </span>
+                                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                                                {new Date(hist.creadoA).toLocaleTimeString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
