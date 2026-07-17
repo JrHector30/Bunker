@@ -19,17 +19,46 @@ const SettingsView = () => {
     const hasChanges = localShowAlerts !== showAlerts;
 
     // Printer settings state
-    const [printers, setPrinters] = useState([]);
-    const [selectedPrinter, setSelectedPrinter] = useState('');
+    const [printers, setPrinters] = useState(() => {
+        try {
+            const saved = localStorage.getItem('bunker_settings_printers');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    });
+    const [selectedPrinter, setSelectedPrinter] = useState(() => {
+        try {
+            return localStorage.getItem('bunker_settings_selected_printer') || '';
+        } catch { return ''; }
+    });
     const [isScanning, setIsScanning] = useState(false);
     const [testingPrint, setTestingPrint] = useState(false);
     const [stations, setStations] = useState(['Caja']);
     const [selectedStation, setSelectedStation] = useState('Caja');
-    const [printerSizes, setPrinterSizes] = useState({});
-    const [printerProfiles, setPrinterProfiles] = useState({});
+    const [printerSizes, setPrinterSizes] = useState(() => {
+        try {
+            const saved = localStorage.getItem('bunker_settings_printer_sizes');
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
+    });
+    const [printerProfiles, setPrinterProfiles] = useState(() => {
+        try {
+            const saved = localStorage.getItem('bunker_settings_printer_profiles');
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
+    });
     const [serverOnline, setServerOnline] = useState(false);
-    const [discoveredDevices, setDiscoveredDevices] = useState([]);
-    const [repairHistory, setRepairHistory] = useState([]);
+    const [discoveredDevices, setDiscoveredDevices] = useState(() => {
+        try {
+            const saved = localStorage.getItem('bunker_settings_discovered_devices');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    });
+    const [repairHistory, setRepairHistory] = useState(() => {
+        try {
+            const saved = localStorage.getItem('bunker_settings_repair_history');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    });
     const [auditTicketEnabled, setAuditTicketEnabled] = useState(false);
     const [now, setNow] = useState(Date.now());
 
@@ -111,57 +140,73 @@ const SettingsView = () => {
 
     const loadPrintersData = async (station = selectedStation) => {
         try {
-            // Fetch local station server heartbeat status
-            const serverRes = await fetch(`/api/recovery/estado-estacion?estacion=${station}`);
+            // Ejecutar todas las peticiones concurrentemente
+            const [
+                serverRes,
+                activeRes,
+                listRes,
+                sizesRes,
+                profilesRes,
+                discRes,
+                histRes,
+                auditConfRes
+            ] = await Promise.all([
+                fetch(`/api/recovery/estado-estacion?estacion=${station}`),
+                fetch(`/api/impresoras/activa?estacion=${station}`),
+                fetch(`/api/impresoras?estacion=${station}`),
+                fetch(`/api/impresoras/medidas?estacion=${station}`),
+                fetch(`/api/impresoras/perfiles?estacion=${station}`),
+                fetch(`/api/recovery/descubiertos?estacion=${station}`),
+                fetch(`/api/recovery/historial?estacion=${station}`),
+                fetch('/api/configuracion/imprimir_ticket_auditoria_recovery')
+            ]);
+
             if (serverRes.ok) {
                 const sData = await serverRes.json();
                 setServerOnline(sData.enLinea || false);
             }
 
-            // Fetch active printer for selected station
-            const activeRes = await fetch(`/api/impresoras/activa?estacion=${station}`);
             if (activeRes.ok) {
                 const activeData = await activeRes.json();
-                setSelectedPrinter(activeData.nombre || '');
+                const activeVal = activeData.nombre || '';
+                setSelectedPrinter(activeVal);
+                localStorage.setItem('bunker_settings_selected_printer', activeVal);
             }
 
-            // Fetch available/linked printers for selected station
-            const listRes = await fetch(`/api/impresoras?estacion=${station}`);
             if (listRes.ok) {
                 const list = await listRes.json();
                 setPrinters(list);
+                localStorage.setItem('bunker_settings_printers', JSON.stringify(list));
             }
 
-            // Fetch printer sizes mapping for selected station
-            const sizesRes = await fetch(`/api/impresoras/medidas?estacion=${station}`);
             if (sizesRes.ok) {
                 const sizesData = await sizesRes.json();
-                setPrinterSizes(sizesData || {});
+                const sizesVal = sizesData || {};
+                setPrinterSizes(sizesVal);
+                localStorage.setItem('bunker_settings_printer_sizes', JSON.stringify(sizesVal));
             }
 
-            // Fetch printer profiles mapping for selected station
-            const profilesRes = await fetch(`/api/impresoras/perfiles?estacion=${station}`);
             if (profilesRes.ok) {
                 const profilesData = await profilesRes.json();
-                setPrinterProfiles(profilesData || {});
+                const profilesVal = profilesData || {};
+                setPrinterProfiles(profilesVal);
+                localStorage.setItem('bunker_settings_printer_profiles', JSON.stringify(profilesVal));
             }
 
-            // Fetch discovered devices (not yet linked)
-            const discRes = await fetch(`/api/recovery/descubiertos?estacion=${station}`);
             if (discRes.ok) {
                 const discData = await discRes.json();
-                setDiscoveredDevices(discData || []);
+                const discVal = discData || [];
+                setDiscoveredDevices(discVal);
+                localStorage.setItem('bunker_settings_discovered_devices', JSON.stringify(discVal));
             }
 
-            // Fetch repair history
-            const histRes = await fetch(`/api/recovery/historial?estacion=${station}`);
             if (histRes.ok) {
                 const histData = await histRes.json();
-                setRepairHistory(histData || []);
+                const histVal = histData || [];
+                setRepairHistory(histVal);
+                localStorage.setItem('bunker_settings_repair_history', JSON.stringify(histVal));
             }
 
-            // Fetch audit ticket printing config
-            const auditConfRes = await fetch('/api/configuracion/imprimir_ticket_auditoria_recovery');
             if (auditConfRes.ok) {
                 const auditConfData = await auditConfRes.json();
                 setAuditTicketEnabled(auditConfData.valor === 'true');
