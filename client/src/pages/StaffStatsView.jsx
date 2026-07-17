@@ -65,6 +65,7 @@ const StaffStatsView = () => {
                 } else if (data.length === 1) {
                     setRequiresSelection(false);
                     setSelectedArqueoId(data[0].id);
+                    fetchArqueoStats(data[0].id, true);
                 } else {
                     setRequiresSelection(true);
                     setLoading(false);
@@ -74,7 +75,7 @@ const StaffStatsView = () => {
                 console.error("Error cargando sesiones de caja:", err);
                 setLoading(false);
             });
-    }, [dateQueryStr]);
+    }, [dateQueryStr, fetchArqueoStats]);
 
     // 2. Fetch stats for the selected cashier session (arqueoId)
     const fetchArqueoStats = useCallback((arqueoId, showLoading = true) => {
@@ -361,7 +362,11 @@ const StaffStatsView = () => {
                             <CalendarDays size={16} className="text-teal-400" />
                             <select
                                 value={selectedArqueoId || ''}
-                                onChange={(e) => setSelectedArqueoId(parseInt(e.target.value))}
+                                onChange={(e) => {
+                                    const valId = parseInt(e.target.value);
+                                    setSelectedArqueoId(valId);
+                                    fetchArqueoStats(valId, true);
+                                }}
                                 className="glass-button"
                                 style={{
                                     padding: '6px 12px',
@@ -434,6 +439,7 @@ const StaffStatsView = () => {
                                     onClick={() => {
                                         setRequiresSelection(false);
                                         setSelectedArqueoId(s.id);
+                                        fetchArqueoStats(s.id, true);
                                     }}
                                     style={{
                                         padding: '12px 20px',

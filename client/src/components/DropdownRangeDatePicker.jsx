@@ -37,12 +37,6 @@ export function DropdownRangeDatePicker({
       setYear(d.getFullYear());
     }
   }, [value, mode]);
-  // =========================================================
-  // 🟢 EFECTO 2 NUEVO: Rompe el rango largo al cambiar de página
-  // =========================================================
-  React.useEffect(() => {
-    setTempSelected(undefined);
-  }, [month, year]);
   const displayMonth = new Date(year, month, 1);
 
   // Formatting helper
