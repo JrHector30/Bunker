@@ -2,6 +2,13 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# Control de Instancia Única mediante Mutex Global
+$createdNew = $false
+$mutex = New-Object System.Threading.Mutex($true, "Global\BunkerPOSTrayMutex", [ref]$createdNew)
+if (-not $createdNew) {
+    exit
+}
+
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 if ([string]::IsNullOrEmpty($scriptDir)) {
     $scriptDir = "C:\Users\JrHector\Downloads\Bunker"
@@ -113,6 +120,10 @@ $restartItem = New-Object System.Windows.Forms.ToolStripMenuItem("Reiniciar Bunk
 
 $exitItem = New-Object System.Windows.Forms.ToolStripMenuItem("Salir de la Bandeja", $null, {
     $notifyIcon.Visible = $false
+    try {
+        $mutex.ReleaseMutex()
+        $mutex.Dispose()
+    } catch {}
     [System.Windows.Forms.Application]::Exit()
 })
 
