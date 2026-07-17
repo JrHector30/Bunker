@@ -1748,7 +1748,12 @@ app.get('/api/staff/stats', async (req, res) => {
             },
             include: {
                 detalles: {
-                    include: { plato: true }
+                    include: {
+                        plato: {
+                            include: { receta: true }
+                        },
+                        cocinero: true
+                    }
                 },
                 usuario: true,
                 mesa: true
@@ -1830,6 +1835,24 @@ app.get('/api/staff/stats', async (req, res) => {
             };
         });
 
+        // 4. Obtener todos los movimientos de insumos asociados al periodo
+        const movimientosInsumo = await prisma.movimientoInsumo.findMany({
+            where: {
+                fecha: {
+                    gte: startDate,
+                    lte: endDate
+                },
+                tipoMovimiento: 'VENTA'
+            },
+            select: {
+                id: true,
+                insumoId: true,
+                cantidad: true,
+                motivo: true,
+                fecha: true
+            }
+        });
+
         res.json({
             arqueo: {
                 id: arqueo.id,
@@ -1845,6 +1868,7 @@ app.get('/api/staff/stats', async (req, res) => {
                 fecha: c.fecha,
                 usuarioId: c.usuarioId,
                 usuarioNombre: c.usuario ? c.usuario.nombre : 'Mesero',
+                usuarioRol: c.usuario ? c.usuario.rol : 'mozo',
                 mesaId: c.mesaId,
                 mesaNum: c.mesa ? c.mesa.numero : 'Mesa',
                 total: c.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0),
@@ -1856,10 +1880,13 @@ app.get('/api/staff/stats', async (req, res) => {
                     precio: d.plato.precio,
                     cocineroId: d.cocineroId,
                     cocineroNombre: d.cocinero ? d.cocinero.nombre : null,
+                    estado: d.estado,
                     fechaPreparacion: d.fechaPreparacion,
-                    fechaListo: d.fechaListo
+                    fechaListo: d.fechaListo,
+                    recetaCount: d.plato.receta ? d.plato.receta.length : 0
                 }))
             })),
+            movimientosInsumo,
             requiresSessionSelection: false
         });
 

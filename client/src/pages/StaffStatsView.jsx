@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
-import { ArrowLeft, User, ChefHat, FileText, CalendarDays } from 'lucide-react';
+import { ArrowLeft, User, ChefHat, FileText, CalendarDays, ChevronDown, ChevronUp, Database } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -11,6 +11,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
+import SimpleCombobox from '../components/SimpleCombobox';
 
 const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -51,10 +52,16 @@ const StaffStatsView = () => {
     const [requiresSelection, setRequiresSelection] = useState(false);
     const [arqueoInfo, setArqueoInfo] = useState(null);
     const [rawComandas, setRawComandas] = useState([]);
+    const [movimientosInsumo, setMovimientosInsumo] = useState([]);
     const [stats, setStats] = useState({ waiters: [], cooks: [] });
     const [filteredDay, setFilteredDay] = useState('TODO');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    // Expandible UI togglers for auditing sections
+    const [expandedWaiters, setExpandedWaiters] = useState({});
+    const [expandedCooks, setExpandedCooks] = useState({});
+    const [expandedOrders, setExpandedOrders] = useState({});
 
     const dateQueryStr = useMemo(() => {
         if (!date) return format(new Date(), 'yyyy-MM-dd');
@@ -91,10 +98,12 @@ const StaffStatsView = () => {
                 if (data.arqueo) {
                     setArqueoInfo(data.arqueo);
                     setRawComandas(data.comandas || []);
+                    setMovimientosInsumo(data.movimientosInsumo || []);
                     setStats({ waiters: data.waiters || [], cooks: data.cooks || [] });
                 } else {
                     setArqueoInfo(null);
                     setRawComandas([]);
+                    setMovimientosInsumo([]);
                     setStats({ waiters: [], cooks: [] });
                 }
             })
@@ -255,7 +264,10 @@ const StaffStatsView = () => {
                 waiters: [],
                 cooks: [],
                 waiterChartData: [],
-                cookChartData: []
+                cookChartData: [],
+                waiterPlatos: [],
+                nonCocinaPlatos: [],
+                comandasPeriodo: []
             };
         }
 
@@ -272,52 +284,151 @@ const StaffStatsView = () => {
         const sales = targetComandas.reduce((sum, c) => sum + c.total, 0);
         const orders = targetComandas.length;
 
-        // Recalculate waiters performance
-        const waiters = (stats.waiters || []).map(w => {
-            const wComandas = targetComandas.filter(c => c.usuarioId === w.id);
-            return {
-                ...w,
-                totalTables: wComandas.length,
-                totalSales: wComandas.reduce((sum, c) => sum + c.total, 0)
-            };
-        });
-
-        // Recalculate cooks performance based on preparado dishes within target comandas
-        const dayDetails = [];
+        // Dynamic waiters consolidation from targetComandas (covers ALL roles/users who registered a comanda)
+        const waitersMap = {};
         targetComandas.forEach(c => {
-            (c.detalles || []).forEach(d => {
-                dayDetails.push(d);
-            });
+            const uid = c.usuarioId || 0;
+            const uName = c.usuarioNombre || (c.usuarioRol === 'admin' ? 'Administrador' : 'Sin mozo asignado');
+            if (!waitersMap[uid]) {
+                waitersMap[uid] = {
+                    id: uid,
+                    nombre: uName,
+                    rol: c.usuarioRol || 'mozo',
+                    totalTables: 0,
+                    totalSales: 0
+                };
+            }
+            waitersMap[uid].totalTables += 1;
+            waitersMap[uid].totalSales += c.total;
         });
+        const waiters = Object.values(waitersMap);
 
-        const cooks = (stats.cooks || []).map(c => {
-            const cookDetails = dayDetails.filter(d => d.cocineroId === c.id);
-            const totalDishes = cookDetails.length;
+        // Dynamic cooks consolidation from targetComandas details (ready/delivered state)
+        const cooksMap = {};
+        const nonCocinaPlatos = [];
+        const waiterPlatos = [];
 
-            let totalTimeMs = 0;
-            let countTime = 0;
-            cookDetails.forEach(d => {
-                if (d.fechaPreparacion && d.fechaListo) {
-                    const start = new Date(d.fechaPreparacion);
-                    const end = new Date(d.fechaListo);
-                    const diff = end - start;
-                    if (diff > 0) {
-                        totalTimeMs += diff;
-                        countTime++;
+        targetComandas.forEach(c => {
+            const uName = c.usuarioNombre || 'Sin mozo asignado';
+            (c.detalles || []).forEach(d => {
+                // Determine Kardex/Stock status based on recetas and movimientosInsumo
+                let kardexStatus = 'No afecta inventario';
+                if (d.recetaCount > 0) {
+                    const hasMovement = movimientosInsumo.some(k => 
+                        k.motivo && k.motivo.includes(`Comanda ID: ${c.id}`)
+                    );
+                    kardexStatus = hasMovement ? 'Stock descontado' : 'Movimiento no encontrado';
+                } else {
+                    kardexStatus = 'Sin receta configurada';
+                }
+
+                const itemDetail = {
+                    mozo: uName,
+                    comandaId: c.id,
+                    mesa: c.mesaNum,
+                    hora: new Date(c.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
+                    fecha: new Date(c.fecha).toLocaleDateString('es-PE'),
+                    plato: d.descripcion,
+                    cantidad: d.cantidad,
+                    precio: d.precio,
+                    subtotal: d.precio * d.cantidad,
+                    estado: d.estado,
+                    cocinero: d.cocineroId ? d.cocineroNombre : 'No aplica / No enviado a cocina',
+                    noEnvioCocina: !d.cocineroId,
+                    totalComanda: c.total,
+                    kardexStatus
+                };
+
+                waiterPlatos.push(itemDetail);
+
+                if (!d.cocineroId) {
+                    // Beverage or snacks (not sent to kitchen)
+                    nonCocinaPlatos.push(itemDetail);
+                } else if (d.estado === 'listo' || d.estado === 'entregado') {
+                    const cid = d.cocineroId;
+                    const cName = d.cocineroNombre || 'Cocinero';
+                    if (!cooksMap[cid]) {
+                        cooksMap[cid] = {
+                            id: cid,
+                            nombre: cName,
+                            rol: 'cocina',
+                            totalDishes: 0,
+                            totalTimeMs: 0,
+                            countTime: 0,
+                            platosList: []
+                        };
+                    }
+                    cooksMap[cid].totalDishes += d.cantidad;
+
+                    const prepTime = d.fechaPreparacion && d.fechaListo 
+                        ? Math.max(0, (new Date(d.fechaListo) - new Date(d.fechaPreparacion)) / 60000) 
+                        : 0;
+
+                    cooksMap[cid].platosList.push({
+                        id: d.id,
+                        comandaId: c.id,
+                        mesa: c.mesaNum,
+                        mozo: uName,
+                        plato: d.descripcion,
+                        cantidad: d.cantidad,
+                        tiempoPrep: prepTime,
+                        fecha: new Date(d.fechaListo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
+                        estado: d.estado
+                    });
+
+                    if (d.fechaPreparacion && d.fechaListo) {
+                        const diff = new Date(d.fechaListo) - new Date(d.fechaPreparacion);
+                        if (diff > 0) {
+                            cooksMap[cid].totalTimeMs += diff;
+                            cooksMap[cid].countTime++;
+                        }
                     }
                 }
             });
-            const avgTimeMin = countTime > 0 ? (totalTimeMs / countTime / 60000) : 0;
-
-            return {
-                ...c,
-                totalDishes,
-                avgTimeMin
-            };
         });
+
+        const cooks = Object.values(cooksMap).map(c => ({
+            ...c,
+            avgTimeMin: c.countTime > 0 ? (c.totalTimeMs / c.countTime / 60000) : 0
+        }));
 
         const waiterChartData = waiters.filter(w => w.totalSales > 0);
         const cookChartData = cooks.filter(c => c.totalDishes > 0);
+
+        // Map period comandas detail auditing
+        const comandasPeriodo = targetComandas.map(c => {
+            const auditPlatos = (c.detalles || []).map(d => {
+                let kardexStatus = 'No afecta inventario';
+                if (d.recetaCount > 0) {
+                    const hasMovement = movimientosInsumo.some(k => 
+                        k.motivo && k.motivo.includes(`Comanda ID: ${c.id}`)
+                    );
+                    kardexStatus = hasMovement ? 'Stock descontado' : 'Movimiento no encontrado';
+                } else {
+                    kardexStatus = 'Sin receta configurada';
+                }
+
+                return {
+                    plato: d.descripcion,
+                    cantidad: d.cantidad,
+                    precio: d.precio,
+                    cocinero: d.cocineroId ? d.cocineroNombre : 'No aplica / No enviado a cocina',
+                    noEnvioCocina: !d.cocineroId,
+                    estado: d.estado,
+                    kardexStatus
+                };
+            });
+
+            return {
+                id: c.id,
+                fecha: new Date(c.fecha).toLocaleDateString('es-PE'),
+                hora: new Date(c.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
+                mesa: c.mesaNum,
+                mozo: c.usuarioNombre || 'Sin mozo asignado',
+                total: c.total,
+                platos: auditPlatos
+            };
+        });
 
         return {
             totalSales: parseFloat(sales.toFixed(2)),
@@ -325,9 +436,26 @@ const StaffStatsView = () => {
             waiters,
             cooks,
             waiterChartData,
-            cookChartData
+            cookChartData,
+            waiterPlatos,
+            nonCocinaPlatos,
+            comandasPeriodo
         };
-    }, [arqueoInfo, filteredDay, rawComandas, stats]);
+    }, [arqueoInfo, filteredDay, rawComandas, movimientosInsumo]);
+
+    const comboboxItems = useMemo(() => {
+        const list = [{ id: 'TODO', name: 'TODO (Rango completo de Caja)' }];
+        rangeDays.forEach(dayStr => {
+            const parts = dayStr.split('-');
+            const displayLabel = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            list.push({ id: dayStr, name: `Día: ${displayLabel}` });
+        });
+        return list;
+    }, [rangeDays]);
+
+    const selectedComboboxItem = useMemo(() => {
+        return comboboxItems.find(item => item.id === filteredDay) || comboboxItems[0];
+    }, [comboboxItems, filteredDay]);
 
     // 7. Cleanup/Daily Delete functionality
     const handleCleanDay = async () => {
@@ -554,34 +682,19 @@ const StaffStatsView = () => {
             {/* Report Content */}
             {!loading && arqueoInfo && (
                 <div>
-                    {/* Day/Range Filter Selector */}
-                    <div className="glass-panel" style={{ padding: 15, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 15, border: '1px solid var(--glass-border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="glass-panel" style={{ padding: '12px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 15, border: '1px solid var(--glass-border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 15, width: '100%', maxWidth: '580px', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 13, fontWeight: 'bold', color: 'var(--text-muted)' }}>Filtrar reporte por día de caja:</span>
-                            <select
-                                value={filteredDay}
-                                onChange={(e) => setFilteredDay(e.target.value)}
-                                className="glass-button"
-                                style={{
-                                    padding: '6px 16px',
-                                    fontSize: 12,
-                                    borderRadius: 12,
-                                    cursor: 'pointer',
-                                    fontWeight: 'bold',
-                                    border: '1px solid var(--glass-border)'
-                                }}
-                            >
-                                <option value="TODO">TODO (Rango completo de Caja)</option>
-                                {rangeDays.map(dayStr => {
-                                    const parts = dayStr.split('-');
-                                    const displayLabel = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                                    return (
-                                        <option key={dayStr} value={dayStr}>
-                                            Día: {displayLabel}
-                                        </option>
-                                    );
-                                })}
-                            </select>
+                            <div style={{ flex: 1, minWidth: '240px' }}>
+                                <SimpleCombobox
+                                    items={comboboxItems}
+                                    selectedItem={selectedComboboxItem}
+                                    onSelect={(item) => {
+                                        if (item) setFilteredDay(item.id);
+                                    }}
+                                    placeholder="Seleccionar día de caja..."
+                                />
+                            </div>
                         </div>
 
                         {filteredDay !== 'TODO' && (
@@ -737,7 +850,7 @@ const StaffStatsView = () => {
                                         ) : (
                                             activeData.waiters.map(w => (
                                                 <tr key={w.id}>
-                                                    <td>{w.nombre}</td>
+                                                    <td>{w.nombre} <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>({w.rol})</span></td>
                                                     <td style={{ textAlign: 'center' }}>{w.totalTables}</td>
                                                     <td style={{ textAlign: 'right', color: 'var(--success)', fontWeight: 'bold' }} className="font-mono">
                                                         S/. {parseFloat(Number(w.totalSales).toFixed(2))}
@@ -750,39 +863,269 @@ const StaffStatsView = () => {
                             </div>
                         </div>
 
-                        {/* Cooks Table */}
+                        {/* Cooks Table (Expandible) */}
                         <div className="glass-panel" style={{ padding: 20, border: '1px solid var(--glass-border)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
                                 <ChefHat size={24} style={{ color: 'var(--warning)' }} />
                                 <h2 style={{ margin: 0, fontSize: '18px' }}>Detalle Cocina</h2>
                             </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {activeData.cooks.length === 0 ? (
+                                    <div className="text-center text-muted" style={{ padding: 20, fontSize: 12 }}>No hay datos</div>
+                                ) : (
+                                    activeData.cooks.map(c => {
+                                        const isExpanded = !!expandedCooks[c.id];
+                                        return (
+                                            <div key={c.id} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, overflow: 'hidden' }}>
+                                                <button
+                                                    onClick={() => setExpandedCooks(prev => ({ ...prev, [c.id]: !isExpanded }))}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '12px 16px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        backgroundColor: 'rgba(255,255,255,0.02)',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        color: 'var(--text-main)'
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                        <span style={{ fontWeight: 'bold', fontSize: 13 }}>{c.nombre}</span>
+                                                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>— {c.totalDishes} platos</span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+                                                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Tiempo Prom: <strong style={{ color: 'var(--text-main)' }}>{c.avgTimeMin > 0 ? `${c.avgTimeMin.toFixed(2)} min` : '-'}</strong></span>
+                                                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                    </div>
+                                                </button>
 
-                            <div className="table-responsive">
-                                <table style={{ width: '100%' }}>
-                                    <thead>
-                                        <tr>
-                                            <th>Nombre</th>
-                                            <th style={{ textAlign: 'center' }}>Platos</th>
-                                            <th style={{ textAlign: 'center' }}>Tiempo Prom.</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {activeData.cooks.length === 0 ? (
-                                            <tr><td colSpan="3" className="text-center text-muted">No hay datos</td></tr>
-                                        ) : (
-                                            activeData.cooks.map(c => (
-                                                <tr key={c.id}>
-                                                    <td>{c.nombre}</td>
-                                                    <td style={{ textAlign: 'center' }}>{c.totalDishes}</td>
-                                                    <td style={{ textAlign: 'center' }}>
-                                                        {c.avgTimeMin > 0 ? `${parseFloat(Number(c.avgTimeMin).toFixed(2))} min` : '-'}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                                                {isExpanded && (
+                                                    <div style={{ padding: 12, backgroundColor: 'rgba(0,0,0,0.15)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                                                        <table style={{ width: '100%', fontSize: 11 }}>
+                                                            <thead>
+                                                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                                                    <th style={{ textAlign: 'left', padding: '4px 0' }}>Plato</th>
+                                                                    <th style={{ textAlign: 'center' }}>Cant.</th>
+                                                                    <th style={{ textAlign: 'center' }}>Comanda</th>
+                                                                    <th style={{ textAlign: 'center' }}>Mesa</th>
+                                                                    <th style={{ textAlign: 'center' }}>Mozo</th>
+                                                                    <th style={{ textAlign: 'center' }}>Tiempo</th>
+                                                                    <th style={{ textAlign: 'right' }}>Hora Listo</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {c.platosList.map((p, idx) => (
+                                                                    <tr key={idx}>
+                                                                        <td style={{ padding: '6px 0' }}>{p.plato}</td>
+                                                                        <td style={{ textAlign: 'center' }}>{p.cantidad}</td>
+                                                                        <td style={{ textAlign: 'center' }}>#{p.comandaId}</td>
+                                                                        <td style={{ textAlign: 'center' }}>Mesa {p.mesa}</td>
+                                                                        <td style={{ textAlign: 'center' }}>{p.mozo}</td>
+                                                                        <td style={{ textAlign: 'center' }}>{p.tiempoPrep > 0 ? `${p.tiempoPrep.toFixed(1)} min` : '-'}</td>
+                                                                        <td style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.fecha}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                )}
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Platos comandados por mozo */}
+                    <div className="glass-panel" style={{ padding: 20, marginTop: 30, border: '1px solid var(--glass-border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                            <User size={24} style={{ color: 'var(--primary)' }} />
+                            <h2 style={{ margin: 0, fontSize: '18px' }}>Platos comandados por mozo</h2>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                            {activeData.waiters.map(w => {
+                                const wItems = activeData.waiterPlatos.filter(item => item.mozo === w.nombre);
+                                const isExpanded = !!expandedWaiters[w.id];
+                                
+                                // Group items by comandaId
+                                const comandasMap = {};
+                                wItems.forEach(item => {
+                                    if (!comandasMap[item.comandaId]) {
+                                        comandasMap[item.comandaId] = {
+                                            id: item.comandaId,
+                                            mesa: item.mesa,
+                                            fecha: item.fecha,
+                                            hora: item.hora,
+                                            total: item.totalComanda,
+                                            platos: []
+                                        };
+                                    }
+                                    comandasMap[item.comandaId].platos.push(item);
+                                });
+                                const mozoComandas = Object.values(comandasMap);
+
+                                return (
+                                    <div key={w.id} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, overflow: 'hidden' }}>
+                                        <button
+                                            onClick={() => setExpandedWaiters(prev => ({ ...prev, [w.id]: !isExpanded }))}
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px 18px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                backgroundColor: 'rgba(255,255,255,0.02)',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                color: 'var(--text-main)'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <span style={{ fontWeight: 'bold', fontSize: 13 }}>{w.nombre} <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>({w.rol})</span></span>
+                                                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>— {w.totalTables} pedidos</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+                                                <span style={{ color: 'var(--success)', fontWeight: 'bold', fontFamily: 'monospace' }}>S/. {w.totalSales.toFixed(2)}</span>
+                                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                            </div>
+                                        </button>
+
+                                        {isExpanded && (
+                                            <div style={{ padding: 15, backgroundColor: 'rgba(0,0,0,0.15)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                                                {mozoComandas.length === 0 ? (
+                                                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sin comandas registradas</div>
+                                                ) : (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                                        {mozoComandas.map(c => (
+                                                            <div key={c.id} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, border: '1px solid rgba(255,255,255,0.03)' }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px dashed rgba(255,255,255,0.08)', paddingBottom: 6 }}>
+                                                                    <span style={{ fontSize: 12, fontWeight: 'bold' }}>Comanda #{c.id} — Mesa {c.mesa} — {c.fecha} {c.hora}</span>
+                                                                    <span style={{ fontSize: 12, fontWeight: 'bold', color: 'var(--success)' }}>Total: S/. {c.total.toFixed(2)}</span>
+                                                                </div>
+                                                                <table style={{ width: '100%', fontSize: 11 }}>
+                                                                    <thead>
+                                                                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                                                            <th style={{ textAlign: 'left', padding: '4px 0' }}>Cant. x Plato</th>
+                                                                            <th style={{ textAlign: 'center' }}>Precio</th>
+                                                                            <th style={{ textAlign: 'center' }}>Cocinero</th>
+                                                                            <th style={{ textAlign: 'center' }}>Kardex / Stock</th>
+                                                                            <th style={{ textAlign: 'right' }}>Subtotal</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {c.platos.map((p, idx) => (
+                                                                            <tr key={idx}>
+                                                                                <td style={{ padding: '6px 0' }}>{p.cantidad} × {p.plato}</td>
+                                                                                <td style={{ textAlign: 'center' }}>{p.cocinero}</td>
+                                                                                <td style={{ textAlign: 'center' }}>
+                                                                                    <span style={{
+                                                                                        fontSize: 9,
+                                                                                        padding: '2px 5px',
+                                                                                        borderRadius: 6,
+                                                                                        backgroundColor: p.kardexStatus === 'Stock descontado' ? 'rgba(34, 197, 94, 0.1)' : p.kardexStatus === 'Sin receta configurada' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(239, 68, 68, 0.1)',
+                                                                                        color: p.kardexStatus === 'Stock descontado' ? '#22c55e' : p.kardexStatus === 'Sin receta configurada' ? 'var(--text-muted)' : '#ef4444'
+                                                                                    }}>
+                                                                                        {p.kardexStatus}
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--success)' }}>S/. {p.subtotal.toFixed(2)}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Detalle de comandas del período */}
+                    <div className="glass-panel" style={{ padding: 20, marginTop: 30, border: '1px solid var(--glass-border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                            <Database size={24} style={{ color: 'var(--success)' }} />
+                            <h2 style={{ margin: 0, fontSize: '18px' }}>Detalle de comandas del período (Auditoría)</h2>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {activeData.comandasPeriodo.length === 0 ? (
+                                <div className="text-center text-muted" style={{ padding: 20, fontSize: 12 }}>No hay comandas registradas</div>
+                            ) : (
+                                activeData.comandasPeriodo.map(c => {
+                                    const isExpanded = !!expandedOrders[c.id];
+                                    return (
+                                        <div key={c.id} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, overflow: 'hidden' }}>
+                                            <button
+                                                onClick={() => setExpandedOrders(prev => ({ ...prev, [c.id]: !isExpanded }))}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px 18px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    backgroundColor: 'rgba(255,255,255,0.02)',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    color: 'var(--text-main)'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                    <span style={{ fontWeight: 'bold', fontSize: 13 }}>Comanda #{c.id} — Mesa {c.mesa}</span>
+                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>— {c.hora} ({c.mozo})</span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+                                                    <span style={{ color: 'var(--success)', fontWeight: 'bold', fontFamily: 'monospace' }}>S/. {c.total.toFixed(2)}</span>
+                                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                </div>
+                                            </button>
+
+                                            {isExpanded && (
+                                                <div style={{ padding: 15, backgroundColor: 'rgba(0,0,0,0.15)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                                                    <table style={{ width: '100%', fontSize: 11 }}>
+                                                        <thead>
+                                                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                                                <th style={{ textAlign: 'left', padding: '4px 0' }}>Cant. x Plato</th>
+                                                                <th style={{ textAlign: 'center' }}>Cocinero</th>
+                                                                <th style={{ textAlign: 'center' }}>Kardex / Inventario</th>
+                                                                <th style={{ textAlign: 'center' }}>Estado</th>
+                                                                <th style={{ textAlign: 'right' }}>Subtotal</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {c.platos.map((p, idx) => (
+                                                                <tr key={idx}>
+                                                                    <td style={{ padding: '6px 0' }}>{p.cantidad} × {p.plato}</td>
+                                                                    <td style={{ textAlign: 'center' }}>{p.cocinero}</td>
+                                                                    <td style={{ textAlign: 'center' }}>
+                                                                        <span style={{
+                                                                            fontSize: 9,
+                                                                            padding: '2px 5px',
+                                                                            borderRadius: 6,
+                                                                            backgroundColor: p.kardexStatus === 'Stock descontado' ? 'rgba(34, 197, 94, 0.1)' : p.kardexStatus === 'Sin receta configurada' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(239, 68, 68, 0.1)',
+                                                                            color: p.kardexStatus === 'Stock descontado' ? '#22c55e' : p.kardexStatus === 'Sin receta configurada' ? 'var(--text-muted)' : '#ef4444'
+                                                                        }}>
+                                                                            {p.kardexStatus}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td style={{ textAlign: 'center', color: p.estado === 'entregado' ? 'var(--success)' : 'var(--warning)' }}>{p.estado}</td>
+                                                                    <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--success)' }}>S/. {(p.precio * p.cantidad).toFixed(2)}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })
+                            )}
                         </div>
                     </div>
                 </div>
