@@ -12,6 +12,33 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
 
+const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        const formattedDate = data.dateStr ? data.dateStr.split('-').reverse().join('/') : '';
+        return (
+            <div className="glass-panel" style={{
+                padding: '10px 14px',
+                border: '1px solid var(--glass-border)',
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                color: 'var(--text-main)',
+                fontSize: 12,
+                borderRadius: 12,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                fontFamily: 'sans-serif'
+            }}>
+                <p style={{ margin: '0 0 6px 0', fontWeight: 'bold', color: 'var(--text-main)' }}>Día: {formattedDate}</p>
+                <p style={{ margin: '0 0 4px 0', color: 'var(--success)' }}>Venta: S/. {parseFloat(data.salesTotal || 0).toFixed(2)}</p>
+                <p style={{ margin: '0 0 4px 0', color: 'var(--primary)' }}>Pedidos atendidos: {data.ordersCount}</p>
+                {data.dishesCount > 0 && (
+                    <p style={{ margin: 0, color: 'var(--warning)' }}>Platos preparados: {data.dishesCount}</p>
+                )}
+            </div>
+        );
+    }
+    return null;
+};
+
 const StaffStatsView = () => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
@@ -187,14 +214,34 @@ const StaffStatsView = () => {
             const total = dayComandas.reduce((sum, c) => sum + c.total, 0);
             const count = dayComandas.length;
 
+            // Sumar platos preparados (listo/entregado) para las comandas de este dia
+            let dayDishes = 0;
+            dayComandas.forEach(c => {
+                (c.detalles || []).forEach(d => {
+                    if (d.estado === 'listo' || d.estado === 'entregado') {
+                        dayDishes++;
+                    }
+                });
+            });
+
+            if (dayStr === '2026-07-16') {
+                console.log("=== LOG TEMPORAL 16/07 ===", {
+                    dateStr: dayStr,
+                    salesTotal: parseFloat(total.toFixed(2)),
+                    ordersCount: count,
+                    dishesCount: dayDishes
+                });
+            }
+
             const parts = dayStr.split('-');
             const label = `${parts[2]}/${parts[1]}`;
 
             return {
                 dateStr: dayStr,
                 label,
-                venta: parseFloat(total.toFixed(2)),
-                pedidos: count
+                salesTotal: parseFloat(total.toFixed(2)),
+                ordersCount: count,
+                dishesCount: dayDishes
             };
         });
     }, [rangeDays, rawComandas]);
@@ -585,15 +632,9 @@ const StaffStatsView = () => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                     <XAxis dataKey="label" stroke="var(--text-muted)" fontSize={10} />
                                     <YAxis stroke="var(--text-muted)" fontSize={10} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--glass-border)', color: 'var(--text-main)' }}
-                                        formatter={(value, name) => [
-                                            name === 'venta' ? `S/. ${parseFloat(Number(value).toFixed(2))}` : `${value} pedidos`,
-                                            name === 'venta' ? 'Venta' : 'Pedidos'
-                                        ]}
-                                    />
+                                    <Tooltip content={<CustomTooltip />} />
                                     <Legend fontSize={10} />
-                                    <Bar dataKey="venta" name="Venta (S/.)" fill="var(--success)" radius={[4, 4, 0, 0]}>
+                                    <Bar dataKey="salesTotal" name="Venta (S/.)" fill="var(--success)" radius={[4, 4, 0, 0]}>
                                         {dailyChartData.map((entry, index) => {
                                             const isSelected = filteredDay === entry.dateStr;
                                             return (
