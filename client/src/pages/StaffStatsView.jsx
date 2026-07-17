@@ -344,7 +344,11 @@ const StaffStatsView = () => {
                 if (!d.cocineroId) {
                     // Beverage or snacks (not sent to kitchen)
                     nonCocinaPlatos.push(itemDetail);
-                } else if (d.estado === 'listo' || d.estado === 'entregado') {
+                } else if (d.estado && (
+                    d.estado.toLowerCase() === 'listo' || 
+                    d.estado.toLowerCase() === 'entregado' || 
+                    d.estado.toLowerCase() === 'entregada'
+                )) {
                     const cid = d.cocineroId;
                     const cName = d.cocineroNombre || 'Cocinero';
                     if (!cooksMap[cid]) {
@@ -364,6 +368,10 @@ const StaffStatsView = () => {
                         ? Math.max(0, (new Date(d.fechaListo) - new Date(d.fechaPreparacion)) / 60000) 
                         : 0;
 
+                    const readyTimeStr = d.fechaListo
+                        ? new Date(d.fechaListo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+                        : 'N/A';
+
                     cooksMap[cid].platosList.push({
                         id: d.id,
                         comandaId: c.id,
@@ -372,7 +380,7 @@ const StaffStatsView = () => {
                         plato: d.descripcion,
                         cantidad: d.cantidad,
                         tiempoPrep: prepTime,
-                        fecha: new Date(d.fechaListo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
+                        fecha: readyTimeStr,
                         estado: d.estado
                     });
 
