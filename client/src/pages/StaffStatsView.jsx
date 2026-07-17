@@ -44,6 +44,28 @@ const StaffStatsView = () => {
         return `${d}-${m}-${y}`;
     }, [date]);
 
+    // 2. Fetch stats for the selected cashier session (arqueoId)
+    const fetchArqueoStats = useCallback((arqueoId, showLoading = true) => {
+        if (showLoading) setLoading(true);
+        fetch(`/api/staff/stats?arqueoId=${arqueoId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.arqueo) {
+                    setArqueoInfo(data.arqueo);
+                    setRawComandas(data.comandas || []);
+                    setStats({ waiters: data.waiters || [], cooks: data.cooks || [] });
+                } else {
+                    setArqueoInfo(null);
+                    setRawComandas([]);
+                    setStats({ waiters: [], cooks: [] });
+                }
+            })
+            .catch(err => console.error("Error al obtener estadísticas del arqueo:", err))
+            .finally(() => {
+                if (showLoading) setLoading(false);
+            });
+    }, []);
+
     // 1. Fetch sessions for the selected date
     useEffect(() => {
         setSessions([]);
@@ -76,28 +98,6 @@ const StaffStatsView = () => {
                 setLoading(false);
             });
     }, [dateQueryStr, fetchArqueoStats]);
-
-    // 2. Fetch stats for the selected cashier session (arqueoId)
-    const fetchArqueoStats = useCallback((arqueoId, showLoading = true) => {
-        if (showLoading) setLoading(true);
-        fetch(`/api/staff/stats?arqueoId=${arqueoId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.arqueo) {
-                    setArqueoInfo(data.arqueo);
-                    setRawComandas(data.comandas || []);
-                    setStats({ waiters: data.waiters || [], cooks: data.cooks || [] });
-                } else {
-                    setArqueoInfo(null);
-                    setRawComandas([]);
-                    setStats({ waiters: [], cooks: [] });
-                }
-            })
-            .catch(err => console.error("Error al obtener estadísticas del arqueo:", err))
-            .finally(() => {
-                if (showLoading) setLoading(false);
-            });
-    }, []);
 
     // 3. Start interval polling ONLY if session is open
     useEffect(() => {
