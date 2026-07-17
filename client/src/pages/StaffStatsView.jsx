@@ -344,7 +344,7 @@ const StaffStatsView = () => {
                 if (!d.cocineroId) {
                     // Beverage or snacks (not sent to kitchen)
                     nonCocinaPlatos.push(itemDetail);
-                } else if (d.estado && (
+                } else if (!d.estado || (
                     d.estado.toLowerCase() === 'listo' || 
                     d.estado.toLowerCase() === 'entregado' || 
                     d.estado.toLowerCase() === 'entregada'
