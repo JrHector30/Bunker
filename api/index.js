@@ -1665,45 +1665,107 @@ app.put('/api/orders/details/:id', async (req, res) => {
     }
 });
 
-// Staff Stats Endpoint
-app.get('/api/staff/stats', async (req, res) => {
+// List cashier sessions (arqueos) that started on a given date (YYYY-MM-DD local time)
+app.get('/api/staff/stats/sessions', async (req, res) => {
     const { date } = req.query; // Expect YYYY-MM-DD
-    try {
-        // Date Logic (Fixed for Peru Time UTC-5)
-        let dateFilter = {};
-        if (date) {
-            // Convert YYYY-MM-DD to ISO range in UTC-5
-            // 00:00:00 Peru = 05:00:00 UTC
-            const start = new Date(`${date}T00:00:00.000-05:00`);
-            const end = new Date(`${date}T23:59:59.999-05:00`);
+    if (!date) return res.status(400).json({ error: "Date is required" });
 
-            dateFilter = {
-                fecha: {
+    try {
+        // Convert YYYY-MM-DD to local Peru Time range (UTC-5)
+        const start = new Date(`${date}T00:00:00.000-05:00`);
+        const end = new Date(`${date}T23:59:59.999-05:00`);
+
+        const arqueos = await prisma.arqueo.findMany({
+            where: {
+                fechaInicio: {
                     gte: start,
                     lte: end
                 }
-            };
+            },
+            orderBy: { id: 'asc' }
+        });
+
+        res.json(arqueos);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Error fetching cashier sessions" });
+    }
+});
+
+// Staff Stats Endpoint
+app.get('/api/staff/stats', async (req, res) => {
+    const { date, arqueoId } = req.query;
+    try {
+        let arqueo = null;
+
+        if (arqueoId) {
+            // Buscar por arqueoId directo
+            arqueo = await prisma.arqueo.findUnique({
+                where: { id: parseInt(arqueoId) }
+            });
+            if (!arqueo) {
+                return res.json({ arqueo: null, waiters: [], cooks: [], comandas: [], requiresSessionSelection: false });
+            }
+        } else if (date) {
+            // Buscar arqueos que iniciaron en esa fecha (Peru Time UTC-5)
+            const start = new Date(`${date}T00:00:00.000-05:00`);
+            const end = new Date(`${date}T23:59:59.999-05:00`);
+
+            const arqueos = await prisma.arqueo.findMany({
+                where: {
+                    fechaInicio: {
+                        gte: start,
+                        lte: end
+                    }
+                },
+                orderBy: { id: 'asc' }
+            });
+
+            if (arqueos.length === 0) {
+                return res.json({ arqueo: null, waiters: [], cooks: [], comandas: [], requiresSessionSelection: false });
+            } else if (arqueos.length === 1) {
+                arqueo = arqueos[0];
+            } else {
+                // Múltiples sesiones en el mismo día: requiere selección
+                return res.json({ arqueo: null, waiters: [], cooks: [], comandas: [], requiresSessionSelection: true });
+            }
+        } else {
+            return res.json({ arqueo: null, waiters: [], cooks: [], comandas: [], requiresSessionSelection: false });
         }
 
-        // 1. Waiters Stats (Users with 'comandas')
-        // We group by usuarioId in Comanda
-        const waiters = await prisma.user.findMany({
-            where: { rol: { in: ['mozo', 'admin'] } },
-            include: {
-                comandas: {
-                    where: {
-                        estado: 'cerrada', // Only paid orders
-                        ...dateFilter      // Filter by date
-                    },
-                    include: { detalles: { include: { plato: true } } }
+        // Determinar límites de tiempo de la sesión seleccionada
+        const startDate = arqueo.fechaInicio;
+        const endDate = arqueo.fechaFin || new Date();
+
+        // 1. Obtener todas las comandas cobradas en el rango de la sesión (excluye anulaciones)
+        const comandas = await prisma.comanda.findMany({
+            where: {
+                estado: 'cerrada',
+                fecha: {
+                    gte: startDate,
+                    lte: endDate
                 }
-            }
+            },
+            include: {
+                detalles: {
+                    include: { plato: true }
+                },
+                usuario: true,
+                mesa: true
+            },
+            orderBy: { fecha: 'asc' }
+        });
+
+        // 2. Consolidar mozos
+        const waiters = await prisma.user.findMany({
+            where: { rol: { in: ['mozo', 'admin'] } }
         });
 
         const waiterStats = waiters.map(w => {
-            const totalTables = w.comandas.length;
-            const totalSales = w.comandas.reduce((acc, order) => {
-                const orderTotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+            const waiterComandas = comandas.filter(c => c.usuarioId === w.id);
+            const totalTables = waiterComandas.length;
+            const totalSales = waiterComandas.reduce((acc, c) => {
+                const orderTotal = c.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
                 return acc + orderTotal;
             }, 0);
 
@@ -1711,44 +1773,41 @@ app.get('/api/staff/stats', async (req, res) => {
                 id: w.id,
                 nombre: w.nombre,
                 rol: w.rol,
-                totalTables, // Orders count
+                totalTables,
                 totalSales
             };
         });
 
-        // 2. Kitchen Stats (Users with 'detallesCocina')
-        const cooks = await prisma.user.findMany({
-            where: { rol: { in: ['cocina', 'admin'] } },
-            include: {
-                detallesCocina: {
-                    where: {
-                        estado: { in: ['listo', 'entregado'] },
-                        // Note: detallesCocina doesn't have a direct date field usually, 
-                        // but we can try to filter by fechaPreparacion or link to Comanda date.
-                        // Ideally we check if the LINKED COMANDA is from that date if detalle doesn't have it.
-                        // checking schema... DetalleComanda usually relies on Comanda's date or has its own timestamps.
-                        // For MVP, if we assume cleanup happens daily, we might just look at all active.
-                        // But let's try to be precise if schema allows.
-                        // If 'fechaPreparacion' exists:
-                        ...(date ? {
-                            fechaPreparacion: {
-                                gte: new Date(`${date}T00:00:00.000-05:00`),
-                                lte: new Date(`${date}T23:59:59.999-05:00`)
-                            }
-                        } : {})
+        // 3. Consolidar cocineros
+        const details = await prisma.detalleComanda.findMany({
+            where: {
+                estado: { in: ['listo', 'entregado'] },
+                comanda: {
+                    estado: 'cerrada',
+                    fecha: {
+                        gte: startDate,
+                        lte: endDate
                     }
                 }
+            },
+            include: {
+                cocinero: true
             }
         });
 
-        const cookStats = cooks.map(c => {
-            const totalDishes = c.detallesCocina.length;
+        const cooks = await prisma.user.findMany({
+            where: { rol: { in: ['cocina', 'admin'] } }
+        });
 
-            // Calculate Avg Time (min)
+        const cookStats = cooks.map(c => {
+            const cookDetails = details.filter(d => d.cocineroId === c.id);
+            const totalDishes = cookDetails.length;
+
+            // Calcular tiempo promedio
             let totalTimeMs = 0;
             let countTime = 0;
 
-            c.detallesCocina.forEach(d => {
+            cookDetails.forEach(d => {
                 if (d.fechaPreparacion && d.fechaListo) {
                     const start = new Date(d.fechaPreparacion);
                     const end = new Date(d.fechaListo);
@@ -1771,7 +1830,38 @@ app.get('/api/staff/stats', async (req, res) => {
             };
         });
 
-        res.json({ waiters: waiterStats, cooks: cookStats });
+        res.json({
+            arqueo: {
+                id: arqueo.id,
+                fechaInicio: arqueo.fechaInicio,
+                fechaFin: arqueo.fechaFin,
+                estado: arqueo.estado,
+                montoInicial: arqueo.montoInicial
+            },
+            waiters: waiterStats,
+            cooks: cookStats,
+            comandas: comandas.map(c => ({
+                id: c.id,
+                fecha: c.fecha,
+                usuarioId: c.usuarioId,
+                usuarioNombre: c.usuario ? c.usuario.nombre : 'Mesero',
+                mesaId: c.mesaId,
+                mesaNum: c.mesa ? c.mesa.numero : 'Mesa',
+                total: c.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0),
+                detalles: c.detalles.map(d => ({
+                    id: d.id,
+                    platoId: d.platoId,
+                    descripcion: d.plato.nombre,
+                    cantidad: d.cantidad,
+                    precio: d.plato.precio,
+                    cocineroId: d.cocineroId,
+                    cocineroNombre: d.cocinero ? d.cocinero.nombre : null,
+                    fechaPreparacion: d.fechaPreparacion,
+                    fechaListo: d.fechaListo
+                }))
+            })),
+            requiresSessionSelection: false
+        });
 
     } catch (e) {
         console.error(e);

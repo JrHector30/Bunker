@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
-import { ArrowLeft, Trash, User, ChefHat, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, User, ChefHat, FileText, CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -16,35 +16,242 @@ const StaffStatsView = () => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const navigate = useNavigate();
-    const [stats, setStats] = useState({ waiters: [], cooks: [] });
+
+    // State definitions
     const [date, setDate] = useState(new Date());
+    const [sessions, setSessions] = useState([]);
+    const [selectedArqueoId, setSelectedArqueoId] = useState(null);
+    const [requiresSelection, setRequiresSelection] = useState(false);
+    const [arqueoInfo, setArqueoInfo] = useState(null);
+    const [rawComandas, setRawComandas] = useState([]);
+    const [stats, setStats] = useState({ waiters: [], cooks: [] });
+    const [filteredDay, setFilteredDay] = useState('TODO');
     const [loading, setLoading] = useState(false);
 
-    const dateQueryStr = React.useMemo(() => date ? format(date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), [date]);
-    const dateDisplayStr = React.useMemo(() => date ? format(date, 'dd-MM-yyyy') : format(new Date(), 'dd-MM-yyyy'), [date]);
+    const dateQueryStr = useMemo(() => date ? format(date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), [date]);
+    const dateDisplayStr = useMemo(() => date ? format(date, 'dd-MM-yyyy') : format(new Date(), 'dd-MM-yyyy'), [date]);
 
-    const fetchStats = () => {
-        setLoading(true);
-        fetch(`/api/staff/stats?date=${dateQueryStr}`)
-            .then(res => res.json())
-            .then(data => setStats(data))
-            .catch(err => console.error(err))
-            .finally(() => setLoading(false));
-    };
-
+    // 1. Fetch sessions for the selected date
     useEffect(() => {
-        fetchStats();
+        setSessions([]);
+        setSelectedArqueoId(null);
+        setRequiresSelection(false);
+        setArqueoInfo(null);
+        setRawComandas([]);
+        setStats({ waiters: [], cooks: [] });
+        setFilteredDay('TODO');
+
+        setLoading(true);
+        fetch(`/api/staff/stats/sessions?date=${dateQueryStr}`)
+            .then(res => res.json())
+            .then(data => {
+                setSessions(data);
+                if (data.length === 0) {
+                    setRequiresSelection(false);
+                    setLoading(false);
+                } else if (data.length === 1) {
+                    setRequiresSelection(false);
+                    setSelectedArqueoId(data[0].id);
+                } else {
+                    setRequiresSelection(true);
+                    setLoading(false);
+                }
+            })
+            .catch(err => {
+                console.error("Error cargando sesiones de caja:", err);
+                setLoading(false);
+            });
     }, [dateQueryStr]);
 
+    // 2. Fetch stats for the selected cashier session (arqueoId)
+    const fetchArqueoStats = useCallback((arqueoId, showLoading = true) => {
+        if (showLoading) setLoading(true);
+        fetch(`/api/staff/stats?arqueoId=${arqueoId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.arqueo) {
+                    setArqueoInfo(data.arqueo);
+                    setRawComandas(data.comandas || []);
+                    setStats({ waiters: data.waiters || [], cooks: data.cooks || [] });
+                } else {
+                    setArqueoInfo(null);
+                    setRawComandas([]);
+                    setStats({ waiters: [], cooks: [] });
+                }
+            })
+            .catch(err => console.error("Error al obtener estadísticas del arqueo:", err))
+            .finally(() => {
+                if (showLoading) setLoading(false);
+            });
+    }, []);
+
+    // 3. Start interval polling ONLY if session is open
+    useEffect(() => {
+        if (!selectedArqueoId) return;
+
+        // Initial fetch
+        fetchArqueoStats(selectedArqueoId, true);
+
+        let interval = null;
+        const checkAndStartInterval = () => {
+            const currentArqueo = sessions.find(s => s.id === selectedArqueoId) || arqueoInfo;
+            if (currentArqueo && currentArqueo.estado === 'abierto') {
+                interval = setInterval(() => {
+                    fetchArqueoStats(selectedArqueoId, false);
+                }, 20000); // 20 seconds
+            }
+        };
+
+        const timeout = setTimeout(checkAndStartInterval, 1000);
+
+        return () => {
+            clearTimeout(timeout);
+            if (interval) clearInterval(interval);
+        };
+    }, [selectedArqueoId, sessions, arqueoInfo, fetchArqueoStats]);
+
+    // 4. Generate continuous array of natural days in cashier range
+    const rangeDays = useMemo(() => {
+        if (!arqueoInfo) return [];
+        const days = [];
+        const start = new Date(arqueoInfo.fechaInicio);
+        const end = arqueoInfo.fechaFin ? new Date(arqueoInfo.fechaFin) : new Date();
+
+        const current = new Date(start);
+        while (current <= end || current.toDateString() === end.toDateString()) {
+            const y = current.getFullYear();
+            const m = String(current.getMonth() + 1).padStart(2, '0');
+            const d = String(current.getDate()).padStart(2, '0');
+            const key = `${y}-${m}-${d}`;
+            if (!days.includes(key)) {
+                days.push(key);
+            }
+            current.setDate(current.getDate() + 1);
+        }
+        return days;
+    }, [arqueoInfo]);
+
+    // 5. Generate daily chart data mapping (showing empty days as 0)
+    const dailyChartData = useMemo(() => {
+        return rangeDays.map(dayStr => {
+            const dayComandas = rawComandas.filter(c => {
+                const cDate = new Date(c.fecha);
+                const y = cDate.getFullYear();
+                const m = String(cDate.getMonth() + 1).padStart(2, '0');
+                const d = String(cDate.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}` === dayStr;
+            });
+
+            const total = dayComandas.reduce((sum, c) => sum + c.total, 0);
+            const count = dayComandas.length;
+
+            const parts = dayStr.split('-');
+            const label = `${parts[2]}/${parts[1]}`;
+
+            return {
+                dateStr: dayStr,
+                label,
+                venta: parseFloat(total.toFixed(2)),
+                pedidos: count
+            };
+        });
+    }, [rangeDays, rawComandas]);
+
+    // 6. Reactive calculations in client based on active filter (filteredDay)
+    const activeData = useMemo(() => {
+        if (!arqueoInfo) {
+            return {
+                totalSales: 0,
+                totalOrders: 0,
+                waiters: [],
+                cooks: [],
+                waiterChartData: [],
+                cookChartData: []
+            };
+        }
+
+        const targetComandas = filteredDay === 'TODO'
+            ? rawComandas
+            : rawComandas.filter(c => {
+                const cDate = new Date(c.fecha);
+                const y = cDate.getFullYear();
+                const m = String(cDate.getMonth() + 1).padStart(2, '0');
+                const d = String(cDate.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}` === filteredDay;
+            });
+
+        const sales = targetComandas.reduce((sum, c) => sum + c.total, 0);
+        const orders = targetComandas.length;
+
+        // Recalculate waiters performance
+        const waiters = (stats.waiters || []).map(w => {
+            const wComandas = targetComandas.filter(c => c.usuarioId === w.id);
+            return {
+                ...w,
+                totalTables: wComandas.length,
+                totalSales: wComandas.reduce((sum, c) => sum + c.total, 0)
+            };
+        });
+
+        // Recalculate cooks performance based on preparado dishes within target comandas
+        const dayDetails = [];
+        targetComandas.forEach(c => {
+            (c.detalles || []).forEach(d => {
+                dayDetails.push(d);
+            });
+        });
+
+        const cooks = (stats.cooks || []).map(c => {
+            const cookDetails = dayDetails.filter(d => d.cocineroId === c.id);
+            const totalDishes = cookDetails.length;
+
+            let totalTimeMs = 0;
+            let countTime = 0;
+            cookDetails.forEach(d => {
+                if (d.fechaPreparacion && d.fechaListo) {
+                    const start = new Date(d.fechaPreparacion);
+                    const end = new Date(d.fechaListo);
+                    const diff = end - start;
+                    if (diff > 0) {
+                        totalTimeMs += diff;
+                        countTime++;
+                    }
+                }
+            });
+            const avgTimeMin = countTime > 0 ? (totalTimeMs / countTime / 60000) : 0;
+
+            return {
+                ...c,
+                totalDishes,
+                avgTimeMin
+            };
+        });
+
+        const waiterChartData = waiters.filter(w => w.totalSales > 0);
+        const cookChartData = cooks.filter(c => c.totalDishes > 0);
+
+        return {
+            totalSales: parseFloat(sales.toFixed(2)),
+            totalOrders: orders,
+            waiters,
+            cooks,
+            waiterChartData,
+            cookChartData
+        };
+    }, [arqueoInfo, filteredDay, rawComandas, stats]);
+
+    // 7. Cleanup/Daily Delete functionality
     const handleCleanDay = async () => {
-        if (!await showConfirmation(`⚠ PELIGRO:\n\n¿Estás seguro de ELIMINAR PERMANENTEMENTE todas las ventas del día ${dateDisplayStr}?\n\nEsta acción NO se puede deshacer.`, { type: 'danger' })) return;
+        if (!arqueoInfo) return;
+        const arqueoLabel = `Arqueo N° ${arqueoInfo.id}`;
+        if (!await showConfirmation(`⚠ PELIGRO:\n\n¿Estás seguro de ELIMINAR PERMANENTEMENTE todas las ventas y registros asociados a la sesión de caja del día ${dateDisplayStr} (${arqueoLabel})?\n\nEsta acción NO se puede deshacer.`, { type: 'danger' })) return;
 
         try {
             const res = await fetch(`/api/staff/stats/daily?date=${dateQueryStr}`, { method: 'DELETE' });
             const data = await res.json();
             if (res.ok) {
                 showToast(data.message, 'error');
-                fetchStats();
+                setDate(new Date());
             } else {
                 showToast("Error: " + data.error, 'error');
             }
@@ -53,38 +260,44 @@ const StaffStatsView = () => {
         }
     };
 
+    // 8. PDF Export Lógica
     const handleExportPDF = () => {
+        if (!arqueoInfo) return;
         const doc = new jsPDF();
+        const rangeLabel = arqueoInfo.fechaFin
+            ? `${format(new Date(arqueoInfo.fechaInicio), 'dd/MM/yy HH:mm')} a ${format(new Date(arqueoInfo.fechaFin), 'dd/MM/yy HH:mm')}`
+            : `${format(new Date(arqueoInfo.fechaInicio), 'dd/MM/yy HH:mm')} a Abierta`;
 
-        // Header
         doc.setFontSize(18);
-        doc.text("Bunker - Reporte de Personal", 14, 20);
-        doc.setFontSize(12);
-        doc.text(`Fecha: ${dateDisplayStr}`, 14, 28);
+        doc.text("Bunker - Reporte de Rendimiento de Caja", 14, 20);
+        doc.setFontSize(10);
+        doc.text(`Arqueo N°: ${arqueoInfo.id} (${arqueoInfo.estado.toUpperCase()})`, 14, 27);
+        doc.text(`Rango: ${rangeLabel}`, 14, 33);
+        doc.text(`Filtro Activo: ${filteredDay === 'TODO' ? 'Todo el rango' : filteredDay}`, 14, 39);
 
         // Waiters Table
         doc.setFontSize(14);
-        doc.text("Rendimiento de Mozos", 14, 40);
+        doc.text("Rendimiento de Mozos", 14, 50);
 
-        const waiterRows = stats.waiters.map(w => [
+        const waiterRows = activeData.waiters.map(w => [
             w.nombre,
             w.totalTables,
             `S/. ${parseFloat(Number(w.totalSales).toFixed(2))}`
         ]);
 
         autoTable(doc, {
-            startY: 45,
+            startY: 55,
             head: [['Nombre', 'Pedidos', 'Venta Total']],
             body: waiterRows,
             theme: 'grid',
-            headStyles: { fillColor: [40, 167, 69] }
+            headStyles: { fillColor: [14, 165, 233] }
         });
 
         // Cooks Table
         const finalY = doc.lastAutoTable.finalY + 15;
         doc.text("Rendimiento de Cocina", 14, finalY);
 
-        const cookRows = stats.cooks.map(c => [
+        const cookRows = activeData.cooks.map(c => [
             c.nombre,
             c.totalDishes,
             c.avgTimeMin > 0 ? `${parseFloat(Number(c.avgTimeMin).toFixed(2))} min` : '-'
@@ -92,212 +305,389 @@ const StaffStatsView = () => {
 
         autoTable(doc, {
             startY: finalY + 5,
-            head: [['Nombre', 'Platos', 'Tiempo Prom.']],
+            head: [['Nombre', 'Platos Preparados', 'Tiempo Promedio']],
             body: cookRows,
             theme: 'grid',
-            headStyles: { fillColor: [255, 193, 7] }
+            headStyles: { fillColor: [239, 68, 68] }
         });
 
-        doc.save(`Reporte_Personal_${date}.pdf`);
+        doc.save(`Reporte_Arqueo_${arqueoInfo.id}_Filtro_${filteredDay}.pdf`);
     };
 
-    // Calculate Totals
-    const totalSales = stats.waiters.reduce((acc, w) => acc + w.totalSales, 0);
-    const totalOrders = stats.waiters.reduce((acc, w) => acc + w.totalTables, 0);
-
-    // Filter out zero values for cleaner charts
-    const waiterData = stats.waiters.filter(w => w.totalSales > 0);
-    const cookData = stats.cooks.filter(c => c.totalDishes > 0);
-
-    // Paletas de colores distintivas
-    // Mozos: Tonos fríos (Azules, Celestes, Turquesas) - Representan servicio/atención
+    // Color palettes
     const WAITER_COLORS = ['#0ea5e9', '#3b82f6', '#22d3ee', '#2dd4bf', '#6366f1', '#8b5cf6', '#06b6d4', '#60a5fa'];
-
-    // Cocineros: Tonos cálidos (Rojos, Naranjas, Amarillos) - Representan calor/cocina
     const COOK_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#dc2626', '#ea580c', '#b91c1c', '#d97706'];
 
     return (
         <div style={{ padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            {/* Top Toolbar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 15 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <button className="glass-button" onClick={() => navigate('/')} style={{ padding: 8 }}>
                         <ArrowLeft size={20} />
                     </button>
-                    <h1>Reporte de Personal</h1>
+                    <div>
+                        <h1 style={{ margin: 0, fontSize: '24px' }}>Rendimiento y Reportes</h1>
+                        {arqueoInfo && (
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginTop: 2 }}>
+                                Caja N° {arqueoInfo.id} ({arqueoInfo.estado === 'abierto' ? 'Abierta' : 'Cerrada'})
+                            </span>
+                        )}
+                    </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* Secondary selector for multiple arqueos */}
+                    {sessions.length > 1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <CalendarDays size={16} className="text-teal-400" />
+                            <select
+                                value={selectedArqueoId || ''}
+                                onChange={(e) => setSelectedArqueoId(parseInt(e.target.value))}
+                                className="glass-button"
+                                style={{
+                                    padding: '6px 12px',
+                                    fontSize: 12,
+                                    borderRadius: 12,
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                {sessions.map(s => {
+                                    const startStr = format(new Date(s.fechaInicio), 'HH:mm');
+                                    const endStr = s.fechaFin ? format(new Date(s.fechaFin), 'HH:mm') : 'Activa';
+                                    return (
+                                        <option key={s.id} value={s.id}>
+                                            Arqueo #{s.id} ({startStr} - {endStr})
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        </div>
+                    )}
+
                     <DropdownRangeDatePicker
                         mode="single"
                         value={date}
                         onChange={(selectedDate) => {
-                            if (selectedDate) {
-                                setDate(selectedDate);
-                            }
+                            if (selectedDate) setDate(selectedDate);
                         }}
                         placeholder="Seleccionar Fecha"
                     />
 
-                    <button
-                        className="glass-button"
-                        onClick={handleExportPDF}
-                        title="Exportar Reporte PDF"
-                        style={{ display: 'flex', alignItems: 'center', gap: 5 }}
-                    >
-                        <FileText size={18} /> PDF
-                    </button>
-                </div>
-            </div>
-
-            {/* Summary Cards */}
-            <div className="responsive-grid" style={{ marginBottom: 30, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
-                <div className="glass-panel" style={{ padding: 20, textAlign: 'center' }}>
-                    <h3 className="text-muted" style={{ margin: 0 }}>Venta Total</h3>
-                    <h1 style={{ color: 'var(--success)', margin: '10px 0' }} className="font-mono">S/. {parseFloat(Number(totalSales).toFixed(2))}</h1>
-                </div>
-                <div className="glass-panel" style={{ padding: 20, textAlign: 'center' }}>
-                    <h3 className="text-muted" style={{ margin: 0 }}>Pedidos Atendidos</h3>
-                    <h1 style={{ color: 'var(--primary)', margin: '10px 0' }}>{totalOrders}</h1>
-                </div>
-            </div>
-
-            {/* CHARTS SECTION */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 20, marginBottom: 30 }}>
-
-                {/* Waiter Sales Chart */}
-                <div className="glass-panel" style={{ padding: 20, height: 350 }}>
-                    <h3 style={{ textAlign: 'center', marginBottom: 20 }}>Ventas por Mozo</h3>
-                    {waiterData.length === 0 ? (
-                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                            Sin datos de ventas
-                        </div>
-                    ) : (
-                        <ResponsiveContainer width="100%" height="90%">
-                            <BarChart data={waiterData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                                <XAxis dataKey="nombre" stroke="var(--text-muted)" />
-                                <YAxis stroke="var(--text-muted)" />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#333', borderColor: '#555', color: '#fff' }}
-                                    formatter={(value) => [`S/. ${parseFloat(Number(value).toFixed(2))}`, 'Ventas']}
-                                />
-                                <Bar dataKey="totalSales" name="Ventas" radius={[5, 5, 0, 0]}>
-                                    {waiterData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={WAITER_COLORS[index % WAITER_COLORS.length]} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                    {arqueoInfo && (
+                        <>
+                            <button
+                                className="glass-button"
+                                onClick={handleExportPDF}
+                                title="Exportar Reporte PDF"
+                                style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                            >
+                                <FileText size={18} /> PDF
+                            </button>
+                        </>
                     )}
                 </div>
+            </div>
 
-                {/* Kitchen Efficiency Chart */}
-                <div className="glass-panel" style={{ padding: 20, height: 350 }}>
-                    <h3 style={{ textAlign: 'center', marginBottom: 20 }}>Platos por Cocinero</h3>
-                    {cookData.length === 0 ? (
-                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                            Sin datos de cocina
-                        </div>
-                    ) : (
-                        <ResponsiveContainer width="100%" height="90%">
-                            <PieChart>
-                                <Pie
-                                    data={cookData}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    label={({ nombre, percent }) => `${nombre} (${(percent * 100).toFixed(0)}%)`}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    dataKey="totalDishes"
-                                    nameKey="nombre"
+            {/* Loading Indicator */}
+            {loading && (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                    <div className="border-3 border-slate-200 border-t-slate-800 rounded-full w-8 h-8 animate-spin" />
+                </div>
+            )}
+
+            {/* Requiere Selección de sesión (Múltiples Arqueos) */}
+            {!loading && requiresSelection && (
+                <div className="glass-panel text-center" style={{ padding: '50px 20px', margin: '20px 0', border: '1px solid var(--glass-border)' }}>
+                    <div style={{ fontSize: 44, marginBottom: 15 }}>📂</div>
+                    <h3 className="text-main" style={{ margin: 0, fontWeight: 700, fontSize: 18 }}>Múltiples Cajas Detectadas</h3>
+                    <p className="text-muted" style={{ fontSize: 13, marginTop: 8, marginBottom: 24, maxWidth: 380, marginLeft: 'auto', marginRight: 'auto' }}>
+                        Se abrieron varias sesiones de caja el día {dateDisplayStr}. Por favor, selecciona la sesión específica para visualizar el reporte:
+                    </p>
+                    <div style={{ display: 'inline-flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {sessions.map(s => {
+                            const startStr = format(new Date(s.fechaInicio), 'HH:mm');
+                            const endStr = s.fechaFin ? format(new Date(s.fechaFin), 'HH:mm') : 'Activa';
+                            return (
+                                <button
+                                    key={s.id}
+                                    className="glass-button"
+                                    onClick={() => {
+                                        setRequiresSelection(false);
+                                        setSelectedArqueoId(s.id);
+                                    }}
+                                    style={{
+                                        padding: '12px 20px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        borderRadius: 16
+                                    }}
                                 >
-                                    {cookData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COOK_COLORS[index % COOK_COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#333', borderColor: '#555', color: '#fff' }}
-                                    formatter={(value) => [value, "Platos Preparados"]}
-                                />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    )}
+                                    <span style={{ fontWeight: 'black', fontSize: 14 }}>Arqueo N° {s.id}</span>
+                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{startStr} a {endStr} ({s.estado === 'abierto' ? 'Abierta' : 'Cerrada'})</span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
+            )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 20 }}>
-                {/* Waiters Table */}
-                <div className="glass-panel" style={{ padding: 20 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
-                        <User size={24} style={{ color: 'var(--primary)' }} />
-                        <h2>Detalle Mozos</h2>
+            {/* Estado Vacío: Sin cajas en el día */}
+            {!loading && !requiresSelection && !arqueoInfo && (
+                <div className="glass-panel text-center" style={{ padding: '60px 20px', margin: '20px 0', border: '1px solid var(--glass-border)' }}>
+                    <div style={{ fontSize: 48, marginBottom: 20 }}>📭</div>
+                    <h3 className="text-main" style={{ margin: 0, fontWeight: 700, fontSize: 18 }}>No hay sesión de caja</h3>
+                    <p className="text-muted" style={{ fontSize: 13, marginTop: 10, maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>
+                        No se ha encontrado ninguna apertura de caja registrada para la fecha seleccionada ({dateDisplayStr}).
+                    </p>
+                </div>
+            )}
+
+            {/* Report Content */}
+            {!loading && arqueoInfo && (
+                <div>
+                    {/* Day/Range Filter Selector */}
+                    <div className="glass-panel" style={{ padding: 15, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 15, border: '1px solid var(--glass-border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ fontSize: 13, fontWeight: 'bold', color: 'var(--text-muted)' }}>Filtrar reporte por día de caja:</span>
+                            <select
+                                value={filteredDay}
+                                onChange={(e) => setFilteredDay(e.target.value)}
+                                className="glass-button"
+                                style={{
+                                    padding: '6px 16px',
+                                    fontSize: 12,
+                                    borderRadius: 12,
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                    border: '1px solid var(--glass-border)'
+                                }}
+                            >
+                                <option value="TODO">TODO (Rango completo de Caja)</option>
+                                {rangeDays.map(dayStr => {
+                                    const parts = dayStr.split('-');
+                                    const displayLabel = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                                    return (
+                                        <option key={dayStr} value={dayStr}>
+                                            Día: {displayLabel}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        </div>
+
+                        {filteredDay !== 'TODO' && (
+                            <button
+                                className="glass-button"
+                                onClick={() => setFilteredDay('TODO')}
+                                style={{ padding: '6px 12px', fontSize: 11, borderRadius: 10, color: 'var(--primary)' }}
+                            >
+                                Restablecer a TODO
+                            </button>
+                        )}
                     </div>
 
-                    <div className="table-responsive">
-                        <table style={{ width: '100%' }}>
-                            <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th style={{ textAlign: 'center' }}>Pedidos</th>
-                                    <th style={{ textAlign: 'right' }}>Venta Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {stats.waiters.length === 0 ? (
-                                    <tr><td colSpan="3" className="text-center text-muted">No hay datos</td></tr>
-                                ) : (
-                                    stats.waiters.map(w => (
-                                        <tr key={w.id}>
-                                            <td>{w.nombre}</td>
-                                            <td style={{ textAlign: 'center' }}>{w.totalTables}</td>
-                                            <td style={{ textAlign: 'right', color: 'var(--success)', fontWeight: 'bold' }} className="font-mono">
-                                                S/. {parseFloat(Number(w.totalSales).toFixed(2))}
-                                            </td>
+                    {/* Summary KPI Cards */}
+                    <div className="responsive-grid" style={{ marginBottom: 30, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
+                        <div className="glass-panel" style={{ padding: 20, textAlign: 'center', border: '1px solid var(--glass-border)' }}>
+                            <h3 className="text-muted" style={{ margin: 0, fontSize: 13, fontWeight: 500 }}>Venta Total</h3>
+                            <h1 style={{ color: 'var(--success)', margin: '10px 0', fontSize: 28 }} className="font-mono">
+                                S/. {activeData.totalSales.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h1>
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Monto efectivamente cobrado</span>
+                        </div>
+                        <div className="glass-panel" style={{ padding: 20, textAlign: 'center', border: '1px solid var(--glass-border)' }}>
+                            <h3 className="text-muted" style={{ margin: 0, fontSize: 13, fontWeight: 500 }}>Pedidos Atendidos</h3>
+                            <h1 style={{ color: 'var(--primary)', margin: '10px 0', fontSize: 28 }} className="font-mono">
+                                {activeData.totalOrders}
+                            </h1>
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Comandas válidamente finalizadas</span>
+                        </div>
+                    </div>
+
+                    {/* CHARTS GRID */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 20, marginBottom: 30 }}>
+                        
+                        {/* 1. Daily Sales timeline chart */}
+                        <div className="glass-panel" style={{ padding: 20, height: 350, border: '1px solid var(--glass-border)' }}>
+                            <h3 style={{ textAlign: 'center', marginBottom: 15, fontSize: 14 }}>Ventas Diarias en este Arqueo</h3>
+                            <ResponsiveContainer width="100%" height="90%">
+                                <BarChart
+                                    data={dailyChartData}
+                                    onClick={(state) => {
+                                        if (state && state.activePayload && state.activePayload.length > 0) {
+                                            const clickedDay = state.activePayload[0].payload.dateStr;
+                                            setFilteredDay(clickedDay);
+                                        }
+                                    }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                                    <XAxis dataKey="label" stroke="var(--text-muted)" fontSize={10} />
+                                    <YAxis stroke="var(--text-muted)" fontSize={10} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--glass-border)', color: 'var(--text-main)' }}
+                                        formatter={(value, name) => [
+                                            name === 'venta' ? `S/. ${parseFloat(Number(value).toFixed(2))}` : `${value} pedidos`,
+                                            name === 'venta' ? 'Venta' : 'Pedidos'
+                                        ]}
+                                    />
+                                    <Legend fontSize={10} />
+                                    <Bar dataKey="venta" name="Venta (S/.)" fill="var(--success)" radius={[4, 4, 0, 0]}>
+                                        {dailyChartData.map((entry, index) => {
+                                            const isSelected = filteredDay === entry.dateStr;
+                                            return (
+                                                <Cell
+                                                    key={`cell-${index}`}
+                                                    fill={isSelected ? 'var(--primary)' : 'var(--success)'}
+                                                    style={{ cursor: 'pointer', opacity: isSelected ? 1 : 0.8 }}
+                                                />
+                                            );
+                                        })}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+
+                        {/* 2. Waiter Sales Chart */}
+                        <div className="glass-panel" style={{ padding: 20, height: 350, border: '1px solid var(--glass-border)' }}>
+                            <h3 style={{ textAlign: 'center', marginBottom: 15, fontSize: 14 }}>Ventas por Mozo</h3>
+                            {activeData.waiterChartData.length === 0 ? (
+                                <div style={{ height: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+                                    Sin datos de ventas en este período
+                                </div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="90%">
+                                    <BarChart data={activeData.waiterChartData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                                        <XAxis dataKey="nombre" stroke="var(--text-muted)" fontSize={10} />
+                                        <YAxis stroke="var(--text-muted)" fontSize={10} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--glass-border)', color: 'var(--text-main)' }}
+                                            formatter={(value) => [`S/. ${parseFloat(Number(value).toFixed(2))}`, 'Ventas']}
+                                        />
+                                        <Bar dataKey="totalSales" name="Ventas" radius={[4, 4, 0, 0]}>
+                                            {activeData.waiterChartData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={WAITER_COLORS[index % WAITER_COLORS.length]} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
+
+                        {/* 3. Kitchen Efficiency Chart */}
+                        <div className="glass-panel" style={{ padding: 20, height: 350, border: '1px solid var(--glass-border)', gridColumn: 'span 2' }}>
+                            <h3 style={{ textAlign: 'center', marginBottom: 15, fontSize: 14 }}>Platos por Cocinero</h3>
+                            {activeData.cookChartData.length === 0 ? (
+                                <div style={{ height: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+                                    Sin platos preparados en este período
+                                </div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="90%">
+                                    <PieChart>
+                                        <Pie
+                                            data={activeData.cookChartData}
+                                            cx="50%"
+                                            cy="40%"
+                                            labelLine={true}
+                                            label={({ nombre, percent }) => `${nombre} (${(percent * 100).toFixed(0)}%)`}
+                                            outerRadius={70}
+                                            fill="#8884d8"
+                                            dataKey="totalDishes"
+                                            nameKey="nombre"
+                                        >
+                                            {activeData.cookChartData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COOK_COLORS[index % COOK_COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--glass-border)', color: 'var(--text-main)' }}
+                                            formatter={(value) => [value, "Platos Preparados"]}
+                                        />
+                                        <Legend verticalAlign="bottom" height={36} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* DETAILS TABLES GRID */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 20 }}>
+                        {/* Waiters Table */}
+                        <div className="glass-panel" style={{ padding: 20, border: '1px solid var(--glass-border)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                                <User size={24} style={{ color: 'var(--primary)' }} />
+                                <h2 style={{ margin: 0, fontSize: '18px' }}>Detalle Mozos</h2>
+                            </div>
+
+                            <div className="table-responsive">
+                                <table style={{ width: '100%' }}>
+                                    <thead>
+                                        <tr>
+                                            <th>Nombre</th>
+                                            <th style={{ textAlign: 'center' }}>Pedidos</th>
+                                            <th style={{ textAlign: 'right' }}>Venta Total</th>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                                    </thead>
+                                    <tbody>
+                                        {activeData.waiters.length === 0 ? (
+                                            <tr><td colSpan="3" className="text-center text-muted">No hay datos</td></tr>
+                                        ) : (
+                                            activeData.waiters.map(w => (
+                                                <tr key={w.id}>
+                                                    <td>{w.nombre}</td>
+                                                    <td style={{ textAlign: 'center' }}>{w.totalTables}</td>
+                                                    <td style={{ textAlign: 'right', color: 'var(--success)', fontWeight: 'bold' }} className="font-mono">
+                                                        S/. {parseFloat(Number(w.totalSales).toFixed(2))}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
 
-                {/* Cooks Table */}
-                <div className="glass-panel" style={{ padding: 20 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
-                        <ChefHat size={24} style={{ color: 'var(--warning)' }} />
-                        <h2>Detalle Cocina</h2>
-                    </div>
+                        {/* Cooks Table */}
+                        <div className="glass-panel" style={{ padding: 20, border: '1px solid var(--glass-border)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                                <ChefHat size={24} style={{ color: 'var(--warning)' }} />
+                                <h2 style={{ margin: 0, fontSize: '18px' }}>Detalle Cocina</h2>
+                            </div>
 
-                    <div className="table-responsive">
-                        <table style={{ width: '100%' }}>
-                            <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th style={{ textAlign: 'center' }}>Platos</th>
-                                    <th style={{ textAlign: 'center' }}>Tiempo Prom.</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {stats.cooks.length === 0 ? (
-                                    <tr><td colSpan="3" className="text-center text-muted">No hay datos</td></tr>
-                                ) : (
-                                    stats.cooks.map(c => (
-                                        <tr key={c.id}>
-                                            <td>{c.nombre}</td>
-                                            <td style={{ textAlign: 'center' }}>{c.totalDishes}</td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                {c.avgTimeMin > 0 ? `${parseFloat(Number(c.avgTimeMin).toFixed(2))} min` : '-'}
-                                            </td>
+                            <div className="table-responsive">
+                                <table style={{ width: '100%' }}>
+                                    <thead>
+                                        <tr>
+                                            <th>Nombre</th>
+                                            <th style={{ textAlign: 'center' }}>Platos</th>
+                                            <th style={{ textAlign: 'center' }}>Tiempo Prom.</th>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                                    </thead>
+                                    <tbody>
+                                        {activeData.cooks.length === 0 ? (
+                                            <tr><td colSpan="3" className="text-center text-muted">No hay datos</td></tr>
+                                        ) : (
+                                            activeData.cooks.map(c => (
+                                                <tr key={c.id}>
+                                                    <td>{c.nombre}</td>
+                                                    <td style={{ textAlign: 'center' }}>{c.totalDishes}</td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        {c.avgTimeMin > 0 ? `${parseFloat(Number(c.avgTimeMin).toFixed(2))} min` : '-'}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
