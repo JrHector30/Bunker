@@ -12,29 +12,96 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
 import SimpleCombobox from '../components/SimpleCombobox';
+import { motion } from 'motion/react';
 
 const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
         const data = payload[0].payload;
         const formattedDate = data.dateStr ? data.dateStr.split('-').reverse().join('/') : '';
+        
+        // Detectar si el documento está en modo oscuro
+        const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+        
+        // Estilos glassmorphism dinámicos
+        const bgColor = isDark ? 'rgba(15, 23, 42, 0.82)' : 'rgba(255, 255, 255, 0.82)';
+        const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.4)';
+        const textColor = isDark ? '#f8fafc' : '#0f172a';
+        
         return (
-            <div className="glass-panel" style={{
-                padding: '10px 14px',
-                border: '1px solid var(--glass-border)',
-                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                color: 'var(--text-main)',
-                fontSize: 12,
-                borderRadius: 12,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                fontFamily: 'sans-serif'
-            }}>
-                <p style={{ margin: '0 0 6px 0', fontWeight: 'bold', color: 'var(--text-main)' }}>Día: {formattedDate}</p>
-                <p style={{ margin: '0 0 4px 0', color: 'var(--success)' }}>Venta: S/. {parseFloat(data.salesTotal || 0).toFixed(2)}</p>
-                <p style={{ margin: '0 0 4px 0', color: 'var(--primary)' }}>Pedidos atendidos: {data.ordersCount}</p>
-                {data.dishesCount > 0 && (
-                    <p style={{ margin: 0, color: 'var(--warning)' }}>Platos preparados: {data.dishesCount}</p>
-                )}
-            </div>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className="glass-panel"
+                style={{
+                    padding: '16px 18px',
+                    border: `1px solid ${borderColor}`,
+                    backgroundColor: bgColor,
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    color: textColor,
+                    borderRadius: '16px',
+                    boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.15)',
+                    fontFamily: '"Plus Jakarta Sans", sans-serif',
+                    minWidth: '240px',
+                    pointerEvents: 'none'
+                }}
+            >
+                <p style={{ 
+                    margin: '0 0 8px 0', 
+                    fontWeight: 600, 
+                    fontSize: '15px', 
+                    lineHeight: '1.4', 
+                    color: textColor,
+                    borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                    paddingBottom: '6px'
+                }}>
+                    Día: {formattedDate}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <p style={{ 
+                        margin: 0, 
+                        color: '#22c55e', 
+                        fontWeight: 500, 
+                        fontSize: '15px', 
+                        lineHeight: '1.5',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }}>
+                        <span>Venta:</span>
+                        <strong style={{ fontWeight: 600 }}>S/. {parseFloat(data.salesTotal || 0).toFixed(2)}</strong>
+                    </p>
+                    <p style={{ 
+                        margin: 0, 
+                        color: '#f97316', 
+                        fontWeight: 500, 
+                        fontSize: '15px', 
+                        lineHeight: '1.5',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }}>
+                        <span>Pedidos atendidos:</span>
+                        <strong style={{ fontWeight: 600 }}>{data.ordersCount}</strong>
+                    </p>
+                    {data.dishesCount > 0 && (
+                        <p style={{ 
+                            margin: 0, 
+                            color: '#3b82f6', 
+                            fontWeight: 500, 
+                            fontSize: '15px', 
+                            lineHeight: '1.5',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <span>Platos preparados:</span>
+                            <strong style={{ fontWeight: 600 }}>{data.dishesCount}</strong>
+                        </p>
+                    )}
+                </div>
+            </motion.div>
         );
     }
     return null;
