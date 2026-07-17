@@ -314,7 +314,7 @@ const StaffStatsView = () => {
                 // Determine Kardex/Stock status based on recetas and movimientosInsumo
                 let kardexStatus = 'No afecta inventario';
                 if (d.recetaCount > 0) {
-                    const hasMovement = movimientosInsumo.some(k => 
+                    const hasMovement = movimientosInsumo.some(k =>
                         k.motivo && k.motivo.includes(`Comanda ID: ${c.id}`)
                     );
                     kardexStatus = hasMovement ? 'Stock descontado' : 'Movimiento no encontrado';
@@ -345,8 +345,8 @@ const StaffStatsView = () => {
                     // Beverage or snacks (not sent to kitchen)
                     nonCocinaPlatos.push(itemDetail);
                 } else if (!d.estado || (
-                    d.estado.toLowerCase() === 'listo' || 
-                    d.estado.toLowerCase() === 'entregado' || 
+                    d.estado.toLowerCase() === 'listo' ||
+                    d.estado.toLowerCase() === 'entregado' ||
                     d.estado.toLowerCase() === 'entregada'
                 )) {
                     const cid = d.cocineroId;
@@ -364,8 +364,8 @@ const StaffStatsView = () => {
                     }
                     cooksMap[cid].totalDishes += d.cantidad;
 
-                    const prepTime = d.fechaPreparacion && d.fechaListo 
-                        ? Math.max(0, (new Date(d.fechaListo) - new Date(d.fechaPreparacion)) / 60000) 
+                    const prepTime = d.fechaPreparacion && d.fechaListo
+                        ? Math.max(0, (new Date(d.fechaListo) - new Date(d.fechaPreparacion)) / 60000)
                         : 0;
 
                     const readyTimeStr = d.fechaListo
@@ -408,7 +408,7 @@ const StaffStatsView = () => {
             const auditPlatos = (c.detalles || []).map(d => {
                 let kardexStatus = 'No afecta inventario';
                 if (d.recetaCount > 0) {
-                    const hasMovement = movimientosInsumo.some(k => 
+                    const hasMovement = movimientosInsumo.some(k =>
                         k.motivo && k.motivo.includes(`Comanda ID: ${c.id}`)
                     );
                     kardexStatus = hasMovement ? 'Stock descontado' : 'Movimiento no encontrado';
@@ -736,7 +736,7 @@ const StaffStatsView = () => {
 
                     {/* CHARTS GRID */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 20, marginBottom: 30 }}>
-                        
+
                         {/* 1. Daily Sales timeline chart */}
                         <div className="glass-panel" style={{ padding: 20, height: 350, border: '1px solid var(--glass-border)' }}>
                             <h3 style={{ textAlign: 'center', marginBottom: 15, fontSize: 14 }}>Ventas Diarias en este Arqueo</h3>
@@ -948,16 +948,16 @@ const StaffStatsView = () => {
                     </div>
 
                     {/* Platos comandados por mozo */}
-                    <div className="glass-panel" style={{ padding: 20, marginTop: 30, border: '1px solid var(--glass-border)' }}>
+                    <div className="glass-panel" style={{ padding: 20, marginTop: 30, border: '1px solid var(--glass-border)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
                             <User size={24} style={{ color: 'var(--primary)' }} />
-                            <h2 style={{ margin: 0, fontSize: '18px' }}>Platos comandados por mozo</h2>
+                            <h2 style={{ margin: 0, fontSize: '18px', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Platos comandados por mozo</h2>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
                             {activeData.waiters.map(w => {
                                 const wItems = activeData.waiterPlatos.filter(item => item.mozo === w.nombre);
                                 const isExpanded = !!expandedWaiters[w.id];
-                                
+
                                 // Group items by comandaId
                                 const comandasMap = {};
                                 wItems.forEach(item => {
@@ -988,15 +988,16 @@ const StaffStatsView = () => {
                                                 backgroundColor: 'rgba(255,255,255,0.02)',
                                                 border: 'none',
                                                 cursor: 'pointer',
-                                                color: 'var(--text-main)'
+                                                color: 'var(--text-main)',
+                                                fontFamily: '"Plus Jakarta Sans", sans-serif'
                                             }}
                                         >
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <span style={{ fontWeight: 'bold', fontSize: 13 }}>{w.nombre} <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>({w.rol})</span></span>
-                                                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>— {w.totalTables} pedidos</span>
+                                                <span style={{ fontWeight: 'bold', fontSize: 13, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{w.nombre} <span style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>({w.rol})</span></span>
+                                                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>— {w.totalTables} pedidos</span>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-                                                <span style={{ color: 'var(--success)', fontWeight: 'bold', fontFamily: 'monospace' }}>S/. {w.totalSales.toFixed(2)}</span>
+                                                <span style={{ color: 'var(--success)', fontWeight: 'bold', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>S/. {w.totalSales.toFixed(2)}</span>
                                                 {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                             </div>
                                         </button>
@@ -1004,16 +1005,16 @@ const StaffStatsView = () => {
                                         {isExpanded && (
                                             <div style={{ padding: 15, backgroundColor: 'rgba(0,0,0,0.15)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
                                                 {mozoComandas.length === 0 ? (
-                                                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sin comandas registradas</div>
+                                                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Sin comandas registradas</div>
                                                 ) : (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                                         {mozoComandas.map(c => (
                                                             <div key={c.id} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, border: '1px solid rgba(255,255,255,0.03)' }}>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px dashed rgba(255,255,255,0.08)', paddingBottom: 6 }}>
-                                                                    <span style={{ fontSize: 12, fontWeight: 'bold' }}>Comanda #{c.id} — Mesa {c.mesa} — {c.fecha} {c.hora}</span>
-                                                                    <span style={{ fontSize: 12, fontWeight: 'bold', color: 'var(--success)' }}>Total: S/. {c.total.toFixed(2)}</span>
+                                                                    <span style={{ fontSize: 12, fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 'bold' }}>Comanda #{c.id} — Mesa {c.mesa} — {c.fecha} {c.hora}</span>
+                                                                    <span style={{ fontSize: 12, fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 'bold', color: 'var(--success)' }}>Total: S/. {c.total.toFixed(2)}</span>
                                                                 </div>
-                                                                <table style={{ width: '100%', fontSize: 11 }}>
+                                                                <table style={{ width: '100%', fontSize: 11, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
                                                                     <thead>
                                                                         <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                                                                             <th style={{ textAlign: 'left', padding: '4px 0' }}>Cant. x Plato</th>
@@ -1026,20 +1027,22 @@ const StaffStatsView = () => {
                                                                     <tbody>
                                                                         {c.platos.map((p, idx) => (
                                                                             <tr key={idx}>
-                                                                                <td style={{ padding: '6px 0' }}>{p.cantidad} × {p.plato}</td>
-                                                                                <td style={{ textAlign: 'center' }}>{p.cocinero}</td>
-                                                                                <td style={{ textAlign: 'center' }}>
+                                                                                <td style={{ padding: '6px 0', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{p.cantidad} × {p.plato}</td>
+                                                                                <td style={{ textAlign: 'center', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>S/. {p.precio.toFixed(2)}</td>
+                                                                                <td style={{ textAlign: 'center', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{p.cocinero}</td>
+                                                                                <td style={{ textAlign: 'center', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
                                                                                     <span style={{
                                                                                         fontSize: 9,
                                                                                         padding: '2px 5px',
                                                                                         borderRadius: 6,
                                                                                         backgroundColor: p.kardexStatus === 'Stock descontado' ? 'rgba(34, 197, 94, 0.1)' : p.kardexStatus === 'Sin receta configurada' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(239, 68, 68, 0.1)',
-                                                                                        color: p.kardexStatus === 'Stock descontado' ? '#22c55e' : p.kardexStatus === 'Sin receta configurada' ? 'var(--text-muted)' : '#ef4444'
+                                                                                        color: p.kardexStatus === 'Stock descontado' ? '#22c55e' : p.kardexStatus === 'Sin receta configurada' ? 'var(--text-muted)' : '#ef4444',
+                                                                                        fontFamily: '"Plus Jakarta Sans", sans-serif'
                                                                                     }}>
                                                                                         {p.kardexStatus}
                                                                                     </span>
                                                                                 </td>
-                                                                                <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--success)' }}>S/. {p.subtotal.toFixed(2)}</td>
+                                                                                <td style={{ textAlign: 'right', fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'var(--success)', fontWeight: 'bold' }}>S/. {p.subtotal.toFixed(2)}</td>
                                                                             </tr>
                                                                         ))}
                                                                     </tbody>
@@ -1057,14 +1060,14 @@ const StaffStatsView = () => {
                     </div>
 
                     {/* Detalle de comandas del período */}
-                    <div className="glass-panel" style={{ padding: 20, marginTop: 30, border: '1px solid var(--glass-border)' }}>
+                    <div className="glass-panel" style={{ padding: 20, marginTop: 30, border: '1px solid var(--glass-border)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
                             <Database size={24} style={{ color: 'var(--success)' }} />
-                            <h2 style={{ margin: 0, fontSize: '18px' }}>Detalle de comandas del período (Auditoría)</h2>
+                            <h2 style={{ margin: 0, fontSize: '18px', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Detalle de comandas del período (Auditoría)</h2>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                             {activeData.comandasPeriodo.length === 0 ? (
-                                <div className="text-center text-muted" style={{ padding: 20, fontSize: 12 }}>No hay comandas registradas</div>
+                                <div className="text-center text-muted" style={{ padding: 20, fontSize: 12, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>No hay comandas registradas</div>
                             ) : (
                                 activeData.comandasPeriodo.map(c => {
                                     const isExpanded = !!expandedOrders[c.id];
@@ -1081,22 +1084,23 @@ const StaffStatsView = () => {
                                                     backgroundColor: 'rgba(255,255,255,0.02)',
                                                     border: 'none',
                                                     cursor: 'pointer',
-                                                    color: 'var(--text-main)'
+                                                    color: 'var(--text-main)',
+                                                    fontFamily: '"Plus Jakarta Sans", sans-serif'
                                                 }}
                                             >
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                    <span style={{ fontWeight: 'bold', fontSize: 13 }}>Comanda #{c.id} — Mesa {c.mesa}</span>
-                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>— {c.hora} ({c.mozo})</span>
+                                                    <span style={{ fontWeight: 'bold', fontSize: 13, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Comanda #{c.id} — Mesa {c.mesa}</span>
+                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>— {c.hora} ({c.mozo})</span>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-                                                    <span style={{ color: 'var(--success)', fontWeight: 'bold', fontFamily: 'monospace' }}>S/. {c.total.toFixed(2)}</span>
+                                                    <span style={{ color: 'var(--success)', fontWeight: 'bold', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>S/. {c.total.toFixed(2)}</span>
                                                     {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                                 </div>
                                             </button>
 
                                             {isExpanded && (
                                                 <div style={{ padding: 15, backgroundColor: 'rgba(0,0,0,0.15)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                                                    <table style={{ width: '100%', fontSize: 11 }}>
+                                                    <table style={{ width: '100%', fontSize: 11, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
                                                         <thead>
                                                             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                                                                 <th style={{ textAlign: 'left', padding: '4px 0' }}>Cant. x Plato</th>
@@ -1109,21 +1113,22 @@ const StaffStatsView = () => {
                                                         <tbody>
                                                             {c.platos.map((p, idx) => (
                                                                 <tr key={idx}>
-                                                                    <td style={{ padding: '6px 0' }}>{p.cantidad} × {p.plato}</td>
-                                                                    <td style={{ textAlign: 'center' }}>{p.cocinero}</td>
-                                                                    <td style={{ textAlign: 'center' }}>
+                                                                    <td style={{ padding: '6px 0', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{p.cantidad} × {p.plato}</td>
+                                                                    <td style={{ textAlign: 'center', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{p.cocinero}</td>
+                                                                    <td style={{ textAlign: 'center', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
                                                                         <span style={{
                                                                             fontSize: 9,
                                                                             padding: '2px 5px',
                                                                             borderRadius: 6,
                                                                             backgroundColor: p.kardexStatus === 'Stock descontado' ? 'rgba(34, 197, 94, 0.1)' : p.kardexStatus === 'Sin receta configurada' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(239, 68, 68, 0.1)',
-                                                                            color: p.kardexStatus === 'Stock descontado' ? '#22c55e' : p.kardexStatus === 'Sin receta configurada' ? 'var(--text-muted)' : '#ef4444'
+                                                                            color: p.kardexStatus === 'Stock descontado' ? '#22c55e' : p.kardexStatus === 'Sin receta configurada' ? 'var(--text-muted)' : '#ef4444',
+                                                                            fontFamily: '"Plus Jakarta Sans", sans-serif'
                                                                         }}>
                                                                             {p.kardexStatus}
                                                                         </span>
                                                                     </td>
-                                                                    <td style={{ textAlign: 'center', color: p.estado === 'entregado' ? 'var(--success)' : 'var(--warning)' }}>{p.estado}</td>
-                                                                    <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--success)' }}>S/. {(p.precio * p.cantidad).toFixed(2)}</td>
+                                                                    <td style={{ textAlign: 'center', color: p.estado === 'entregado' ? 'var(--success)' : 'var(--warning)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{p.estado}</td>
+                                                                    <td style={{ textAlign: 'right', fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'var(--success)', fontWeight: 'bold' }}>S/. {(p.precio * p.cantidad).toFixed(2)}</td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>
