@@ -27,6 +27,7 @@ const StaffStatsView = () => {
     const [stats, setStats] = useState({ waiters: [], cooks: [] });
     const [filteredDay, setFilteredDay] = useState('TODO');
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const dateQueryStr = useMemo(() => {
         if (!date) return format(new Date(), 'yyyy-MM-dd');
@@ -48,8 +49,18 @@ const StaffStatsView = () => {
     const fetchArqueoStats = useCallback((arqueoId, showLoading = true) => {
         if (showLoading) setLoading(true);
         fetch(`/api/staff/stats?arqueoId=${arqueoId}`)
-            .then(res => res.json())
+            .then(async (res) => {
+                if (!res.ok) {
+                    throw new Error(`Error de servidor (Status: ${res.status})`);
+                }
+                const contentType = res.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new TypeError("Respuesta de servidor no es JSON válido");
+                }
+                return res.json();
+            })
             .then(data => {
+                setError(null);
                 if (data.arqueo) {
                     setArqueoInfo(data.arqueo);
                     setRawComandas(data.comandas || []);
@@ -60,7 +71,10 @@ const StaffStatsView = () => {
                     setStats({ waiters: [], cooks: [] });
                 }
             })
-            .catch(err => console.error("Error al obtener estadísticas del arqueo:", err))
+            .catch(err => {
+                console.error("Error al obtener estadísticas del arqueo:", err);
+                setError(err.message || "Error al conectar con el servidor");
+            })
             .finally(() => {
                 if (showLoading) setLoading(false);
             });
@@ -75,11 +89,22 @@ const StaffStatsView = () => {
         setRawComandas([]);
         setStats({ waiters: [], cooks: [] });
         setFilteredDay('TODO');
+        setError(null);
 
         setLoading(true);
         fetch(`/api/staff/stats/sessions?date=${dateQueryStr}`)
-            .then(res => res.json())
+            .then(async (res) => {
+                if (!res.ok) {
+                    throw new Error(`Error de servidor (Status: ${res.status})`);
+                }
+                const contentType = res.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new TypeError("Respuesta de servidor no es JSON válido");
+                }
+                return res.json();
+            })
             .then(data => {
+                setError(null);
                 setSessions(data);
                 if (data.length === 0) {
                     setRequiresSelection(false);
@@ -95,6 +120,7 @@ const StaffStatsView = () => {
             })
             .catch(err => {
                 console.error("Error cargando sesiones de caja:", err);
+                setError(err.message || "Error al conectar con el servidor");
                 setLoading(false);
             });
     }, [dateQueryStr, fetchArqueoStats]);
@@ -102,9 +128,6 @@ const StaffStatsView = () => {
     // 3. Start interval polling ONLY if session is open
     useEffect(() => {
         if (!selectedArqueoId) return;
-
-        // Initial fetch
-        fetchArqueoStats(selectedArqueoId, true);
 
         let interval = null;
         const checkAndStartInterval = () => {
@@ -122,7 +145,7 @@ const StaffStatsView = () => {
             clearTimeout(timeout);
             if (interval) clearInterval(interval);
         };
-    }, [selectedArqueoId, fetchArqueoStats]);
+    }, [selectedArqueoId, sessions, fetchArqueoStats]);
 
     // 4. Generate continuous array of natural days in cashier range
     const rangeDays = useMemo(() => {
@@ -420,8 +443,19 @@ const StaffStatsView = () => {
                 </div>
             )}
 
+            {/* Error Alert */}
+            {!loading && error && (
+                <div className="glass-panel text-center" style={{ padding: '40px 20px', margin: '20px 0', border: '1px solid var(--glass-border)', boxShadow: '0 0 15px rgba(239, 68, 68, 0.1)' }}>
+                    <div style={{ fontSize: 48, marginBottom: 20 }}>⚠️</div>
+                    <h3 className="text-main" style={{ margin: 0, fontWeight: 700, fontSize: 18, color: '#ef4444' }}>Error de Conexión</h3>
+                    <p className="text-muted" style={{ fontSize: 13, marginTop: 10, maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>
+                        {error}. Por favor, asegúrate de que el backend local esté corriendo e inténtalo de nuevo.
+                    </p>
+                </div>
+            )}
+
             {/* Requiere Selección de sesión (Múltiples Arqueos) */}
-            {!loading && requiresSelection && (
+            {!loading && !error && requiresSelection && (
                 <div className="glass-panel text-center" style={{ padding: '50px 20px', margin: '20px 0', border: '1px solid var(--glass-border)' }}>
                     <div style={{ fontSize: 44, marginBottom: 15 }}>📂</div>
                     <h3 className="text-main" style={{ margin: 0, fontWeight: 700, fontSize: 18 }}>Múltiples Cajas Detectadas</h3>
@@ -460,7 +494,7 @@ const StaffStatsView = () => {
             )}
 
             {/* Estado Vacío: Sin cajas en el día */}
-            {!loading && !requiresSelection && !arqueoInfo && (
+            {!loading && !error && !requiresSelection && !arqueoInfo && (
                 <div className="glass-panel text-center" style={{ padding: '60px 20px', margin: '20px 0', border: '1px solid var(--glass-border)' }}>
                     <div style={{ fontSize: 48, marginBottom: 20 }}>📭</div>
                     <h3 className="text-main" style={{ margin: 0, fontWeight: 700, fontSize: 18 }}>No hay sesión de caja</h3>
