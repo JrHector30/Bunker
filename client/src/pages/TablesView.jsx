@@ -16,77 +16,81 @@ const TablesView = () => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const { user } = useAuth();
+    const fetchLocalData = async () => {
+        try {
+            const localTables = await db.table('tables').toArray();
+            const [localOrders, localOrderItems, localProducts] = await Promise.all([
+                db.orders.toArray(),
+                db.orderItems.toArray(),
+                db.products.toArray()
+            ]);
+
+            const productMap = new Map(localProducts.map(p => [p.id, p]));
+            const orderItemMap = new Map();
+            localOrderItems.forEach(item => {
+                if (!orderItemMap.has(item.comandaId)) {
+                    orderItemMap.set(item.comandaId, []);
+                }
+                orderItemMap.get(item.comandaId).push({
+                    ...item,
+                    plato: productMap.get(item.platoId) || { id: item.platoId, nombre: 'Plato Desconocido', precio: 0 }
+                });
+            });
+
+            const activeOrdersMap = new Map();
+            localOrders.forEach(order => {
+                const isClosed = order.estado === 'cerrada' || order.status === 'cerrada';
+                const isCancelled = order.estado === 'anulada' || order.status === 'anulada';
+                if (!isClosed && !isCancelled) {
+                    if (!activeOrdersMap.has(Number(order.mesaId))) {
+                        activeOrdersMap.set(Number(order.mesaId), []);
+                    }
+                    activeOrdersMap.get(Number(order.mesaId)).push({
+                        ...order,
+                        detalles: orderItemMap.get(order.id) || []
+                    });
+                }
+            });
+
+            // Normalizar campos y construir mesasHijas dinámicamente
+            const tablesWithFields = localTables.map(t => ({
+                ...t,
+                mesaPadreId: t.mesaPadreId !== undefined && t.mesaPadreId !== null ? Number(t.mesaPadreId) : null,
+                mesasHijas: []
+            }));
+
+            const tablesMap = new Map(tablesWithFields.map(t => [t.id, t]));
+
+            // Asociar hijas a sus respectivos padres
+            tablesWithFields.forEach(t => {
+                if (t.mesaPadreId !== null) {
+                    const padre = tablesMap.get(t.mesaPadreId);
+                    if (padre) {
+                        padre.mesasHijas.push(t);
+                    }
+                }
+            });
+
+            const data = tablesWithFields.map(t => {
+                const orders = activeOrdersMap.get(t.id) || [];
+                return {
+                    ...t,
+                    comandas: orders
+                };
+            });
+
+            const filteredData = data.filter(t => t && t.numero !== '100' && t.numero !== '101');
+            filteredData.sort((a, b) => parseInt(a.numero, 10) - parseInt(b.numero, 10));
+            return filteredData;
+        } catch (err) {
+            console.error('[TablesView] Error cargando mesas locales offline:', err);
+            return [];
+        }
+    };
+
     const fetcher = async () => {
         if (networkStatus.isOffline()) {
-            try {
-                const localTables = await db.table('tables').toArray();
-                const [localOrders, localOrderItems, localProducts] = await Promise.all([
-                    db.orders.toArray(),
-                    db.orderItems.toArray(),
-                    db.products.toArray()
-                ]);
-
-                const productMap = new Map(localProducts.map(p => [p.id, p]));
-                const orderItemMap = new Map();
-                localOrderItems.forEach(item => {
-                    if (!orderItemMap.has(item.comandaId)) {
-                        orderItemMap.set(item.comandaId, []);
-                    }
-                    orderItemMap.get(item.comandaId).push({
-                        ...item,
-                        plato: productMap.get(item.platoId) || { id: item.platoId, nombre: 'Plato Desconocido', precio: 0 }
-                    });
-                });
-
-                const activeOrdersMap = new Map();
-                localOrders.forEach(order => {
-                    const isClosed = order.estado === 'cerrada' || order.status === 'cerrada';
-                    const isCancelled = order.estado === 'anulada' || order.status === 'anulada';
-                    if (!isClosed && !isCancelled) {
-                        if (!activeOrdersMap.has(Number(order.mesaId))) {
-                            activeOrdersMap.set(Number(order.mesaId), []);
-                        }
-                        activeOrdersMap.get(Number(order.mesaId)).push({
-                            ...order,
-                            detalles: orderItemMap.get(order.id) || []
-                        });
-                    }
-                });
-
-                // Normalizar campos y construir mesasHijas dinámicamente
-                const tablesWithFields = localTables.map(t => ({
-                    ...t,
-                    mesaPadreId: t.mesaPadreId !== undefined && t.mesaPadreId !== null ? Number(t.mesaPadreId) : null,
-                    mesasHijas: []
-                }));
-
-                const tablesMap = new Map(tablesWithFields.map(t => [t.id, t]));
-
-                // Asociar hijas a sus respectivos padres
-                tablesWithFields.forEach(t => {
-                    if (t.mesaPadreId !== null) {
-                        const padre = tablesMap.get(t.mesaPadreId);
-                        if (padre) {
-                            padre.mesasHijas.push(t);
-                        }
-                    }
-                });
-
-                const data = tablesWithFields.map(t => {
-                    const orders = activeOrdersMap.get(t.id) || [];
-                    return {
-                        ...t,
-                        comandas: orders
-                    };
-                });
-
-                const filteredData = data.filter(t => t && t.numero !== '100' && t.numero !== '101');
-                filteredData.sort((a, b) => parseInt(a.numero, 10) - parseInt(b.numero, 10));
-                return filteredData;
-            } catch (err) {
-                console.error('[TablesView] Error cargando mesas locales offline:', err);
-                return [];
-            }
+            return fetchLocalData();
         }
 
         // Flujo ONLINE habitual
@@ -106,9 +110,8 @@ const TablesView = () => {
                 return [];
             })
             .catch(async (err) => {
-                console.warn('[TablesView] Fetcher online falló. Conmutando a local offline.');
-                networkStatus.setStatus(NetworkState.OFFLINE_CONFIRMED);
-                return fetcher();
+                console.warn('[TablesView] Fetcher online falló. Usando fallback offline local silencioso.');
+                return fetchLocalData();
             });
     };
 

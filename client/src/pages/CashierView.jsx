@@ -95,84 +95,88 @@ const CashierView = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const loadOpenAccountsLocal = useCallback(async () => {
+    try {
+      const localOrders = await db.orders
+        .filter(o => o.status !== 'cerrada' && o.status !== 'anulada')
+        .toArray();
+      const [localOrderItems, localProducts, localTables] = await Promise.all([
+        db.orderItems.toArray(),
+        db.products.toArray(),
+        db.table('tables').toArray()
+      ]);
+
+      const productMap = new Map();
+      localProducts.forEach(p => {
+        if (p.id != null) productMap.set(String(p.id), p);
+        if (p.remoteId != null) productMap.set(String(p.remoteId), p);
+      });
+
+      // tableMap con clave String para evitar NaN al hacer Number(UUID)
+      const tableMap = new Map(localTables.map(t => [String(t.id), t]));
+
+      const orderItemMap = new Map();
+      localOrderItems.forEach(item => {
+        // Soportar ambos nombres de campo para la relación con la comanda
+        const parentId = String(item.comandaId || item.orderId || '');
+        if (!parentId) return;
+        if (!orderItemMap.has(parentId)) orderItemMap.set(parentId, []);
+
+        const productKey = String(item.platoId || item.productId || '');
+        const product = productMap.get(productKey);
+
+        // Resolver precio defensivamente: precio ?? precioVenta del item, luego del producto
+        const unitPrice = item.precio != null ? Number(item.precio)
+                        : item.precioVenta != null ? Number(item.precioVenta)
+                        : product?.precio != null ? Number(product.precio)
+                        : product?.precioVenta != null ? Number(product.precioVenta)
+                        : 0;
+
+        orderItemMap.get(parentId).push({
+          ...item,
+          _unitPrice: unitPrice,
+          plato: product
+            ? { ...product, precio: unitPrice }
+            : { id: productKey, nombre: 'Plato sin datos', precio: unitPrice }
+        });
+      });
+
+      // Filtrar órdenes activas usando ambos campos de estado
+      const activeOrders = localOrders.filter(o => {
+        const est = (o.estado || o.status || '').toLowerCase();
+        return est !== 'cerrada' && est !== 'anulada';
+      });
+
+      return activeOrders.map(order => {
+        const details = orderItemMap.get(String(order.id)) || [];
+
+        // Resolver mesaId: mesaId ?? tableId, normalizar a String
+        const resolvedTableId = order.mesaId != null ? String(order.mesaId)
+                              : order.tableId != null ? String(order.tableId)
+                              : null;
+        const mesa = resolvedTableId ? tableMap.get(resolvedTableId) : null;
+
+        // Número visible: numero ?? name (nunca Number(uuid))
+        const mesaNumero = mesa
+          ? (mesa.numero ?? mesa.name ?? resolvedTableId)
+          : (resolvedTableId ?? '?');
+
+        return {
+          ...order,
+          detalles: details,
+          mesa: { id: resolvedTableId, numero: mesaNumero }
+        };
+      });
+    } catch (err) {
+      console.error('[CashierView] Error al cargar open accounts offline:', err);
+      return [];
+    }
+  }, []);
+
   // API Call: Fetch open accounts
   const openAccountsFetcher = useCallback(async () => {
     if (networkStatus.isOffline()) {
-      try {
-        const localOrders = await db.orders
-          .filter(o => o.status !== 'cerrada' && o.status !== 'anulada')
-          .toArray();
-        const [localOrderItems, localProducts, localTables] = await Promise.all([
-          db.orderItems.toArray(),
-          db.products.toArray(),
-          db.table('tables').toArray()
-        ]);
-
-        const productMap = new Map();
-        localProducts.forEach(p => {
-          if (p.id != null) productMap.set(String(p.id), p);
-          if (p.remoteId != null) productMap.set(String(p.remoteId), p);
-        });
-
-        // tableMap con clave String para evitar NaN al hacer Number(UUID)
-        const tableMap = new Map(localTables.map(t => [String(t.id), t]));
-
-        const orderItemMap = new Map();
-        localOrderItems.forEach(item => {
-          // Soportar ambos nombres de campo para la relación con la comanda
-          const parentId = String(item.comandaId || item.orderId || '');
-          if (!parentId) return;
-          if (!orderItemMap.has(parentId)) orderItemMap.set(parentId, []);
-
-          const productKey = String(item.platoId || item.productId || '');
-          const product = productMap.get(productKey);
-
-          // Resolver precio defensivamente: precio ?? precioVenta del item, luego del producto
-          const unitPrice = item.precio != null ? Number(item.precio)
-                          : item.precioVenta != null ? Number(item.precioVenta)
-                          : product?.precio != null ? Number(product.precio)
-                          : product?.precioVenta != null ? Number(product.precioVenta)
-                          : 0;
-
-          orderItemMap.get(parentId).push({
-            ...item,
-            _unitPrice: unitPrice,
-            plato: product
-              ? { ...product, precio: unitPrice }
-              : { id: productKey, nombre: 'Plato sin datos', precio: unitPrice }
-          });
-        });
-
-        // Filtrar órdenes activas usando ambos campos de estado
-        const activeOrders = localOrders.filter(o => {
-          const est = (o.estado || o.status || '').toLowerCase();
-          return est !== 'cerrada' && est !== 'anulada';
-        });
-
-        return activeOrders.map(order => {
-          const details = orderItemMap.get(String(order.id)) || [];
-
-          // Resolver mesaId: mesaId ?? tableId, normalizar a String
-          const resolvedTableId = order.mesaId != null ? String(order.mesaId)
-                                : order.tableId != null ? String(order.tableId)
-                                : null;
-          const mesa = resolvedTableId ? tableMap.get(resolvedTableId) : null;
-
-          // Número visible: numero ?? name (nunca Number(uuid))
-          const mesaNumero = mesa
-            ? (mesa.numero ?? mesa.name ?? resolvedTableId)
-            : (resolvedTableId ?? '?');
-
-          return {
-            ...order,
-            detalles: details,
-            mesa: { id: resolvedTableId, numero: mesaNumero }
-          };
-        });
-      } catch (err) {
-        console.error('[CashierView] Error al cargar open accounts offline:', err);
-        return [];
-      }
+      return loadOpenAccountsLocal();
     }
 
     return fetch('/api/cashier/open-accounts')
@@ -181,23 +185,26 @@ const CashierView = () => {
         return res.json();
       })
       .catch(err => {
-        console.warn('[CashierView] openAccountsFetcher falló. Conmutando a offline.');
-        networkStatus.setStatus(NetworkState.OFFLINE_CONFIRMED);
-        return openAccountsFetcher();
+        console.warn('[CashierView] openAccountsFetcher falló. Usando fallback local silencioso.');
+        return loadOpenAccountsLocal();
       });
-  }, []);
+  }, [loadOpenAccountsLocal]);
 
   const { data: openTables, mutate: fetchTables } = useCache('openTables', openAccountsFetcher, []);
+
+  const loadBalanceLocal = useCallback(async () => {
+    try {
+      return await offlineCashService.getBalance();
+    } catch (err) {
+      console.error('[CashierView] Error al cargar balance local offline:', err);
+      return null;
+    }
+  }, []);
 
   // API Call: Fetch current cashier status balance
   const statusFetcher = useCallback(async () => {
     if (networkStatus.isOffline()) {
-      try {
-        return await offlineCashService.getBalance();
-      } catch (err) {
-        console.error('[CashierView] Error al cargar balance local offline:', err);
-        return null;
-      }
+      return loadBalanceLocal();
     }
 
     return fetch('/api/cashier/balance')
@@ -206,11 +213,10 @@ const CashierView = () => {
         return res.json();
       })
       .catch(err => {
-        console.warn('[CashierView] statusFetcher falló. Conmutando a offline.');
-        networkStatus.setStatus(NetworkState.OFFLINE_CONFIRMED);
-        return statusFetcher();
+        console.warn('[CashierView] statusFetcher falló. Usando fallback local silencioso.');
+        return loadBalanceLocal();
       });
-  }, []);
+  }, [loadBalanceLocal]);
 
   const { data: currentStatus, mutate: fetchStatus } = useCache('cashier_balance', statusFetcher, null);
 

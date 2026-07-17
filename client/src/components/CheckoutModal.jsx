@@ -195,7 +195,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
       setOptimisticLock(parseInt(targetTableId), 'libre');
 
       // Checkout Logic (Offline-First hybrid logic)
-      if (networkStatus.isOffline()) {
+      const performOfflineCheckout = () => {
         offlineCheckoutService.checkout(targetTableId, {
           paymentMethod: resolvedPaymentMethod,
           docType: resolvedDocType,
@@ -207,7 +207,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
           direccionFiscal: comprobanteTipo !== 'Ticket' ? direccionFiscal : null
         })
           .then(() => {
-            showToast('Pago registrado correctamente (Modo Offline).', 'success');
+            showToast('Pago registrado correctamente (Fallback Offline).', 'success');
             window.dispatchEvent(new CustomEvent('refreshCashCount'));
             window.dispatchEvent(new CustomEvent('refreshTables'));
             try {
@@ -226,6 +226,10 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
               window.dispatchEvent(new CustomEvent('refreshTables'));
             }
           });
+      };
+
+      if (networkStatus.isOffline()) {
+        performOfflineCheckout();
       } else {
         // Send checkout details to backend
         fetch(`/api/checkout/${targetTableId}`, {
@@ -260,18 +264,13 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
               } catch (e) { }
               if (onSuccess) onSuccess();
             } else {
-              showToast('Error al registrar pago. Verifica en Caja.', 'error');
-              if (previousTables) {
-                localStorage.setItem('tables', previousTables);
-                window.dispatchEvent(new CustomEvent('refreshTables'));
-              }
+              showToast('Error al registrar pago online. Conmutando a offline local...', 'warning');
+              performOfflineCheckout();
             }
           })
           .catch(e => {
-            console.warn('[CheckoutModal] Registro online falló. Conmutando a offline local.');
-            networkStatus.setStatus(NetworkState.OFFLINE_CONFIRMED);
-            // Volver a intentar de forma offline
-            handleCheckout();
+            console.warn('[CheckoutModal] Registro online falló. Usando fallback offline local.');
+            performOfflineCheckout();
           });
       }
 
