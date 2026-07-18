@@ -32,5 +32,5 @@ export { offlineReadiness } from './readiness/offlineReadiness';
 export { offlineOrderService } from './services/offlineOrderService';
 export { offlineKitchenService } from './services/offlineKitchenService';
 export { offlineCheckoutService } from './services/offlineCheckoutService';
-export { offlineCashService } from './services/offlineCashService';
+export { offlineCashService, resolveItemPrice } from './services/offlineCashService';
 export { offlineSnapshotService } from './services/offlineSnapshotService';

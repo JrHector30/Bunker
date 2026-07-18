@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { networkStatus, db } from '../offline';
 
 const CajaContext = createContext();
 
@@ -7,22 +8,36 @@ export const CajaProvider = ({ children }) => {
 
     const verificarEstadoCaja = async () => {
         try {
+            if (networkStatus.isOffline()) {
+                const openArqueos = await db.arqueos.where('estado').equals('abierto').toArray();
+                const isOpen = openArqueos.length > 0;
+                setIsCajaAbierta(isOpen);
+                return;
+            }
+
             const res = await fetch('/api/cashier/balance');
             if (res.ok) {
                 const data = await res.json();
                 setIsCajaAbierta(data && data.estado === 'abierto');
             } else {
-                setIsCajaAbierta(false);
+                console.warn('[CajaContext] Falló verificación online. Conservando estado de caja anterior:', isCajaAbierta);
+                setIsCajaAbierta(prev => prev ?? false);
             }
         } catch (error) {
-            console.error("Error global al verificar estado de caja:", error);
-            setIsCajaAbierta(false);
+            console.error("[CajaContext] Error global al verificar estado de caja:", error);
+            setIsCajaAbierta(prev => prev ?? false);
         }
     };
 
-    // Cargar el estado UNA SOLA VEZ al iniciar toda la aplicación
+    // Registrar validador inicial y suscripción reactiva a cambios de red
     useEffect(() => {
         verificarEstadoCaja();
+        const unsubscribe = networkStatus.subscribe(() => {
+            verificarEstadoCaja();
+        });
+        return () => {
+            unsubscribe();
+        };
     }, []);
 
     return (

@@ -3,7 +3,7 @@ import { X, DollarSign, Smartphone, CreditCard, Receipt, Printer, ArrowRight, Ch
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { setOptimisticLock } from '../hooks/useCache';
-import { networkStatus, NetworkState, offlineCheckoutService, offlineSnapshotService } from '../offline';
+import { networkStatus, NetworkState, offlineCheckoutService, offlineSnapshotService, resolveItemPrice } from '../offline';
 
 export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
   const { showConfirmation } = useConfirmation();
@@ -61,19 +61,25 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
   if (!isOpen || !order) return null;
 
   // Real total calculation
-  const subtotal = order.detalles.reduce((sum, d) => sum + (d.cantidad * d.plato.precio), 0);
+  const pricingError = order.detalles.some(d => resolveItemPrice(d) === null);
+
+  const subtotal = pricingError ? null : order.detalles.reduce((sum, d) => {
+    const price = resolveItemPrice(d);
+    return sum + (d.cantidad * price);
+  }, 0);
 
   // Tip calculation
-  const propinaMonto =
+  const propinaMonto = pricingError ? 0 : (
     propinaPct === 'custom'
       ? parseFloat(customPropina) || 0
-      : (subtotal * propinaPct) / 100;
+      : (subtotal * propinaPct) / 100
+  );
 
-  const totalFinal = subtotal + propinaMonto;
+  const totalFinal = pricingError ? null : subtotal + propinaMonto;
 
   // Cash change (Vuelto) calculation
   const paidAmountNum = parseFloat(montoPagado) || 0;
-  const vuelto = Math.max(0, paidAmountNum - totalFinal);
+  const vuelto = pricingError ? 0 : Math.max(0, paidAmountNum - totalFinal);
 
   // Document length rule
   const getRequiredLength = () => {
@@ -131,17 +137,22 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
 
   // Kitchen validation
   const pendingKitchenItems = order.detalles.filter(d => {
-    const sendsToKitchen = d.plato.categoria?.enviarCocina ?? true;
+    const sendsToKitchen = d.plato?.categoria?.enviarCocina ?? true;
     const isPending = !['listo', 'lista', 'entregado'].includes(d.estado);
     return sendsToKitchen && isPending;
   });
 
-  const isBlocked = pendingKitchenItems.length > 0;
+  const isBlocked = pendingKitchenItems.length > 0 || pricingError;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (isBlocked) {
+    if (pricingError) {
+      showToast('No se puede cobrar: Hay errores de integridad en los precios.', 'error');
+      return;
+    }
+
+    if (pendingKitchenItems.length > 0) {
       showToast('No se puede cobrar: Hay platos pendientes en cocina.', 'error');
       return;
     }
@@ -311,13 +322,25 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
           <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
 
             {/* Validation Warning */}
-            {isBlocked && (
+            {pendingKitchenItems.length > 0 && (
               <div className="bg-amber-500 text-black p-3.5 rounded-lg flex items-start gap-2.5 font-sans font-medium text-xs">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div>
                   <div className="font-bold">⚠️ No se puede cobrar: Hay platos pendientes en cocina.</div>
                   <div className="text-[10px] opacity-90 mt-1 font-normal">
-                    Faltan: {pendingKitchenItems.map(p => p.plato.nombre).join(', ')}
+                    Faltan: {pendingKitchenItems.map(p => p.plato?.nombre || 'Plato sin datos').join(', ')}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {pricingError && (
+              <div className="bg-rose-600 text-white p-3.5 rounded-lg flex items-start gap-2.5 font-sans font-medium text-xs">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold">⚠️ Cobro Bloqueado: Inconsistencia de Precios</div>
+                  <div className="text-[10px] opacity-90 mt-1 font-normal">
+                    Uno o más productos no tienen precio registrado en el catálogo. Corrija los precios para habilitar la operación.
                   </div>
                 </div>
               </div>
@@ -327,19 +350,26 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
             <div className="bg-[var(--bg-secondary)] rounded-lg p-3.5 border border-[var(--glass-border)]">
               <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2 font-sans">Resumen de Consumo</span>
               <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1 font-sans">
-                {order.detalles.map((d, index) => (
-                  <div key={index} className="flex justify-between items-center text-xs">
-                    <span className="text-[var(--text-muted)] truncate max-w-[250px]">
-                      <span className="font-mono font-bold text-[var(--text-muted)] mr-1.5">{d.cantidad}x</span>
-                      {d.plato.nombre}
-                    </span>
-                    <span className="font-mono font-medium text-[var(--text-main)]">S/. {(d.cantidad * d.plato.precio).toFixed(2)}</span>
-                  </div>
-                ))}
+                {order.detalles.map((d, index) => {
+                  const price = resolveItemPrice(d);
+                  return (
+                    <div key={index} className="flex justify-between items-center text-xs">
+                      <span className="text-[var(--text-muted)] truncate max-w-[250px]">
+                        <span className="font-mono font-bold text-[var(--text-muted)] mr-1.5">{d.cantidad}x</span>
+                        {d.plato?.nombre || 'Plato sin datos'}
+                      </span>
+                      <span className="font-mono font-medium text-[var(--text-main)]">
+                        {price !== null ? `S/. ${(d.cantidad * price).toFixed(2)}` : 'Precio no disponible'}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
               <div className="border-t border-[var(--glass-border)] mt-2.5 pt-2 flex justify-between items-center text-xs font-bold text-[var(--text-main)] font-sans">
                 <span>Subtotal Consumido:</span>
-                <span className="font-mono text-sm">S/. {subtotal.toFixed(2)}</span>
+                <span className="font-mono text-sm">
+                  {subtotal !== null ? `S/. ${subtotal.toFixed(2)}` : 'Precio no disponible'}
+                </span>
               </div>
             </div>
 
@@ -698,16 +728,21 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                 <span className="text-xs text-[var(--text-muted)]">Subtotal + Propina</span>
               </div>
               <span className="text-xl font-bold font-mono text-emerald-500">
-                S/. {totalFinal.toFixed(2)}
+                {totalFinal !== null ? `S/. ${totalFinal.toFixed(2)}` : 'Precio no disponible'}
               </span>
             </div>
 
             {/* Checkout confirmation */}
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 transition-all cursor-pointer shadow-xs mt-2 font-sans"
+              disabled={isBlocked}
+              className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-semibold text-white transition-all shadow-xs mt-2 font-sans ${
+                isBlocked
+                  ? 'bg-rose-800 opacity-60 cursor-not-allowed'
+                  : 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 cursor-pointer'
+              }`}
             >
-              <span>Confirmar Pago e Imprimir</span>
+              <span>{pricingError ? 'Cobro bloqueado por error de precio' : 'Confirmar Pago e Imprimir'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>

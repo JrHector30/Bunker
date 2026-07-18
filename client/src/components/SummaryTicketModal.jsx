@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Printer } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { enqueueTicket } from '../utils/printer';
+import { networkStatus, offlineCashService } from '../offline';
 
 export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
   const { showToast } = useNotification();
@@ -12,25 +13,34 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
     if (isOpen && arqueoId) {
       setLoading(true);
       setSummaryData(null);
-      fetch(`/api/cashier/arqueo/${arqueoId}`)
-        .then(async (res) => {
-          if (res.ok) {
-            const data = await res.json();
+
+      const loadData = async () => {
+        try {
+          if (networkStatus.isOffline()) {
+            const data = await offlineCashService.getArqueoDetails(arqueoId);
             setSummaryData(data);
           } else {
-            showToast('Error al obtener el resumen de caja.', 'error');
-            onClose();
+            const res = await fetch(`/api/cashier/arqueo/${arqueoId}`);
+            if (res.ok) {
+              const data = await res.json();
+              setSummaryData(data);
+            } else {
+              showToast('Error al obtener el resumen de caja.', 'error');
+              onClose();
+            }
           }
-        })
-        .catch(() => {
-          showToast('Error de conexión al obtener el resumen.', 'error');
+        } catch (err) {
+          console.error('[SummaryTicketModal] Error cargando resumen:', err);
+          showToast('Error al obtener el resumen de caja.', 'error');
           onClose();
-        })
-        .finally(() => {
+        } finally {
           setLoading(false);
-        });
+        }
+      };
+
+      loadData();
     }
-  }, [isOpen, arqueoId]);
+  }, [isOpen, arqueoId, showToast, onClose]);
 
   if (!isOpen) return null;
 
@@ -109,100 +119,90 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
               </div>
 
               {loading ? (
-                <div className="text-center py-6">
-                  Cargando datos del ticket...
+                <div className="text-center py-6 text-slate-500">
+                  Cargando resumen...
                 </div>
               ) : !summaryData ? (
-                <div className="text-center py-6 text-red-500">
-                  No se encontraron datos.
+                <div className="text-center py-6 text-rose-500">
+                  Error de datos.
                 </div>
               ) : (
-                <>
-                  <div className="mb-3 space-y-0.5">
-                    <div>Turno N°: <span className="font-bold">{summaryData.id}</span></div>
-                    <div>Estado: <span className="font-bold">{summaryData.estado?.toUpperCase()}</span></div>
-                    <div>Inicio: {formatDate(summaryData.fechaInicio)}</div>
-                    {summaryData.fechaFin && <div>Cierre: {formatDate(summaryData.fechaFin)}</div>}
-                    <div>M. Inicial: S/. {(summaryData.montoInicial || 0).toFixed(2)}</div>
+                <div className="space-y-3.5">
+                  <div>
+                    <div className="font-bold text-center border-b border-black pb-1 mb-2">TICKET RESUMEN DE CAJA</div>
+                    <div className="flex justify-between"><span>SESIÓN N°:</span><span className="font-bold">{summaryData.id}</span></div>
+                    <div className="flex justify-between"><span>ESTADO:</span><span className="font-bold">{summaryData.estado?.toUpperCase()}</span></div>
+                    <div className="flex justify-between"><span>APERTURA:</span><span>{formatDate(summaryData.fechaInicio)}</span></div>
+                    {summaryData.estado !== 'abierto' && (
+                      <div className="flex justify-between"><span>CIERRE:</span><span>{formatDate(summaryData.fechaFin)}</span></div>
+                    )}
                   </div>
 
-                  <div className="border-b border-dashed border-black my-2"></div>
-
-                  <div className="font-bold mb-1.5">DESGLOSE DE INGRESOS</div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between">
-                      <span>Efectivo:</span>
-                      <span>S/. {(summaryData.ingresos?.efectivo || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tarjeta (POS):</span>
-                      <span>S/. {(summaryData.ingresos?.tarjeta || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Yape:</span>
-                      <span>S/. {(summaryData.ingresos?.yape || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Plin:</span>
-                      <span>S/. {(summaryData.ingresos?.plin || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Izipay:</span>
-                      <span>S/. {(summaryData.ingresos?.izipay || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Niubiz:</span>
-                      <span>S/. {(summaryData.ingresos?.niubiz || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Ingresos Manuales:</span>
-                      <span>S/. {(summaryData.ingresos?.manual || 0).toFixed(2)}</span>
-                    </div>
+                  <div className="border-t border-black pt-2">
+                    <div className="flex justify-between font-bold"><span>FONDO INICIAL:</span><span>S/. {(summaryData.montoInicial || 0).toFixed(2)}</span></div>
                   </div>
 
-                  <div className="border-t border-dashed border-black mt-2 pt-2 flex justify-between font-bold text-[13px]">
-                    <span>TOTAL VENTAS:</span>
-                    <span>S/. {getVentasTotal(summaryData).toFixed(2)}</span>
+                  <div className="border-t border-dashed border-black pt-2 space-y-1">
+                    <div className="font-bold">DESGLOSE DE VENTAS:</div>
+                    <div className="flex justify-between pl-2"><span>Efectivo:</span><span>S/. {(summaryData.ingresos?.efectivo || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between pl-2"><span>Tarjeta (POS):</span><span>S/. {((summaryData.ingresos?.tarjeta || 0) + (summaryData.ingresos?.izipay || 0) + (summaryData.ingresos?.niubiz || 0)).toFixed(2)}</span></div>
+                    <div className="flex justify-between pl-2"><span>Yape:</span><span>S/. {(summaryData.ingresos?.yape || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between pl-2"><span>Plin:</span><span>S/. {(summaryData.ingresos?.plin || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between font-bold"><span>TOTAL VENTAS:</span><span>S/. {getVentasTotal(summaryData).toFixed(2)}</span></div>
                   </div>
 
-                  <div className="border-b border-dashed border-black my-2"></div>
+                  <div className="border-t border-dashed border-black pt-2 space-y-1">
+                    <div className="font-bold">MOVIMIENTOS MANUALES:</div>
+                    <div className="flex justify-between pl-2"><span>Ingresos Manuales:</span><span>S/. {(summaryData.ingresos?.manual || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between pl-2"><span>Egresos Manuales:</span><span>S/. {(summaryData.egresos || 0).toFixed(2)}</span></div>
+                  </div>
 
-                  <div className="font-bold mb-1.5">RESUMEN FLUIDOS EFECTIVO</div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between">
-                      <span>Total Ingreso:</span>
-                      <span>S/. {((summaryData.ingresos?.efectivo || 0) + (summaryData.ingresos?.manual || 0)).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Total Egreso:</span>
-                      <span>S/. {(summaryData.egresos || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold">
-                      <span>Total Neto Caja:</span>
+                  <div className="border-t border-black pt-2 space-y-1">
+                    <div className="flex justify-between font-bold text-[12px] border-b border-black pb-1">
+                      <span>SALDO EN CAJA (EFECTIVO):</span>
                       <span>S/. {(summaryData.totalCaja || 0).toFixed(2)}</span>
                     </div>
+                    <div className="flex justify-between font-bold text-[12px] border-b border-black pb-1">
+                      <span>MONTO BRUTO NETO:</span>
+                      <span>
+                        {summaryData.totalBruto !== null ? `S/. ${Number(summaryData.totalBruto).toFixed(2)}` : 'PRECIO NO DISPONIBLE'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-500">
+                      <span>Fondo de Propinas:</span>
+                      <span>S/. {(summaryData.totalPropinas || summaryData.propinas || 0).toFixed(2)}</span>
+                    </div>
                   </div>
 
-                  <div className="text-center mt-6 text-[9.5px] border-t border-dashed border-black pt-2">
-                    <div>RESUMEN DE CAJA REGISTRADORA</div>
-                    <div>Este ticket no posee validez fiscal.</div>
-                    <div>¡Bunker agradece su preferencia!</div>
+                  <div className="text-center text-[10px] border-t border-dashed border-black pt-2 mt-4">
+                    <div>Fin del Reporte</div>
+                    <div>¡Gracias por su servicio!</div>
                   </div>
-                </>
+                </div>
               )}
+
             </div>
 
-            {/* Print Button */}
-            {!loading && summaryData && (
-              <button
-                onClick={handlePrint}
-                className="border-none mt-4 flex items-center justify-center gap-2 py-2 px-5 rounded-lg text-xs font-semibold font-sans text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-sm cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Imprimir Ticket</span>
-              </button>
-            )}
           </div>
+
+          {/* Footer Action Buttons */}
+          <div className="bg-slate-50 px-6 py-4 flex gap-3 border-t border-slate-200 justify-end rounded-b-lg no-print">
+            <button
+              onClick={onClose}
+              className="py-2.5 px-4 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-350 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handlePrint}
+              disabled={loading || !summaryData}
+              className="py-2.5 px-4 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Imprimir Ticket
+            </button>
+          </div>
+
         </div>
       </div>
     </div>

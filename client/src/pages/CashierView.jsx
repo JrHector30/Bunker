@@ -23,7 +23,7 @@ import CloseButton from '../components/ui/CloseButton';
 import { CustomCharts } from '../components/CustomCharts';
 import { CheckoutModal } from '../components/CheckoutModal';
 import { MovimientoModal } from '../components/MovimientoModal';
-import { networkStatus, NetworkState, db, offlineCashService } from '../offline';
+import { networkStatus, NetworkState, db, offlineCashService, resolveItemPrice } from '../offline';
 import { PaloteoModal } from '../components/PaloteoModal';
 import { SummaryTicketModal } from '../components/SummaryTicketModal';
 import { DetailModal } from '../components/DetailModal';
@@ -80,6 +80,7 @@ const CashierView = () => {
 
   // PDF Generation loading
   const [isGenerating, setIsGenerating] = useState(false);
+  const [connectionError, setConnectionError] = useState(false);
 
   // Window resize to dock accounts panel automatically
   useEffect(() => {
@@ -176,18 +177,21 @@ const CashierView = () => {
   // API Call: Fetch open accounts
   const openAccountsFetcher = useCallback(async () => {
     if (networkStatus.isOffline()) {
+      setConnectionError(false);
       return loadOpenAccountsLocal();
     }
 
-    return fetch('/api/cashier/open-accounts')
-      .then(res => {
-        if (!res.ok) throw new Error('Error al conectar');
-        return res.json();
-      })
-      .catch(err => {
-        console.warn('[CashierView] openAccountsFetcher falló. Usando fallback local silencioso.');
-        return loadOpenAccountsLocal();
-      });
+    try {
+      const res = await fetch('/api/cashier/open-accounts');
+      if (!res.ok) throw new Error('Error al conectar con el servidor');
+      const data = await res.json();
+      setConnectionError(false);
+      return data;
+    } catch (err) {
+      console.error('[CashierView] openAccountsFetcher falló:', err);
+      setConnectionError(true);
+      throw err; // Re-lanzar para conservar los últimos datos válidos en useCache
+    }
   }, [loadOpenAccountsLocal]);
 
   const { data: openTables, mutate: fetchTables } = useCache('openTables', openAccountsFetcher, []);
@@ -204,26 +208,204 @@ const CashierView = () => {
   // API Call: Fetch current cashier status balance
   const statusFetcher = useCallback(async () => {
     if (networkStatus.isOffline()) {
+      setConnectionError(false);
       return loadBalanceLocal();
     }
 
-    return fetch('/api/cashier/balance')
-      .then(res => {
-        if (!res.ok) throw new Error('Error al conectar');
-        return res.json();
-      })
-      .catch(err => {
-        console.warn('[CashierView] statusFetcher falló. Usando fallback local silencioso.');
-        return loadBalanceLocal();
-      });
+    try {
+      const res = await fetch('/api/cashier/balance');
+      if (!res.ok) throw new Error('Error al conectar con el servidor');
+      const data = await res.json();
+      setConnectionError(false);
+      return data;
+    } catch (err) {
+      console.error('[CashierView] statusFetcher falló:', err);
+      setConnectionError(true);
+      throw err; // Re-lanzar para conservar los últimos datos válidos en useCache
+    }
   }, [loadBalanceLocal]);
 
   const { data: currentStatus, mutate: fetchStatus } = useCache('cashier_balance', statusFetcher, null);
 
   const shiftStatus = currentStatus?.estado || 'cerrado';
 
+  const loadHistoryLocal = useCallback(async () => {
+    try {
+      const localArqueos = await db.arqueos.toArray();
+      localArqueos.sort((a, b) => b.id - a.id);
+
+      let filtered = localArqueos;
+      if (filterDateRange?.from) {
+        const start = new Date(filterDateRange.from);
+        start.setHours(0, 0, 0, 0);
+        const end = filterDateRange.to ? new Date(filterDateRange.to) : new Date(filterDateRange.from);
+        end.setHours(23, 59, 59, 999);
+        filtered = localArqueos.filter(arq => {
+          const date = new Date(arq.fechaInicio);
+          return date >= start && date <= end;
+        });
+      }
+
+      const totalCount = filtered.length;
+      const limit = 5;
+      const totalPages = Math.ceil(totalCount / limit) || 1;
+      
+      const startIndex = (currentPage - 1) * limit;
+      const paginated = filtered.slice(startIndex, startIndex + limit);
+
+      const [allOrders, allOrderItems, allProducts, allMovements] = await Promise.all([
+        db.orders.toArray(),
+        db.orderItems.toArray(),
+        db.products.toArray(),
+        db.movimientosCaja.toArray()
+      ]);
+
+      const productMap = new Map(allProducts.map(p => [p.id, p]));
+      const itemMap = new Map();
+      allOrderItems.forEach(item => {
+        const parentId = String(item.comandaId || item.orderId || '');
+        if (parentId) {
+          if (!itemMap.has(parentId)) itemMap.set(parentId, []);
+          itemMap.get(parentId).push(item);
+        }
+      });
+
+      const parsePaymentMethod = (metodoPago) => {
+        const m = (metodoPago || 'efectivo').toLowerCase();
+        if (m.includes('izipay') || m.includes('izi')) return 'izipay';
+        if (m.includes('niubiz')) return 'niubiz';
+        if (m.includes('plin')) return 'plin';
+        if (m.includes('yape')) return 'yape';
+        if (m.includes('tarjeta')) return 'tarjeta';
+        return 'efectivo';
+      };
+
+      const data = paginated.map(arq => {
+        const startDate = new Date(arq.fechaInicio);
+        const endDate = arq.estado === 'abierto' ? new Date() : new Date(arq.fechaFin || arq.fechaInicio);
+        const movements = allMovements.filter(m => m.arqueoId === arq.id);
+
+        const manualIngresos = movements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + Number(m.monto), 0);
+        const manualEgresos = movements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + Number(m.monto), 0);
+
+        const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + Number(m.monto), 0);
+        const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + Number(m.monto), 0);
+
+        const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + Number(m.monto), 0);
+        const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + Number(m.monto), 0);
+
+        const inicio = Number(arq.montoInicial || 0);
+        const egresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + Number(m.monto), 0);
+
+        let totalBruto = 0;
+        let totalPropinas = 0;
+        let incomeDetails = {
+          efectivo: 0,
+          tarjeta: 0,
+          yape: 0,
+          izipay: 0,
+          plin: 0,
+          niubiz: 0,
+          manual: manualIngresos
+        };
+
+        const closedOrders = allOrders.filter(order => {
+          const isClosed = order.estado === 'cerrada' || order.status === 'cerrada';
+          if (!isClosed) return false;
+          const orderDate = new Date(order.fechaCierre || order.fecha);
+          return orderDate >= startDate && orderDate <= endDate;
+        });
+
+        let sessionHasError = false;
+        closedOrders.forEach(order => {
+          const items = itemMap.get(order.id) || [];
+          let orderSubtotal = 0;
+          let orderHasError = false;
+
+          items.forEach(item => {
+            const plato = productMap.get(item.platoId);
+            const resolvedPrice = resolveItemPrice(item, plato);
+            if (resolvedPrice !== null) {
+              orderSubtotal += (Number(item.cantidad) * resolvedPrice);
+            } else {
+              orderHasError = true;
+              sessionHasError = true;
+              console.error(`[INTEGRITY ERROR] Precio no disponible para item id: ${item.id} en arqueo local: ${arq.id}`);
+            }
+          });
+
+          if (!orderHasError) {
+            totalBruto += orderSubtotal;
+            const cat = parsePaymentMethod(order.metodoPago);
+            if (incomeDetails[cat] !== undefined) {
+              incomeDetails[cat] += orderSubtotal;
+            } else {
+              incomeDetails.efectivo += orderSubtotal;
+            }
+          }
+          totalPropinas += Number(order.propina || 0);
+        });
+
+        incomeDetails.yape = Math.max(0, incomeDetails.yape + manualIngresosYape - manualEgresosYape);
+        incomeDetails.plin = Math.max(0, incomeDetails.plin + manualIngresosPlin - manualEgresosPlin);
+
+        let totalPendiente = 0;
+        if (arq.estado === 'abierto') {
+          const pendingOrders = allOrders.filter(order => {
+            const isClosed = order.estado === 'cerrada' || order.status === 'cerrada';
+            const isCancelled = order.estado === 'anulada' || order.status === 'anulada';
+            return !isClosed && !isCancelled;
+          });
+          pendingOrders.forEach(order => {
+            const items = itemMap.get(order.id) || [];
+            items.forEach(item => {
+              const plato = productMap.get(item.platoId);
+              const resolvedPrice = resolveItemPrice(item, plato);
+              if (resolvedPrice !== null) {
+                totalPendiente += (Number(item.cantidad) * resolvedPrice);
+              } else {
+                console.error(`[INTEGRITY ERROR] Precio no disponible para item pendiente id: ${item.id}`);
+              }
+            });
+          });
+        }
+
+        return {
+          id: arq.id,
+          fechaInicio: arq.fechaInicio,
+          fechaFin: arq.fechaFin,
+          estado: arq.estado,
+          inicio,
+          egresos,
+          ingresos: incomeDetails,
+          totalCaja: inicio + manualIngresos + incomeDetails.efectivo - manualEgresos,
+          totalBruto: sessionHasError ? null : totalBruto,
+          totalPropinas,
+          totalPendiente
+        };
+      });
+
+      return {
+        data,
+        meta: {
+          total: totalCount,
+          page: currentPage,
+          totalPages
+        }
+      };
+    } catch (err) {
+      console.error('[CashierView] Error local en loadHistoryLocal:', err);
+      return { data: [], meta: { total: 0, page: 1, totalPages: 1 } };
+    }
+  }, [currentPage, filterDateRange]);
+
   // API Call: Fetch historical sessions list
-  const historyFetcher = useCallback(() => {
+  const historyFetcher = useCallback(async () => {
+    if (networkStatus.isOffline()) {
+      setConnectionError(false);
+      return loadHistoryLocal();
+    }
+
     let url = `/api/cashier/history?page=${currentPage}&limit=5`;
     if (filterDateRange?.from) {
       const startStr = format(filterDateRange.from, 'yyyy-MM-dd');
@@ -234,8 +416,19 @@ const CashierView = () => {
         url += `&startDate=${startStr}&endDate=${startStr}`;
       }
     }
-    return fetch(url).then(res => res.json());
-  }, [currentPage, filterDateRange]);
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Error al conectar con el servidor');
+      const data = await res.json();
+      setConnectionError(false);
+      return data;
+    } catch (err) {
+      console.error('[CashierView] historyFetcher falló:', err);
+      setConnectionError(true);
+      throw err; // Re-lanzar para conservar los últimos datos válidos en useCache
+    }
+  }, [currentPage, filterDateRange, loadHistoryLocal]);
 
   const historyKey = useMemo(() => {
     if (!filterDateRange?.from) return `cashier_history_${currentPage}_none`;
@@ -250,14 +443,17 @@ const CashierView = () => {
     { data: [], meta: { page: 1, totalPages: 1 } }
   );
 
-  // Sync default selected arqueo for charts
+  // Sync selected arqueo ID cuando cambian los datos cargados o la clave
   useEffect(() => {
-    if (currentStatus?.id && !selectedArqueoId) {
+    if (history?.data?.length > 0) {
+      const exists = history.data.some(arq => arq.id === selectedArqueoId);
+      if (!exists) {
+        setSelectedArqueoId(history.data[0].id);
+      }
+    } else if (currentStatus?.id && !selectedArqueoId) {
       setSelectedArqueoId(currentStatus.id);
-    } else if (history?.data?.length > 0 && !selectedArqueoId) {
-      setSelectedArqueoId(history.data[0].id);
     }
-  }, [currentStatus, history, selectedArqueoId]);
+  }, [history, currentStatus, selectedArqueoId]);
 
   // Synchronizers and Polling
   const statusRef = useRef(fetchStatus);
@@ -307,11 +503,25 @@ const CashierView = () => {
     };
   }, [fetchHistory]);
 
+  const hasPricingError = useMemo(() => {
+    const tableError = openTables?.some(cuenta => 
+      cuenta.detalles?.some(d => resolveItemPrice(d) === null)
+    );
+    const statusError = currentStatus?.ventas?.some(v => 
+      v.items?.some(i => i.precio === null)
+    );
+    return !!(tableError || statusError);
+  }, [openTables, currentStatus]);
+
   // Active shift toggle logic
   const handleToggleShift = async () => {
     if (!currentStatus) return;
 
     if (currentStatus.estado === 'abierto') {
+      if (hasPricingError) {
+        showToast("No se puede cerrar caja: Hay inconsistencias de precios en las comandas.", "error");
+        return;
+      }
       if (!await showConfirmation("¿Estás seguro de cerrar caja? Asegúrate de que no haya cuentas pendientes.", { type: 'danger' })) return;
       executeToggle(0);
     } else {
@@ -1029,6 +1239,16 @@ const CashierView = () => {
 
   return (
     <div className="flex flex-col font-sans antialiased text-[var(--text-main)] w-full">
+      {/* Banner de error de conexión en modo Online */}
+      {connectionError && !networkStatus.isOffline() && (
+        <div className="bg-rose-600 text-white px-4 py-2.5 text-xs font-bold text-center flex items-center justify-center gap-2 animate-fade-in no-print shrink-0">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-200"></span>
+          </span>
+          <span>Sin conexión con el servidor. Reintentando de forma automática... Se muestran los últimos datos válidos cargados.</span>
+        </div>
+      )}
 
       {/* Top Main Toolbar */}
       <div className="flex-1 flex overflow-hidden">
@@ -1123,6 +1343,13 @@ const CashierView = () => {
                 </button>
               )}
             </div>
+
+            {shiftStatus === 'abierto' && hasPricingError && (
+              <div className="flex items-center gap-1.5 text-xs text-rose-500 bg-rose-50 dark:bg-rose-950/10 px-2.5 py-1 rounded-lg border border-rose-200 dark:border-rose-900/20 font-bold font-sans animate-pulse">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>Precios no disponibles (Cierre bloqueado)</span>
+              </div>
+            )}
 
             {shiftStatus === 'abierto' && currentStatus && (
               <div className="flex items-center gap-1 text-[13px] text-[var(--text-muted)] font-sans">
@@ -1464,7 +1691,16 @@ const CashierView = () => {
               ) : (
                 <div className="space-y-3 flex-1 overflow-y-auto pr-1">
                   {openTables.map((cuenta) => {
-                    const comandaTotal = cuenta.detalles?.reduce((sum, d) => sum + (d.cantidad * d.plato.precio), 0) || 0;
+                    let comandaHasError = false;
+                    const comandaTotal = cuenta.detalles?.reduce((sum, d) => {
+                      const price = resolveItemPrice(d);
+                      if (price === null) {
+                        comandaHasError = true;
+                        console.error(`[INTEGRITY ERROR] Precio no disponible para el detalle id ${d.id}`);
+                        return sum;
+                      }
+                      return sum + (d.cantidad * price);
+                    }, 0) || 0;
 
                     return (
                       <div
@@ -1476,20 +1712,25 @@ const CashierView = () => {
                             Mesa {cuenta.mesa?.numero || ''}
                           </span>
                           <span className="font-sans text-sm font-bold text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/10 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/20">
-                            S/. {comandaTotal.toFixed(2)}
+                            {comandaHasError ? 'Precio no disponible' : `S/. ${comandaTotal.toFixed(2)}`}
                           </span>
                         </div>
 
                         <div className="mt-3 space-y-1.5 pt-2.5 font-sans" style={{ borderTop: '1px solid var(--table-row-border)' }}>
-                          {cuenta.detalles?.map((prod, pIdx) => (
-                            <div key={pIdx} className="flex justify-between text-[12.5px] font-medium text-[var(--text-muted)]">
-                              <span className="truncate max-w-[170px]">
-                                <span className="font-mono font-semibold text-[var(--text-muted)] mr-1">{prod.cantidad}x</span>
-                                {prod.plato?.nombre}
-                              </span>
-                              <span className="font-sans">S/. {(prod.cantidad * prod.plato?.precio).toFixed(2)}</span>
-                            </div>
-                          ))}
+                          {cuenta.detalles?.map((prod, pIdx) => {
+                            const price = resolveItemPrice(prod);
+                            return (
+                              <div key={pIdx} className="flex justify-between text-[12.5px] font-medium text-[var(--text-muted)]">
+                                <span className="truncate max-w-[170px]">
+                                  <span className="font-mono font-semibold text-[var(--text-muted)] mr-1">{prod.cantidad}x</span>
+                                  {prod.plato?.nombre || 'Plato sin datos'}
+                                </span>
+                                <span className="font-sans">
+                                  {price !== null ? `S/. ${(prod.cantidad * price).toFixed(2)}` : 'Precio no disponible'}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
 
                         <div className="flex items-center gap-2 mt-4 font-sans">
@@ -1583,7 +1824,16 @@ const CashierView = () => {
                 ) : (
                   <div className="space-y-3 flex-1 overflow-y-auto pr-1 font-sans">
                     {openTables.map((cuenta) => {
-                      const comandaTotal = cuenta.detalles?.reduce((sum, d) => sum + (d.cantidad * d.plato.precio), 0) || 0;
+                      let comandaHasError = false;
+                      const comandaTotal = cuenta.detalles?.reduce((sum, d) => {
+                        const price = resolveItemPrice(d);
+                        if (price === null) {
+                          comandaHasError = true;
+                          console.error(`[INTEGRITY ERROR] Precio no disponible para el detalle id ${d.id}`);
+                          return sum;
+                        }
+                        return sum + (d.cantidad * price);
+                      }, 0) || 0;
 
                       return (
                         <div
@@ -1595,20 +1845,25 @@ const CashierView = () => {
                               Mesa {cuenta.mesa?.numero || ''}
                             </span>
                             <span className="font-mono text-sm font-bold text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/10 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/20">
-                              S/. {comandaTotal.toFixed(2)}
+                              {comandaHasError ? 'Precio no disponible' : `S/. ${comandaTotal.toFixed(2)}`}
                             </span>
                           </div>
 
                           <div className="mt-3 space-y-1.5 pt-2.5 font-sans" style={{ borderTop: '1px solid var(--table-row-border)' }}>
-                            {cuenta.detalles?.map((prod, pIdx) => (
-                              <div key={pIdx} className="flex justify-between text-[12.5px] font-medium text-[var(--text-muted)]">
-                                <span className="truncate max-w-[170px]">
-                                  <span className="font-mono font-semibold text-[var(--text-muted)] mr-1">{prod.cantidad}x</span>
-                                  {prod.plato?.nombre}
-                                </span>
-                                <span className="font-mono">S/. {(prod.cantidad * prod.plato?.precio).toFixed(2)}</span>
-                              </div>
-                            ))}
+                            {cuenta.detalles?.map((prod, pIdx) => {
+                              const price = resolveItemPrice(prod);
+                              return (
+                                <div key={pIdx} className="flex justify-between text-[12.5px] font-medium text-[var(--text-muted)]">
+                                  <span className="truncate max-w-[170px]">
+                                    <span className="font-mono font-semibold text-[var(--text-muted)] mr-1">{prod.cantidad}x</span>
+                                    {prod.plato?.nombre || 'Plato sin datos'}
+                                  </span>
+                                  <span className="font-mono">
+                                    {price !== null ? `S/. ${(prod.cantidad * price).toFixed(2)}` : 'Precio no disponible'}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
 
                           <div className="flex items-center gap-2 mt-4 font-sans">

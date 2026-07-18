@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
+import { networkStatus, offlineCashService } from '../offline';
 
 export function PaloteoModal({ isOpen, onClose, arqueoId }) {
   const { showToast } = useNotification();
@@ -11,25 +12,34 @@ export function PaloteoModal({ isOpen, onClose, arqueoId }) {
     if (isOpen && arqueoId) {
       setLoading(true);
       setPaloteoData(null);
-      fetch(`/api/cashier/arqueo/${arqueoId}`)
-        .then(async (res) => {
-          if (res.ok) {
-            const data = await res.json();
+
+      const loadData = async () => {
+        try {
+          if (networkStatus.isOffline()) {
+            const data = await offlineCashService.getArqueoDetails(arqueoId);
             setPaloteoData(data);
           } else {
-            showToast('Error al obtener los detalles del paloteo.', 'error');
-            onClose();
+            const res = await fetch(`/api/cashier/arqueo/${arqueoId}`);
+            if (res.ok) {
+              const data = await res.json();
+              setPaloteoData(data);
+            } else {
+              showToast('Error al obtener los detalles del paloteo.', 'error');
+              onClose();
+            }
           }
-        })
-        .catch(() => {
-          showToast('Error de conexión al obtener los detalles.', 'error');
+        } catch (err) {
+          console.error('[PaloteoModal] Error cargando paloteo:', err);
+          showToast('Error al obtener los detalles del paloteo.', 'error');
           onClose();
-        })
-        .finally(() => {
+        } finally {
           setLoading(false);
-        });
+        }
+      };
+
+      loadData();
     }
-  }, [isOpen, arqueoId]);
+  }, [isOpen, arqueoId, showToast, onClose]);
 
   if (!isOpen) return null;
 
@@ -88,43 +98,39 @@ export function PaloteoModal({ isOpen, onClose, arqueoId }) {
           {/* Body */}
           <div className="p-6">
             <div className="max-h-[350px] overflow-y-auto pr-1">
-              <table className="w-full text-xs text-left">
-                <thead>
-                  <tr className="border-b border-[var(--glass-border)] text-[var(--text-muted)] font-bold uppercase tracking-wider text-[10px]">
-                    <th className="pb-2">Producto</th>
-                    <th className="pb-2 text-center w-24">Cantidad Vendida</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--glass-border)]">
-                  {countsArray.length === 0 ? (
-                    <tr>
-                      <td colSpan={2} className="py-8 text-center text-[var(--text-muted)] font-medium">
-                        No hay ventas registradas en este turno.
-                      </td>
+              {countsArray.length === 0 ? (
+                <div className="text-center py-8 text-xs text-[var(--text-muted)] border border-dashed border-[var(--glass-border)] rounded-lg">
+                  No se registraron platos vendidos en este arqueo.
+                </div>
+              ) : (
+                <table className="w-full text-sm font-sans">
+                  <thead>
+                    <tr className="border-b border-[var(--glass-border)] text-left text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">
+                      <th className="pb-2">Producto / Plato</th>
+                      <th className="pb-2 text-right">Cant. Vendida</th>
                     </tr>
-                  ) : (
-                    countsArray.map(([name, count]) => (
-                      <tr key={name} className="hover:bg-[var(--bg-secondary)]/50">
-                        <td className="py-2.5 text-[var(--text-main)] font-medium">{name}</td>
-                        <td className="py-2.5 text-center font-mono font-bold text-[var(--text-main)] text-sm bg-[var(--bg-secondary)] rounded-md border border-[var(--glass-border)]">
-                          {count}
-                        </td>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--glass-border)] text-[var(--text-main)]">
+                    {countsArray.map(([name, qty]) => (
+                      <tr key={name} className="hover:bg-[var(--bg-secondary)]">
+                        <td className="py-2.5 font-medium">{name}</td>
+                        <td className="py-2.5 text-right font-mono font-bold text-[var(--primary)]">{qty}x</td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
+          </div>
 
-            {/* Total units footer */}
-            {countsArray.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-[var(--glass-border)] flex justify-between items-center text-xs text-[var(--text-muted)] font-semibold">
-                <span>Total de Unidades Vendidas:</span>
-                <span className="font-mono text-sm font-bold text-[var(--text-main)]">
-                  {countsArray.reduce((acc, c) => acc + c[1], 0)}
-                </span>
-              </div>
-            )}
+          {/* Footer */}
+          <div className="bg-[var(--bg-secondary)] px-6 py-4 flex justify-end border-t border-[var(--glass-border)] rounded-b-lg">
+            <button
+              onClick={onClose}
+              className="py-2 px-4 rounded-lg text-xs font-bold text-white bg-[var(--primary)] hover:opacity-90 active:opacity-100 transition-colors cursor-pointer border-none"
+            >
+              Cerrar Paloteo
+            </button>
           </div>
         </div>
       </div>

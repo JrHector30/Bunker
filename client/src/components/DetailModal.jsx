@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, DollarSign, Smartphone, CreditCard, HelpCircle, FileText, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
+import { networkStatus, offlineCashService } from '../offline';
 
 export function DetailModal({ isOpen, onClose, arqueoId }) {
   const { showToast } = useNotification();
@@ -11,25 +12,34 @@ export function DetailModal({ isOpen, onClose, arqueoId }) {
     if (isOpen && arqueoId) {
       setLoading(true);
       setArqueo(null);
-      fetch(`/api/cashier/arqueo/${arqueoId}`)
-        .then(async (res) => {
-          if (res.ok) {
-            const data = await res.json();
+
+      const loadData = async () => {
+        try {
+          if (networkStatus.isOffline()) {
+            const data = await offlineCashService.getArqueoDetails(arqueoId);
             setArqueo(data);
           } else {
-            showToast('Error al obtener los detalles del arqueo.', 'error');
-            onClose();
+            const res = await fetch(`/api/cashier/arqueo/${arqueoId}`);
+            if (res.ok) {
+              const data = await res.json();
+              setArqueo(data);
+            } else {
+              showToast('Error al obtener los detalles del arqueo.', 'error');
+              onClose();
+            }
           }
-        })
-        .catch(() => {
-          showToast('Error de conexión al obtener los detalles.', 'error');
+        } catch (err) {
+          console.error('[DetailModal] Error cargando arqueo:', err);
+          showToast('Error al obtener los detalles del arqueo.', 'error');
           onClose();
-        })
-        .finally(() => {
+        } finally {
           setLoading(false);
-        });
+        }
+      };
+
+      loadData();
     }
-  }, [isOpen, arqueoId]);
+  }, [isOpen, arqueoId, showToast, onClose]);
 
   if (!isOpen) return null;
 
@@ -127,7 +137,9 @@ export function DetailModal({ isOpen, onClose, arqueoId }) {
               </div>
               <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg text-center">
                 <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total en Bruto</span>
-                <span className="text-sm font-bold font-mono text-slate-700">S/. {(arqueo.totalBruto || 0).toFixed(2)}</span>
+                <span className="text-sm font-bold font-mono text-slate-700">
+                  {arqueo.totalBruto !== null ? `S/. ${Number(arqueo.totalBruto).toFixed(2)}` : 'Inconsistente'}
+                </span>
               </div>
             </div>
 

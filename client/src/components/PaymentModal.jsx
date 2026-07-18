@@ -3,14 +3,20 @@ import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { Banknote, CreditCard, Smartphone, CheckSquare, X, AlertCircle } from 'lucide-react';
 import { setOptimisticLock } from '../hooks/useCache';
+import { resolveItemPrice } from '../offline';
 
 const PaymentModal = ({ order, onClose, onSuccess }) => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
-    const totalOrder = order.detalles.reduce((sum, d) => sum + (d.cantidad * d.plato.precio), 0);
+    const pricingError = order.detalles.some(d => resolveItemPrice(d) === null);
+
+    const totalOrder = pricingError ? null : order.detalles.reduce((sum, d) => {
+        const price = resolveItemPrice(d);
+        return sum + (d.cantidad * price);
+    }, 0);
     const taxRate = 0.18;
-    const subTotal = totalOrder / (1 + taxRate);
-    const taxAmount = totalOrder - subTotal;
+    const subTotal = pricingError ? null : totalOrder / (1 + taxRate);
+    const taxAmount = pricingError ? null : totalOrder - subTotal;
 
     // State
     const [paymentMethod, setPaymentMethod] = useState('efectivo');
@@ -29,8 +35,8 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
     const [observation, setObservation] = useState('');
     const [email, setEmail] = useState('');
 
-    const finalTotal = totalOrder + (hasTip ? Number(tipAmount) : 0);
-    const change = paymentMethod === 'efectivo' ? (Number(cashGiven) - finalTotal) : 0;
+    const finalTotal = pricingError ? null : totalOrder + (hasTip ? Number(tipAmount) : 0);
+    const change = (pricingError || paymentMethod !== 'efectivo') ? 0 : (Number(cashGiven) - finalTotal);
 
     const validateDocument = async () => {
         if (!documentoCliente) return;
@@ -168,7 +174,7 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
     const pendingKitchenItems = order.detalles.filter(d => {
         // Condition 1: Must be a kitchen category (enviarCocina = true)
         // Note: Backend must return categoria. If not present (legacy), assume true for safety or false if strict.
-        const sendsToKitchen = d.plato.categoria?.enviarCocina ?? true;
+        const sendsToKitchen = d.plato?.categoria?.enviarCocina ?? true;
 
         // Condition 2: Status is NOT 'listo', 'lista', or 'entregado'
         const isPending = !['listo', 'lista', 'entregado'].includes(d.estado);
@@ -176,7 +182,7 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
         return sendsToKitchen && isPending;
     });
 
-    const isBlocked = pendingKitchenItems.length > 0;
+    const isBlocked = pendingKitchenItems.length > 0 || pricingError;
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -190,7 +196,7 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                 </div>
 
                 {/* Validation Warning */}
-                {isBlocked && (
+                {pendingKitchenItems.length > 0 && (
                     <div style={{
                         background: 'var(--warning)',
                         color: 'black',
@@ -206,7 +212,29 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                         <div>
                             <div>⚠️ No se puede cobrar: Hay platos pendientes en cocina.</div>
                             <div style={{ fontSize: '0.85rem', fontWeight: 'normal', marginTop: 5 }}>
-                                Faltan: {pendingKitchenItems.map(p => p.plato.nombre).join(', ')}
+                                Faltan: {pendingKitchenItems.map(p => p.plato?.nombre || 'Plato sin datos').join(', ')}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {pricingError && (
+                    <div style={{
+                        background: 'var(--danger)',
+                        color: 'white',
+                        padding: 15,
+                        marginBottom: 20,
+                        borderRadius: 8,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        fontWeight: 'bold'
+                    }}>
+                        <AlertCircle size={24} />
+                        <div>
+                            <div>⚠️ Pago Bloqueado: Inconsistencia de Precios</div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 'normal', marginTop: 5 }}>
+                                Uno o más platos no tienen precio registrado en el catálogo. Corrija los precios para habilitar la operación.
                             </div>
                         </div>
                     </div>
@@ -219,15 +247,15 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                         <h3 style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: 10, marginBottom: 15 }}>Monto</h3>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                             <span className="text-muted">Sub-Total:</span>
-                            <span><span className="font-mono">S/. {subTotal.toFixed(2)}</span></span>
+                            <span><span className="font-mono">{subTotal !== null ? `S/. ${subTotal.toFixed(2)}` : 'Precio no disponible'}</span></span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                             <span className="text-muted">Impuesto (18%):</span>
-                            <span><span className="font-mono">S/. {taxAmount.toFixed(2)}</span></span>
+                            <span><span className="font-mono">{taxAmount !== null ? `S/. ${taxAmount.toFixed(2)}` : 'Precio no disponible'}</span></span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20, fontWeight: 'bold', fontSize: '1.2rem' }}>
                             <span>Total Bruto:</span>
-                            <span><span className="font-mono">S/. {totalOrder.toFixed(2)}</span></span>
+                            <span><span className="font-mono">{totalOrder !== null ? `S/. ${totalOrder.toFixed(2)}` : 'Precio no disponible'}</span></span>
                         </div>
                     </div>
 
@@ -434,9 +462,14 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
                         className="glass-button primary"
                         onClick={handleFinalize}
                         disabled={isBlocked}
-                        style={{ opacity: isBlocked ? 0.5 : 1, cursor: isBlocked ? 'not-allowed' : 'pointer' }}
+                        style={{
+                            background: isBlocked ? 'var(--rose-800)' : 'var(--success)',
+                            borderColor: 'transparent',
+                            opacity: isBlocked ? 0.6 : 1,
+                            cursor: isBlocked ? 'not-allowed' : 'pointer'
+                        }}
                     >
-                        <CheckSquare size={18} /> Finalizar
+                        <CheckSquare size={18} /> {pricingError ? 'Pago bloqueado por precio' : 'Finalizar'}
                     </button>
                 </div>
             </div>
