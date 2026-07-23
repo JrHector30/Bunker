@@ -8,7 +8,7 @@ import {
   ArrowLeft, Plus, FileSpreadsheet, Eye, Printer, MoreVertical,
   Trash, Search, X, Receipt, CheckCircle, ChevronLeft, ChevronRight,
   TrendingUp, BarChart3, HelpCircle, FileText, Smartphone, CreditCard,
-  SlidersHorizontal, Menu, CalendarDays, Download
+  SlidersHorizontal, Menu, CalendarDays, Download, AlertCircle
 } from 'lucide-react';
 
 import { useNotification } from '../context/NotificationContext';

@@ -33,6 +33,7 @@ import {
     ChartColumn,
     Menu
 } from 'lucide-react';
+import ErrorBoundary from './ErrorBoundary';
 
 const DashboardLayout = () => {
     const { user, logout, tienePermiso } = useAuth();
@@ -672,7 +673,9 @@ const DashboardLayout = () => {
                             </div>
                         )}
                         <div className="flex-grow pb-8">
-                            <Outlet />
+                            <ErrorBoundary>
+                                <Outlet />
+                            </ErrorBoundary>
                         </div>
                         <footer className={`mt-auto pt-6 border-t border-slate-800/10 dark:border-slate-800/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[var(--text-muted)] font-medium ${isCashier ? 'mx-4 sm:mx-6 lg:mx-8 mb-4' : ''}`}>
                             <span>© 2026 Búnker - Sistema de Gestión de Comandas Inteligentes.</span>
