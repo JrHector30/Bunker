@@ -12,10 +12,17 @@ import { generateUUID, getCurrentDate } from '../offlineUtils';
  * @returns {number|null} Precio resuelto o null si hay error de integridad
  */
 export function resolveItemPrice(d, product) {
+  if (!d) return null;
+
   // Prioridad 1: Precio histórico guardado directamente en el detalle (precio o precioVenta)
   let price = d.precio !== undefined ? d.precio : d.precioVenta;
   
-  // Prioridad 2: Precio del snapshot del producto (precio o precioVenta)
+  // Prioridad 2: Precio de la relación plato anidada (d.plato)
+  if (price === undefined || price === null) {
+    price = d.plato?.precio !== undefined ? d.plato.precio : d.plato?.precioVenta;
+  }
+
+  // Prioridad 3: Precio del snapshot del producto (precio o precioVenta) pasado como argumento
   if (price === undefined || price === null) {
     price = product?.precio !== undefined ? product.precio : product?.precioVenta;
   }

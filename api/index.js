@@ -3134,7 +3134,7 @@ app.get('/api/cashier/history', async (req, res) => {
             };
 
             comandasCerradas.forEach(order => {
-                const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+                const subtotal = order.detalles.reduce((sum, d) => sum + ((d.plato?.precio ?? 0) * d.cantidad), 0);
                 totalBruto += subtotal;
                 totalPropinas += order.propina || 0;
 
@@ -3155,7 +3155,7 @@ app.get('/api/cashier/history', async (req, res) => {
                     ['listo', 'lista', 'entregado', 'entregada'].includes(d.estado.toLowerCase())
                 );
                 if (hasKitchenItems) {
-                    return acc + order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+                    return acc + order.detalles.reduce((sum, d) => sum + ((d.plato?.precio ?? 0) * d.cantidad), 0);
                 }
                 return acc;
             }, 0);
