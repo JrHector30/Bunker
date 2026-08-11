@@ -27,6 +27,125 @@ const LoginPage = () => {
     const { data: usersList, mutate: fetchUsers } = useCache('users', fetcher, []);
     const [isExiting, setIsExiting] = useState(false);
 
+    // Password Recovery State
+    const [showRecoverModal, setShowRecoverModal] = useState(false);
+    const [recoverStep, setRecoverStep] = useState(1); // 1: confirmar correo, 2: ingresar código, 3: nueva contraseña
+    const [recoverError, setRecoverError] = useState('');
+    const [recoverSuccess, setRecoverSuccess] = useState('');
+    const [recoverCode, setRecoverCode] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [resetToken, setResetToken] = useState('');
+    const [userIdForReset, setUserIdForReset] = useState(null);
+
+    const handleOpenForgotPassword = () => {
+        setRecoverStep(1);
+        setRecoverError('');
+        setRecoverSuccess('');
+        setRecoverCode('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setResetToken('');
+        setUserIdForReset(null);
+        setShowRecoverModal(true);
+    };
+
+    const obscureEmail = (email) => {
+        if (!email) return '';
+        const [name, domain] = email.split('@');
+        if (name.length <= 2) {
+            return `${name}***@${domain}`;
+        }
+        const visibleStart = name.slice(0, 2);
+        const visibleEnd = name.slice(-1);
+        const obscuredPart = '*'.repeat(name.length - 3);
+        return `${visibleStart}${obscuredPart}${visibleEnd}@${domain}`;
+    };
+
+    const handleSendRecoverCode = async () => {
+        setRecoverError('');
+        setRecoverCode('');
+        try {
+            const res = await fetch('/api/auth/recover-password/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario: selectedUser.usuario })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setRecoverStep(2);
+                setRecoverSuccess('Código enviado correctamente.');
+                setTimeout(() => setRecoverSuccess(''), 4000);
+            } else {
+                setRecoverError(data.error || 'Error al enviar código de recuperación.');
+            }
+        } catch (err) {
+            setRecoverError('Error de red al solicitar código.');
+        }
+    };
+
+    const handleVerifyRecoverCode = async () => {
+        setRecoverError('');
+        if (recoverCode.length !== 6 || !/^\d+$/.test(recoverCode)) {
+            return setRecoverError('El código debe ser de 6 dígitos.');
+        }
+
+        try {
+            const res = await fetch('/api/auth/recover-password/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario: selectedUser.usuario, code: recoverCode })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setResetToken(data.resetToken);
+                setUserIdForReset(data.userId);
+                setRecoverStep(3);
+            } else {
+                setRecoverError(data.error || 'El código ingresado no es correcto.');
+            }
+        } catch (err) {
+            setRecoverError('Error de red al verificar código.');
+        }
+    };
+
+    const handleResetPassword = async () => {
+        setRecoverError('');
+        if (newPassword.length !== 6 || !/^\d+$/.test(newPassword)) {
+            return setRecoverError('La nueva contraseña debe tener exactamente 6 dígitos numéricos.');
+        }
+        if (newPassword !== confirmPassword) {
+            return setRecoverError('Las contraseñas no coinciden.');
+        }
+
+        try {
+            const res = await fetch('/api/auth/recover-password/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: userIdForReset,
+                    resetToken: resetToken,
+                    newPassword: newPassword
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setRecoverSuccess('Contraseña restablecida exitosamente.');
+                // Recargar usuarios para actualizar la caché local de contraseñas de react
+                fetchUsers();
+                setTimeout(() => {
+                    setShowRecoverModal(false);
+                    setPin('');
+                    setError('');
+                }, 2000);
+            } else {
+                setRecoverError(data.error || 'Error al restablecer la contraseña.');
+            }
+        } catch (err) {
+            setRecoverError('Error de red al restablecer contraseña.');
+        }
+    };
+
     useEffect(() => {
         if (!selectedUser && usersList && usersList.length > 0) {
             setSelectedUser(usersList[0]);
@@ -289,9 +408,194 @@ const LoginPage = () => {
                             Ingresar
                         </button>
 
+                        {selectedUser?.rol === 'admin' && (
+                            <button
+                                type="button"
+                                onClick={handleOpenForgotPassword}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--primary)',
+                                    marginTop: 20,
+                                    fontSize: '0.95rem',
+                                    cursor: 'pointer',
+                                    textAlign: 'center',
+                                    textDecoration: 'underline',
+                                    fontFamily: '"Inter", sans-serif',
+                                    opacity: 0.8,
+                                    transition: 'opacity 0.2s'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                                onMouseLeave={e => e.currentTarget.style.opacity = 0.8}
+                            >
+                                Olvidé mi contraseña.
+                            </button>
+                        )}
+
                     </div>
                 </div>
             </div>
+
+            {/* Modal de Recuperación de Contraseña */}
+            {showRecoverModal && (
+                <div className="modal-overlay" style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', zIndex: 1000, fontFamily: '"Inter", sans-serif'
+                }} onClick={() => setShowRecoverModal(false)}>
+                    <div className="modal-content" style={{
+                        background: '#121212', border: '1px solid #2a2a2a', padding: 30,
+                        borderRadius: 20, width: 420, boxShadow: '0 20px 50px rgba(0,0,0,0.9)',
+                        position: 'relative'
+                    }} onClick={e => e.stopPropagation()}>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 500, color: 'var(--primary)', margin: 0 }}>
+                                Recuperar Contraseña
+                            </h3>
+                            <button
+                                onClick={() => setShowRecoverModal(false)}
+                                style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                            {recoverError && <div style={{ color: 'var(--danger)', fontSize: '0.9rem', textAlign: 'center' }}>{recoverError}</div>}
+                            {recoverSuccess && <div style={{ color: 'var(--success)', fontSize: '0.9rem', textAlign: 'center' }}>{recoverSuccess}</div>}
+
+                            {recoverStep === 1 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                                    <p style={{ color: '#aaa', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                                        Se enviará un código de verificación al correo asociado a tu cuenta:
+                                    </p>
+                                    <div style={{
+                                        background: '#181818', padding: '12px 15px', borderRadius: 10,
+                                        border: '1px solid #222', textAlign: 'center', fontWeight: 500, fontSize: '1.05rem', color: '#fff'
+                                    }}>
+                                        {selectedUser?.correo ? obscureEmail(selectedUser.correo) : 'Sin correo asociado. Contacta a soporte.'}
+                                    </div>
+                                    <button
+                                        disabled={!selectedUser?.correo}
+                                        onClick={handleSendRecoverCode}
+                                        style={{
+                                            background: selectedUser?.correo ? 'var(--primary)' : '#222',
+                                            color: selectedUser?.correo ? '#000' : '#555',
+                                            border: 'none', padding: '12px', borderRadius: 10, cursor: selectedUser?.correo ? 'pointer' : 'not-allowed',
+                                            fontWeight: 600, fontSize: '0.95rem', transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        Enviar código
+                                    </button>
+                                </div>
+                            )}
+
+                            {recoverStep === 2 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                                    <p style={{ color: '#aaa', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                                        Ingresa el código numérico de 6 dígitos enviado a tu correo:
+                                    </p>
+                                    <input
+                                        type="text"
+                                        maxLength={6}
+                                        value={recoverCode}
+                                        placeholder="------"
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            if (val.length <= 6) setRecoverCode(val);
+                                        }}
+                                        style={{
+                                            background: '#181818', border: '1px solid #2a2a2a', color: '#fff',
+                                            padding: 12, borderRadius: 10, fontSize: '1.3rem', letterSpacing: '8px', textAlign: 'center'
+                                        }}
+                                    />
+                                    <button
+                                        onClick={handleVerifyRecoverCode}
+                                        disabled={recoverCode.length !== 6}
+                                        style={{
+                                            background: recoverCode.length === 6 ? 'var(--primary)' : '#222',
+                                            color: recoverCode.length === 6 ? '#000' : '#555',
+                                            border: 'none', padding: '12px', borderRadius: 10, cursor: recoverCode.length === 6 ? 'pointer' : 'not-allowed',
+                                            fontWeight: 600, fontSize: '0.95rem', transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        Verificar Código
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleSendRecoverCode}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: 'var(--primary)',
+                                            fontSize: '0.9rem',
+                                            cursor: 'pointer',
+                                            textDecoration: 'underline',
+                                            marginTop: 5,
+                                            textAlign: 'center',
+                                            fontFamily: '"Inter", sans-serif'
+                                        }}
+                                    >
+                                        Reenviar código
+                                    </button>
+                                </div>
+                            )}
+
+                            {recoverStep === 3 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                                    <div>
+                                        <label style={{ fontSize: '0.85rem', color: '#888', display: 'block', marginBottom: 5 }}>Nueva contraseña</label>
+                                        <input
+                                            type="password"
+                                            maxLength={6}
+                                            value={newPassword}
+                                            placeholder="6 dígitos numéricos"
+                                            onChange={e => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                if (val.length <= 6) setNewPassword(val);
+                                            }}
+                                            style={{
+                                                background: '#181818', border: '1px solid #2a2a2a', color: '#fff',
+                                                padding: 12, borderRadius: 10, width: '100%', boxSizing: 'border-box'
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.85rem', color: '#888', display: 'block', marginBottom: 5 }}>Repetir contraseña</label>
+                                        <input
+                                            type="password"
+                                            maxLength={6}
+                                            value={confirmPassword}
+                                            placeholder="Repite los 6 dígitos"
+                                            onChange={e => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                if (val.length <= 6) setConfirmPassword(val);
+                                            }}
+                                            style={{
+                                                background: '#181818', border: '1px solid #2a2a2a', color: '#fff',
+                                                padding: 12, borderRadius: 10, width: '100%', boxSizing: 'border-box'
+                                            }}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleResetPassword}
+                                        disabled={newPassword.length !== 6 || confirmPassword.length !== 6}
+                                        style={{
+                                            background: (newPassword.length === 6 && confirmPassword.length === 6) ? 'var(--primary)' : '#222',
+                                            color: (newPassword.length === 6 && confirmPassword.length === 6) ? '#000' : '#555',
+                                            border: 'none', padding: '12px', borderRadius: 10, cursor: (newPassword.length === 6 && confirmPassword.length === 6) ? 'pointer' : 'not-allowed',
+                                            fontWeight: 600, fontSize: '0.95rem', transition: 'all 0.2s', marginTop: 10
+                                        }}
+                                    >
+                                        Guardar Contraseña
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </React.Fragment>
     );
 };

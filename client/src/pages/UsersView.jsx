@@ -29,6 +29,91 @@ const UsersView = () => {
     });
     const [previewImage, setPreviewImage] = useState(null);
 
+    // Email Assignment Modal State
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [emailStep, setEmailStep] = useState(1); // 1: ingresar correo, 2: ingresar código
+    const [emailInput, setEmailInput] = useState('');
+    const [emailCode, setEmailCode] = useState('');
+    const [emailError, setEmailError] = useState('');
+    const [emailSuccess, setEmailSuccess] = useState('');
+
+    const handleOpenEmailAssign = () => {
+        setEmailInput(editingUser?.correo || '');
+        setEmailCode('');
+        setEmailStep(1);
+        setEmailError('');
+        setEmailSuccess('');
+        setShowEmailModal(true);
+    };
+
+    const handleSendCode = async () => {
+        setEmailError('');
+        setEmailCode('');
+        if (!emailInput || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
+            return setEmailError('Ingrese un correo válido.');
+        }
+
+        try {
+            const loggedInUser = JSON.parse(localStorage.getItem('bunker_user'));
+            const adminId = loggedInUser?.id;
+
+            const res = await fetch(`/api/users/${editingUser.id}/assign-email/request`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Id': adminId
+                },
+                body: JSON.stringify({ correo: emailInput })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                setEmailStep(2);
+                setEmailSuccess('Código enviado correctamente.');
+                setTimeout(() => setEmailSuccess(''), 4000);
+            } else {
+                setEmailError(data.error || 'Error al enviar código.');
+            }
+        } catch (err) {
+            setEmailError('Error de red al enviar código.');
+        }
+    };
+
+    const handleVerifyCode = async () => {
+        setEmailError('');
+        if (emailCode.length !== 6 || !/^\d+$/.test(emailCode)) {
+            return setEmailError('El código debe ser de 6 dígitos.');
+        }
+
+        try {
+            const loggedInUser = JSON.parse(localStorage.getItem('bunker_user'));
+            const adminId = loggedInUser?.id;
+
+            const res = await fetch(`/api/users/${editingUser.id}/assign-email/verify`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Id': adminId
+                },
+                body: JSON.stringify({ correo: emailInput, code: emailCode })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                setEmailSuccess('Correo asociado correctamente.');
+                setEditingUser(prev => ({ ...prev, correo: emailInput }));
+                fetchUsers();
+                setTimeout(() => {
+                    setShowEmailModal(false);
+                }, 1500);
+            } else {
+                setEmailError(data.error || 'El código ingresado no es correcto.');
+            }
+        } catch (err) {
+            setEmailError('Error de red al verificar código.');
+        }
+    };
+
     const handleOpenModal = (user = null) => {
         if (user) {
             setEditingUser(user);
@@ -36,7 +121,7 @@ const UsersView = () => {
                 nombre: user.nombre,
                 usuario: user.usuario || '',
                 rol: user.rol,
-                password: user.password,
+                password: '',
                 foto: user.foto || ''
             });
             setPreviewImage(user.foto ? user.foto : null);
@@ -235,14 +320,132 @@ const UsersView = () => {
                                 </div>
                                 <div>
                                     <label>Contraseña</label>
-                                    <input type="text" className="glass-input" required value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                                    <input
+                                        type="text"
+                                        className="glass-input"
+                                        required={!editingUser}
+                                        value={formData.password}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, ''); // solo números
+                                            if (val.length <= 6) {
+                                                setFormData({ ...formData, password: val });
+                                            }
+                                        }}
+                                        placeholder={editingUser ? "•••••• (Vacío para mantener)" : "6 dígitos numéricos"}
+                                    />
                                 </div>
                             </div>
+
+                            {/* Sección Asignar Correo para admin */}
+                            {editingUser && formData.rol === 'admin' && (
+                                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    <hr style={{ border: '0', borderTop: '1px solid rgba(255,255,255,0.1)' }} />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.9rem', color: '#ccc' }}>
+                                            {editingUser.correo ? `Correo: ${editingUser.correo}` : 'Sin correo asociado'}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            className="glass-button"
+                                            style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+                                            onClick={handleOpenEmailAssign}
+                                        >
+                                            {editingUser.correo ? 'Modificar Correo' : 'Asignar Correo'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             <button type="submit" className="glass-button primary" style={{ marginTop: 20, height: 50, fontSize: '1.1rem' }}>
                                 <Save size={20} style={{ marginRight: 10 }} /> Guardar Usuario
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Secundario de Asociación de Correo */}
+            {showEmailModal && (
+                <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowEmailModal(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: 400 }}>
+                        <div className="modal-header">
+                            <h2>Asociar Correo</h2>
+                            <CloseButton onClick={() => setShowEmailModal(false)} className="scale-90" />
+                        </div>
+                        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                            {emailError && <div style={{ color: 'var(--danger)', fontSize: '0.9rem' }}>{emailError}</div>}
+                            {emailSuccess && <div style={{ color: 'var(--success)', fontSize: '0.9rem' }}>{emailSuccess}</div>}
+
+                            {emailStep === 1 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                    <div>
+                                        <label>Correo electrónico</label>
+                                        <input
+                                            type="email"
+                                            className="glass-input"
+                                            placeholder="admin@bunker.com"
+                                            value={emailInput}
+                                            onChange={e => setEmailInput(e.target.value)}
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="glass-button primary"
+                                        style={{ height: 44 }}
+                                        onClick={handleSendCode}
+                                    >
+                                        Enviar código
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                    <div style={{ fontSize: '0.9rem', color: '#aaa' }}>
+                                        Código enviado a: <strong>{emailInput}</strong>
+                                    </div>
+                                    <div>
+                                        <label>Ingresa el código enviado a tu correo</label>
+                                        <input
+                                            type="text"
+                                            className="glass-input"
+                                            maxLength={6}
+                                            placeholder="------"
+                                            style={{ textAlign: 'center', fontSize: '1.2rem', letterSpacing: '4px' }}
+                                            value={emailCode}
+                                            onChange={e => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                if (val.length <= 6) setEmailCode(val);
+                                            }}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 10 }}>
+                                        <button
+                                            type="button"
+                                            className="glass-button"
+                                            style={{ flex: 1, height: 44 }}
+                                            onClick={() => setEmailStep(1)}
+                                        >
+                                            Atrás
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="glass-button primary"
+                                            style={{ flex: 1, height: 44 }}
+                                            onClick={handleVerifyCode}
+                                        >
+                                            Confirmar
+                                        </button>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="glass-button"
+                                        style={{ fontSize: '0.85rem', padding: '10px', marginTop: 5, width: '100%', borderColor: 'rgba(255,255,255,0.05)' }}
+                                        onClick={handleSendCode}
+                                    >
+                                        Reenviar código
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

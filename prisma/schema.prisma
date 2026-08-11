@@ -10,15 +10,30 @@ datasource db {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  nombre    String
-  usuario   String    @unique // Login username
-  rol       String    // mozo, cocina, caja, admin
-  password  String
-  foto      String?   // URL to profile photo
-  comandas  Comanda[]
-  detallesCocina DetalleComanda[] @relation("Cocinero")
+  id               Int               @id @default(autoincrement())
+  nombre           String
+  usuario          String            @unique // Login username
+  rol              String            // mozo, cocina, caja, admin
+  password         String
+  foto             String?           // URL to profile photo
+  correo           String?           // Correo del admin para recuperación
+  passwordRecovery PasswordRecovery? // Relación 1:1 de recuperación
+  comandas         Comanda[]
+  detallesCocina   DetalleComanda[]  @relation("Cocinero")
   movimientosInsumo MovimientoInsumo[]
+}
+
+model PasswordRecovery {
+  id                  Int       @id @default(autoincrement())
+  userId              Int       @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash            String    // Hash de bcrypt del código de 6 dígitos
+  expiresAt           DateTime  // Tiempo de expiración del código actual
+  sendCount           Int       @default(0) // Contador de solicitudes (max 3)
+  blockedUntil        DateTime? // Bloqueo de 30 minutos si sendCount >= 3
+  resetTokenHash      String?   // Hash del token de reinicio temporal
+  resetTokenExpiresAt DateTime? // Expiración del token de reinicio
+  createdAt           DateTime  @default(now())
 }
 
 model Mesa {

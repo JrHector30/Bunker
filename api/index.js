@@ -4,6 +4,8 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 const multer = require('multer');
+const bcrypt = require('bcryptjs');
+const axios = require('axios');
 const fs = require('fs-extra');
 const sharp = require('sharp');
 const OpenAI = require('openai'); // Import OpenAI
@@ -507,8 +509,23 @@ app.get('/api/users', async (req, res) => {
 app.post('/api/users', async (req, res) => {
     const { nombre, usuario, rol, password, foto } = req.body;
     try {
+        if (!password || password.length !== 6 || !/^\d+$/.test(password)) {
+            return res.status(400).json({ error: "La contraseña debe tener exactamente 6 dígitos numéricos." });
+        }
+        const hashedPassword = bcrypt.hashSync(password, 10);
+        
+        let correo = null;
+        if (rol === 'admin') {
+            const existingAdmin = await prisma.user.findFirst({
+                where: { rol: 'admin', correo: { not: null } }
+            });
+            if (existingAdmin) {
+                correo = existingAdmin.correo;
+            }
+        }
+
         const user = await prisma.user.create({
-            data: { nombre, usuario, rol, password, foto }
+            data: { nombre, usuario, rol, password: hashedPassword, foto, correo }
         });
         res.json(user);
     } catch (error) {
@@ -523,8 +540,25 @@ app.put('/api/users/:id', async (req, res) => {
         const updateData = {};
         if (nombre) updateData.nombre = nombre;
         if (usuario) updateData.usuario = usuario;
-        if (rol) updateData.rol = rol;
-        if (password) updateData.password = password;
+        if (rol) {
+            updateData.rol = rol;
+            if (rol === 'admin') {
+                const existingAdmin = await prisma.user.findFirst({
+                    where: { rol: 'admin', correo: { not: null } }
+                });
+                if (existingAdmin) {
+                    updateData.correo = existingAdmin.correo;
+                }
+            } else {
+                updateData.correo = null; // Remueve correo si ya no es admin
+            }
+        }
+        if (password) {
+            if (password.length !== 6 || !/^\d+$/.test(password)) {
+                return res.status(400).json({ error: "La contraseña debe tener exactamente 6 dígitos numéricos." });
+            }
+            updateData.password = bcrypt.hashSync(password, 10);
+        }
         if (foto !== undefined) updateData.foto = foto;
 
         const user = await prisma.user.update({
@@ -550,16 +584,22 @@ app.delete('/api/users/:id', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
     const { usuario, password } = req.body;
-    const user = await prisma.user.findFirst({
-        where: { usuario } // In prod, verify hash
-    });
-    if (user) {
-        if (user.password !== password) {
-            return res.status(401).json({ error: "Contraseña incorrecta" });
+    try {
+        const user = await prisma.user.findFirst({
+            where: { usuario }
+        });
+        if (user) {
+            const isMatch = bcrypt.compareSync(password, user.password);
+            if (!isMatch) {
+                return res.status(401).json({ error: "Contraseña incorrecta" });
+            }
+            res.json(user);
+        } else {
+            res.status(401).json({ error: "Invalid credentials" });
         }
-        res.json(user);
-    } else {
-        res.status(401).json({ error: "Invalid credentials" });
+    } catch (error) {
+        console.error("Error en login:", error);
+        res.status(500).json({ error: "Error en el servidor" });
     }
 });
 
@@ -3764,6 +3804,369 @@ app.put('/api/permisos/:rol/:modulo', async (req, res) => {
         res.json(permiso);
     } catch (e) {
         res.status(500).json({ error: e.message });
+    }
+});
+
+// --- HELPER: ENVÍO DE CORREO MEDIANTE RESEND ---
+const sendVerificationEmail = async (to, code) => {
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+
+    // Los códigos solo pueden aparecer en consola durante desarrollo, nunca en producción
+    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
+        console.log(`[EMAIL SIMULATOR] Código de verificación para ${to}: ${code}`);
+    }
+
+    if (!apiKey) {
+        console.warn('RESEND_API_KEY no está configurada en .env. Saltando envío real de correo.');
+        return { success: true, simulated: true };
+    }
+
+    try {
+        const response = await axios.post('https://api.resend.com/emails', {
+            from: from,
+            to: to,
+            subject: 'Código de verificación de Bunker',
+            html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #d9534f; text-align: center;">Bunker - Sistema de Recuperación</h2>
+                    <p>Hola,</p>
+                    <p>Has recibido este correo para verificar tu cuenta en Bunker.</p>
+                    <div style="background: #f4f4f4; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; color: #d9534f;">
+                        ${code}
+                    </div>
+                    <p>Este código es válido por 10 minutos.</p>
+                    <p>Si no has solicitado este código, puedes ignorar este correo.</p>
+                    <hr style="border: 0; border-top: 1px solid #eee;" />
+                    <p style="font-size: 12px; color: #888; text-align: center;">Bunker Restaurant OS &copy; 2026</p>
+                </div>
+            `
+        }, {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        return { success: true, id: response.data.id };
+    } catch (err) {
+        console.error('Error enviando correo con Resend:', err.response ? err.response.data : err.message);
+        throw new Error('No se pudo enviar el correo de verificación.');
+    }
+};
+
+const crypto = require('crypto');
+
+// --- ENDPOINTS: ASIGNACIÓN DE CORREO (PROTEGIDOS) ---
+
+app.post('/api/users/:id/assign-email/request', async (req, res) => {
+    const { id } = req.params;
+    const { correo } = req.body;
+    const adminId = req.headers['x-admin-id'];
+
+    try {
+        if (!adminId) {
+            return res.status(401).json({ error: "No autorizado. Falta identificación de administrador." });
+        }
+        const requester = await prisma.user.findUnique({ where: { id: parseInt(adminId) } });
+        if (!requester || requester.rol !== 'admin') {
+            return res.status(403).json({ error: "Acción no permitida. Solo administradores pueden realizar esta acción." });
+        }
+
+        const targetUser = await prisma.user.findUnique({ where: { id: parseInt(id) } });
+        if (!targetUser || targetUser.rol !== 'admin') {
+            return res.status(400).json({ error: "El usuario objetivo no es administrador." });
+        }
+
+        if (!correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+            return res.status(400).json({ error: "El formato de correo no es válido." });
+        }
+
+        const userId = targetUser.id;
+        const now = new Date();
+
+        let recovery = await prisma.passwordRecovery.findUnique({ where: { userId } });
+        if (!recovery) {
+            recovery = await prisma.passwordRecovery.create({
+                data: {
+                    userId,
+                    codeHash: '',
+                    expiresAt: new Date(0)
+                }
+            });
+        }
+
+        if (recovery.blockedUntil && recovery.blockedUntil > now) {
+            const waitTime = Math.ceil((recovery.blockedUntil - now) / (1000 * 60));
+            return res.status(429).json({ error: `Has alcanzado el límite de solicitudes. Podrás solicitar un nuevo código en ${waitTime} minutos.` });
+        }
+
+        const nextSendCount = recovery.sendCount + 1;
+        let blockedUntil = recovery.blockedUntil;
+
+        if (nextSendCount >= 3) {
+            blockedUntil = new Date(now.getTime() + 30 * 60 * 1000);
+        }
+
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const salt = bcrypt.genSaltSync(10);
+        const codeHash = bcrypt.hashSync(code, salt);
+        const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
+
+        await prisma.passwordRecovery.update({
+            where: { userId },
+            data: {
+                codeHash,
+                expiresAt,
+                sendCount: nextSendCount >= 3 ? 3 : nextSendCount,
+                blockedUntil
+            }
+        });
+
+        await sendVerificationEmail(correo, code);
+
+        res.json({ success: true, message: "Código enviado correctamente." });
+    } catch (err) {
+        console.error("Error en assign-email/request:", err);
+        res.status(500).json({ error: "No se pudo enviar el código de verificación." });
+    }
+});
+
+app.post('/api/users/:id/assign-email/verify', async (req, res) => {
+    const { id } = req.params;
+    const { correo, code } = req.body;
+    const adminId = req.headers['x-admin-id'];
+
+    try {
+        if (!adminId) {
+            return res.status(401).json({ error: "No autorizado. Falta identificación de administrador." });
+        }
+        const requester = await prisma.user.findUnique({ where: { id: parseInt(adminId) } });
+        if (!requester || requester.rol !== 'admin') {
+            return res.status(403).json({ error: "Acción no permitida. Solo administradores pueden realizar esta acción." });
+        }
+
+        const targetUser = await prisma.user.findUnique({ where: { id: parseInt(id) } });
+        if (!targetUser || targetUser.rol !== 'admin') {
+            return res.status(400).json({ error: "El usuario objetivo no es administrador." });
+        }
+
+        const userId = targetUser.id;
+        const now = new Date();
+
+        const recovery = await prisma.passwordRecovery.findUnique({ where: { userId } });
+        if (!recovery || !recovery.codeHash) {
+            return res.status(400).json({ error: "No se ha solicitado ningún código para este usuario." });
+        }
+
+        if (recovery.expiresAt < now) {
+            return res.status(400).json({ error: "El código ha expirado." });
+        }
+
+        const isMatch = bcrypt.compareSync(code, recovery.codeHash);
+        if (!isMatch) {
+            return res.status(400).json({ error: "El código ingresado no es correcto." });
+        }
+
+        await prisma.user.updateMany({
+            where: { rol: 'admin' },
+            data: { correo }
+        });
+
+        await prisma.passwordRecovery.update({
+            where: { userId },
+            data: {
+                codeHash: '',
+                expiresAt: new Date(0),
+                sendCount: 0,
+                blockedUntil: null,
+                resetTokenHash: null,
+                resetTokenExpiresAt: null
+            }
+        });
+
+        res.json({ success: true, message: "Correo asociado correctamente." });
+    } catch (err) {
+        console.error("Error en assign-email/verify:", err);
+        res.status(500).json({ error: "Error en el servidor al verificar el código." });
+    }
+});
+
+// --- ENDPOINTS: RECUPERACIÓN DE CONTRASEÑA ---
+
+app.post('/api/auth/recover-password/request', async (req, res) => {
+    const { usuario } = req.body;
+
+    try {
+        if (!usuario) {
+            return res.status(400).json({ error: "Usuario es requerido." });
+        }
+
+        const user = await prisma.user.findUnique({ where: { usuario } });
+        if (!user || user.rol !== 'admin') {
+            return res.status(403).json({ error: "Acción no permitida. Este flujo está limitado a administradores." });
+        }
+
+        if (!user.correo) {
+            return res.status(400).json({ error: "El usuario no tiene un correo electrónico asociado." });
+        }
+
+        const userId = user.id;
+        const now = new Date();
+
+        let recovery = await prisma.passwordRecovery.findUnique({ where: { userId } });
+        if (!recovery) {
+            recovery = await prisma.passwordRecovery.create({
+                data: {
+                    userId,
+                    codeHash: '',
+                    expiresAt: new Date(0)
+                }
+            });
+        }
+
+        if (recovery.blockedUntil && recovery.blockedUntil > now) {
+            const waitTime = Math.ceil((recovery.blockedUntil - now) / (1000 * 60));
+            return res.status(429).json({ error: `Has alcanzado el límite de solicitudes. Podrás solicitar un nuevo código en ${waitTime} minutos.` });
+        }
+
+        const nextSendCount = recovery.sendCount + 1;
+        let blockedUntil = recovery.blockedUntil;
+
+        if (nextSendCount >= 3) {
+            blockedUntil = new Date(now.getTime() + 30 * 60 * 1000);
+        }
+
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const salt = bcrypt.genSaltSync(10);
+        const codeHash = bcrypt.hashSync(code, salt);
+        const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
+
+        await prisma.passwordRecovery.update({
+            where: { userId },
+            data: {
+                codeHash,
+                expiresAt,
+                sendCount: nextSendCount >= 3 ? 3 : nextSendCount,
+                blockedUntil
+            }
+        });
+
+        await sendVerificationEmail(user.correo, code);
+
+        res.json({ success: true, message: "Código enviado correctamente." });
+    } catch (err) {
+        console.error("Error en recover-password/request:", err);
+        res.status(500).json({ error: "Error en el servidor al enviar el código de recuperación." });
+    }
+});
+
+app.post('/api/auth/recover-password/verify', async (req, res) => {
+    const { usuario, code } = req.body;
+
+    try {
+        if (!usuario || !code) {
+            return res.status(400).json({ error: "Usuario y código son requeridos." });
+        }
+
+        const user = await prisma.user.findUnique({ where: { usuario } });
+        if (!user || user.rol !== 'admin') {
+            return res.status(403).json({ error: "Acción no permitida." });
+        }
+
+        const userId = user.id;
+        const now = new Date();
+
+        const recovery = await prisma.passwordRecovery.findUnique({ where: { userId } });
+        if (!recovery || !recovery.codeHash) {
+            return res.status(400).json({ error: "No se ha solicitado ningún código de recuperación." });
+        }
+
+        if (recovery.expiresAt < now) {
+            return res.status(400).json({ error: "El código ha expirado." });
+        }
+
+        const isMatch = bcrypt.compareSync(code, recovery.codeHash);
+        if (!isMatch) {
+            return res.status(400).json({ error: "El código ingresado no es correcto." });
+        }
+
+        const resetToken = crypto.randomUUID();
+        const resetTokenHash = bcrypt.hashSync(resetToken, 10);
+        const resetTokenExpiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 min
+
+        await prisma.passwordRecovery.update({
+            where: { userId },
+            data: {
+                codeHash: '',
+                expiresAt: new Date(0),
+                resetTokenHash,
+                resetTokenExpiresAt
+            }
+        });
+
+        res.json({ success: true, resetToken, userId: user.id });
+    } catch (err) {
+        console.error("Error en recover-password/verify:", err);
+        res.status(500).json({ error: "Error en el servidor al verificar el código." });
+    }
+});
+
+app.post('/api/auth/recover-password/reset', async (req, res) => {
+    const { userId, resetToken, newPassword } = req.body;
+
+    try {
+        if (!userId || !resetToken || !newPassword) {
+            return res.status(400).json({ error: "Todos los campos son requeridos." });
+        }
+
+        if (newPassword.length !== 6 || !/^\d+$/.test(newPassword)) {
+            return res.status(400).json({ error: "La contraseña debe tener exactamente 6 dígitos numéricos." });
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
+        if (!user || user.rol !== 'admin') {
+            return res.status(403).json({ error: "Acción no permitida." });
+        }
+
+        const now = new Date();
+        const recovery = await prisma.passwordRecovery.findUnique({ where: { userId: user.id } });
+
+        if (!recovery || !recovery.resetTokenHash || !recovery.resetTokenExpiresAt) {
+            return res.status(400).json({ error: "No hay una sesión de recuperación activa." });
+        }
+
+        if (recovery.resetTokenExpiresAt < now) {
+            return res.status(400).json({ error: "El token de recuperación ha expirado." });
+        }
+
+        const isTokenMatch = bcrypt.compareSync(resetToken, recovery.resetTokenHash);
+        if (!isTokenMatch) {
+            return res.status(400).json({ error: "Token de recuperación inválido." });
+        }
+
+        const hashedPassword = bcrypt.hashSync(newPassword, 10);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { password: hashedPassword }
+        });
+
+        await prisma.passwordRecovery.update({
+            where: { userId: user.id },
+            data: {
+                codeHash: '',
+                expiresAt: new Date(0),
+                sendCount: 0,
+                blockedUntil: null,
+                resetTokenHash: null,
+                resetTokenExpiresAt: null
+            }
+        });
+
+        res.json({ success: true, message: "Contraseña actualizada exitosamente." });
+    } catch (err) {
+        console.error("Error en recover-password/reset:", err);
+        res.status(500).json({ error: "Error en el servidor al restablecer la contraseña." });
     }
 });
 
