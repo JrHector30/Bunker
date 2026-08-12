@@ -23,11 +23,22 @@ import CloseButton from '../components/ui/CloseButton';
 import { CustomCharts } from '../components/CustomCharts';
 import { CheckoutModal } from '../components/CheckoutModal';
 import { MovimientoModal } from '../components/MovimientoModal';
-import { networkStatus, NetworkState, db, offlineCashService, resolveItemPrice } from '../offline';
+import { networkStatus, NetworkState, db, offlineCashService, offlineSnapshotService, resolveItemPrice } from '../offline';
 import { PaloteoModal } from '../components/PaloteoModal';
 import { SummaryTicketModal } from '../components/SummaryTicketModal';
 import { DetailModal } from '../components/DetailModal';
 import SmoothDropdown from '../components/ui/SmoothDropdown';
+
+// Format date helper
+const formatDate = (dateString, includeTime = true) => {
+  if (!dateString) return "--:--";
+  const d = new Date(dateString);
+  return d.toLocaleString('es-PE', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    ...(includeTime ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : {}),
+    hour12: false
+  }).replace(',', '');
+};
 
 const cashierActions = [
   { id: "detail", label: "Auditar Detalles", icon: FileText },
@@ -128,10 +139,10 @@ const CashierView = () => {
 
         // Resolver precio defensivamente: precio ?? precioVenta del item, luego del producto
         const unitPrice = item.precio != null ? Number(item.precio)
-                        : item.precioVenta != null ? Number(item.precioVenta)
-                        : product?.precio != null ? Number(product.precio)
-                        : product?.precioVenta != null ? Number(product.precioVenta)
-                        : 0;
+          : item.precioVenta != null ? Number(item.precioVenta)
+            : product?.precio != null ? Number(product.precio)
+              : product?.precioVenta != null ? Number(product.precioVenta)
+                : 0;
 
         orderItemMap.get(parentId).push({
           ...item,
@@ -153,8 +164,8 @@ const CashierView = () => {
 
         // Resolver mesaId: mesaId ?? tableId, normalizar a String
         const resolvedTableId = order.mesaId != null ? String(order.mesaId)
-                              : order.tableId != null ? String(order.tableId)
-                              : null;
+          : order.tableId != null ? String(order.tableId)
+            : null;
         const mesa = resolvedTableId ? tableMap.get(resolvedTableId) : null;
 
         // Número visible: numero ?? name (nunca Number(uuid))
@@ -182,7 +193,7 @@ const CashierView = () => {
     }
 
     try {
-      const res = await fetch('/api/cashier/open-accounts');
+      const res = await fetch(`/api/cashier/open-accounts?_t=${Date.now()}`);
       if (!res.ok) throw new Error('Error al conectar con el servidor');
       const data = await res.json();
       setConnectionError(false);
@@ -213,7 +224,7 @@ const CashierView = () => {
     }
 
     try {
-      const res = await fetch('/api/cashier/balance');
+      const res = await fetch(`/api/cashier/balance?_t=${Date.now()}`);
       if (!res.ok) throw new Error('Error al conectar con el servidor');
       const data = await res.json();
       setConnectionError(false);
@@ -246,10 +257,27 @@ const CashierView = () => {
         });
       }
 
+      if (searchQuery) {
+        filtered = filtered.filter(arq => {
+          const matchDate = (dateStr) => {
+            if (!dateStr) return false;
+            return formatDate(dateStr).toLowerCase().includes(searchQuery.toLowerCase());
+          };
+
+          const userName = arq.usuarioId === user?.id ? user.nombre : 'Hector';
+
+          return arq.id.toString().includes(searchQuery) ||
+            matchDate(arq.fechaInicio) ||
+            matchDate(arq.fechaFin) ||
+            arq.estado.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            userName.toLowerCase().includes(searchQuery.toLowerCase());
+        });
+      }
+
       const totalCount = filtered.length;
       const limit = 5;
       const totalPages = Math.ceil(totalCount / limit) || 1;
-      
+
       const startIndex = (currentPage - 1) * limit;
       const paginated = filtered.slice(startIndex, startIndex + limit);
 
@@ -381,7 +409,7 @@ const CashierView = () => {
           totalCaja: inicio + manualIngresos + incomeDetails.efectivo - manualEgresos,
           totalBruto: sessionHasError ? null : totalBruto,
           totalPropinas,
-          totalPendiente
+          usuario: { nombre: arq.usuarioId === user?.id ? user.nombre : 'Hector' }
         };
       });
 
@@ -397,7 +425,7 @@ const CashierView = () => {
       console.error('[CashierView] Error local en loadHistoryLocal:', err);
       return { data: [], meta: { total: 0, page: 1, totalPages: 1 } };
     }
-  }, [currentPage, filterDateRange]);
+  }, [currentPage, filterDateRange, searchQuery, user]);
 
   // API Call: Fetch historical sessions list
   const historyFetcher = useCallback(async () => {
@@ -406,7 +434,10 @@ const CashierView = () => {
       return loadHistoryLocal();
     }
 
-    let url = `/api/cashier/history?page=${currentPage}&limit=5`;
+    let url = `/api/cashier/history?page=${currentPage}&limit=5&_t=${Date.now()}`;
+    if (searchQuery) {
+      url += `&search=${encodeURIComponent(searchQuery)}`;
+    }
     if (filterDateRange?.from) {
       const startStr = format(filterDateRange.from, 'yyyy-MM-dd');
       if (filterDateRange.to) {
@@ -428,14 +459,15 @@ const CashierView = () => {
       setConnectionError(true);
       throw err; // Re-lanzar para conservar los últimos datos válidos en useCache
     }
-  }, [currentPage, filterDateRange, loadHistoryLocal]);
+  }, [currentPage, filterDateRange, searchQuery, loadHistoryLocal]);
 
   const historyKey = useMemo(() => {
-    if (!filterDateRange?.from) return `cashier_history_${currentPage}_none`;
+    const searchPart = searchQuery ? `_search_${searchQuery}` : '';
+    if (!filterDateRange?.from) return `cashier_history_${currentPage}_none${searchPart}`;
     const startStr = format(filterDateRange.from, 'yyyy-MM-dd');
     const endStr = filterDateRange.to ? format(filterDateRange.to, 'yyyy-MM-dd') : '';
-    return `cashier_history_${currentPage}_${startStr}_${endStr}`;
-  }, [currentPage, filterDateRange]);
+    return `cashier_history_${currentPage}_${startStr}_${endStr}${searchPart}`;
+  }, [currentPage, filterDateRange, searchQuery]);
 
   const { data: history, loading: historyLoading, mutate: fetchHistory } = useCache(
     historyKey,
@@ -504,10 +536,10 @@ const CashierView = () => {
   }, [fetchHistory]);
 
   const hasPricingError = useMemo(() => {
-    const tableError = openTables?.some(cuenta => 
+    const tableError = openTables?.some(cuenta =>
       cuenta.detalles?.some(d => resolveItemPrice(d) === null)
     );
-    const statusError = currentStatus?.ventas?.some(v => 
+    const statusError = currentStatus?.ventas?.some(v =>
       v.items?.some(i => i.precio === null)
     );
     return !!(tableError || statusError);
@@ -564,7 +596,7 @@ const CashierView = () => {
     fetch('/api/cashier/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ montoInicial })
+      body: JSON.stringify({ montoInicial, usuarioId: user?.id })
     })
       .then(async res => {
         const body = await res.json();
@@ -573,7 +605,7 @@ const CashierView = () => {
       })
       .then(async () => {
         // Hidratar snapshot de fondo para incorporar el cambio de sesión
-        offlineSnapshotService.hydrateOperationalSnapshot().catch(() => {});
+        offlineSnapshotService.hydrateOperationalSnapshot().catch(() => { });
 
         fetchStatus();
         setCurrentPage(1);
@@ -618,7 +650,7 @@ const CashierView = () => {
         if (res.ok) {
           showToast('Movimiento registrado con éxito.', 'success');
           // Hidratar snapshot de fondo para incorporar el movimiento de caja
-          offlineSnapshotService.hydrateOperationalSnapshot().catch(() => {});
+          offlineSnapshotService.hydrateOperationalSnapshot().catch(() => { });
 
           fetchStatus();
           fetchHistory();
@@ -668,16 +700,7 @@ const CashierView = () => {
     }
   };
 
-  // Format date helper
-  const formatDate = (dateString, includeTime = true) => {
-    if (!dateString) return "--:--";
-    const d = new Date(dateString);
-    return d.toLocaleString('es-PE', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      ...(includeTime ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : {}),
-      hour12: false
-    }).replace(',', '');
-  };
+  // Removed formatDate helper from here (moved to top of file)
 
   // SEARCH AND FILTER HISTORY
   const filteredHistory = useMemo(() => {
@@ -687,6 +710,7 @@ const CashierView = () => {
       arq.id.toString().includes(searchQuery) ||
       (arq.usuario?.nombre || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       formatDate(arq.fechaInicio).toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (arq.fechaFin && formatDate(arq.fechaFin).toLowerCase().includes(searchQuery.toLowerCase())) ||
       arq.estado.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [history, searchQuery]);
@@ -1450,14 +1474,24 @@ const CashierView = () => {
                               <span>{formatDate(arq.fechaInicio)}</span>
                             </div>
                             {isActiveSession ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 font-sans">
-                                <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
-                                EN CURSO
-                              </span>
+                              <div className="flex flex-col gap-1 items-start">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 font-sans">
+                                  <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
+                                  EN CURSO
+                                </span>
+                                <span className="text-[11px] font-semibold text-emerald-600 font-sans ml-1">
+                                  Resp: {arq.usuario?.nombre || 'Hector'}
+                                </span>
+                              </div>
                             ) : (
-                              <div className="flex items-center gap-1 text-[var(--text-muted)] font-sans text-[12px]">
-                                <span className="text-[10px] font-medium">Fin:</span>
-                                <span>{formatDate(arq.fechaFin)}</span>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1 text-[var(--text-muted)] font-sans text-[12px]">
+                                  <span className="text-[10px] font-medium">Fin:</span>
+                                  <span>{formatDate(arq.fechaFin)}</span>
+                                </div>
+                                <div className="text-[11px] font-medium text-[var(--text-muted)] font-sans ml-1">
+                                  Resp: {arq.usuario?.nombre || 'Hector'}
+                                </div>
                               </div>
                             )}
                           </td>

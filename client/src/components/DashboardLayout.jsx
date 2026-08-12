@@ -41,7 +41,7 @@ const DashboardLayout = () => {
     const { showToast } = useNotification();
     const navigate = useNavigate();
     const location = useLocation();
-    
+
     const [netState, setNetState] = useState(networkStatus.getStatus());
     const [pendingOps, setPendingOps] = useState(0);
 
@@ -65,7 +65,7 @@ const DashboardLayout = () => {
         // Intervalo para actualizar el contador y realizar pings pasivos (8s para no saturar)
         const interval = setInterval(() => {
             updatePendingCount();
-            networkStatus.checkConnectivity().catch(() => {});
+            networkStatus.checkConnectivity().catch(() => { });
         }, 8000);
 
         // Escuchar eventos globales de cola
@@ -201,11 +201,11 @@ const DashboardLayout = () => {
     const isDarkMode = mode === 'dark';
     const isCashier = location.pathname === '/cashier';
     const isRail = isTabletRail || collapsed;
- 
+
     return (
         <React.Fragment>
             <div className="app-container" style={{ display: 'flex', minHeight: '100vh', overflow: 'hidden', position: 'relative' }}>
- 
+
                 {/* 1. Sleek Sidebar Panel (Inspired by GestionDeComandas) */}
                 <aside
                     id="bunker-sidebar"
@@ -324,7 +324,7 @@ const DashboardLayout = () => {
                                                 }
                                             }}
                                             className={`relative rounded-xl flex items-center transition-all duration-200 group cursor-pointer no-underline ${isRail
-                                                ? 'w-12 h-12 justify-center'
+                                                ? 'w-12 h-12 justify-center ml-2'
                                                 : 'w-full h-10 px-3.5 justify-between gap-3.5'
                                                 } ${isPathActive
                                                     ? 'text-slate-200 bg-[#151722]/50'
@@ -576,11 +576,11 @@ const DashboardLayout = () => {
                 {/* Tablet Navigation Rail Popover Flyout for Logistics */}
                 {isTabletRail && isLogisticaPopoverOpen && (
                     <>
-                        <div 
-                            className="fixed inset-0 z-40 bg-transparent" 
+                        <div
+                            className="fixed inset-0 z-40 bg-transparent"
                             onClick={() => setIsLogisticaPopoverOpen(false)}
                         />
-                        <div 
+                        <div
                             className="fixed z-50 p-2.5 rounded-xl border bg-[#0d0e15] border-slate-800 shadow-2xl flex flex-col gap-1 w-52 font-sans"
                             style={{
                                 left: '84px',
@@ -605,11 +605,10 @@ const DashboardLayout = () => {
                                         key={sub.id}
                                         to={sub.to}
                                         onClick={() => setIsLogisticaPopoverOpen(false)}
-                                        className={`rounded-lg flex items-center h-10 px-3 justify-start gap-2.5 transition-all duration-200 group cursor-pointer no-underline ${
-                                            isSubActive
-                                                ? 'bg-brand text-white shadow-md shadow-brand/20 font-bold'
-                                                : 'text-slate-400 hover:text-slate-200 hover:bg-[#151722]'
-                                        }`}
+                                        className={`rounded-lg flex items-center h-10 px-3 justify-start gap-2.5 transition-all duration-200 group cursor-pointer no-underline ${isSubActive
+                                            ? 'bg-brand text-white shadow-md shadow-brand/20 font-bold'
+                                            : 'text-slate-400 hover:text-slate-200 hover:bg-[#151722]'
+                                            }`}
                                     >
                                         <SubIcon className="w-4 h-4 flex-shrink-0" />
                                         <span className="text-xs font-semibold">{sub.label}</span>
@@ -622,7 +621,7 @@ const DashboardLayout = () => {
 
                 {/* 2. Main Content Layout (Occupies rest of screen space) */}
                 <div className={`flex-1 transition-all duration-300 ${isRail ? 'pl-0 sm:pl-20' : 'pl-0 sm:pl-64'} flex flex-col w-full min-h-screen bg-[var(--bg-primary)] text-[var(--text-main)]`}>
-                    
+
                     {/* Mobile Top Header Bar (< 640px) */}
                     <header className="flex sm:hidden items-center justify-between px-4 py-3 bg-[#0d0e15] border-b border-slate-800/80 sticky top-0 z-30 w-full shrink-0 select-none">
                         <div className="flex items-center gap-2.5">
@@ -635,7 +634,7 @@ const DashboardLayout = () => {
                         <div className="flex items-center gap-3">
                             {/* Escasez Alerts */}
                             {(user?.rol === 'admin' || user?.rol === 'caja') && lowStockAlerts.length > 0 && showAlerts && (
-                                <button 
+                                <button
                                     onClick={() => setIsAlertsModalOpen(true)}
                                     className="relative p-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 cursor-pointer"
                                     style={{ background: 'transparent', border: 'none' }}
@@ -696,199 +695,195 @@ const DashboardLayout = () => {
                         { id: 'kitchen', to: '/kitchen', icon: ChefHat, label: 'Cocina', modulo: 'cocina' },
                         { id: 'cashier', to: '/cashier', icon: DollarSign, label: 'Caja', modulo: 'caja' },
                     ]
-                    .filter(item => !item.modulo || tienePermiso(item.modulo))
-                    .map((item) => {
-                        const DockIcon = item.icon;
-                        const isLinkActive = location.pathname.startsWith(item.to);
-                        return (
-                            <NavLink
-                                key={item.id}
-                                to={item.to}
-                                className={`flex-1 py-1 flex flex-col items-center justify-center gap-1 transition-all duration-200 no-underline rounded-xl relative ${
-                                    isLinkActive 
-                                        ? 'text-[var(--primary)] font-bold' 
+                        .filter(item => !item.modulo || tienePermiso(item.modulo))
+                        .map((item) => {
+                            const DockIcon = item.icon;
+                            const isLinkActive = location.pathname.startsWith(item.to);
+                            return (
+                                <NavLink
+                                    key={item.id}
+                                    to={item.to}
+                                    className={`flex-1 py-1 flex flex-col items-center justify-center gap-1 transition-all duration-200 no-underline rounded-xl relative ${isLinkActive
+                                        ? 'text-[var(--primary)] font-bold'
                                         : 'text-slate-500 hover:text-slate-300'
-                                }`}
-                            >
-                                {isLinkActive && (
-                                    <span className="absolute top-0 w-8 h-[3px] bg-[var(--primary)] rounded-full shadow-[0_0_10px_var(--primary)] animate-pulse" />
-                                )}
-                                <DockIcon className="w-5 h-5 transition-transform duration-200 active:scale-90" />
-                                <span className="text-[9px] uppercase tracking-wider font-extrabold font-sans mt-0.5">{item.label}</span>
-                            </NavLink>
-                        );
-                    })}
+                                        }`}
+                                >
+                                    {isLinkActive && (
+                                        <span className="absolute top-0 w-8 h-[3px] bg-[var(--primary)] rounded-full shadow-[0_0_10px_var(--primary)] animate-pulse" />
+                                    )}
+                                    <DockIcon className="w-5 h-5 transition-transform duration-200 active:scale-90" />
+                                    <span className="text-[9px] uppercase tracking-wider font-extrabold font-sans mt-0.5">{item.label}</span>
+                                </NavLink>
+                            );
+                        })}
 
                     {/* Más Button (Local sheet trigger) */}
                     <button
                         ref={masButtonRef}
                         onClick={() => setIsMoreOpen(true)}
-                        className={`flex-1 py-1 flex flex-col items-center justify-center gap-1 transition-all duration-200 rounded-xl relative bg-transparent border-none outline-none cursor-pointer ${
-                            isMoreOpen ? 'text-[var(--primary)]' : 'text-slate-500 hover:text-slate-300'
-                        }`}
+                        className={`flex-1 py-1 flex flex-col items-center justify-center gap-1 transition-all duration-200 rounded-xl relative bg-transparent border-none outline-none cursor-pointer ${isMoreOpen ? 'text-[var(--primary)]' : 'text-slate-500 hover:text-slate-300'
+                            }`}
                     >
                         <Menu className="w-5 h-5 transition-transform duration-200 active:scale-90" />
                         <span className="text-[9px] uppercase tracking-wider font-extrabold font-sans mt-0.5">Más</span>
                     </button>
                 </div>
 
-            {/* Bottom Sheet Drawer for "Más" using AnimatePresence */}
-            <AnimatePresence>
-                {isMoreOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => {
-                                setIsMoreOpen(false);
-                                masButtonRef.current?.focus();
-                            }}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[1030] sm:hidden"
-                        />
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed bottom-0 left-0 right-0 bg-[#0d0e15] border-t border-slate-800 rounded-t-[24px] z-[1040] shadow-2xl flex flex-col font-sans max-h-[80vh] overflow-hidden sm:hidden"
-                            style={{
-                                paddingBottom: 'calc(20px + env(safe-area-inset-bottom))',
-                            }}
-                        >
-                            <div className="w-12 h-1 bg-slate-800 rounded-full mx-auto my-3 flex-shrink-0" />
-                            
-                            <div className="flex justify-between items-center px-5 pb-3 border-b border-slate-800/60">
-                                <div>
-                                    <h3 className="text-sm font-bold text-white uppercase tracking-wider leading-none font-sans">Más Opciones</h3>
-                                    <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-widest font-sans">Búnker Navegación</p>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        setIsMoreOpen(false);
-                                        masButtonRef.current?.focus();
-                                    }}
-                                    className="w-8 h-8 rounded-full bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
+                {/* Bottom Sheet Drawer for "Más" using AnimatePresence */}
+                <AnimatePresence>
+                    {isMoreOpen && (
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => {
+                                    setIsMoreOpen(false);
+                                    masButtonRef.current?.focus();
+                                }}
+                                className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[1030] sm:hidden"
+                            />
+                            <motion.div
+                                initial={{ y: "100%" }}
+                                animate={{ y: 0 }}
+                                exit={{ y: "100%" }}
+                                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                                className="fixed bottom-0 left-0 right-0 bg-[#0d0e15] border-t border-slate-800 rounded-t-[24px] z-[1040] shadow-2xl flex flex-col font-sans max-h-[80vh] overflow-hidden sm:hidden"
+                                style={{
+                                    paddingBottom: 'calc(20px + env(safe-area-inset-bottom))',
+                                }}
+                            >
+                                <div className="w-12 h-1 bg-slate-800 rounded-full mx-auto my-3 flex-shrink-0" />
 
-                            <div className="overflow-y-auto px-5 py-4 flex flex-col gap-4 flex-grow">
-                                <div className="grid grid-cols-2 gap-3.5">
-                                    {visibleMenuItems
-                                        .filter(item => !['home', 'tables', 'kitchen', 'cashier'].includes(item.id))
-                                        .map(item => {
-                                            const Icon = item.icon;
-                                            const isPathActive = location.pathname.startsWith(item.to.split('?')[0]);
-                                            
-                                            if (item.id === 'inventory') {
-                                                return (
-                                                    <div key={item.id} className="col-span-2 flex flex-col gap-2.5 bg-[#141622]/40 border border-slate-800/50 rounded-xl p-3.5">
-                                                        <div className="flex items-center gap-2 text-slate-300 font-bold text-xs uppercase tracking-wider">
-                                                            <Icon size={16} className="text-[var(--primary)]" />
-                                                            <span className="font-sans">{item.label}</span>
-                                                        </div>
-                                                        <div className="grid grid-cols-1 gap-2 mt-1">
-                                                            {[
-                                                                { id: 'logistica-platos', to: '/admin/inventory?tab=platos', icon: Utensils, label: 'Menú (Platos)' },
-                                                                { id: 'logistica-insumos', to: '/admin/inventory?tab=insumos', icon: Package, label: 'Inventario (Insumos)' },
-                                                                { id: 'logistica-recetario', to: '/admin/inventory?tab=recetario', icon: Beaker, label: 'Recetarios (Costeo)' },
-                                                                { id: 'logistica-kardex', to: '/admin/inventory?tab=kardex', icon: History, label: 'Kardex' },
-                                                                { id: 'logistica-auditoria', to: '/admin/inventory?tab=auditoria', icon: ClipboardCheck, label: 'Auditoría' },
-                                                            ].map(sub => {
-                                                                const SubIcon = sub.icon;
-                                                                const currentPathWithSearch = location.pathname + location.search;
-                                                                const isSubActive = currentPathWithSearch === sub.to || (sub.to.includes('tab=platos') && currentPathWithSearch === '/admin/inventory');
-                                                                return (
-                                                                    <Link
-                                                                        key={sub.id}
-                                                                        to={sub.to}
-                                                                        onClick={() => setIsMoreOpen(false)}
-                                                                        className={`rounded-lg flex items-center h-10 px-3.5 justify-start gap-2.5 transition-all duration-200 group cursor-pointer no-underline ${
-                                                                            isSubActive
+                                <div className="flex justify-between items-center px-5 pb-3 border-b border-slate-800/60">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-wider leading-none font-sans">Más Opciones</h3>
+                                        <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-widest font-sans">Búnker Navegación</p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setIsMoreOpen(false);
+                                            masButtonRef.current?.focus();
+                                        }}
+                                        className="w-8 h-8 rounded-full bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+
+                                <div className="overflow-y-auto px-5 py-4 flex flex-col gap-4 flex-grow">
+                                    <div className="grid grid-cols-2 gap-3.5">
+                                        {visibleMenuItems
+                                            .filter(item => !['home', 'tables', 'kitchen', 'cashier'].includes(item.id))
+                                            .map(item => {
+                                                const Icon = item.icon;
+                                                const isPathActive = location.pathname.startsWith(item.to.split('?')[0]);
+
+                                                if (item.id === 'inventory') {
+                                                    return (
+                                                        <div key={item.id} className="col-span-2 flex flex-col gap-2.5 bg-[#141622]/40 border border-slate-800/50 rounded-xl p-3.5">
+                                                            <div className="flex items-center gap-2 text-slate-300 font-bold text-xs uppercase tracking-wider">
+                                                                <Icon size={16} className="text-[var(--primary)]" />
+                                                                <span className="font-sans">{item.label}</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-1 gap-2 mt-1">
+                                                                {[
+                                                                    { id: 'logistica-platos', to: '/admin/inventory?tab=platos', icon: Utensils, label: 'Menú (Platos)' },
+                                                                    { id: 'logistica-insumos', to: '/admin/inventory?tab=insumos', icon: Package, label: 'Inventario (Insumos)' },
+                                                                    { id: 'logistica-recetario', to: '/admin/inventory?tab=recetario', icon: Beaker, label: 'Recetarios (Costeo)' },
+                                                                    { id: 'logistica-kardex', to: '/admin/inventory?tab=kardex', icon: History, label: 'Kardex' },
+                                                                    { id: 'logistica-auditoria', to: '/admin/inventory?tab=auditoria', icon: ClipboardCheck, label: 'Auditoría' },
+                                                                ].map(sub => {
+                                                                    const SubIcon = sub.icon;
+                                                                    const currentPathWithSearch = location.pathname + location.search;
+                                                                    const isSubActive = currentPathWithSearch === sub.to || (sub.to.includes('tab=platos') && currentPathWithSearch === '/admin/inventory');
+                                                                    return (
+                                                                        <Link
+                                                                            key={sub.id}
+                                                                            to={sub.to}
+                                                                            onClick={() => setIsMoreOpen(false)}
+                                                                            className={`rounded-lg flex items-center h-10 px-3.5 justify-start gap-2.5 transition-all duration-200 group cursor-pointer no-underline ${isSubActive
                                                                                 ? 'bg-brand text-white shadow-md shadow-brand/20 font-bold'
                                                                                 : 'bg-[#0d0e15] border border-slate-800/60 text-slate-400 hover:text-slate-200 hover:bg-[#151722]'
-                                                                        }`}
-                                                                    >
-                                                                        <SubIcon className="w-4 h-4" />
-                                                                        <span className="text-[11px] font-semibold font-sans">{sub.label}</span>
-                                                                    </Link>
-                                                                );
-                                                            })}
+                                                                                }`}
+                                                                        >
+                                                                            <SubIcon className="w-4 h-4" />
+                                                                            <span className="text-[11px] font-semibold font-sans">{sub.label}</span>
+                                                                        </Link>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            }
+                                                    );
+                                                }
 
-                                            return (
-                                                <Link
-                                                    key={item.id}
-                                                    to={item.to}
-                                                    onClick={() => setIsMoreOpen(false)}
-                                                    className={`rounded-xl flex flex-col justify-center items-center p-4 border transition-all duration-200 group cursor-pointer no-underline text-center gap-2 ${
-                                                        isPathActive
+                                                return (
+                                                    <Link
+                                                        key={item.id}
+                                                        to={item.to}
+                                                        onClick={() => setIsMoreOpen(false)}
+                                                        className={`rounded-xl flex flex-col justify-center items-center p-4 border transition-all duration-200 group cursor-pointer no-underline text-center gap-2 ${isPathActive
                                                             ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20 font-bold'
                                                             : 'bg-[#141622]/40 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-[#151722]'
-                                                    }`}
-                                                    style={{ minHeight: '80px' }}
-                                                >
-                                                    <Icon className="w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
-                                                    <span className="text-[11px] font-semibold tracking-wide font-sans">{item.label}</span>
-                                                </Link>
-                                            );
-                                        })}
-                                </div>
+                                                            }`}
+                                                        style={{ minHeight: '80px' }}
+                                                    >
+                                                        <Icon className="w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
+                                                        <span className="text-[11px] font-semibold tracking-wide font-sans">{item.label}</span>
+                                                    </Link>
+                                                );
+                                            })}
+                                    </div>
 
-                                <div className="flex gap-3.5 mt-2 border-t border-slate-800/85 pt-4 flex-shrink-0">
-                                    <button
-                                        onClick={() => {
-                                            toggleMode();
-                                            setIsMoreOpen(false);
-                                        }}
-                                        className="flex-grow rounded-xl flex items-center justify-center gap-2 h-11 border border-slate-800 text-slate-300 bg-slate-900/40 hover:bg-slate-900 cursor-pointer text-xs font-semibold"
-                                    >
-                                        {isDarkMode ? (
-                                            <>
-                                                <Sun size={16} className="text-amber-500" />
-                                                <span>Modo Claro</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Moon size={16} className="text-slate-400" />
-                                                <span>Modo Oscuro</span>
-                                            </>
-                                        )}
-                                    </button>
+                                    <div className="flex gap-3.5 mt-2 border-t border-slate-800/85 pt-4 flex-shrink-0">
+                                        <button
+                                            onClick={() => {
+                                                toggleMode();
+                                                setIsMoreOpen(false);
+                                            }}
+                                            className="flex-grow rounded-xl flex items-center justify-center gap-2 h-11 border border-slate-800 text-slate-300 bg-slate-900/40 hover:bg-slate-900 cursor-pointer text-xs font-semibold"
+                                        >
+                                            {isDarkMode ? (
+                                                <>
+                                                    <Sun size={16} className="text-amber-500" />
+                                                    <span>Modo Claro</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Moon size={16} className="text-slate-400" />
+                                                    <span>Modo Oscuro</span>
+                                                </>
+                                            )}
+                                        </button>
 
-                                    <button
-                                        onClick={() => {
-                                            setIsMoreOpen(false);
-                                            handleLogout();
-                                        }}
-                                        className="flex-grow rounded-xl flex items-center justify-center gap-2 h-11 border border-red-500/20 text-red-500 bg-red-500/10 hover:bg-red-500/20 cursor-pointer text-xs font-semibold"
-                                    >
-                                        <LogOut size={16} />
-                                        <span>Cerrar Sesión</span>
-                                    </button>
+                                        <button
+                                            onClick={() => {
+                                                setIsMoreOpen(false);
+                                                handleLogout();
+                                            }}
+                                            className="flex-grow rounded-xl flex items-center justify-center gap-2 h-11 border border-red-500/20 text-red-500 bg-red-500/10 hover:bg-red-500/20 cursor-pointer text-xs font-semibold"
+                                        >
+                                            <LogOut size={16} />
+                                            <span>Cerrar Sesión</span>
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Modal de Alertas de Escasez */}
             {isAlertsModalOpen && (
                 <div className="modal-overlay" style={{ zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setIsAlertsModalOpen(false)}>
-                    <div className="modal-content glass-panel" style={{ width: '90%', maxWidth: 500, background: 'rgba(20, 20, 20, 0.85)', backdropFilter: 'blur(15px)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }} onClick={e => e.stopPropagation()}>
-                        <div className="modal-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 15, marginBottom: 15 }}>
+                    <div className="modal-content glass-panel" style={{ width: '90%', maxWidth: 500, background: isDarkMode ? 'rgba(20, 20, 20, 0.85)' : 'var(--bg-secondary, rgba(255, 255, 255, 0.95))', backdropFilter: 'blur(15px)', color: isDarkMode ? '#fff' : 'var(--text-main, #1e293b)', border: isDarkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--glass-border, rgba(0,0,0,0.1))' }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header" style={{ borderBottom: isDarkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--glass-border, rgba(0,0,0,0.1))', paddingBottom: 15, marginBottom: 15 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <AlertCircle color="var(--danger)" size={24} />
                                 <h2 style={{ margin: 0 }}>Insumos por Agotarse</h2>
                             </div>
-                            <button className="glass-button" onClick={() => setIsAlertsModalOpen(false)} style={{ border: 'none', background: 'transparent', padding: 5, color: '#fff' }}><X size={24} /></button>
+                            <button className="glass-button" onClick={() => setIsAlertsModalOpen(false)} style={{ border: 'none', background: 'transparent', padding: 5, color: isDarkMode ? '#fff' : 'var(--text-main, #1e293b)' }}><X size={24} /></button>
                         </div>
                         <div className="modal-body minimal-scrollbar" style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: 10 }}>
                             {lowStockAlerts.length === 0 ? (
@@ -896,7 +891,7 @@ const DashboardLayout = () => {
                             ) : (
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)' }}>
+                                        <tr style={{ borderBottom: isDarkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--table-row-border, rgba(0,0,0,0.1))', textAlign: 'left', fontSize: '0.9rem', color: isDarkMode ? 'rgba(255,255,255,0.6)' : 'var(--text-muted, #64748b)' }}>
                                             <th style={{ padding: '10px 0' }}>Insumo</th>
                                             <th style={{ padding: '10px 0', textAlign: 'right' }}>Stock Actual</th>
                                             <th style={{ padding: '10px 0', textAlign: 'right' }}>Mínimo</th>
@@ -904,12 +899,12 @@ const DashboardLayout = () => {
                                     </thead>
                                     <tbody>
                                         {lowStockAlerts.map(alert => (
-                                            <tr key={alert.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.95rem' }}>
+                                            <tr key={alert.id} style={{ borderBottom: isDarkMode ? '1px solid rgba(255,255,255,0.05)' : '1px solid var(--table-row-border, rgba(0,0,0,0.05))', fontSize: '0.95rem' }}>
                                                 <td style={{ padding: '12px 0', fontWeight: '500' }}>{alert.nombre}</td>
                                                 <td style={{ padding: '12px 0', textAlign: 'right', fontWeight: 'bold', color: 'var(--warning)' }}>
                                                     {parseFloat(Number(alert.stock).toFixed(2))} <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>{alert.unidadMedida}</span>
                                                 </td>
-                                                <td style={{ padding: '12px 0', textAlign: 'right', color: 'rgba(255,255,255,0.5)' }}>
+                                                <td style={{ padding: '12px 0', textAlign: 'right', color: isDarkMode ? 'rgba(255,255,255,0.5)' : 'var(--text-muted, #64748b)' }}>
                                                     {parseFloat(Number(alert.stockMinimo).toFixed(2))} <span style={{ fontSize: '0.8rem' }}>{alert.unidadMedida}</span>
                                                 </td>
                                             </tr>

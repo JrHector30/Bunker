@@ -787,11 +787,20 @@ const InventoryView = () => {
         }
         let imageUrl = editingProduct ? editingProduct.imagen : null;
         if (formData.imageFile) {
+            if (formData.imageFile.size > 15 * 1024 * 1024) {
+                showToast('La imagen debe ser de 15MB como máximo', 'error');
+                return;
+            }
             const uploadData = new FormData(); uploadData.append('image', formData.imageFile);
             try {
                 const res = await fetch('/api/upload', { method: 'POST', body: uploadData });
-                imageUrl = (await res.json()).url;
-            } catch (error) { showToast('Falló la subida de imagen', 'error'); return; }
+                if (!res.ok) {
+                    showToast('La imagen debe ser de 15MB como máximo', 'error');
+                    return;
+                }
+                const data = await res.json();
+                imageUrl = data.url;
+            } catch (error) { showToast('La imagen debe ser de 15MB como máximo', 'error'); return; }
         }
         const payload = { ...formData, imagen: imageUrl };
         const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';

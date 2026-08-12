@@ -149,7 +149,7 @@ const StaffStatsView = () => {
     // 2. Fetch stats for the selected cashier session (arqueoId)
     const fetchArqueoStats = useCallback((arqueoId, showLoading = true) => {
         if (showLoading) setLoading(true);
-        fetch(`/api/staff/stats?arqueoId=${arqueoId}`)
+        fetch(`/api/staff/stats?arqueoId=${arqueoId}&_t=${Date.now()}`)
             .then(async (res) => {
                 if (!res.ok) {
                     throw new Error(`Error de servidor (Status: ${res.status})`);
@@ -195,7 +195,7 @@ const StaffStatsView = () => {
         setError(null);
 
         setLoading(true);
-        fetch(`/api/staff/stats/sessions?date=${dateQueryStr}`)
+        fetch(`/api/staff/stats/sessions?date=${dateQueryStr}&_t=${Date.now()}`)
             .then(async (res) => {
                 if (!res.ok) {
                     throw new Error(`Error de servidor (Status: ${res.status})`);
@@ -652,9 +652,10 @@ const StaffStatsView = () => {
                                 {sessions.map(s => {
                                     const startStr = format(new Date(s.fechaInicio), 'HH:mm');
                                     const endStr = s.fechaFin ? format(new Date(s.fechaFin), 'HH:mm') : 'Activa';
+                                    const userName = s.usuario?.nombre || 'Hector';
                                     return (
                                         <option key={s.id} value={s.id}>
-                                            Arqueo #{s.id} ({startStr} - {endStr})
+                                            Arqueo #{s.id} ({startStr} - {endStr}) - Resp: {userName}
                                         </option>
                                     );
                                 })}
@@ -716,6 +717,7 @@ const StaffStatsView = () => {
                         {sessions.map(s => {
                             const startStr = format(new Date(s.fechaInicio), 'HH:mm');
                             const endStr = s.fechaFin ? format(new Date(s.fechaFin), 'HH:mm') : 'Activa';
+                            const userName = s.usuario?.nombre || 'Hector';
                             return (
                                 <button
                                     key={s.id}
@@ -736,6 +738,7 @@ const StaffStatsView = () => {
                                 >
                                     <span style={{ fontWeight: 'black', fontSize: 14 }}>Arqueo N° {s.id}</span>
                                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{startStr} a {endStr} ({s.estado === 'abierto' ? 'Abierta' : 'Cerrada'})</span>
+                                    <span style={{ fontSize: 11, color: 'var(--warning)', fontWeight: 'semibold', marginTop: 2 }}>Resp: {userName}</span>
                                 </button>
                             );
                         })}

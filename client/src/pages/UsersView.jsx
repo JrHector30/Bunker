@@ -137,6 +137,11 @@ const UsersView = () => {
         const file = e.target.files[0];
         if (!file) return;
 
+        if (file.size > 15 * 1024 * 1024) {
+            showToast('La imagen debe ser de 15MB como máximo', 'error');
+            return;
+        }
+
         // Preview
         const reader = new FileReader();
         reader.onloadend = () => setPreviewImage(reader.result);
@@ -151,13 +156,17 @@ const UsersView = () => {
                 method: 'POST',
                 body: formData
             });
+            if (!res.ok) {
+                showToast('La imagen debe ser de 15MB como máximo', 'error');
+                return;
+            }
             const data = await res.json();
             if (data.url) {
                 setFormData(prev => ({ ...prev, foto: data.url }));
             }
         } catch (error) {
             console.error('Error uploading image:', error);
-            showToast('Error al subir imagen', 'error');
+            showToast('La imagen debe ser de 15MB como máximo', 'error');
         }
     };
 

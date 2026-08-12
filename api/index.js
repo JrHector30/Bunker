@@ -41,7 +41,7 @@ if (process.env.NODE_ENV !== 'production') {
 const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+    limits: { fileSize: 15 * 1024 * 1024 } // 15MB
 });
 
 app.use(cors({ origin: '*' }));
@@ -49,8 +49,8 @@ app.use((req, res, next) => {
     console.log(`[HTTP] ${req.method} ${req.url}`);
     next();
 });
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ limit: '5mb', extended: true }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
@@ -1717,15 +1717,26 @@ app.get('/api/staff/stats/sessions', async (req, res) => {
 
         const arqueos = await prisma.arqueo.findMany({
             where: {
-                fechaInicio: {
-                    gte: start,
-                    lte: end
-                }
+                OR: [
+                    { fechaInicio: { gte: start, lte: end } },
+                    { fechaFin: { gte: start, lte: end } }
+                ]
             },
             orderBy: { id: 'asc' }
         });
 
-        res.json(arqueos);
+        const arqueosWithUsers = await Promise.all(arqueos.map(async (arq) => {
+            const userObj = await prisma.user.findUnique({
+                where: { id: arq.usuarioId },
+                select: { nombre: true }
+            });
+            return {
+                ...arq,
+                usuario: userObj ? { nombre: userObj.nombre } : { nombre: 'Hector' }
+            };
+        }));
+
+        res.json(arqueosWithUsers);
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: "Error fetching cashier sessions" });
@@ -1753,10 +1764,10 @@ app.get('/api/staff/stats', async (req, res) => {
 
             const arqueos = await prisma.arqueo.findMany({
                 where: {
-                    fechaInicio: {
-                        gte: start,
-                        lte: end
-                    }
+                    OR: [
+                        { fechaInicio: { gte: start, lte: end } },
+                        { fechaFin: { gte: start, lte: end } }
+                    ]
                 },
                 orderBy: { id: 'asc' }
             });
@@ -3035,7 +3046,7 @@ app.post('/api/cashier/toggle', async (req, res) => {
             const newArqueo = await prisma.arqueo.create({
                 data: {
                     montoInicial: req.body.montoInicial || 0, // Allow passing start amount
-                    usuarioId: 1, // Placeholder
+                    usuarioId: req.body.usuarioId || 1, // Get from body or default to 1
                     estado: 'abierto',
                     fechaInicio: new Date()
                 }
@@ -3080,7 +3091,7 @@ app.post('/api/cashier/toggle', async (req, res) => {
 // History Endpoint (Paginated & Filtered)
 app.get('/api/cashier/history', async (req, res) => {
     try {
-        const { date, startDate, endDate, page = 1, limit = 5 } = req.query;
+        const { date, startDate, endDate, search, page = 1, limit = 5 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const take = parseInt(limit);
 
@@ -3093,6 +3104,88 @@ app.get('/api/cashier/history', async (req, res) => {
             const start = new Date(`${date}T00:00:00-05:00`);
             const end = new Date(`${date}T23:59:59-05:00`);
             where.fechaInicio = { gte: start, lte: end };
+        }
+
+        if (search) {
+            const orConditions = [];
+
+            // 1. Numeric ID
+            if (/^\d+$/.test(search)) {
+                orConditions.push({ id: parseInt(search, 10) });
+            }
+
+            // 2. Date format dd/mm (e.g. 26/02)
+            const dateMatch = search.match(/^(\d{1,2})[\/\- ](\d{1,2})(?:[\/\- ](\d{2,4}))?$/);
+            if (dateMatch) {
+                const day = parseInt(dateMatch[1], 10);
+                const month = parseInt(dateMatch[2], 10);
+                const year = dateMatch[3] ? parseInt(dateMatch[3], 10) : null;
+
+                const pad = (n) => String(n).padStart(2, '0');
+                const dateRanges = [];
+                if (year) {
+                    const fullYear = year < 100 ? 2000 + year : year;
+                    const start = new Date(`${fullYear}-${pad(month)}-${pad(day)}T00:00:00-05:00`);
+                    const end = new Date(`${fullYear}-${pad(month)}-${pad(day)}T23:59:59-05:00`);
+                    if (!isNaN(start.getTime())) {
+                        dateRanges.push({ start, end });
+                    }
+                } else {
+                    const currentYear = new Date().getFullYear();
+                    for (let y = currentYear - 5; y <= currentYear + 2; y++) {
+                        const start = new Date(`${y}-${pad(month)}-${pad(day)}T00:00:00-05:00`);
+                        const end = new Date(`${y}-${pad(month)}-${pad(day)}T23:59:59-05:00`);
+                        if (!isNaN(start.getTime())) {
+                            dateRanges.push({ start, end });
+                        }
+                    }
+                }
+
+                dateRanges.forEach(range => {
+                    orConditions.push({ fechaInicio: { gte: range.start, lte: range.end } });
+                    orConditions.push({ fechaFin: { gte: range.start, lte: range.end } });
+                });
+            }
+
+            // 3. State
+            orConditions.push({
+                estado: {
+                    contains: search,
+                    mode: 'insensitive'
+                }
+            });
+
+            // 4. Match users whose name matches search
+            const matchingUsers = await prisma.user.findMany({
+                where: {
+                    nombre: {
+                        contains: search,
+                        mode: 'insensitive'
+                    }
+                },
+                select: { id: true }
+            });
+            if (matchingUsers.length > 0) {
+                const userIds = matchingUsers.map(u => u.id);
+                orConditions.push({
+                    usuarioId: {
+                        in: userIds
+                    }
+                });
+            }
+
+            if (orConditions.length > 0) {
+                if (where.fechaInicio) {
+                    where = {
+                        AND: [
+                            { fechaInicio: where.fechaInicio },
+                            { OR: orConditions }
+                        ]
+                    };
+                } else {
+                    where.OR = orConditions;
+                }
+            }
         }
 
         const [totalCount, arqueos] = await Promise.all([
@@ -3111,7 +3204,7 @@ app.get('/api/cashier/history', async (req, res) => {
             const isAbierto = arq.estado === 'abierto';
 
             // Parallelized sub-queries
-            const [comandasCerradas, movements, pendingOrders] = await Promise.all([
+            const [comandasCerradas, movements, pendingOrders, userObj] = await Promise.all([
                 prisma.comanda.findMany({
                     where: {
                         estado: 'cerrada',
@@ -3136,7 +3229,11 @@ app.get('/api/cashier/history', async (req, res) => {
                         where: { estado: { notIn: ['cerrada', 'anulada'] } },
                         include: { detalles: { where: { estado: { not: 'anulado' } }, include: { plato: true } } }
                       })
-                    : Promise.resolve([])
+                    : Promise.resolve([]),
+                prisma.user.findUnique({
+                    where: { id: arq.usuarioId },
+                    select: { nombre: true }
+                })
             ]);
 
             const parsePaymentMethod = (metodoPago) => {
@@ -3211,7 +3308,8 @@ app.get('/api/cashier/history', async (req, res) => {
                 totalCaja: arq.montoInicial + manualIngresos + incomeDetails.efectivo - manualEgresos,
                 totalBruto,
                 totalPropinas,
-                totalPendiente
+                totalPendiente,
+                usuario: userObj ? { nombre: userObj.nombre } : { nombre: 'Hector' }
             };
         }));
 

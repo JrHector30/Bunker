@@ -15,7 +15,7 @@ export const CajaProvider = ({ children }) => {
                 return;
             }
 
-            const res = await fetch('/api/cashier/balance');
+            const res = await fetch(`/api/cashier/balance?_t=${Date.now()}`);
             if (res.ok) {
                 const data = await res.json();
                 setIsCajaAbierta(data && data.estado === 'abierto');
