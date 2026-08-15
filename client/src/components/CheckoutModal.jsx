@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, Smartphone, CreditCard, Receipt, Printer, ArrowRight, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { X, DollarSign, Smartphone, CreditCard, Receipt, Printer, ArrowRight, CheckCircle2, AlertCircle, Loader2, Mail } from 'lucide-react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { setOptimisticLock } from '../hooks/useCache';
@@ -25,6 +25,12 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
   const [propinaPct, setPropinaPct] = useState(10);
   const [customPropina, setCustomPropina] = useState('');
   const [imprimirTicket, setImprimirTicket] = useState(true);
+
+  // WhatsApp & Email sending options
+  const [enviarWhatsapp, setEnviarWhatsapp] = useState(false);
+  const [whatsappCelular, setWhatsappCelular] = useState('');
+  const [enviarEmail, setEnviarEmail] = useState(false);
+  const [correoCliente, setCorreoCliente] = useState('');
 
   // Comprobante states
   const [comprobanteTipo, setComprobanteTipo] = useState('Ticket'); // 'Ticket', 'Boleta', 'Factura'
@@ -55,6 +61,10 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
       setDireccionFiscal('');
       setIsValidated(false);
       setValidationError('');
+      setEnviarWhatsapp(false);
+      setWhatsappCelular('');
+      setEnviarEmail(false);
+      setCorreoCliente('');
     }
   }, [isOpen, order]);
 
@@ -133,6 +143,38 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
     } finally {
       setIsValidating(false);
     }
+  };
+
+  const sendWhatsAppReceipt = () => {
+    if (!enviarWhatsapp || !whatsappCelular) return;
+
+    let phone = whatsappCelular.replace(/\D/g, '');
+    if (phone.length === 9 && phone.startsWith('9')) {
+      phone = '51' + phone; // Prepend Peru country code
+    }
+
+    let text = `*BÚNKER - COMPROBANTE DE PAGO*\n\n`;
+    text += `*Comprobante:* ${comprobanteTipo}\n`;
+    if (comprobanteTipo !== 'Ticket') {
+      text += `*Cliente:* ${razonSocial || 'Cliente General'}\n`;
+      text += `*${docTipo}:* ${docNumero}\n`;
+    }
+    text += `--------------------------------\n`;
+    order.detalles.forEach(d => {
+      if (d.estado !== 'anulado') {
+        text += `• ${d.cantidad}x ${d.plato.nombre} - S/. ${(d.plato.precio * d.cantidad).toFixed(2)}\n`;
+      }
+    });
+    text += `--------------------------------\n`;
+    if (propinaMonto > 0) {
+      text += `*Propina:* S/. ${propinaMonto.toFixed(2)}\n`;
+    }
+    text += `*Total Cobrado:* *S/. ${totalFinal.toFixed(2)}*\n\n`;
+    text += `¡Gracias por su visita!`;
+
+    const encodedText = encodeURIComponent(text);
+    const waUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodedText}`;
+    window.open(waUrl, '_blank');
   };
 
   // Kitchen validation
@@ -219,6 +261,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
         })
           .then(() => {
             showToast('Pago registrado correctamente (Fallback Offline).', 'success');
+            if (enviarWhatsapp) sendWhatsAppReceipt();
             window.dispatchEvent(new CustomEvent('refreshCashCount'));
             window.dispatchEvent(new CustomEvent('refreshTables'));
             try {
@@ -252,7 +295,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
             totalReceived: metodo === 'efectivo' ? paidAmountNum : totalFinal,
             tip: propinaMonto,
             observation: '',
-            email: '',
+            email: enviarEmail ? correoCliente : '',
             tipoComprobante: comprobanteTipo.toLowerCase(),
             documentoCliente: comprobanteTipo !== 'Ticket' ? docNumero : null,
             razonSocial: comprobanteTipo !== 'Ticket' ? razonSocial : null,
@@ -262,6 +305,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
           .then(async res => {
             if (res.ok) {
               showToast('Pago registrado correctamente.', 'success');
+              if (enviarWhatsapp) sendWhatsAppReceipt();
               // Hidratar balance y mesas de fondo
               offlineSnapshotService.hydrateOperationalSnapshot().catch(() => {});
 
@@ -719,6 +763,58 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                 onChange={(e) => setImprimirTicket(e.target.checked)}
                 className="w-4 h-4 accent-[var(--primary)] border-[var(--glass-border)] text-[var(--text-main)] rounded cursor-pointer"
               />
+            </div>
+
+            {/* WhatsApp option toggle */}
+            <div className="space-y-2 p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)] font-sans">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-500 fill-emerald-500" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.517 2.266 2.27 3.51 5.282 3.507 8.485-.006 6.66-5.344 11.997-11.957 11.997-2.005 0-3.973-.504-5.714-1.464L0 24zm6.59-4.846c1.66.986 3.288 1.509 5.31 1.512 5.517 0 10.007-4.49 10.012-10.01.002-2.674-1.038-5.188-2.932-7.082C17.14 1.66 14.636.62 11.96.621 6.446.621 1.957 5.111 1.952 10.627c0 2.106.551 4.165 1.597 5.962l-1.048 3.826 3.99-1.047z"/>
+                  </svg>
+                  <span className="text-xs font-semibold text-[var(--text-main)]">Enviar por WhatsApp</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={enviarWhatsapp}
+                  onChange={(e) => setEnviarWhatsapp(e.target.checked)}
+                  className="w-4 h-4 accent-[var(--primary)] border-[var(--glass-border)] text-[var(--text-main)] rounded cursor-pointer"
+                />
+              </div>
+              {enviarWhatsapp && (
+                <input
+                  type="text"
+                  placeholder="Número de celular (ej: 999888777)"
+                  value={whatsappCelular}
+                  onChange={(e) => setWhatsappCelular(e.target.value)}
+                  className="block w-full rounded-lg border border-[var(--glass-border)] py-1.5 px-3 text-xs focus:outline-hidden focus:border-[var(--primary)] transition-all text-[var(--text-main)] font-sans bg-[var(--bg-surface)] mt-2"
+                />
+              )}
+            </div>
+
+            {/* Email option toggle */}
+            <div className="space-y-2 p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)] font-sans">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-sky-400" />
+                  <span className="text-xs font-semibold text-[var(--text-main)]">Enviar por Correo</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={enviarEmail}
+                  onChange={(e) => setEnviarEmail(e.target.checked)}
+                  className="w-4 h-4 accent-[var(--primary)] border-[var(--glass-border)] text-[var(--text-main)] rounded cursor-pointer"
+                />
+              </div>
+              {enviarEmail && (
+                <input
+                  type="email"
+                  placeholder="Correo electrónico (ej: cliente@correo.com)"
+                  value={correoCliente}
+                  onChange={(e) => setCorreoCliente(e.target.value)}
+                  className="block w-full rounded-lg border border-[var(--glass-border)] py-1.5 px-3 text-xs focus:outline-hidden focus:border-[var(--primary)] transition-all text-[var(--text-main)] font-sans bg-[var(--bg-surface)] mt-2"
+                />
+              )}
             </div>
 
             {/* Total final display */}

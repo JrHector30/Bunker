@@ -3,6 +3,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ============================================
+   GLOBAL BOX-SIZING RESET
+   Matches modern layout defaults and prevents inputs/textareas 
+   from overflowing when padded inside w-full containers.
+   ============================================ */
+*,
+::before,
+::after {
+  box-sizing: border-box;
+}
+
+
+/* ============================================
    BUNKER HYBRID FONT DEFINITIONS
    Plus Jakarta Sans for text, JetBrains Mono for digits 0-9
    ============================================ */
@@ -2467,4 +2479,23 @@ body {
     height: 600px !important;
     overflow: auto !important;
   }
+}
+
+/* Enable custom scrollbar specifically for the login dropdown, overriding the global hide */
+.login-dropdown::-webkit-scrollbar {
+  display: block !important;
+  width: 6px !important;
+}
+
+.login-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 3px !important;
+}
+
+.login-dropdown::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.login-dropdown::-webkit-scrollbar-track {
+  background: transparent !important;
 }

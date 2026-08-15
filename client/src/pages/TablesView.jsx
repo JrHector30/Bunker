@@ -937,7 +937,7 @@ const TablesView = () => {
                                                 </td>
                                                 <td style={{ padding: 10, textAlign: 'center' }}>
                                                     <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
-                                                        {item.estado === 'lista' ? (
+                                                        {(item.estado === 'lista' || item.estado === 'listo') ? (
                                                             <button
                                                                 className="glass-button primary"
                                                                 style={{ padding: '4px 8px', fontSize: '0.8rem' }}

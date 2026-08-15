@@ -78,7 +78,7 @@ export function MovimientoModal({ isOpen, onClose, onAddMovimiento, activeArqueo
 
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div className="relative transform overflow-hidden rounded-lg bg-[var(--bg-surface)] text-left shadow-lg transition-all sm:my-8 sm:w-full sm:max-w-md border border-[var(--glass-border)]">
-          
+
           {/* Header */}
           <div className="bg-[var(--bg-surface)] border-b border-[var(--glass-border)] px-6 py-4 flex justify-between items-center text-[var(--text-main)]">
             <div className="flex items-center gap-2">
@@ -99,7 +99,7 @@ export function MovimientoModal({ isOpen, onClose, onAddMovimiento, activeArqueo
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            
+
             {/* Toggle Tipo (Ingreso / Egreso) */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2 font-sans">Tipo de Movimiento</label>
@@ -110,11 +110,10 @@ export function MovimientoModal({ isOpen, onClose, onAddMovimiento, activeArqueo
                     setTipo('INGRESO');
                     setMetodoPago('efectivo');
                   }}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border text-sm font-medium transition-all cursor-pointer ${
-                    tipo === 'INGRESO'
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 font-bold'
-                      : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
-                  }`}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border text-sm font-medium transition-all cursor-pointer ${tipo === 'INGRESO'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 font-bold'
+                    : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
+                    }`}
                 >
                   <ArrowUpRight className={`w-4 h-4 ${tipo === 'INGRESO' ? 'text-emerald-500' : 'text-[var(--text-muted)]'}`} />
                   <span>Ingreso</span>
@@ -122,11 +121,10 @@ export function MovimientoModal({ isOpen, onClose, onAddMovimiento, activeArqueo
                 <button
                   type="button"
                   onClick={() => setTipo('EGRESO')}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border text-sm font-medium transition-all cursor-pointer ${
-                    tipo === 'EGRESO'
-                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-500 font-bold'
-                      : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
-                  }`}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border text-sm font-medium transition-all cursor-pointer ${tipo === 'EGRESO'
+                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-500 font-bold'
+                    : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
+                    }`}
                 >
                   <ArrowDownRight className={`w-4 h-4 ${tipo === 'EGRESO' ? 'text-rose-500' : 'text-[var(--text-muted)]'}`} />
                   <span>Egreso (Salida)</span>
@@ -151,11 +149,10 @@ export function MovimientoModal({ isOpen, onClose, onAddMovimiento, activeArqueo
                     setMonto(e.target.value);
                     if (errors.monto) setErrors({ ...errors, monto: undefined });
                   }}
-                  className={`block w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm focus:outline-hidden transition-all font-mono ${
-                    errors.monto
-                      ? 'border-rose-500/30 bg-rose-500/5 text-rose-500 focus:border-rose-500'
-                      : 'border-[var(--glass-border)] bg-[var(--bg-secondary)] text-[var(--text-main)] focus:border-[var(--primary)]'
-                  }`}
+                  className={`block w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm focus:outline-hidden transition-all font-mono ${errors.monto
+                    ? 'border-rose-500/30 bg-rose-500/5 text-rose-500 focus:border-rose-500'
+                    : 'border-[var(--glass-border)] bg-[var(--bg-secondary)] text-[var(--text-main)] focus:border-[var(--primary)]'
+                    }`}
                 />
               </div>
               {errors.monto && <p className="text-xs text-rose-500 mt-1 font-sans font-medium">{errors.monto}</p>}
@@ -176,11 +173,10 @@ export function MovimientoModal({ isOpen, onClose, onAddMovimiento, activeArqueo
                       key={item.id}
                       type="button"
                       onClick={() => setMetodoPago(item.id)}
-                      className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium text-left transition-all cursor-pointer ${
-                        metodoPago === item.id
-                          ? 'bg-[var(--primary)] border-[var(--primary)] text-white font-bold'
-                          : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
-                      }`}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium text-left transition-all cursor-pointer ${metodoPago === item.id
+                        ? 'bg-[var(--primary)] border-[var(--primary)] text-white font-bold'
+                        : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
+                        }`}
                     >
                       <item.icon className={`w-4 h-4 ${metodoPago === item.id ? 'text-white' : item.color}`} />
                       <span>{item.name}</span>
@@ -218,11 +214,10 @@ export function MovimientoModal({ isOpen, onClose, onAddMovimiento, activeArqueo
                     key={item.id}
                     type="button"
                     onClick={() => setComprobante(item.id)}
-                    className={`py-2 px-3 rounded-lg border text-xs font-semibold text-center transition-all cursor-pointer ${
-                      comprobante === item.id
-                        ? 'bg-[var(--primary)] border-[var(--primary)] text-white font-bold'
-                        : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
-                    }`}
+                    className={`py-2 px-3 rounded-lg border text-xs font-semibold text-center transition-all cursor-pointer ${comprobante === item.id
+                      ? 'bg-[var(--primary)] border-[var(--primary)] text-white font-bold'
+                      : 'bg-[var(--bg-secondary)] border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--item-hover)]'
+                      }`}
                   >
                     {item.name}
                   </button>
@@ -241,11 +236,10 @@ export function MovimientoModal({ isOpen, onClose, onAddMovimiento, activeArqueo
                   setDescripcion(e.target.value);
                   if (errors.descripcion) setErrors({ ...errors, descripcion: undefined });
                 }}
-                className={`block w-full rounded-lg border p-3 text-sm focus:outline-hidden transition-all resize-none font-sans ${
-                  errors.descripcion
-                    ? 'border-rose-500/30 bg-rose-500/5 text-rose-500 focus:border-rose-500'
-                    : 'border-[var(--glass-border)] bg-[var(--bg-secondary)] text-[var(--text-main)] focus:border-[var(--primary)]'
-                }`}
+                className={`block w-full rounded-lg border p-3 text-sm focus:outline-hidden transition-all resize-none font-sans ${errors.descripcion
+                  ? 'border-rose-500/30 bg-rose-500/5 text-rose-500 focus:border-rose-500'
+                  : 'border-[var(--glass-border)] bg-[var(--bg-secondary)] text-[var(--text-main)] focus:border-[var(--primary)]'
+                  }`}
               />
               {errors.descripcion && <p className="text-xs text-rose-500 mt-1 font-sans font-medium">{errors.descripcion}</p>}
             </div>
@@ -255,13 +249,13 @@ export function MovimientoModal({ isOpen, onClose, onAddMovimiento, activeArqueo
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-2.5 px-4 rounded-lg border border-[var(--glass-border)] text-sm font-semibold text-[var(--text-muted)] bg-[var(--bg-secondary)] hover:bg-[var(--item-hover)] transition-colors cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-lg border border-[var(--glass-border)] text-sm font-sans text-[var(--text-muted)] bg-[var(--bg-secondary)] hover:bg-[var(--item-hover)] transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold text-white bg-[var(--primary)] hover:opacity-90 active:opacity-100 transition-colors cursor-pointer shadow-xs"
+                className="flex-1 py-2.5 px-4 rounded-lg text-sm font-sans border-white/20 text-white bg-[var(--primary)] hover:opacity-90 active:opacity-100 transition-colors cursor-pointer shadow-xs"
               >
                 Confirmar Registro
               </button>

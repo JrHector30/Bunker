@@ -268,7 +268,24 @@ const LoginPage = () => {
 
                             {/* Dropdown Menu */}
                             {isDropdownOpen && (
-                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 10, background: '#181818', borderRadius: 16, border: '1px solid #2a2a2a', overflow: 'hidden', zIndex: 10, boxShadow: '0 20px 50px rgba(0,0,0,0.8)' }}>
+                                <div
+                                    className="login-dropdown"
+                                    style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        left: 0,
+                                        right: 0,
+                                        marginTop: 10,
+                                        background: '#181818',
+                                        borderRadius: 16,
+                                        border: '1px solid #2a2a2a',
+                                        overflowY: 'auto',
+                                        overflowX: 'hidden',
+                                        maxHeight: '536px',
+                                        zIndex: 10,
+                                        boxShadow: '0 20px 50px rgba(0,0,0,0.8)'
+                                    }}
+                                >
                                     {usersList.map((u) => (
                                         <div
                                             key={u.id}

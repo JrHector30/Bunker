@@ -8,6 +8,7 @@ const PermissionsConfig = () => {
     const [hasChanges, setHasChanges] = useState(false);
 
     const modulos = [
+        { key: 'inicio', label: '🏠 Inicio', description: 'Acceso a la pantalla principal' },
         { key: 'mesas', label: '🍽️ Sala / Mesas', description: 'Gestión de mesas y comandas' },
         { key: 'cocina', label: '👨‍🍳 Cocina', description: 'Vista de pedidos y preparación' },
         { key: 'caja', label: '💰 Caja', description: 'Cierre de cuentas y pagos' },

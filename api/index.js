@@ -2192,6 +2192,70 @@ app.get('/api/facturacion/:type/:documento', async (req, res) => {
     }
 });
 
+const sendReceiptEmail = async (to, comanda, detalles) => {
+    const from = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    if (!process.env.RESEND_API_KEY) {
+        console.log(`[EMAIL SIMULATOR] Enviando comprobante por correo a ${to}`);
+        return;
+    }
+    
+    // Format HTML representation of receipt
+    let itemsHtml = '';
+    detalles.forEach(d => {
+        if (d.estado !== 'anulado') {
+            itemsHtml += `
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">${d.cantidad}x ${d.plato.nombre}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">S/. ${(d.plato.precio * d.cantidad).toFixed(2)}</td>
+                </tr>
+            `;
+        }
+    });
+    
+    const subtotal = detalles.reduce((sum, d) => d.estado !== 'anulado' ? sum + (d.plato.precio * d.cantidad) : sum, 0);
+    const total = subtotal + parseFloat(comanda.propina || 0);
+
+    const emailHtml = `
+        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #ffffff; color: #333333;">
+            <h2 style="text-align: center; color: #f97316; margin-bottom: 20px;">BÚNKER - COMPROBANTE</h2>
+            <p>Estimado cliente, aquí tiene el detalle de su comprobante.</p>
+            <p><strong>Comprobante:</strong> ${comanda.tipoComprobante.toUpperCase()}</p>
+            ${comanda.documentoCliente ? `<p><strong>Documento:</strong> ${comanda.documentoCliente}</p>` : ''}
+            ${comanda.razonSocial ? `<p><strong>Cliente:</strong> ${comanda.razonSocial}</p>` : ''}
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                <thead>
+                    <tr style="background-color: #f5f5f5;">
+                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Producto</th>
+                        <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHtml}
+                </tbody>
+            </table>
+            <div style="margin-top: 15px; border-top: 2px solid #ddd; padding-top: 10px;">
+                <p style="margin: 4px 0; text-align: right;"><strong>Subtotal:</strong> S/. ${subtotal.toFixed(2)}</p>
+                ${comanda.propina > 0 ? `<p style="margin: 4px 0; text-align: right;"><strong>Propina:</strong> S/. ${parseFloat(comanda.propina).toFixed(2)}</p>` : ''}
+                <h3 style="margin: 4px 0; text-align: right; color: #22c55e;">Total: S/. ${total.toFixed(2)}</h3>
+            </div>
+            <p style="text-align: center; margin-top: 25px; font-size: 0.8em; color: #888;">Gracias por su preferencia • Búnker OS</p>
+        </div>
+    `;
+
+    try {
+        await axios.post('https://api.resend.com/emails', {
+            from,
+            to,
+            subject: `Comprobante de Pago - Búnker (Mesa ${comanda.mesaId})`,
+            html: emailHtml
+        }, {
+            headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` }
+        });
+    } catch (e) {
+        console.error("Error sending receipt email:", e.response?.data || e.message);
+    }
+};
+
 // 6. Checkout (Updated)
 app.post('/api/checkout/:mesaId', async (req, res) => {
     const { mesaId } = req.params;
@@ -2321,6 +2385,12 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
                     console.error("[KARDEX] Error creating batch movimientos:", e.message);
                 }
             }
+        }
+
+        if (email) {
+            sendReceiptEmail(email, closedOrder, order.detalles).catch(err => {
+                console.error("[Checkout] Error al enviar comprobante en background:", err);
+            });
         }
 
         res.json({ ...closedOrder, total, message: "Ticket generated" });

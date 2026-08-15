@@ -21,6 +21,22 @@ import LandingView from './pages/LandingView';       // New
 import SupportView from './pages/SupportView';       // New
 import NotFoundView from './views/NotFoundView';
 
+const getDefaultRoute = (user, tienePermiso) => {
+  if (!user) return "/login";
+  if (user.rol === 'admin') return "/home";
+  
+  if (tienePermiso('inicio')) return "/home";
+  if (tienePermiso('mesas')) return "/tables";
+  if (tienePermiso('cocina')) return "/kitchen";
+  if (tienePermiso('caja')) return "/cashier";
+  if (tienePermiso('logistica')) return "/admin/inventory";
+  if (tienePermiso('categories')) return "/admin/categories";
+  if (tienePermiso('usuarios')) return "/admin/users";
+  if (tienePermiso('reportes')) return "/admin/staff-stats";
+  
+  return "/settings"; // Default fallback
+};
+
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, modulo }) => {
   const { user, tienePermiso } = useAuth();
@@ -28,7 +44,7 @@ const ProtectedRoute = ({ children, modulo }) => {
   if (!user) return <Navigate to="/login" />;
   
   if (modulo && !tienePermiso(modulo)) {
-    return <Navigate to="/home" />; // Redirect to home if no permission for module
+    return <Navigate to={getDefaultRoute(user, tienePermiso)} />;
   }
   
   return children;
@@ -36,16 +52,15 @@ const ProtectedRoute = ({ children, modulo }) => {
 
 // Route Dispatcher based on Role
 const HomeRedirect = () => {
-  const { user } = useAuth();
+  const { user, tienePermiso } = useAuth();
   if (!user) return <Navigate to="/login" />;
 
-  // Default redirect to the new Dashboard for all roles
-  return <Navigate to="/home" />;
+  return <Navigate to={getDefaultRoute(user, tienePermiso)} />;
 }
 
 const RootRoute = () => {
-  const { user } = useAuth();
-  if (user) return <Navigate to="/home" />;
+  const { user, tienePermiso } = useAuth();
+  if (user) return <Navigate to={getDefaultRoute(user, tienePermiso)} />;
   return <LandingView />;
 };
 
@@ -65,7 +80,7 @@ function App() {
             <Route element={<DashboardLayout />}>
 
               <Route path="/home" element={
-                <ProtectedRoute>
+                <ProtectedRoute modulo="inicio">
                   <HomeView />
                 </ProtectedRoute>
               } />

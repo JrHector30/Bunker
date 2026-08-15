@@ -169,7 +169,7 @@ const DashboardLayout = () => {
     };
 
     const menuItems = [
-        { id: 'home', to: '/home', icon: LayoutDashboard, label: 'Inicio' },
+        { id: 'home', to: '/home', icon: LayoutDashboard, label: 'Inicio', modulo: 'inicio' },
         { id: 'tables', to: '/tables', icon: UtensilsCrossed, label: 'Mesas', modulo: 'mesas' },
         { id: 'kitchen', to: '/kitchen', icon: ChefHat, label: 'Cocina', modulo: 'cocina' },
         { id: 'cashier', to: '/cashier', icon: DollarSign, label: 'Caja', modulo: 'caja' },
