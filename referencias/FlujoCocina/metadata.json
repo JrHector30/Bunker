@@ -1,6 +1,0 @@
-{
-  "name": "Flujo de Cocina",
-  "description": "Módulo interactivo y moderno para el flujo de trabajo de cocina por platos en restaurantes, diseñado para tablets con indicadores de tiempo real y alertas críticas.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

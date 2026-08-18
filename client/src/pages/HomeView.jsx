@@ -2,61 +2,40 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid
+} from 'recharts';
 import {
   CreditCard, TrendingUp, MoreHorizontal, ChefHat, Clock, Layers,
   Award, Sparkles, Receipt, CheckCircle, Bell, MessageSquare,
-  Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Utensils, Wine, Coffee
+  Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Utensils, Wine, Coffee,
+  Eye, EyeOff, MapPin, Printer, Star, ArrowRight, ShieldCheck, AlertTriangle, Compass, Users,
+  Trophy, Zap, Crown, Medal, ArrowUpRight, Flame, X, LayoutDashboard, UtensilsCrossed, Menu,
+  Grid3X3, DollarSign, Search, CheckCircle2
 } from 'lucide-react';
 import { Calendar } from '../components/ui/Calendar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { enqueueTicket } from '../utils/printer';
+import { CheckoutModal } from '../components/CheckoutModal';
 
-// Subtle gray card border matching GestionDeComandas panel-bg style
-const CARD_STYLE = {
-  border: '1px solid rgb(228 228 231 / 0.6)',
-  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-};
-
-// Dark mode card border variant
-const CARD_STYLE_DARK = {
-  border: '1px solid rgb(63 63 70 / 0.5)',
-  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.25)',
-};
-
-// Helper component for date formatting in transactions
-const formatTime = (dateStr) => {
-  try {
-    const d = new Date(dateStr);
-    const hrs = String(d.getHours()).padStart(2, '0');
-    const mins = String(d.getMinutes()).padStart(2, '0');
-    return `${hrs}:${mins}`;
-  } catch (e) {
-    return '12:00';
-  }
-};
-
-// Reusable premium card container – uses subtle zinc/gray borders matching GestionDeComandas
-const GlassCard = ({ children, className = "" }) => (
+// Reusable premium card container using native classes for theme sync
+const GlassCard = ({ children, className = "", style = {}, onClick }) => (
   <div
-    className={`relative overflow-hidden rounded-[24px] transition-all duration-300 group bg-[var(--bg-secondary)] ${className}`}
+    onClick={onClick}
+    className={`relative overflow-hidden rounded-[24px] transition-all duration-300 group bg-[var(--bg-secondary)] border border-[var(--glass-border)] hover:border-[var(--primary)]/30 hover:shadow-[0_8px_32px_rgba(0,0,0,0.25)] ${className}`}
     style={{
-      border: '1px solid rgb(228 228 231 / 0.5)',
-      boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-
-    }}
-  >
-    {children}
-  </div>
-);
-
-// Same card for internal sub-panels
-const SubCard = ({ children, className = "", style = {} }) => (
-  <div
-    className={`rounded-[24px] transition-all duration-300 bg-[var(--bg-secondary)] ${className}`}
-    style={{
-      border: '1px solid rgb(228 228 231 / 0.5)',
-      boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+      boxShadow: '0 4px 20px 0 rgba(0, 0, 0, 0.2)',
       ...style,
     }}
   >
@@ -64,751 +43,1401 @@ const SubCard = ({ children, className = "", style = {} }) => (
   </div>
 );
 
-// 1. MyCard Component (Real Weekly Earnings Static Display)
-const MyCardComponent = ({ weeklyEarnings }) => {
+// Helper to determine status color settings
+const getStatusColorConfig = (status, isDelayed) => {
+  if (isDelayed) {
+    return {
+      bg: 'bg-rose-500/10 hover:bg-rose-500/20',
+      border: 'border-rose-500 hover:border-rose-450',
+      glow: 'shadow-[0_0_15px_rgba(239,68,68,0.25)]',
+      indicator: 'bg-rose-500',
+      text: 'text-rose-400',
+      label: 'Demorada'
+    };
+  }
 
-  return (
-    <div className="flex flex-col gap-3 w-full">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium text-xs tracking-wide text-[var(--text-muted)]">Mi Tarjeta</h3>
-        <button className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer bg-transparent border-none">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
-      </div>
-
-      <GlassCard className="p-5 min-h-[160px] flex flex-col justify-between">
-        {/* Glow effects */}
-        <div className="absolute top-[-20%] right-[-20%] w-[180px] h-[180px] rounded-full bg-[var(--primary)]/5 blur-3xl group-hover:scale-110 transition-transform duration-700 pointer-events-none"></div>
-        <div className="absolute bottom-[-30%] left-[-10%] w-[160px] h-[160px] rounded-full bg-[var(--primary)]/5 blur-3xl pointer-events-none"></div>
-
-        {/* Top Card Row */}
-        <div className="flex items-center justify-between relative z-10">
-          <div className="p-2.5 rounded-xl bg-[var(--primary)]/5 border border-[var(--primary)]/20 text-[var(--primary)]">
-            <CreditCard className="w-5 h-5" />
-          </div>
-
-          <div className="relative">
-            <div className="absolute -inset-1 rounded-full bg-[var(--primary)]/40 blur-sm"></div>
-            <div className="relative w-11 h-11 rounded-full bg-[var(--primary)] flex items-center justify-center border border-white/20 text-[10px] font-black text-white dark:text-black uppercase tracking-wider shadow-inner">
-              VISA
-            </div>
-          </div>
-
-          <span className="text-xs font-medium text-[var(--text-muted)]">
-            {new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-          </span>
-        </div>
-
-        {/* Middle divider */}
-        <div className="my-1 border-t  border-zinc-200/50 w-full relative z-10"></div>
-
-        {/* Bottom Card Row */}
-        <div className="flex items-end justify-between relative z-10 mt-2">
-          <div className="flex flex-col">
-            <span className="text-[10px] uppercase tracking-widest font-semibold mb-1 text-[var(--text-muted)]">
-              GANANCIA SEMANAL
-            </span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-xs font-bold text-[var(--primary)] font-mono">S/.</span>
-              <motion.span
-                key={Math.floor(weeklyEarnings)}
-                initial={{ opacity: 0.8 }}
-                animate={{ opacity: 1 }}
-                className="text-2xl font-black tracking-tight text-[var(--text-main)] font-mono"
-              >
-                {weeklyEarnings.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </motion.span>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] uppercase tracking-widest font-semibold mb-1 text-[var(--text-muted)]">
-              ADMINISTRADOR
-            </span>
-            <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-main)]">
-              Hector
-            </span>
-          </div>
-        </div>
-
-        {/* Floating live indicator */}
-        <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full py-0.5 px-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping"></span>
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500 absolute"></span>
-          <span className="text-[8px] font-bold text-green-500 tracking-wider uppercase ml-2">EN VIVO</span>
-        </div>
-      </GlassCard>
-    </div>
-  );
+  switch (status?.toLowerCase()) {
+    case 'libre':
+    case 'free':
+      return {
+        bg: 'bg-emerald-500/5 hover:bg-emerald-500/15',
+        border: 'border-emerald-500/40 hover:border-emerald-400',
+        glow: 'shadow-[0_0_10px_rgba(16,185,129,0.15)]',
+        indicator: 'bg-emerald-400',
+        text: 'text-emerald-400',
+        label: 'Libre'
+      };
+    case 'ocupada':
+    case 'ocupado':
+    case 'occupied':
+      return {
+        bg: 'bg-amber-500/5 hover:bg-amber-500/15',
+        border: 'border-amber-500/40 hover:border-amber-400',
+        glow: 'shadow-[0_0_15px_rgba(245,158,11,0.25)]',
+        indicator: 'bg-amber-400',
+        text: 'text-amber-400',
+        label: 'Ocupada'
+      };
+    case 'por pagar':
+    case 'billing':
+    case 'cuenta':
+      return {
+        bg: 'bg-rose-500/10 hover:bg-rose-500/20',
+        border: 'border-rose-500/60 hover:border-rose-400 animate-pulse',
+        glow: 'shadow-[0_0_20px_rgba(244,63,94,0.3)]',
+        indicator: 'bg-rose-400',
+        text: 'text-rose-400',
+        label: 'Por Pagar'
+      };
+    case 'reservada':
+    case 'reserved':
+      return {
+        bg: 'bg-cyan-500/5 hover:bg-cyan-500/15',
+        border: 'border-cyan-500/40 hover:border-cyan-400',
+        glow: 'shadow-[0_0_12px_rgba(6,182,212,0.2)]',
+        indicator: 'bg-cyan-400',
+        text: 'text-cyan-400',
+        label: 'Reservada'
+      };
+    case 'cleaning':
+    case 'limpieza':
+      return {
+        bg: 'bg-zinc-700/10 hover:bg-zinc-700/20',
+        border: 'border-zinc-600/40 hover:border-zinc-500',
+        glow: '',
+        indicator: 'bg-zinc-400',
+        text: 'text-zinc-400',
+        label: 'Limpieza'
+      };
+    default:
+      return {
+        bg: 'bg-zinc-800/10 hover:bg-zinc-800/20',
+        border: 'border-zinc-700/40',
+        glow: '',
+        indicator: 'bg-zinc-400',
+        text: 'text-zinc-400',
+        label: 'Desconocido'
+      };
+  }
 };
 
-// 2. CategoryPanel Component
-const CategoryPanelComponent = ({ activeOrdersCount, averageWaitTime, occupiedTablesCount, totalTablesCount }) => {
-  const categories = [
-    {
-      id: 'active_orders',
-      title: 'Órdenes',
-      subtitle: 'Comandas Activas',
-      value: `${activeOrdersCount} Activas`,
-      icon: ChefHat,
-      iconColor: 'text-[var(--primary)]',
-      iconBg: 'bg-[var(--primary)]/5 border-[var(--primary)]/20'
-    },
-    {
-      id: 'wait_time',
-      title: 'Tiempo',
-      subtitle: 'Espera Promedio',
-      value: `${averageWaitTime} min`,
-      icon: Clock,
-      iconColor: 'text-[var(--primary)]',
-      iconBg: 'bg-[var(--primary)]/5 border-[var(--primary)]/20'
-    },
-    {
-      id: 'tables_occupied',
-      title: 'Mesas',
-      subtitle: 'Ocupación Local',
-      value: `${occupiedTablesCount} / ${totalTablesCount}`,
-      icon: Layers,
-      iconColor: 'text-[var(--text-main)]',
-      iconBg: 'bg-white/[0.02] border-[var(--glass-border)]'
+// 1. Quick KPI Bar Component (Bento Row)
+const QuickKpiBarComponent = ({
+  tables,
+  occupiedTablesCount,
+  totalTablesCount,
+  averageWaitTime,
+  currentEarning,
+  DAILY_GOAL,
+  goalPercentage,
+  lowStockInsumosCount,
+  onHide,
+  hiddenWidgets,
+  designMode
+}) => {
+  const isHidden = hiddenWidgets.includes('quickKpiBar');
+  if (isHidden && !designMode) return null;
+
+  const freeTables = tables.filter(t => t.estado?.toLowerCase() === 'libre' || t.estado?.toLowerCase() === 'free').length;
+  const billingTables = tables.filter(t => t.estado?.toLowerCase() === 'por pagar' || t.estado?.toLowerCase() === 'billing' || t.estado?.toLowerCase() === 'cuenta').length;
+  const delayedTables = tables.filter(t => {
+    if (t.comandas && t.comandas.length > 0) {
+      const diff = Date.now() - new Date(t.comandas[0].fecha).getTime();
+      return Math.floor(diff / 60000) > 15;
     }
-  ];
+    return false;
+  }).length;
 
   return (
-    <div className="flex flex-col gap-3 w-full">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium text-xs tracking-wide text-[var(--text-muted)]">Categoría</h3>
-        {/* Ver Todo removed per User Request */}
-      </div>
+    <section
+      id="bunker-kpi-bar"
+      className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 mb-5 relative ${isHidden ? 'opacity-40 border border-dashed border-red-500/50 rounded-3xl p-1 bg-red-500/5' : ''}`}
+    >
+      {/* KPI 1: Ocupación de Mesas (Bento 3-col) */}
+      <GlassCard className="lg:col-span-3 p-4 flex flex-col justify-between min-h-[110px]">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Ocupación de Mesas</span>
+          <span className="text-[10px] bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/30 px-2.5 py-0.5 rounded-lg font-bold font-mono-nums flex items-center gap-0.5 shadow-[0_0_10px_rgba(249,115,22,0.15)]">
+            {Math.round((occupiedTablesCount / (totalTablesCount || 1)) * 100)}% Cap.
+          </span>
+        </div>
 
-      <div className="grid grid-cols-3 gap-3 w-full home-categories-grid">
-        {categories.map((cat) => {
-          const Icon = cat.icon;
-          return (
-            <motion.div
-              key={cat.id}
-              whileHover={{ y: -4, scale: 1.02 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="relative overflow-hidden rounded-[24px] p-3 flex flex-col justify-between items-center text-center min-h-[160px] group cursor-pointer bg-[var(--bg-secondary)]"
-              style={{
-                border: '1px solid rgb(228 228 231 / 0.5)',
-                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-              }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-b from-[var(--primary)]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="flex items-end justify-between my-2">
+          <h2 className="text-3xl font-black font-mono-nums text-[var(--text-main)] tracking-tight">
+            {occupiedTablesCount}<span className="text-[var(--text-muted)] text-lg font-normal">/{totalTablesCount}</span>
+          </h2>
+          <div className="text-right text-[11px] text-[var(--text-muted)] font-medium">
+            <span className="text-emerald-450 font-bold">{freeTables} libres</span>
+            {billingTables > 0 && <span className="text-rose-455 ml-1.5 font-bold">• {billingTables} cobro</span>}
+          </div>
+        </div>
 
-              <div className={`relative flex items-center justify-center w-10 h-10 rounded-2xl ${cat.iconBg} border border-zinc-200/50 shadow-sm`}>
-                <Icon className={`w-4 h-4 ${cat.iconColor}`} />
-                <div className="absolute -inset-1 rounded-2xl border border-zinc-200/40 opacity-0 group-hover:opacity-100 transition-all duration-500 scale-90 group-hover:scale-100"></div>
-              </div>
+        <div className="w-full bg-black/60 h-1.5 rounded-full mt-1 overflow-hidden border border-[var(--glass-border)]">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${(occupiedTablesCount / (totalTablesCount || 1)) > 0.8 ? 'bg-rose-500' : 'bg-emerald-500'
+              }`}
+            style={{ width: `${Math.round((occupiedTablesCount / (totalTablesCount || 1)) * 100)}%` }}
+          />
+        </div>
 
-              <div className="flex flex-col items-center mt-3">
-                <span className="text-[10px] uppercase font-bold tracking-widest mb-1 text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition-colors">
-                  {cat.title}
-                </span>
-                <span className="text-[14px] font-black tracking-tight text-[var(--text-main)]">
-                  {cat.value}
-                </span>
-                <span className="text-[9px] mt-1 font-medium text-[var(--text-muted)] hidden sm:inline">
-                  {cat.subtitle}
-                </span>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-    </div>
+        {designMode && (
+          <button
+            onClick={() => onHide('quickKpiBar')}
+            className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 p-1 rounded bg-black/80 text-zinc-400 hover:text-white transition-all z-30"
+          >
+            {isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          </button>
+        )}
+      </GlassCard>
+
+      {/* KPI 2: Tiempo de Espera (Bento 3-col) */}
+      <GlassCard className="lg:col-span-3 p-4 flex flex-col justify-between min-h-[110px]">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Tiempo Promedio</span>
+          {delayedTables > 0 ? (
+            <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-lg font-bold font-mono-nums flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.25)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-450 animate-ping"></span>
+              {delayedTables} demoras
+            </span>
+          ) : (
+            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-lg font-bold font-mono-nums flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Óptimo
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-end justify-between my-2">
+          <h2 className="text-3xl font-black font-mono-nums text-[var(--text-main)] tracking-tight">
+            {averageWaitTime}<span className="text-[var(--text-muted)] text-lg font-normal">min</span>
+          </h2>
+          <span className="text-[11px] text-[var(--text-muted)] font-mono-nums">Meta: &lt;14m</span>
+        </div>
+
+        {/* Multi-segment mini progress bar */}
+        <div className="flex space-x-1 mt-1">
+          <div className="h-1 flex-grow bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.3)]"></div>
+          <div className="h-1 flex-grow bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.3)]"></div>
+          <div className="h-1 flex-grow bg-amber-500 rounded-full"></div>
+          <div className="h-1 flex-grow bg-black/40 rounded-full border border-[var(--glass-border)]"></div>
+        </div>
+
+        {designMode && (
+          <button
+            onClick={() => onHide('quickKpiBar')}
+            className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 p-1 rounded bg-black/80 text-zinc-400 hover:text-white transition-all z-30"
+          >
+            {isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          </button>
+        )}
+      </GlassCard>
+
+      {/* KPI 3: Venta del Turno (Bento 4-col) */}
+      <GlassCard className="lg:col-span-4 p-4 flex items-center justify-between min-h-[110px]">
+        <div className="flex-1">
+          <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Venta del Turno</span>
+          <h2 className="text-2xl sm:text-3xl font-black font-mono-nums text-[var(--text-main)] mt-1 tracking-tight">
+            S/. {currentEarning.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h2>
+          <p className="text-[10px] text-emerald-400 font-mono-nums mt-0.5 flex items-center gap-1 font-semibold">
+            <TrendingUp className="w-3.5 h-3.5" /> +12% vs turno ant.
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-3 ml-2">
+          <div className="text-right">
+            <p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Meta</p>
+            <p className="text-xs font-bold font-mono-nums text-[var(--text-main)]">S/. {DAILY_GOAL}</p>
+          </div>
+          <div className="w-12 h-12 rounded-full border-4 border-black/40 border-t-[var(--primary)] flex items-center justify-center shadow-[0_0_12px_var(--color-brand-glow)]">
+            <span className="text-[10px] font-black font-mono-nums text-[var(--text-main)]">{goalPercentage}%</span>
+          </div>
+        </div>
+
+        {designMode && (
+          <button
+            onClick={() => onHide('quickKpiBar')}
+            className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 p-1 rounded bg-black/80 text-zinc-400 hover:text-white transition-all z-30"
+          >
+            {isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          </button>
+        )}
+      </GlassCard>
+
+      {/* KPI 4: KDS Cocina (Bento 2-col) */}
+      <GlassCard className="lg:col-span-2 p-4 flex flex-col justify-between min-h-[110px]">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Cocina KDS</span>
+          <ChefHat className="w-4 h-4 text-amber-500" />
+        </div>
+
+        <div className="my-2">
+          <h2 className="text-2xl font-black font-mono-nums text-[var(--text-main)]">
+            {lowStockInsumosCount} <span className="text-xs text-[var(--text-muted)] font-normal">alertas</span>
+          </h2>
+        </div>
+
+        <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] pt-1 border-t border-[var(--glass-border)]">
+          <span>Insumos bajos</span>
+          <span className="font-mono-nums font-bold text-amber-500">{lowStockInsumosCount}</span>
+        </div>
+
+        {designMode && (
+          <button
+            onClick={() => onHide('quickKpiBar')}
+            className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 p-1 rounded bg-black/80 text-zinc-400 hover:text-white transition-all z-30"
+          >
+            {isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          </button>
+        )}
+      </GlassCard>
+    </section>
   );
 };
 
-// 3. PedidosAtendidos Component (Mozos commissions / orders)
-const PedidosAtendidosComponent = ({ waiters, topWaiter }) => {
+// 2. Interactive Floor Plan View
+const FloorPlanComponent = ({
+  tables,
+  selectedTable,
+  onSelectTable,
+  activeZone,
+  onChangeZone,
+  onHide,
+  hiddenWidgets,
+  designMode
+}) => {
+  const { mode } = useTheme();
+  const isDarkMode = mode === 'dark';
+
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const isHidden = hiddenWidgets.includes('floorPlan');
+  if (isHidden && !designMode) return null;
+
+  // Filter logic
+  const filteredTables = tables.filter(t => {
+    // Exclude special tables
+    if (t.numero === '100' || t.numero === '101') return false;
+
+    // Zone filter
+    if (activeZone !== 'all') {
+      const parentZone = t.posX > 64 ? 'terraza' : (t.posY > 70 ? 'barra' : 'principal');
+      if (activeZone !== parentZone) return false;
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      const state = t.estado?.toLowerCase();
+      if (statusFilter === 'occupied' && state !== 'ocupada' && state !== 'ocupado') return false;
+      if (statusFilter === 'free' && state !== 'libre' && state !== 'free') return false;
+      if (statusFilter === 'billing' && state !== 'por pagar' && state !== 'billing') return false;
+    }
+
+    // Search query
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      const waiter = t.comandas?.[0]?.usuario?.nombre?.toLowerCase() || '';
+      return t.numero.toString().includes(q) || waiter.includes(q);
+    }
+
+    return true;
+  });
+
+  const getDinersCount = (table) => {
+    return table.comandas?.[0]?.comensales || table.capacidad || 2;
+  };
+
+  const getActiveBillAmount = (table) => {
+    const comanda = table.comandas?.[0];
+    if (!comanda || !comanda.detalles) return 0;
+    return comanda.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+  };
+
+  const getTableElapsedMins = (table) => {
+    const comanda = table.comandas?.[0];
+    if (!comanda) return null;
+    const diffMs = Date.now() - new Date(comanda.fecha).getTime();
+    return Math.max(1, Math.floor(diffMs / 60000));
+  };
+
+  const counts = {
+    all: tables.length,
+    free: tables.filter(t => t.estado?.toLowerCase() === 'libre' || t.estado?.toLowerCase() === 'free').length,
+    occupied: tables.filter(t => t.estado?.toLowerCase() === 'ocupada' || t.estado?.toLowerCase() === 'ocupado').length,
+    billing: tables.filter(t => t.estado?.toLowerCase() === 'por pagar' || t.estado?.toLowerCase() === 'billing' || t.estado?.toLowerCase() === 'cuenta').length,
+  };
+
+  const activeOrder = selectedTable?.comandas?.[0];
+  const activeBill = selectedTable ? getActiveBillAmount(selectedTable) : 0;
+  const elapsed = selectedTable ? getTableElapsedMins(selectedTable) : null;
+
   return (
-    <div className="flex flex-col gap-3 w-full h-full">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="font-medium text-xs tracking-wide text-[var(--text-muted)]">Pedidos Atendidos</h3>
-          <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
-            Comisión
-          </span>
+    <GlassCard
+      className={`p-4 sm:p-5 lg:p-6 flex flex-col h-full relative ${isHidden ? 'opacity-40 border border-dashed border-red-500/50 p-1 bg-red-500/5' : ''}`}
+    >
+      {/* Floor Plan Header & Controls */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 pb-4 border-b border-[var(--glass-border)]">
+        <div>
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-emerald-450 animate-bounce" />
+            <h3 className="font-extrabold text-base text-[var(--text-main)] tracking-tight">Plano de Sala en Vivo</h3>
+            <span className="text-[11px] px-2.5 py-0.5 rounded-lg bg-white text-[var(--text-main)] font-mono-nums font-bold border border-[var(--glass-border)] shadow-inner">
+              {filteredTables.length} mesas
+            </span>
+          </div>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5 font-medium">
+            Distribución física en tiempo real y comanda interactiva
+          </p>
         </div>
-        <button className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer bg-transparent border-none">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
       </div>
 
-      <div
-        className="flex-1 rounded-[24px] p-4 flex flex-col bg-[var(--bg-secondary)]"
-        style={{
-          border: '1px solid rgb(228 228 231 / 0.5)',
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-        }}
-      >
-        <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[185px] pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-700/50">
-          {waiters.map((waiter, index) => {
-            const isTop = topWaiter && waiter.id === topWaiter.id;
-            const avatarUrl = `https://api.dicebear.com/7.x/adventurer/svg?seed=${waiter.nombre || waiter.id}`;
+      {/* Zone Tabs & Status Pills Bar */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 py-3 border-b border-[var(--glass-border)]">
+        {/* Zone switcher pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 text-xs scrollbar-none">
+          <button
+            onClick={() => onChangeZone('all')}
+            className={`px-3 py-1.5 rounded-xl whitespace-nowrap text-xs font-semibold font-sans transition-all flex items-center gap-1.5 bg-zinc-800 text-white border border-[var(--glass-border)] shadow-md`}
+          >
+            <span>🏛️</span>
+            <span>Todas las Zonas</span>
+          </button>
+        </div>
+
+        {/* Status Filter Badges */}
+        <div className="flex items-center gap-1.5 overflow-x-auto text-[11px] scrollbar-none">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`px-2.5 py-1 rounded-lg border font-medium font-sans transition-all ${statusFilter === 'all'
+              ? (isDarkMode ? 'bg-zinc-800 text-white border-[var(--glass-border)] font-bold' : 'bg-zinc-300 text-zinc-950 border-zinc-400 font-bold')
+              : (isDarkMode ? 'bg-black/50 text-[var(--text-muted)] border-[var(--glass-border)]/50 hover:text-[var(--text-main)]' : 'bg-white/45 text-zinc-600 border-zinc-200/60 hover:text-zinc-900')
+              }`}
+          >
+            Todas ({counts.all})
+          </button>
+          <button
+            onClick={() => setStatusFilter('occupied')}
+            className={`px-2.5 py-1 rounded-lg border font-medium font-sans transition-all flex items-center gap-1.5 ${statusFilter === 'occupied'
+              ? 'bg-amber-500/20 text-amber-500 dark:text-amber-300 border-amber-500/60 font-bold'
+              : (isDarkMode ? 'bg-black/50 text-amber-500/90 border-[var(--glass-border)] hover:border-amber-500/30' : 'bg-white/45 text-amber-600 border-zinc-200/60 hover:border-amber-500/30')
+              }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            Ocupadas ({counts.occupied})
+          </button>
+          <button
+            onClick={() => setStatusFilter('free')}
+            className={`px-2.5 py-1 rounded-lg border font-medium font-sans transition-all flex items-center gap-1.5 ${statusFilter === 'free'
+              ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/60 font-bold'
+              : (isDarkMode ? 'bg-black/50 text-emerald-500/90 border-[var(--glass-border)] hover:border-emerald-550' : 'bg-white/45 text-emerald-600 border-zinc-200/60 hover:border-emerald-550')
+              }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Libres ({counts.free})
+          </button>
+          <button
+            onClick={() => setStatusFilter('billing')}
+            className={`px-2.5 py-1 rounded-lg border font-medium font-sans transition-all flex items-center gap-1.5 ${statusFilter === 'billing'
+              ? 'bg-rose-500/20 text-rose-500 dark:text-rose-300 border-rose-500/60 font-bold animate-pulse'
+              : (isDarkMode ? 'bg-black/50 text-rose-500/90 border-[var(--glass-border)] hover:border-rose-500/30' : 'bg-white/45 text-rose-600 border-zinc-200/60 hover:border-rose-500/30')
+              }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+            Cobro ({counts.billing})
+          </button>
+        </div>
+      </div>
+
+      {/* Main Floor Area Grid */}
+      <div className="flex-1 mt-4 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch min-h-[410px] lg:min-h-[440px]">
+        {/* Interactive Floor Plan (Left 8 Cols) */}
+        <div
+          className="lg:col-span-8 bg-black/90 rounded-2xl border border-[var(--glass-border)] p-4 relative overflow-hidden select-none min-h-[390px] lg:min-h-[420px]"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0)`,
+            backgroundSize: '24px 24px'
+          }}
+        >
+          {/* Zone Dividers */}
+          <div className="absolute top-3 left-3 text-[9px] uppercase font-bold tracking-wider text-zinc-500 flex items-center gap-1 pointer-events-none z-0">
+            🍷 Salón Principal
+          </div>
+          <div className="absolute top-3 right-3 text-[9px] uppercase font-bold tracking-wider text-emerald-500/80 pointer-events-none z-0">
+            🌿 Terraza Exterior
+          </div>
+          <div className="absolute bottom-[3.5%] right-[10%] left-[45%] h-7 bg-zinc-900/95 border border-[var(--glass-border)] rounded-xl flex items-center justify-center text-[9px] font-bold text-amber-500/80 pointer-events-none z-0 shadow-lg shadow-black/80">
+            🍸 BARRA COCTELERÍA & LOUNGE
+          </div>
+
+          {/* Render Tables on Floor Map */}
+          {filteredTables.map((table) => {
+            const isSelected = selectedTable?.id === table.id;
+            const totalAmount = getActiveBillAmount(table);
+            const state = table.estado?.toLowerCase();
+            const isOccupied = state === 'ocupada' || state === 'ocupado';
+            const isBilling = state === 'por pagar' || state === 'billing' || state === 'cuenta';
+
+            // Class selection based on theme index.css classes
+            let classeNeon = 'mesa-libre-neon';
+
+            if (isOccupied) {
+              classeNeon = 'mesa-ocupada-neon';
+            } else if (isBilling) {
+              classeNeon = 'mesa-ocupada-neon border-rose-500/70 shadow-[0_0_15px_rgba(244,63,94,0.35)]';
+            } else if (state === 'limpieza' || state === 'cleaning') {
+              classeNeon = 'mesa-apagada';
+            }
+
+            const rawY = table.posY !== undefined && table.posY !== null ? table.posY : 25;
+            // Compress vertical range from [19, 95] to [6, 56] to strongly reduce vertical spacing and fit screen
+            const finalTop = 12 + ((rawY - 19) / 76) * 50;
 
             return (
-              <motion.div
-                key={waiter.id}
-                whileHover={{ x: 3, backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
-                className="flex items-center justify-between p-2 rounded-2xl border border-transparent hover:border-zinc-200/50 transition-all duration-200"
+              <div
+                key={table.id}
+                onClick={() => onSelectTable(table)}
+                style={{
+                  position: 'absolute',
+                  left: `${table.posX !== undefined && table.posX !== null ? table.posX : 15}%`,
+                  top: `${finalTop}%`,
+                  transform: 'translate(-50%, -50%)',
+                  width: '84px',
+                  height: '84px',
+                  background: 'var(--mesa-bg, rgba(15, 15, 20, 0.8))',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  padding: '10px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  zIndex: isSelected ? 40 : 20,
+                  transition: 'all 0.2s ease',
+                }}
+                className={`mesa-mapa cursor-pointer border ${classeNeon} ${isSelected ? 'ring-2 ring-emerald-400 scale-[1.05] shadow-[0_0_25px_rgba(16,185,129,0.45)]' : ''
+                  }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <img
-                      src={avatarUrl}
-                      alt={waiter.nombre}
-                      className="w-10 h-10 rounded-full object-cover border border-zinc-200/40 bg-slate-800"
-                    />
-                    {isTop && (
-                      <span className="absolute -top-1 -right-1 bg-[var(--primary)] text-white dark:text-black p-0.5 rounded-full shadow-md">
-                        <Award className="w-3 h-3 font-bold" />
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold tracking-wide flex items-center gap-1 text-[var(--text-main)]">
-                      {waiter.nombre}
-                      {isTop && (
-                        <span className="text-[8px] font-bold uppercase tracking-widest bg-[var(--primary)]/10 text-[var(--primary)] px-1.5 py-0.5 rounded-md hidden sm:inline">
-                          TOP
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-[10px] text-[var(--text-muted)] font-medium">
-                      {index === 0 ? 'Turno Mañana' : index === 1 ? 'Turno Tarde' : 'Turno Completo'}
-                    </span>
-                  </div>
+                {/* Table Header: Table Name / Number */}
+                <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--text-main, #fff)', pointerEvents: 'none' }}>
+                  {table.numero < 10 ? `0${table.numero}` : table.numero}
                 </div>
 
-                <div className="flex flex-col items-end">
-                  <span className="text-xs font-black text-[var(--text-main)] font-mono">
-                    S/. {(waiter.totalSales || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                  </span>
-                  <span className="text-[8px] px-1 py-0.2 rounded-md font-bold tracking-wider uppercase bg-green-500/10 border border-green-500/20 text-green-500">
-                    PAGADO
+                {/* Table Center Body */}
+                <div className="pointer-events-none">
+                  {isOccupied ? (
+                    <div>
+                      <div className="text-[10px] font-black text-amber-400 font-mono-nums flex items-center justify-center gap-0.5">
+                        <span>S/. {totalAmount.toFixed(0)}</span>
+                      </div>
+                      <div className="text-[8px] text-zinc-400 font-mono-nums flex items-center justify-center gap-0.5 mt-0.5">
+                        <Clock className="w-2.5 h-2.5 text-amber-500" />
+                        <span>{getTableElapsedMins(table)}m</span>
+                      </div>
+                    </div>
+                  ) : isBilling ? (
+                    <div className="bg-rose-500/25 rounded-md px-1 py-0.5 border border-rose-500/40 text-center">
+                      <div className="text-[10px] font-black text-rose-200 font-mono-nums">
+                        S/. {totalAmount.toFixed(0)}
+                      </div>
+                      <div className="text-[7px] font-bold text-rose-300 uppercase tracking-tight leading-none mt-0.5">
+                        COBRO
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-0.5 text-[9px] text-emerald-450 font-bold">
+                      <Users className="w-2.5 h-2.5" />
+                      <span>{table.capacidad}p</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Table Footer: Assigned Waiter */}
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'flex', gap: 10, width: '100%', justifyContents: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '2px', pointerEvents: 'none' }}>
+                  <span className="truncate max-w-[70px] text-center font-medium">
+                    {table.comandas?.[0]?.usuario?.nombre?.split(' ')[0] || 'Libre'}
                   </span>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
 
-        {/* Líder del Día widget */}
-        <div className="mt-9 p-3 rounded-2xl border flex items-center justify-between bg-[var(--primary)]/5 border-zinc-200/40">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--primary)]/10 border border-[var(--primary)]/20 text-[var(--primary)]">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Líder del Día</span>
-              <span className="text-[11px] font-semibold text-[var(--text-main)]">{topWaiter ? topWaiter.nombre : 'Ninguno'}</span>
-            </div>
-          </div>
-          <span className="text-[10px] font-mono border px-2 py-0.5 rounded-md font-bold bg-green-500/10 text-green-500 border-green-500/20">
-            Eficiencia +24%
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-};
+        {/* Selected Table Detail Panel (Right 4 Cols) */}
+        <div className={`lg:col-span-4 border rounded-2xl p-4 flex flex-col justify-between select-none backdrop-blur-md ${isDarkMode ? 'bg-black/40 border-[var(--glass-border)]' : 'bg-white/45 border-zinc-200 shadow-sm'
+          }`}>
+          {selectedTable ? (
+            <div className="flex flex-col h-full justify-between">
+              <div>
+                <div className={`flex items-center justify-between pb-3 border-b ${isDarkMode ? 'border-[var(--glass-border)]' : 'border-zinc-200'}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-white font-mono-nums font-black text-xs border border-zinc-700">
+                      M#{selectedTable.numero}
+                    </span>
+                    <h4 className={`font-extrabold text-xs truncate max-w-[120px] ${isDarkMode ? 'text-[var(--text-main)]' : 'text-zinc-900'}`}>
+                      Mesa #{selectedTable.numero}
+                    </h4>
+                  </div>
+                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${selectedTable.estado?.toLowerCase() === 'ocupada' || selectedTable.estado?.toLowerCase() === 'ocupado' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' :
+                    selectedTable.estado?.toLowerCase() === 'por pagar' || selectedTable.estado?.toLowerCase() === 'billing' || selectedTable.estado?.toLowerCase() === 'cuenta' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-455 border border-rose-500/20 animate-pulse' :
+                      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border border-emerald-500/20'
+                    }`}>
+                    {selectedTable.estado}
+                  </span>
+                </div>
 
-// 4. CierreMesas Component (Closed tables list + PDF Export)
-const CierreMesasComponent = ({ transactions, onDownloadPDF }) => {
-  const getTableIcon = (tableName) => {
-    const num = parseInt(tableName.replace(/\D/g, '')) || 1;
-    if (num % 3 === 0) return { icon: Utensils, bg: 'bg-[var(--primary)]/5 border-[var(--primary)]/20', text: 'text-[var(--primary)]' };
-    if (num % 3 === 1) return { icon: Wine, bg: 'bg-[var(--primary)]/5 border-[var(--primary)]/20', text: 'text-[var(--primary)]' };
-    return { icon: Coffee, bg: 'bg-white/[0.02] border-[var(--glass-border)]', text: 'text-[var(--text-main)]' };
-  };
-
-  return (
-    <div className="flex flex-col gap-3 w-full h-full">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium text-xs tracking-wide text-[var(--text-muted)]">Cierre de Mesas</h3>
-
-        {/* PDF Download Button replacing Sort by dropdown per User Request */}
-        <button
-          onClick={onDownloadPDF}
-          className="flex items-center justify-center p-2 rounded-xl transition-all cursor-pointer text-[var(--text-muted)] hover:text-[var(--primary)] active:scale-95 bg-[var(--bg-secondary)]"
-          style={{ border: '1px solid rgb(228 228 231 / 0.5)', boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)' }}
-          title="Descargar Reporte de Mesas Cerradas"
-        >
-          <Download className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div
-        className="flex-1 rounded-[24px] p-4 flex flex-col justify-between bg-[var(--bg-secondary)]"
-        style={{
-          border: '1px solid rgb(228 228 231 / 0.5)',
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-        }}
-      >
-        <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[190px] pr-1 scrollbar-none">
-          {transactions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center text-[var(--text-muted)]">
-              <Receipt className="w-8 h-8 opacity-25 mb-2" />
-              <span className="text-xs">No hay mesas cerradas para el filtro seleccionado.</span>
-            </div>
-          ) : (
-            transactions.map((tx) => {
-              const iconStyle = getTableIcon(tx.tableName);
-              const TableIcon = iconStyle.icon;
-
-              return (
-                <motion.div
-                  key={tx.id}
-                  whileHover={{ x: 3, backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
-                  className="flex items-center justify-between p-2 rounded-2xl border border-transparent hover:border-zinc-200/50 transition-all duration-200"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border shadow-sm ${iconStyle.bg} ${iconStyle.text}`}>
-                      <TableIcon className="w-5 h-5" />
+                {/* Comanda details */}
+                {activeOrder ? (
+                  <div className="mt-3 space-y-3">
+                    <div className={`flex items-center justify-between text-[10px] p-2 rounded-xl border ${isDarkMode ? 'bg-zinc-900/40 border-[var(--glass-border)]/40 text-[var(--text-muted)]' : 'bg-zinc-100/50 border-zinc-200/50 text-zinc-600'
+                      }`}>
+                      <span className="flex items-center gap-1 font-bold">
+                        <Users className="w-3.5 h-3.5 text-cyan-500" />
+                        {getDinersCount(selectedTable)} pers.
+                      </span>
+                      <span className="flex items-center gap-1 font-bold">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                        {elapsed} min activo
+                      </span>
                     </div>
 
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold tracking-wide text-[var(--text-main)]">
-                        {tx.tableName}
-                      </span>
-                      <span className="text-[10px] text-[var(--text-muted)] font-medium">
-                        Cierre: {tx.closedAt}
-                      </span>
+                    <div className={`flex items-center gap-2.5 p-2 rounded-xl border ${isDarkMode ? 'bg-zinc-900/60 border-[var(--glass-border)]/40' : 'bg-zinc-100/60 border-zinc-200/50'
+                      }`}>
+                      <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-black text-white">
+                        {activeOrder.usuario?.nombre?.[0] || 'M'}
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-zinc-500 dark:text-[var(--text-muted)] block font-medium">Atendido por:</span>
+                        <span className={`text-[11px] font-bold ${isDarkMode ? 'text-[var(--text-main)]' : 'text-zinc-800'}`}>{activeOrder.usuario?.nombre || 'Mozo'}</span>
+                      </div>
+                    </div>
+
+                    {/* Dishes list */}
+                    <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                      <span className="text-[9px] font-bold text-zinc-500 dark:text-[var(--text-muted)] uppercase tracking-wider block">Consumo comanda</span>
+                      {activeOrder.detalles?.map(d => (
+                        <div key={d.id} className={`flex items-center justify-between text-[11px] p-1.5 rounded-lg border ${isDarkMode ? 'bg-zinc-950/40 border-[var(--glass-border)]/30 text-white' : 'bg-zinc-100/40 border-zinc-200/50 text-zinc-800'
+                          }`}>
+                          <span className="truncate max-w-[130px] font-semibold">
+                            <b className="text-[var(--primary)] font-mono-nums mr-1">{d.cantidad}x</b> {d.plato?.nombre}
+                          </span>
+                          <span className="font-bold font-mono-nums">
+                            S/. {(d.plato?.precio * d.cantidad).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-end">
-                      <span className="text-xs font-black text-[var(--text-main)] font-mono">
-                        S/. {(tx.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                      </span>
-                      <span className="text-[9px] text-[var(--text-muted)] font-medium">
-                        Atendido por {tx.waiterName.split(' ')[0]}
-                      </span>
-                    </div>
-
-                    <CheckCircle className="w-4 h-4 text-green-500 opacity-80" />
-                  </div>
-                </motion.div>
-              );
-            })
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// 5. StatisticsPanel Component (Right sidebar panel)
-const StatisticsPanelComponent = ({
-  selectedDate,
-  setSelectedDate,
-  goalPercentage,
-  currentEarning,
-  chartData = [],
-  fundFilter = 'week',
-  setFundFilter,
-  onShowToast,
-  unpaidTables = [],
-  lowStockInsumos = []
-}) => {
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [hoveredIdx, setHoveredIdx] = useState(null);
-
-  // Circle progress calculations
-  const radius = 40;
-  const strokeDasharray = 2 * Math.PI * radius; // 251.2
-  const strokeDashoffset = strokeDasharray - (strokeDasharray * goalPercentage) / 100;
-
-  // Calculate coordinates for the 2D Area Chart (Flujo de Fondos)
-  const svgWidth = 320;
-  const svgHeight = 90;
-  const chartPaddingLeft = 28;
-  const chartPaddingRight = 12;
-  const chartPaddingTop = 18;
-  const chartPaddingBottom = 14;
-
-  const chartWidth = svgWidth - chartPaddingLeft - chartPaddingRight;
-  const chartHeight = svgHeight - chartPaddingTop - chartPaddingBottom;
-
-  const maxAmount = chartData.length > 0 ? Math.max(...chartData.map(c => c.amount)) : 1000;
-
-  // Create coordinate points
-  const points = chartData.map((item, i) => {
-    const x = chartPaddingLeft + (i / (chartData.length - 1 || 1)) * chartWidth;
-    const ratio = maxAmount > 0 ? (item.amount / maxAmount) : 0.5;
-    const y = chartPaddingTop + chartHeight - ratio * chartHeight;
-    return { x, y, earning: item.amount, date: item.date, label: item.label };
-  });
-
-  // Hermite Spline Path
-  let curvePath = '';
-  if (points.length > 0) {
-    curvePath = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[i];
-      const p1 = points[i + 1];
-      const cpX1 = p0.x + (p1.x - p0.x) / 2;
-      const cpY1 = p0.y;
-      const cpX2 = p0.x + (p1.x - p0.x) / 2;
-      const cpY2 = p1.y;
-      curvePath += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${p1.x} ${p1.y}`;
-    }
-  }
-
-  const areaPath = points.length > 0
-    ? `${curvePath} L ${points[points.length - 1].x} ${chartPaddingTop + chartHeight} L ${points[0].x} ${chartPaddingTop + chartHeight} Z`
-    : '';
-
-  // Find active point
-  const activeIdx = hoveredIdx !== null
-    ? hoveredIdx
-    : chartData.findIndex(c => c.date === selectedDate);
-
-  const activePoint = activeIdx !== -1 && points[activeIdx] !== undefined
-    ? points[activeIdx]
-    : points[points.length - 1];
-
-  const activeEarning = activePoint?.earning || 0;
-  const activeLabel = activePoint?.label || '';
-
-  return (
-    <GlassCard className="flex flex-col gap-3 w-full p-4 h-full">
-
-      {/* Header Profile & Notification row */}
-      <div className="flex items-center justify-between w-full relative">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="relative w-10 h-10 rounded-2xl flex items-center justify-center transition-all cursor-pointer hover:bg-white/[0.04] text-[var(--text-muted)] hover:text-[var(--text-main)]"
-            style={{ border: '1px solid rgb(228 228 231 / 0.5)' }}
-          >
-            <Bell className="w-5 h-5" />
-            {(unpaidTables.length + lowStockInsumos.length) > 0 && (
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[var(--primary)] ring-2 ring-[var(--bg-secondary)]"></span>
-            )}
-          </button>
-
-          {/* Floating Live Alerts Dropdown */}
-          {showNotifications && (
-            <div
-              className="absolute left-0 top-12 w-72 rounded-2xl p-4 shadow-2xl z-50 flex flex-col gap-3 bg-[var(--bg-secondary)]"
-              style={{
-                border: '1px solid rgb(228 228 231 / 0.6)',
-                boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.3)',
-              }}
-            >
-              <div className="flex items-center justify-between border-b border-zinc-200/20 pb-2">
-                <span className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider">Alertas en Vivo</span>
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)]">
-                  {unpaidTables.length + lowStockInsumos.length} alertas
-                </span>
-              </div>
-              <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
-                {unpaidTables.length === 0 && lowStockInsumos.length === 0 ? (
-                  <span className="text-[10px] text-[var(--text-muted)] py-3 text-center block">No hay alertas activas en este momento.</span>
                 ) : (
-                  <>
-                    {unpaidTables.map(t => (
-                      <div key={`table-${t.id}`} className="flex items-center justify-between p-2 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-amber-500">Mesa {t.numero}</span>
-                          <span className="text-[9px] text-[var(--text-muted)]">Falta pagar / Ocupada</span>
-                        </div>
-                        <span className="text-[8px] font-mono font-bold bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded">Pendiente</span>
-                      </div>
-                    ))}
-                    {lowStockInsumos.map(i => (
-                      <div key={`insumo-${i.id}`} className="flex items-center justify-between p-2 rounded-xl bg-red-500/5 border border-red-500/20">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-red-500">{i.nombre}</span>
-                          <span className="text-[9px] text-[var(--text-muted)]">Stock: {i.stock} {i.unidadMedida} (Min: {i.stockMinimo})</span>
-                        </div>
-                        <span className="text-[8px] font-mono font-bold bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded">Stock Crítico</span>
-                      </div>
-                    ))}
-                  </>
+                  <div className="py-16 text-center text-zinc-550 dark:text-[var(--text-muted)] text-[11px] flex flex-col items-center gap-2">
+                    <Utensils className="w-7 h-7 text-zinc-400 dark:text-zinc-700" />
+                    <span>Mesa disponible.<br />No hay comanda abierta en este turno.</span>
+                  </div>
                 )}
               </div>
+
+              {/* Actions */}
+              {activeOrder && (
+                <div className={`mt-4 pt-3 border-t ${isDarkMode ? 'border-[var(--glass-border)]' : 'border-zinc-200'}`}>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-zinc-550 dark:text-[var(--text-muted)]">Total comanda:</span>
+                    <span className="text-base font-black text-emerald-600 dark:text-emerald-450 font-mono-nums">
+                      S/. {activeBill.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="py-24 text-center text-zinc-500 dark:text-[var(--text-muted)] text-xs flex flex-col items-center justify-center gap-3 h-full">
+              <Compass className="w-8 h-8 text-zinc-400 dark:text-zinc-700 animate-spin-slow" />
+              <span>Selecciona una mesa en el mapa<br />para gestionar la comanda o facturar.</span>
             </div>
           )}
         </div>
-
-        <div className="flex items-center gap-2.5">
-          <div className="flex flex-col items-end">
-            <span className="text-xs font-bold text-[var(--text-main)]">Hector Q.</span>
-            <span className="text-[8px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded-md bg-green-500/10 text-green-500">ADMIN LIVE</span>
-          </div>
-          <div className="relative">
-            <img
-              src="https://api.dicebear.com/7.x/adventurer/svg?seed=Hector"
-              alt="Hector Admin"
-              className="w-10 h-10 rounded-2xl object-cover bg-slate-800"
-              style={{ border: '1px solid rgb(228 228 231 / 0.4)' }}
-            />
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-[var(--bg-secondary)]"></span>
-          </div>
-        </div>
       </div>
 
-      {/* Statistics Label */}
-      <div className="flex items-center justify-between mt-2">
-        <h3 className="font-bold text-base tracking-wide text-[var(--text-main)]">Estadísticas</h3>
-        <button className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer bg-transparent border-none">
-          <MoreHorizontal className="w-5 h-5" />
+      {designMode && (
+        <button
+          onClick={() => onHide('floorPlan')}
+          className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 p-1 rounded bg-black/80 text-zinc-400 hover:text-white transition-all z-45"
+        >
+          {isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
         </button>
-      </div>
-
-      {/* Donut Chart */}
-      <div className="flex flex-col items-center justify-center my-1 relative">
-        <div className="relative w-32 h-32 flex items-center justify-center">
-          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-            <circle
-              cx="50"
-              cy="50"
-              r={radius}
-              className="fill-transparent stroke-white/[0.04]"
-              strokeWidth="8"
-            />
-            <circle
-              cx="50"
-              cy="50"
-              r={radius}
-              stroke="var(--primary)"
-              strokeWidth="8"
-              fill="transparent"
-              strokeDasharray={strokeDasharray}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              className="transition-all duration-1000 ease-out"
-            />
-          </svg>
-
-          <div className="absolute inset-1.5 rounded-full flex flex-col items-center justify-center bg-[var(--bg-secondary)] shadow-sm" style={{ border: '1px solid rgb(228 228 231 / 0.5)' }}>
-            <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--text-muted)]">
-              CAJA DEL DÍA
-            </span>
-            <span className="text-lg font-black mt-0.5 tracking-tight text-[var(--text-main)] font-mono">
-              S/. {currentEarning.toLocaleString('es-PE', { minimumFractionDigits: 0 })}
-            </span>
-            <span className="text-[8px] font-bold mt-0.5 tracking-wide px-1.5 py-0.2 rounded-full flex items-center gap-0.5 bg-green-500/10 text-green-500 border border-green-500/20">
-              <TrendingUp className="w-2.5 h-2.5" /> {goalPercentage}%
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Interactive Calendar */}
-      <div className="flex justify-center w-full relative z-30 select-none">
-        <Calendar
-          mode="single"
-          selected={selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date()}
-          onSelect={(date) => {
-            if (date) {
-              const yearVal = date.getFullYear();
-              const monthVal = String(date.getMonth() + 1).padStart(2, '0');
-              const dayVal = String(date.getDate()).padStart(2, '0');
-              setSelectedDate(`${yearVal}-${monthVal}-${dayVal}`);
-            }
-          }}
-          className="w-full"
-        />
-      </div>
-
-      {/* PREMIUM INTERACTIVE 2D AREA CHART CARD: CASH FLOW */}
-      <SubCard className="p-2.5 flex flex-col gap-1.5 relative mt-1 text-[var(--text-main)]">
-        <div className="flex items-center justify-between w-full">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-extrabold text-[var(--text-muted)] uppercase tracking-widest">Flujo de Fondos</span>
-            <span className="text-lg font-black mt-0.5 tracking-tight font-mono text-[var(--text-main)]">
-              S/. {activeEarning.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-            </span>
-            <div className="flex items-center gap-1 mt-1">
-              <span className="text-[9px] text-green-500 font-extrabold flex items-center">
-                <TrendingUp className="w-2.5 h-2.5 mr-0.5" /> 10.2% vs semana anterior
-              </span>
-              <span className="text-[9px] text-[var(--text-muted)] font-bold font-sans">({activeLabel})</span>
-            </div>
-          </div>
-
-          <div className="relative">
-            <select
-              value={fundFilter}
-              onChange={(e) => setFundFilter(e.target.value)}
-              className="bg-white/5 border border-zinc-500/20 rounded-xl px-2.5 py-1 text-[9px] font-extrabold text-[var(--text-main)] focus:outline-none cursor-pointer"
-            >
-              <option value="week" className="bg-[#0b0b10]">Esta semana</option>
-              <option value="month" className="bg-[#0b0b10]">Últimos 30 días</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="relative w-full h-[90px] mt-1 select-none">
-          <svg
-            width="100%"
-            height="100%"
-            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-            preserveAspectRatio="none"
-            className="overflow-visible"
-          >
-            <defs>
-              <linearGradient id="chartAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.45" />
-                <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.00" />
-              </linearGradient>
-            </defs>
-
-            {/* Horizontal Grid lines */}
-            {[0, 0.5, 1].map((ratio, index) => {
-              const yVal = chartPaddingTop + ratio * chartHeight;
-              const gridAmount = maxAmount - ratio * maxAmount;
-              return (
-                <g key={index} className="opacity-40">
-                  <line
-                    x1={chartPaddingLeft}
-                    y1={yVal}
-                    x2={svgWidth - chartPaddingRight}
-                    y2={yVal}
-                    stroke="rgba(255, 255, 255, 0.1)"
-                    strokeWidth="0.8"
-                    strokeDasharray="3,3"
-                  />
-                  <text
-                    x={chartPaddingLeft - 6}
-                    y={yVal + 3}
-                    fill="var(--text-muted)"
-                    fontSize="7"
-                    fontWeight="bold"
-                    textAnchor="end"
-                    className="font-mono"
-                  >
-                    {gridAmount >= 1000 ? `${(gridAmount / 1000).toFixed(1)}K` : Math.round(gridAmount)}
-                  </text>
-                </g>
-              );
-            })}
-
-            {/* Filled Area Gradient */}
-            {areaPath && (
-              <path
-                d={areaPath}
-                fill="url(#chartAreaGradient)"
-                className="transition-all duration-300 ease-out"
-              />
-            )}
-
-            {/* Spline Curve Line */}
-            {curvePath && (
-              <path
-                d={curvePath}
-                fill="none"
-                stroke="var(--primary)"
-                strokeWidth="3.2"
-                strokeLinecap="round"
-                className="transition-all duration-300 ease-out"
-              />
-            )}
-
-            {/* X-Axis Labels */}
-            {points.map((p, i) => {
-              if (points.length > 7 && i % Math.ceil(points.length / 6) !== 0 && activeIdx !== i) {
-                return null;
-              }
-              return (
-                <text
-                  key={i}
-                  x={p.x}
-                  y={chartPaddingTop + chartHeight + 11}
-                  fill={activeIdx === i ? "var(--primary)" : "var(--text-muted)"}
-                  fontSize="7"
-                  fontWeight="900"
-                  textAnchor="middle"
-                  className="transition-colors duration-200"
-                >
-                  {p.label.split(' ')[1]}
-                </text>
-              );
-            })}
-
-            {/* Glowing Active Point */}
-            {activePoint && (
-              <g className="transition-all duration-150 ease-out">
-                <circle
-                  cx={activePoint.x}
-                  cy={activePoint.y}
-                  r="7"
-                  fill="var(--primary)"
-                  opacity="0.35"
-                  className="animate-ping"
-                />
-                <circle
-                  cx={activePoint.x}
-                  cy={activePoint.y}
-                  r="5"
-                  fill="white"
-                  stroke="var(--primary)"
-                  strokeWidth="2.5"
-                />
-                <circle
-                  cx={activePoint.x}
-                  cy={activePoint.y}
-                  r="1.5"
-                  fill="var(--primary)"
-                />
-
-                {/* Speech Bubble Tooltip */}
-                <g transform={`translate(${activePoint.x}, ${activePoint.y})`}>
-                  <path
-                    d="M -26 -32 h 52 a 4 4 0 0 1 4 4 v 11 a 4 4 0 0 1 -4 4 h -22 l -4 4 l -4 -4 h -22 a 4 4 0 0 1 -4 -4 v -11 a 4 4 0 0 1 4 -4 z"
-                    fill="var(--primary)"
-                    className="shadow-lg filter drop-shadow-md"
-                  />
-                  <text
-                    y="-20"
-                    fill="white"
-                    fontSize="7.5"
-                    fontWeight="900"
-                    textAnchor="middle"
-                    className="font-mono tracking-tight"
-                  >
-                    S/.{Math.round(activePoint.earning)}
-                  </text>
-                </g>
-              </g>
-            )}
-
-            {/* Invisible Hover triggers */}
-            {points.map((p, i) => {
-              const colWidth = chartWidth / (chartData.length - 1 || 1);
-              const triggerX = p.x - colWidth / 2;
-              return (
-                <rect
-                  key={i}
-                  x={triggerX}
-                  y={0}
-                  width={colWidth}
-                  height={svgHeight}
-                  fill="transparent"
-                  className="cursor-pointer"
-                  onMouseEnter={() => setHoveredIdx(i)}
-                  onMouseLeave={() => setHoveredIdx(null)}
-                  onClick={() => setSelectedDate(p.date)}
-                />
-              );
-            })}
-          </svg>
-        </div>
-      </SubCard>
-
+      )}
     </GlassCard>
   );
 };
 
-// Editable widget container that allows dragging and resizing (VisBug style)
+// 3. Revenue Analytics Component (using Recharts)
+const RevenueAnalyticsComponent = ({
+  chartData,
+  transactions,
+  selectedDate,
+  setSelectedDate,
+  fundFilter,
+  setFundFilter,
+  revenuePeriod,
+  setRevenuePeriod,
+  onHide,
+  hiddenWidgets,
+  designMode
+}) => {
+  const { mode } = useTheme();
+  const isDarkMode = mode === 'dark';
+
+  const [chartType, setChartType] = useState('area');
+  const [activeMetric, setActiveMetric] = useState('revenue');
+
+  const isHidden = hiddenWidgets.includes('revenueAnalytics');
+  if (isHidden && !designMode) return null;
+
+  // Process data based on period
+  let rawData = [];
+  let totalRevenue = 0;
+  let totalGuests = 0;
+  let totalOrders = 0;
+
+  if (revenuePeriod === 'day') {
+    const hourlyData = [];
+    for (let h = 11; h <= 23; h++) {
+      hourlyData.push({ timeLabel: `${h}:00`, label: `${h}:00`, revenue: 0, guestsCount: 0, previousRevenue: 0, avgTicket: 0, ordersCount: 0 });
+    }
+    transactions.forEach(tx => {
+      try {
+        const d = new Date(tx.fecha || tx.createdAt);
+        const hr = d.getHours();
+        if (hr >= 11 && hr <= 23) {
+          const idx = hr - 11;
+          hourlyData[idx].revenue += (tx.total || 0);
+          hourlyData[idx].guestsCount += (tx.comensales || 2);
+          hourlyData[idx].ordersCount += 1;
+        }
+      } catch (e) { }
+    });
+
+    // Mock comparisons
+    hourlyData.forEach((d, i) => {
+      d.previousRevenue = Math.max(0, Math.round(d.revenue * 0.85 + (i % 2 === 0 ? 50 : -40)));
+      d.avgTicket = d.ordersCount > 0 ? d.revenue / d.ordersCount : 0;
+    });
+
+    rawData = hourlyData;
+    totalRevenue = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
+    totalGuests = transactions.reduce((sum, tx) => sum + (tx.comensales || 2), 0);
+    totalOrders = transactions.length;
+  } else {
+    // Week or Month
+    rawData = (chartData || []).map((item, idx) => ({
+      timeLabel: item.label,
+      label: item.label,
+      revenue: item.amount || 0,
+      previousRevenue: Math.max(100, Math.round((item.amount || 0) * 0.9 + (idx % 2 === 0 ? 100 : -100))),
+      guestsCount: Math.round((item.amount || 0) / 25),
+      ordersCount: Math.round((item.amount || 0) / 48),
+      avgTicket: 48
+    }));
+    totalRevenue = rawData.reduce((sum, d) => sum + d.revenue, 0);
+    totalGuests = rawData.reduce((sum, d) => sum + d.guestsCount, 0);
+    totalOrders = rawData.reduce((sum, d) => sum + d.ordersCount, 0);
+  }
+
+  const prevTotalRevenue = rawData.reduce((sum, item) => sum + item.previousRevenue, 0);
+  const growthPercent = (((totalRevenue - prevTotalRevenue) / (prevTotalRevenue || 1)) * 100).toFixed(1);
+  const avgTicket = totalRevenue / (totalOrders || 1);
+
+  const getPeriodLabel = () => {
+    switch (revenuePeriod) {
+      case 'day': return 'Hoy (Turno)';
+      case 'week': return 'Semana (Lun - Dom)';
+      case 'month': return 'Mes (Semanas)';
+    }
+  };
+
+  const handlePeriodChange = (p) => {
+    setRevenuePeriod(p);
+    if (p === 'week') setFundFilter('week');
+    if (p === 'month') setFundFilter('month');
+  };
+
+  // Custom Dark Tooltip
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-black/95 border border-[var(--glass-border)] rounded-xl p-3 shadow-2xl font-mono text-[10px] min-w-[170px] text-[var(--text-main)] animate-in fade-in zoom-in-95 duration-100">
+          <div className="text-[var(--primary)] font-bold text-xs mb-1.5 border-b border-[var(--glass-border)]/50 pb-1 flex items-center justify-between">
+            <span>{label}</span>
+            <span className="text-[9px] text-[var(--text-muted)] font-normal">{getPeriodLabel()}</span>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex justify-between text-white font-semibold">
+              <span className="text-[var(--text-muted)]">Ingreso:</span>
+              <span className="font-mono-nums text-emerald-450">S/. {data.revenue.toLocaleString()}</span>
+            </div>
+
+            <div className="flex justify-between text-[var(--text-muted)] text-[9px]">
+              <span>Periodo Ant.:</span>
+              <span className="font-mono-nums">S/. {data.previousRevenue.toLocaleString()}</span>
+            </div>
+
+            <div className="flex justify-between text-[var(--text-main)] text-[9px] pt-1 border-t border-[var(--glass-border)]/30">
+              <span className="text-[var(--text-muted)]">Comensales:</span>
+              <span className="font-semibold">{data.guestsCount} pers.</span>
+            </div>
+
+            <div className="flex justify-between text-[9px]">
+              <span className="text-[var(--text-muted)]">Ticket Prom.:</span>
+              <span className="text-[var(--primary)] font-semibold font-mono-nums">S/. {data.avgTicket ? data.avgTicket.toFixed(0) : '48'}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <GlassCard
+      className={`p-4 sm:p-5 lg:p-6 flex flex-col h-full relative ${isHidden ? 'opacity-40 border border-dashed border-red-500/50 p-1 bg-red-500/5' : ''}`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--glass-border)]">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="font-extrabold text-base text-[var(--text-main)] tracking-tight">Rendimiento de Ventas</h3>
+            <span className="text-[10px] px-2.5 py-0.5 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/30 font-mono-nums font-bold flex items-center gap-0.5 shadow-[0_0_10px_rgba(249,115,22,0.15)]">
+              <TrendingUp className="w-3.5 h-3.5" /> {growthPercent >= 0 ? `+${growthPercent}` : growthPercent}%
+            </span>
+          </div>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5 font-medium">Ingresos, proyecciones y ticket promedio en tiempo real</p>
+        </div>
+
+        {/* Floating Filters control */}
+        <div className="flex items-center gap-2">
+          {/* Chart Style Switcher */}
+          <div className={`hidden sm:flex items-center p-1 rounded-xl border backdrop-blur-md ${isDarkMode ? 'bg-black/60 border-[var(--glass-border)]' : 'bg-zinc-200/60 border-zinc-200'
+            }`}>
+            <button
+              onClick={() => setChartType('area')}
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${chartType === 'area'
+                ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-[0_0_8px_var(--color-brand-glow)] font-sans font-bold'
+                : `bg-transparent border-transparent font-sans font-bold ${isDarkMode ? 'text-white hover:bg-white/5' : 'text-zinc-800 hover:bg-zinc-100'}`
+                }`}
+              title="Línea Suave"
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setChartType('bar')}
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${chartType === 'bar'
+                ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-[0_0_8px_var(--color-brand-glow)] font-sans font-bold'
+                : `bg-transparent border-transparent font-sans font-bold ${isDarkMode ? 'text-white hover:bg-white/5' : 'text-zinc-800 hover:bg-zinc-100'}`
+                }`}
+              title="Barras"
+            >
+              <Grid3X3 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Period Selection */}
+          <div className={`p-1 rounded-xl flex space-x-1 border backdrop-blur-md text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'bg-black/60 border-[var(--glass-border)]' : 'bg-zinc-200/60 border-zinc-200'
+            }`}>
+            {(['day', 'week', 'month']).map((period) => (
+              <button
+                key={period}
+                onClick={() => handlePeriodChange(period)}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer border ${revenuePeriod === period
+                  ? 'bg-[var(--primary)] text-white font-sans font-extrabold shadow-sm border-[var(--primary)] shadow-[0_0_8px_var(--color-brand-glow)]'
+                  : `bg-transparent border-transparent font-sans font-bold ${isDarkMode ? 'text-white hover:bg-white/5' : 'text-zinc-800 hover:bg-zinc-100'}`
+                  }`}
+              >
+                {period === 'day' ? 'DÍA' : period === 'week' ? 'SEMANA' : 'MES'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Metrics Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-4 select-none">
+        <div
+          onClick={() => setActiveMetric('revenue')}
+          className={`p-3 rounded-xl border cursor-pointer backdrop-blur-md transition-all ${activeMetric === 'revenue'
+            ? (isDarkMode ? 'bg-zinc-800/85 border-[var(--primary)]/60 text-white font-bold' : 'bg-zinc-200/85 border-[var(--primary)]/60 text-zinc-950 font-bold shadow-sm')
+            : (isDarkMode ? 'bg-black/40 border-[var(--glass-border)] text-zinc-400 hover:bg-zinc-800/40' : 'bg-white/45 border-zinc-200/60 text-zinc-700 hover:bg-zinc-100')
+            }`}
+        >
+          <span className={`text-[10px] block font-bold uppercase tracking-wider ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Venta Total</span>
+          <div className={`text-base font-black font-mono-nums mt-1 ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
+            S/. {totalRevenue.toLocaleString('es-PE', { maximumFractionDigits: 0 })}
+          </div>
+          <span className="text-[9px] text-emerald-600 dark:text-emerald-450 font-mono-nums font-semibold flex items-center mt-1">
+            <ArrowUpRight className="w-3 h-3 mr-0.5" /> +12%
+          </span>
+        </div>
+
+        <div
+          onClick={() => setActiveMetric('ticket')}
+          className={`p-3 rounded-xl border cursor-pointer backdrop-blur-md transition-all ${activeMetric === 'ticket'
+            ? (isDarkMode ? 'bg-zinc-800/85 border-[var(--primary)]/60 text-white font-bold' : 'bg-zinc-200/85 border-[var(--primary)]/60 text-zinc-950 font-bold shadow-sm')
+            : (isDarkMode ? 'bg-black/40 border-[var(--glass-border)] text-zinc-400 hover:bg-zinc-800/40' : 'bg-white/45 border-zinc-200/60 text-zinc-700 hover:bg-zinc-100')
+            }`}
+        >
+          <span className={`text-[10px] block font-bold uppercase tracking-wider ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Ticket Medio</span>
+          <div className={`text-base font-black font-mono-nums mt-1 ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
+            S/. {avgTicket > 0 ? avgTicket.toFixed(0) : '48'}
+          </div>
+          <span className={`text-[9px] font-mono-nums mt-1 block leading-none ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+            {totalOrders} pedidos
+          </span>
+        </div>
+
+        <div
+          onClick={() => setActiveMetric('guests')}
+          className={`p-3 rounded-xl border cursor-pointer backdrop-blur-md transition-all ${activeMetric === 'guests'
+            ? (isDarkMode ? 'bg-zinc-800/85 border-[var(--primary)]/60 text-white font-bold' : 'bg-zinc-200/85 border-[var(--primary)]/60 text-zinc-950 font-bold shadow-sm')
+            : (isDarkMode ? 'bg-black/40 border-[var(--glass-border)] text-zinc-400 hover:bg-zinc-800/40' : 'bg-white/45 border-zinc-200/60 text-zinc-700 hover:bg-zinc-100')
+            }`}
+        >
+          <span className={`text-[10px] block font-bold uppercase tracking-wider ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Comensales</span>
+          <div className={`text-base font-black font-mono-nums mt-1 ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
+            {totalGuests}
+          </div>
+          <span className={`text-[9px] font-mono-nums mt-1 block leading-none ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+            ~{totalOrders > 0 ? (totalGuests / totalOrders).toFixed(1) : '2.1'} p./mesa
+          </span>
+        </div>
+
+        <div className={`p-3 rounded-xl border backdrop-blur-md ${isDarkMode ? 'bg-black/40 border-[var(--glass-border)]' : 'bg-white/45 border-zinc-200/60'
+          }`}>
+          <span className={`text-[10px] block font-bold uppercase tracking-wider ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Hora Rush</span>
+          <div className="text-base font-black mt-1 text-[var(--primary)] font-mono-nums">
+            13:15 - 14:45
+          </div>
+          <span className={`text-[9px] font-mono-nums mt-1 block leading-none ${isDarkMode ? 'text-amber-500' : 'text-amber-600'}`}>
+            Capacidad 100%
+          </span>
+        </div>
+      </div>
+
+      {/* Recharts Canvas */}
+      <div className="flex-1 min-h-[220px] w-full pt-1 flex items-center justify-center">
+        {rawData.length === 0 ? (
+          <div className="text-zinc-550 text-xs font-semibold">No hay transacciones guardadas.</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            {chartType === 'area' ? (
+              <AreaChart data={rawData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="bunkerRevenueGlow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.0} />
+                  </linearGradient>
+                  <linearGradient id="bunkerPrevRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#71717a" stopOpacity={0.12} />
+                    <stop offset="95%" stopColor="#71717a" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis
+                  dataKey="timeLabel"
+                  stroke="var(--text-muted)"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
+                />
+                <YAxis
+                  stroke="var(--text-muted)"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(val) => `S/.${val}`}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="previousRevenue"
+                  stroke="#52525b"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                  fillOpacity={1}
+                  fill="url(#bunkerPrevRevenue)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey={activeMetric === 'revenue' ? 'revenue' : activeMetric === 'guests' ? 'guestsCount' : 'avgTicket'}
+                  stroke="var(--primary)"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#bunkerRevenueGlow)"
+                />
+              </AreaChart>
+            ) : (
+              <BarChart data={rawData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis
+                  dataKey="timeLabel"
+                  stroke="var(--text-muted)"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
+                />
+                <YAxis
+                  stroke="var(--text-muted)"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(val) => `S/.${val}`}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="previousRevenue" fill="rgba(255,255,255,0.08)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey={activeMetric === 'revenue' ? 'revenue' : activeMetric === 'guests' ? 'guestsCount' : 'avgTicket'} fill="var(--primary)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            )}
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {designMode && (
+        <button
+          onClick={() => onHide('revenueAnalytics')}
+          className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 p-1 rounded bg-black/80 text-zinc-400 hover:text-white transition-all z-30"
+        >
+          {isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+        </button>
+      )}
+    </GlassCard>
+  );
+};
+
+// 4. Staff Leaderboard Component
+const StaffLeaderboardComponent = ({
+  waitersList,
+  cooksList,
+  allUsersList = [],
+  onHide,
+  hiddenWidgets,
+  designMode
+}) => {
+  const { mode } = useTheme();
+  const isDarkMode = mode === 'dark';
+
+  const [selectedRole, setSelectedRole] = useState('waiter'); // 'waiter' | 'chef'
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+
+  const isHidden = hiddenWidgets.includes('staffLeaderboard');
+  if (isHidden && !designMode) return null;
+
+  const getAvatarElement = (staff) => {
+    if (staff.avatar) {
+      return (
+        <img
+          src={staff.avatar}
+          alt={staff.name}
+          className="w-11 h-11 rounded-xl object-cover bg-slate-900 border border-[var(--glass-border)]"
+        />
+      );
+    }
+    const initials = staff.name ? staff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'US';
+    return (
+      <div className="w-11 h-11 rounded-xl bg-zinc-800 border border-[var(--glass-border)] flex items-center justify-center font-black text-xs text-[var(--primary)] shadow-inner font-sans">
+        {initials}
+      </div>
+    );
+  };
+
+  const getListAvatarElement = (staff) => {
+    if (staff.avatar) {
+      return (
+        <img
+          src={staff.avatar}
+          alt={staff.name}
+          className="w-8 h-8 rounded-lg object-cover bg-slate-900 border border-[var(--glass-border)]"
+        />
+      );
+    }
+    const initials = staff.name ? staff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'US';
+    return (
+      <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-[var(--glass-border)] flex items-center justify-center font-bold text-[10px] text-[var(--primary)] font-sans">
+        {initials}
+      </div>
+    );
+  };
+
+  const getModalAvatarElement = (staff) => {
+    if (staff.avatar) {
+      return (
+        <img
+          src={staff.avatar}
+          alt={staff.name}
+          className="w-16 h-16 rounded-2xl object-cover bg-slate-955 border border-[var(--glass-border)]"
+        />
+      );
+    }
+    const initials = staff.name ? staff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'US';
+    return (
+      <div className="w-16 h-16 rounded-2xl bg-zinc-800 border border-[var(--glass-border)] flex items-center justify-center font-black text-lg text-[var(--primary)] shadow-inner font-sans">
+        {initials}
+      </div>
+    );
+  };
+
+  const dbWaiters = allUsersList.filter(u => u.rol === 'mozo' || u.rol === 'admin');
+  const dbCooks = allUsersList.filter(u => u.rol === 'cocina' || u.rol === 'cocinero' || u.rol === 'cocina_admin');
+
+  const activeWaiters = (waitersList && waitersList.length > 0) ? waitersList : dbWaiters;
+  const activeCooks = (cooksList && cooksList.length > 0) ? cooksList : dbCooks;
+
+  let detailed = [];
+
+  if (selectedRole === 'waiter') {
+    const sorted = [...activeWaiters].sort((a, b) => (b.totalSales || 0) - (a.totalSales || 0));
+    detailed = sorted.map((w, idx) => {
+      const mockTimes = [9.8, 11.2, 12.4, 13.1, 14.5];
+      const avgTime = mockTimes[idx] || 15;
+      const stars = (5 - idx * 0.08).toFixed(2);
+      return {
+        id: w.id,
+        name: w.name || w.nombre,
+        avatar: w.foto,
+        role: 'waiter',
+        completedOrders: w.completedOrders || w.totalTables || 0,
+        totalSales: w.totalSales || 0,
+        avgSpeedMinutes: w.avgSpeedMinutes || avgTime,
+        rating: w.rating || stars,
+        rank: idx + 1,
+        targetSpeedMinutes: 14,
+        zone: idx % 2 === 0 ? 'Salón A' : 'Terraza',
+        badges: idx === 0 ? [{ id: '1', label: 'Speed Demon' }, { id: '2', label: 'Top Vendedor' }] : (idx === 1 ? [{ id: '1', label: 'Master Upseller' }] : [])
+      };
+    });
+  } else {
+    const sorted = [...activeCooks].sort((a, b) => (b.totalDishes || 0) - (a.totalDishes || 0));
+    detailed = sorted.map((c, idx) => {
+      const stars = (4.98 - idx * 0.05).toFixed(2);
+      return {
+        id: c.id,
+        name: c.name || c.nombre,
+        avatar: c.foto,
+        role: 'chef',
+        completedOrders: c.completedOrders || c.totalDishes || 0,
+        avgSpeedMinutes: c.avgSpeedMinutes || (c.avgTimeMin ? Number(c.avgTimeMin.toFixed(1)) : 10),
+        rating: c.rating || stars,
+        rank: idx + 1,
+        targetSpeedMinutes: 12,
+        zone: 'Cocina',
+        station: c.station || (idx === 0 ? 'Plancha caliente' : (idx === 1 ? 'Pase / Salsas' : 'Cocina Fría')),
+        speedScore: c.speedScore || Math.round(92 - idx * 4),
+        badges: idx === 0 ? [{ id: '1', label: 'Chef de Línea' }] : []
+      };
+    });
+  }
+
+  const getRankBadge = (rank) => {
+    switch (rank) {
+      case 1:
+        return (
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 text-slate-950 flex items-center justify-center font-extrabold shadow-md shadow-amber-500/40 ring-2 ring-yellow-400">
+            <Crown className="w-4 h-4 fill-slate-950" />
+          </div>
+        );
+      case 2:
+        return (
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-slate-300 to-slate-100 text-slate-950 flex items-center justify-center font-extrabold shadow-md shadow-slate-300/30 ring-2 ring-slate-200">
+            <Medal className="w-4 h-4" />
+          </div>
+        );
+      case 3:
+        return (
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-700 to-amber-600 text-amber-100 flex items-center justify-center font-extrabold shadow-md shadow-amber-700/30 ring-2 ring-amber-600">
+            <Award className="w-4 h-4" />
+          </div>
+        );
+      default:
+        return (
+          <div className="w-7 h-7 rounded-full bg-zinc-800 text-[var(--text-muted)] flex items-center justify-center font-bold text-xs border border-zinc-700">
+            #{rank}
+          </div>
+        );
+    }
+  };
+
+  return (
+    <GlassCard
+      className={`p-4 sm:p-5 lg:p-6 flex flex-col h-full relative ${isHidden ? 'opacity-40 border border-dashed border-red-500/50 p-1 bg-red-500/5' : ''}`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--glass-border)]">
+        <div>
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-amber-500" />
+            <h3 className="font-extrabold text-base text-[var(--text-main)] flex items-center gap-2 tracking-tight">
+              Personal del Turno & Leaderboard
+            </h3>
+            <span className="text-[10px] px-2.5 py-0.5 rounded-lg bg-amber-500/10 text-amber-400 font-mono-nums font-bold border border-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.15)]">
+              En Vivo
+            </span>
+          </div>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5 font-medium">Clasificación por velocidad de atención y satisfacción</p>
+        </div>
+
+        {/* Toggle Selectors */}
+        <div className={`p-1 rounded-xl flex space-x-1 border backdrop-blur-md text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'bg-black/60 border-[var(--glass-border)]' : 'bg-zinc-200/60 border-zinc-200'
+          }`}>
+          <button
+            onClick={() => setSelectedRole('waiter')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer border ${selectedRole === 'waiter'
+              ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-[0_0_8px_var(--color-brand-glow)] font-sans font-bold'
+              : `bg-transparent border-transparent font-sans font-bold ${isDarkMode ? 'text-white hover:bg-white/5' : 'text-zinc-800 hover:bg-zinc-100'}`
+              }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Mozos</span>
+          </button>
+
+          <button
+            onClick={() => setSelectedRole('chef')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer border ${selectedRole === 'chef'
+              ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-[0_0_8px_var(--color-brand-glow)] font-sans font-bold'
+              : `bg-transparent border-transparent font-sans font-bold ${isDarkMode ? 'text-white hover:bg-white/5' : 'text-zinc-800 hover:bg-zinc-100'}`
+              }`}
+          >
+            <ChefHat className="w-3.5 h-3.5" />
+            <span>KDS Cocina</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Podium Top 3 Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4 select-none">
+        {detailed.slice(0, 3).map((staff) => (
+          <div
+            key={staff.id}
+            onClick={() => setSelectedEmployee(staff)}
+            className={`p-3 rounded-xl border cursor-pointer transition-all relative overflow-hidden group hover:scale-[1.02] ${staff.rank === 1
+              ? (isDarkMode ? 'bg-zinc-800/90 border-[var(--primary)]/40 text-white' : 'bg-zinc-200/90 border-[var(--primary)]/40 text-zinc-950 shadow')
+              : (isDarkMode ? 'bg-black/40 border-[var(--glass-border)] text-zinc-300' : 'bg-white/45 border-zinc-200 text-zinc-800')
+              }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {getRankBadge(staff.rank)}
+                <span className={`text-xs font-bold group-hover:text-[var(--primary)] transition-colors truncate max-w-[80px] ${isDarkMode ? 'text-white' : 'text-zinc-950'
+                  }`}>
+                  {staff.name}
+                </span>
+              </div>
+              <div className="flex items-center gap-0.5 text-[10px] text-amber-500 font-mono-nums font-bold">
+                <Star className="w-3 h-3 fill-amber-500" />
+                <span>{staff.rating}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                {getAvatarElement(staff)}
+                {staff.rank === 1 && (
+                  <div className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-[var(--primary)] text-[var(--text-inverse)] shadow">
+                    <Sparkles className="w-3 h-3" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 space-y-0.5 font-mono-nums text-[10px]">
+                <div className={`flex justify-between ${isDarkMode ? 'text-zinc-400' : 'text-zinc-550'}`}>
+                  <span>Velocidad:</span>
+                  <span className={`font-bold ${isDarkMode ? 'text-emerald-450' : 'text-emerald-600'}`}>{staff.avgSpeedMinutes} min</span>
+                </div>
+                <div className={`flex justify-between ${isDarkMode ? 'text-zinc-400' : 'text-zinc-550'}`}>
+                  <span>Comandas:</span>
+                  <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>{staff.completedOrders}</span>
+                </div>
+                <div className={`flex justify-between ${isDarkMode ? 'text-zinc-400' : 'text-zinc-550'}`}>
+                  <span>{staff.role === 'waiter' ? 'Venta:' : 'Partida:'}</span>
+                  <span className="font-semibold text-amber-500 truncate max-w-[50px]">
+                    {staff.role === 'waiter' ? `S/. ${staff.totalSales.toFixed(0)}` : staff.station?.split(' ')[0]}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Detailed Full Staff list */}
+      <div className="flex-1 overflow-y-auto space-y-2 max-h-[220px] pr-1">
+        <div className={`text-[10px] font-bold uppercase tracking-wider mb-2 px-2 flex justify-between ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+          <span>Ranking Detallado</span>
+          <span>Velocidad Promedio</span>
+        </div>
+
+        {detailed.map((staff) => {
+          const speedEfficiency = Math.max(10, Math.min(100, Math.round((staff.targetSpeedMinutes / staff.avgSpeedMinutes) * 75)));
+
+          return (
+            <div
+              key={staff.id}
+              onClick={() => setSelectedEmployee(staff)}
+              className={`p-2.5 rounded-xl border cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${isDarkMode
+                ? 'bg-black/40 border-[var(--glass-border)] hover:bg-zinc-800/80 hover:border-zinc-700'
+                : 'bg-white/45 border-zinc-200 hover:bg-zinc-100 hover:border-zinc-300'
+                }`}
+            >
+              <div className="flex items-center gap-3 min-w-[150px]">
+                {getRankBadge(staff.rank)}
+                {getListAvatarElement(staff)}
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`font-bold text-xs group-hover:text-[var(--primary)] transition-colors ${isDarkMode ? 'text-white' : 'text-zinc-950'
+                      }`}>
+                      {staff.name}
+                    </span>
+                    <span className={`text-[8px] px-1.5 py-0.2 rounded border ${isDarkMode ? 'bg-zinc-850 border-zinc-700 text-zinc-400' : 'bg-zinc-200 border-zinc-300 text-zinc-600'
+                      }`}>
+                      {staff.zone}
+                    </span>
+                  </div>
+                  <div className={`text-[10px] flex items-center gap-2 mt-0.5 ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    <span>{staff.role === 'waiter' ? 'Camarero' : staff.station || 'Chef'}</span>
+                    <span>•</span>
+                    <span className="text-amber-500 font-mono-nums font-bold">★ {staff.rating}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Speed metrics */}
+              <div className="flex-grow max-w-xs space-y-1">
+                <div className="flex justify-between text-[10px] font-mono-nums">
+                  <span className={`${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Tiempo Prom.:</span>
+                  <span className={`font-bold ${staff.avgSpeedMinutes <= staff.targetSpeedMinutes ? (isDarkMode ? 'text-emerald-450' : 'text-emerald-600') : (isDarkMode ? 'text-amber-450' : 'text-amber-600')}`}>
+                    {staff.avgSpeedMinutes} min <span className={`font-normal ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>(&lt;{staff.targetSpeedMinutes}m)</span>
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-black rounded-full overflow-hidden border border-[var(--glass-border)]">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${staff.avgSpeedMinutes <= staff.targetSpeedMinutes ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`}
+                    style={{ width: `${speedEfficiency}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 text-[10px] font-mono-nums justify-between sm:justify-end">
+                <div className="text-right">
+                  <span className={`text-[9px] block ${isDarkMode ? 'text-zinc-400' : 'text-zinc-550'}`}>Comandas</span>
+                  <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-zinc-950'}`}>{staff.completedOrders}</span>
+                </div>
+
+                <div className="text-right min-w-[70px]">
+                  <span className={`text-[9px] block ${isDarkMode ? 'text-zinc-400' : 'text-zinc-550'}`}>{staff.role === 'waiter' ? 'Venta Total' : 'Rendimiento'}</span>
+                  <span className={`font-bold font-mono-nums ${isDarkMode ? 'text-emerald-450' : 'text-emerald-600'}`}>
+                    {staff.role === 'waiter' ? `S/. ${staff.totalSales.toFixed(0)}` : `${staff.speedScore}%`}
+                  </span>
+                </div>
+
+                <ChevronRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-300 transition-colors" />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Employee Detail Modal/Drawer */}
+      {selectedEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in select-none">
+          <div className={`rounded-2xl w-full max-w-md border shadow-2xl p-6 relative ${isDarkMode ? 'bg-zinc-900 border-[var(--glass-border)] text-white' : 'bg-white border-zinc-200 text-zinc-900 shadow-2xl'
+            }`}>
+            <button
+              onClick={() => setSelectedEmployee(null)}
+              className={`absolute top-4 right-4 p-1.5 rounded-lg transition-all cursor-pointer ${isDarkMode ? 'bg-zinc-800 text-zinc-400 hover:text-white' : 'bg-zinc-100 text-zinc-650 hover:text-zinc-900 border border-zinc-250'
+                }`}
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-4 mb-4">
+              {getModalAvatarElement(selectedEmployee)}
+              <div>
+                <h4 className={`font-extrabold text-lg ${isDarkMode ? 'text-white' : 'text-zinc-950'}`}>{selectedEmployee.name}</h4>
+                <p className={`text-xs mt-0.5 font-medium flex items-center gap-1.5 ${isDarkMode ? 'text-[var(--text-muted)]' : 'text-zinc-550'}`}>
+                  <span className={`px-2 py-0.5 rounded uppercase text-[9px] font-bold ${isDarkMode ? 'bg-zinc-800 border border-zinc-700 text-zinc-300' : 'bg-zinc-150 border border-zinc-250 text-zinc-700'
+                    }`}>
+                    {selectedEmployee.role === 'waiter' ? 'Mozo de salón' : 'Cocinero KDS'}
+                  </span>
+                  <span>&bull;</span>
+                  <span className="text-amber-500 font-bold flex items-center gap-0.5">★ {selectedEmployee.rating}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className={`space-y-3 p-4 rounded-xl border font-mono text-xs ${isDarkMode ? 'bg-black/40 border-[var(--glass-border)]/50' : 'bg-zinc-100/60 border-zinc-200'
+              }`}>
+              <h5 className={`font-bold text-[10px] uppercase tracking-wider mb-2 border-b pb-1 ${isDarkMode ? 'text-[var(--text-muted)] border-[var(--glass-border)]' : 'text-zinc-500 border-zinc-200'
+                }`}>Métricas clave del turno</h5>
+
+              <div className="flex justify-between items-center pb-1">
+                <span className={isDarkMode ? 'text-[var(--text-muted)]' : 'text-zinc-550'}>Rango de servicio:</span>
+                <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-zinc-950'}`}>Top #{selectedEmployee.rank}</span>
+              </div>
+              <div className="flex justify-between items-center pb-1">
+                <span className={isDarkMode ? 'text-[var(--text-muted)]' : 'text-zinc-550'}>Velocidad promedio:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-450">{selectedEmployee.avgSpeedMinutes} minutos</span>
+              </div>
+              <div className="flex justify-between items-center pb-1">
+                <span className={isDarkMode ? 'text-[var(--text-muted)]' : 'text-zinc-550'}>Tiempo objetivo:</span>
+                <span className={`font-bold ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>&lt; {selectedEmployee.targetSpeedMinutes} minutos</span>
+              </div>
+              <div className="flex justify-between items-center pb-1">
+                <span className={isDarkMode ? 'text-[var(--text-muted)]' : 'text-zinc-550'}>Comandas cerradas:</span>
+                <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-zinc-950'}`}>{selectedEmployee.completedOrders} comandas</span>
+              </div>
+              {selectedEmployee.role === 'waiter' ? (
+                <div className={`flex justify-between items-center pt-2 border-t text-sm ${isDarkMode ? 'border-[var(--glass-border)] text-[var(--primary)] font-black' : 'border-zinc-250 text-[var(--primary)] font-black'
+                  }`}>
+                  <span>Ventas en Caja:</span>
+                  <span>S/. {selectedEmployee.totalSales.toLocaleString('es-PE')}</span>
+                </div>
+              ) : (
+                <div className={`flex justify-between items-center pt-2 border-t font-black ${isDarkMode ? 'border-[var(--glass-border)] text-emerald-450' : 'border-zinc-250 text-emerald-600'
+                  }`}>
+                  <span>Partida/Estación:</span>
+                  <span>{selectedEmployee.station}</span>
+                </div>
+              )}
+            </div>
+
+            {selectedEmployee.badges && selectedEmployee.badges.length > 0 && (
+              <div className="mt-4">
+                <h5 className={`text-[10px] uppercase font-bold tracking-wider mb-2 ${isDarkMode ? 'text-[var(--text-muted)]' : 'text-zinc-550'}`}>Insignias logradas</h5>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedEmployee.badges.map(b => (
+                    <span
+                      key={b.id}
+                      className={`text-[9px] px-2 py-0.5 rounded-lg font-bold border ${isDarkMode ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' : 'bg-amber-500/10 text-amber-800 border-amber-500/30'
+                        }`}
+                    >
+                      🏆 {b.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {designMode && (
+        <button
+          onClick={() => onHide('staffLeaderboard')}
+          className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 p-1 rounded bg-black/80 text-zinc-400 hover:text-white transition-all z-30"
+        >
+          {isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+        </button>
+      )}
+    </GlassCard>
+  );
+};
+
+// Reorderable layout widget supporting absolute layout in percentages horizontally for sidebar safety
 const EditableWidget = ({ id, layout, onLayoutChange, designMode, children, className = "" }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -817,43 +1446,72 @@ const EditableWidget = ({ id, layout, onLayoutChange, designMode, children, clas
 
   const handleMouseDown = (e) => {
     if (!designMode) return;
-    // Don't drag if clicking buttons, links, inputs, or selects
     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('select') || e.target.closest('input')) return;
+
+    const container = document.getElementById('dashboard-canvas');
+    if (!container) return;
+
+    const containerWidth = container.clientWidth || 1000;
+
+    // Convert stored percentages back to current pixels for dragging calculations
+    const currentX = layout.absolute ? (layout.xPct * containerWidth) / 100 : 0;
+    const currentY = layout.absolute ? layout.y : 0;
+    const currentW = layout.absolute ? (layout.widthPct * containerWidth) / 100 : e.currentTarget.clientWidth;
+    const currentH = layout.absolute ? layout.height : e.currentTarget.clientHeight;
 
     if (e.target.closest('.resize-handle')) {
       setIsResizing(true);
-      setResizeStart({ x: e.clientX, y: e.clientY });
+      setResizeStart({ x: e.clientX, y: e.clientY, w: currentW, h: currentH });
       e.preventDefault();
       e.stopPropagation();
       return;
     }
 
     setIsDragging(true);
-    setDragStart({ x: e.clientX - (layout.x || 0), y: e.clientY - (layout.y || 0) });
+    setDragStart({ x: e.clientX - currentX, y: e.clientY - currentY });
     e.preventDefault();
   };
 
   useEffect(() => {
     const handleMouseMove = (e) => {
+      const container = document.getElementById('dashboard-canvas');
+      if (!container) return;
+
+      const containerWidth = container.clientWidth || 1000;
+
       if (isDragging) {
-        const dx = e.clientX - dragStart.x;
-        const dy = e.clientY - dragStart.y;
+        let dx = e.clientX - dragStart.x;
+        let dy = e.clientY - dragStart.y;
+
+        // Keep coordinates within bounds
+        dx = Math.max(0, dx);
+        dy = Math.max(0, dy);
+
+        // Convert horizontal positions to percentages
+        const xPct = (dx / containerWidth) * 100;
+
         onLayoutChange(id, {
           ...layout,
-          x: dx,
+          xPct,
           y: dy,
           absolute: true
         });
       } else if (isResizing) {
         const dx = e.clientX - resizeStart.x;
         const dy = e.clientY - resizeStart.y;
+
+        const newW = Math.max(150, resizeStart.w + dx);
+        const newH = Math.max(100, resizeStart.h + dy);
+
+        // Convert horizontal width to percentage
+        const widthPct = (newW / containerWidth) * 100;
+
         onLayoutChange(id, {
           ...layout,
-          width: Math.max(100, (layout.width || 300) + dx),
-          height: Math.max(80, (layout.height || 200) + dy),
+          widthPct,
+          height: newH,
           absolute: true
         });
-        setResizeStart({ x: e.clientX, y: e.clientY });
       }
     };
 
@@ -873,12 +1531,12 @@ const EditableWidget = ({ id, layout, onLayoutChange, designMode, children, clas
     };
   }, [isDragging, isResizing, dragStart, resizeStart, layout, id, onLayoutChange]);
 
-  const style = layout.absolute ? {
+  const style = (layout && layout.absolute) ? {
     position: 'absolute',
-    left: `${layout.x}px`,
+    left: `${layout.xPct}%`,
     top: `${layout.y}px`,
-    width: typeof layout.width === 'number' ? `${layout.width}px` : layout.width,
-    height: typeof layout.height === 'number' ? `${layout.height}px` : layout.height,
+    width: `${layout.widthPct}%`,
+    height: `${layout.height}px`,
     zIndex: isDragging || isResizing ? 50 : 10,
     cursor: designMode ? 'move' : 'default',
     transition: isDragging || isResizing ? 'none' : 'box-shadow 0.2s ease',
@@ -890,7 +1548,10 @@ const EditableWidget = ({ id, layout, onLayoutChange, designMode, children, clas
     <div
       onMouseDown={handleMouseDown}
       style={style}
-      className={`${className} ${designMode ? 'border border-dashed border-[var(--primary)]/60 rounded-[26px] p-0.5 bg-[var(--primary)]/5 select-none shadow-xl' : ''}`}
+      className={`${className} ${designMode
+        ? 'border border-dashed border-[var(--primary)]/60 rounded-[26px] p-0.5 bg-[var(--primary)]/5 select-none shadow-xl'
+        : ''
+        }`}
     >
       {designMode && (
         <div className="absolute top-1 left-2 px-1.5 py-0.5 rounded bg-[var(--primary)] text-white dark:text-black font-extrabold text-[8px] tracking-wider uppercase z-20 pointer-events-none">
@@ -917,62 +1578,74 @@ const HomeView = () => {
   const navigate = useNavigate();
   const { showToast } = useNotification();
   const { user } = useAuth();
+  const { mode } = useTheme();
+  const isDarkMode = mode === 'dark';
 
   // VisBug Design Mode States
   const [designMode, setDesignMode] = useState(false);
   const [canvasHeight, setCanvasHeight] = useState('auto');
   const [layouts, setLayouts] = useState(() => {
     const saved = localStorage.getItem('bunker_dashboard_layouts');
-    return saved ? JSON.parse(saved) : {
-      welcomeHeader: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
-      myCard: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
-      categories: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
-      pedidos: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
-      cierre: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
-      statistics: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const requiredKeys = ['welcomeHeader', 'quickKpiBar', 'floorPlan', 'revenueAnalytics', 'staffLeaderboard'];
+        const hasAllKeys = requiredKeys.every(k => parsed[k] !== undefined && parsed[k] !== null);
+        if (hasAllKeys) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error("Error parsing saved layouts:", e);
+      }
+    }
+    // Default initial absolute coordinates in percentages (xPct/widthPct) for responsive scaling
+    return {
+      welcomeHeader: { xPct: 0, y: 0, widthPct: 100, height: 50, absolute: true },
+      quickKpiBar: { xPct: 0, y: 70, widthPct: 100, height: 130, absolute: true },
+      floorPlan: { xPct: 0, y: 220, widthPct: 65, height: 500, absolute: true },
+      revenueAnalytics: { xPct: 67, y: 220, widthPct: 33, height: 240, absolute: true },
+      staffLeaderboard: { xPct: 67, y: 480, widthPct: 33, height: 240, absolute: true },
     };
   });
+
+  // Hidden cards state
+  const [hiddenWidgets, setHiddenWidgets] = useState(() => {
+    const saved = localStorage.getItem('bunker_hidden_widgets');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const toggleWidgetVisibility = (id) => {
+    setHiddenWidgets(prev => {
+      const updated = prev.includes(id) ? prev.filter(w => w !== id) : [...prev, id];
+      localStorage.setItem('bunker_hidden_widgets', JSON.stringify(updated));
+      return updated;
+    });
+    showToast(`Tarjeta modificada. Entra a Modo Diseño para ver o restaurar.`, 'info');
+  };
 
   const resetLayout = () => {
     setDesignMode(false);
     setCanvasHeight('auto');
     const defaultLayouts = {
-      welcomeHeader: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
-      myCard: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
-      categories: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
-      pedidos: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
-      cierre: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
-      statistics: { x: 0, y: 0, width: '100%', height: 'auto', absolute: false },
+      welcomeHeader: { xPct: 0, y: 0, widthPct: 100, height: 50, absolute: true },
+      quickKpiBar: { xPct: 0, y: 70, widthPct: 100, height: 130, absolute: true },
+      floorPlan: { xPct: 0, y: 220, widthPct: 65, height: 500, absolute: true },
+      revenueAnalytics: { xPct: 67, y: 220, widthPct: 33, height: 240, absolute: true },
+      staffLeaderboard: { xPct: 67, y: 480, widthPct: 33, height: 240, absolute: true },
     };
     setLayouts(defaultLayouts);
     localStorage.removeItem('bunker_dashboard_layouts');
-    // showToast('Diseño restablecido al grid original.', 'info');
   };
 
-  // Run a layout migration on first render to clear any broken states in the user's browser local storage
+  // Run layout migration
   useEffect(() => {
-    const migrationKey = 'bunker_dashboard_layout_migration_v4';
+    const migrationKey = 'bunker_dashboard_layout_migration_v8';
     if (!localStorage.getItem(migrationKey)) {
       localStorage.removeItem('bunker_dashboard_layouts');
       localStorage.setItem(migrationKey, 'true');
       resetLayout();
     }
   }, []);
-
-  // Calculate canvas height dynamically based on layout coordinates to avoid collapses
-  useEffect(() => {
-    const hasAbsolute = Object.values(layouts).some(l => l.absolute);
-    if (hasAbsolute) {
-      const maxBottom = Object.values(layouts).reduce((max, lay) => {
-        if (!lay.absolute) return max;
-        const bottom = (lay.y || 0) + (typeof lay.height === 'number' ? lay.height : 250);
-        return Math.max(max, bottom);
-      }, 550);
-      setCanvasHeight(`${maxBottom + 20}px`);
-    } else {
-      setCanvasHeight('auto');
-    }
-  }, [layouts]);
 
   const updateLayout = (id, newLayout) => {
     setLayouts(prev => {
@@ -984,75 +1657,70 @@ const HomeView = () => {
 
   const toggleDesignMode = () => {
     if (!designMode) {
-      const hasAbsolute = Object.values(layouts).some(l => l.absolute);
-      if (!hasAbsolute) {
-        const container = document.getElementById('dashboard-canvas');
-        if (container) {
-          const containerRect = container.getBoundingClientRect();
-          const ids = ['welcomeHeader', 'myCard', 'categories', 'pedidos', 'cierre', 'statistics'];
-          const newLayouts = { ...layouts };
-
-          ids.forEach(id => {
-            const el = document.getElementById(`widget-${id}`);
-            if (el) {
-              const rect = el.getBoundingClientRect();
-              newLayouts[id] = {
-                x: rect.left - containerRect.left,
-                y: rect.top - containerRect.top,
-                width: rect.width,
-                height: rect.height,
-                absolute: true
-              };
-            }
-          });
-
-          setLayouts(newLayouts);
-          localStorage.setItem('bunker_dashboard_layouts', JSON.stringify(newLayouts));
-        }
+      // Find bottom most coordinate
+      const hasAbsolute = Object.values(layouts).some(l => l && l.absolute);
+      if (hasAbsolute) {
+        const maxBottom = Object.values(layouts).reduce((max, lay) => {
+          if (lay && lay.absolute) {
+            const bottom = (lay.y || 0) + (typeof lay.height === 'number' ? lay.height : 250);
+            return Math.max(max, bottom);
+          }
+          return max;
+        }, 600);
+        setCanvasHeight(`${maxBottom + 100}px`);
       }
       setDesignMode(true);
-      showToast('Modo Diseño activado. Arrastra y deforma libremente las cartillas y cabecera.', 'info');
+      showToast('Modo Diseño activado. Arrastra y deforma libremente las tarjetas por la pantalla.', 'info');
     } else {
       setDesignMode(false);
-      showToast('Diseño personalizado guardado.', 'success');
+      showToast('Diseño personalizado guardado de forma responsiva.', 'success');
     }
   };
 
   // Selected Date state
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [weeklyEarnings, setWeeklyEarnings] = useState(0);
   const [fundFilter, setFundFilter] = useState('week');
+  const [revenuePeriod, setRevenuePeriod] = useState('day');
   const [chartData, setChartData] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [lowStockInsumos, setLowStockInsumos] = useState([]);
-  const [unpaidTables, setUnpaidTables] = useState([]);
+  const [lowStockInsumosCount, setLowStockInsumosCount] = useState(0);
+  const [allUsersList, setAllUsersList] = useState([]);
 
-  // Active cashier state
+  // Active cashier & live operational states
   const [activeBalance, setActiveBalance] = useState(null);
   const [tables, setTables] = useState([]);
   const [waitersList, setWaitersList] = useState([]);
+  const [cooksList, setCooksList] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Seating plan interactive states
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [activeZone, setActiveZone] = useState('all');
+
+  // Checkout modal states
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [selectedCheckoutOrder, setSelectedCheckoutOrder] = useState(null);
 
   // Fetch static data on mount & periodic sync
   const loadStaticData = async () => {
     try {
-      const [weeklyRes, alertsRes, balanceRes] = await Promise.all([
-        fetch('/api/stats/weekly-earnings'),
+      const [alertsRes, balanceRes, usersRes] = await Promise.all([
         fetch('/api/insumos/alertas'),
-        fetch('/api/cashier/balance')
+        fetch('/api/cashier/balance'),
+        fetch('/api/users')
       ]);
 
-      if (weeklyRes.ok) {
-        const data = await weeklyRes.json();
-        setWeeklyEarnings(data.total || 0);
-      }
       if (alertsRes.ok) {
         const data = await alertsRes.json();
-        setLowStockInsumos(data);
+        setLowStockInsumosCount(data.length || 0);
       }
       if (balanceRes.ok) {
         const balanceData = await balanceRes.json();
         setActiveBalance(balanceData);
+      }
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        setAllUsersList(usersData);
       }
     } catch (e) {
       console.error("Error al cargar datos estáticos del dashboard:", e);
@@ -1065,7 +1733,7 @@ const HomeView = () => {
       setLoading(true);
       const [tablesRes, staffRes, txRes, flowRes] = await Promise.all([
         fetch('/api/tables'),
-        fetch(`/api/staff/stats?fecha=${selectedDate}`),
+        fetch(`/api/staff/stats?date=${selectedDate}`),
         fetch(`/api/stats/transactions?fecha=${selectedDate}`),
         fetch(`/api/stats/fund-flow?range=${fundFilter}`)
       ]);
@@ -1073,13 +1741,16 @@ const HomeView = () => {
       if (tablesRes.ok) {
         const tablesData = await tablesRes.json();
         setTables(tablesData);
-        // Filtro de mesas ocupadas que faltan pagar
-        const unpaid = tablesData.filter(t => t.estado?.toLowerCase() === 'ocupada' || t.estado?.toLowerCase() === 'ocupado');
-        setUnpaidTables(unpaid);
+
+        if (selectedTable) {
+          const fresh = tablesData.find(t => t.id === selectedTable.id);
+          if (fresh) setSelectedTable(fresh);
+        }
       }
       if (staffRes.ok) {
         const staffData = await staffRes.json();
         setWaitersList(staffData.waiters || []);
+        setCooksList(staffData.cooks || []);
       }
       if (txRes.ok) {
         const txData = await txRes.json();
@@ -1100,7 +1771,6 @@ const HomeView = () => {
   // Run on mount
   useEffect(() => {
     loadStaticData();
-    // Periodic refresh every 30 seconds for background notifications/alert monitoring
     const interval = setInterval(loadStaticData, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -1110,66 +1780,81 @@ const HomeView = () => {
     loadDashboardData();
   }, [selectedDate, fundFilter]);
 
-  // PDF Export for Cierre de Mesas
-  const handleDownloadPDF = (transactionsToExport) => {
+  // Hook sync events from other modules
+  useEffect(() => {
+    const handleSyncEvent = () => {
+      loadDashboardData();
+      loadStaticData();
+    };
+    window.addEventListener('refreshTables', handleSyncEvent);
+    window.addEventListener('refreshCashCount', handleSyncEvent);
+    return () => {
+      window.removeEventListener('refreshTables', handleSyncEvent);
+      window.removeEventListener('refreshCashCount', handleSyncEvent);
+    };
+  }, [selectedTable]);
+
+  // Checkouts triggers
+  const handleOpenCheckout = (table) => {
+    if (!activeBalance || activeBalance.estado !== 'abierto') {
+      showToast("Debe ABRIR CAJA en el módulo Caja antes de cobrar.", 'error');
+      return;
+    }
+    const activeOrder = table.comandas?.[0];
+    if (!activeOrder) return;
+
+    const hijasNumeros = table.mesasHijas?.length > 0
+      ? ' - ' + table.mesasHijas.map(h => h.numero).join(' - ')
+      : '';
+    const tableNumero = `${table.numero || ''}${hijasNumeros}`;
+
+    setSelectedCheckoutOrder({ ...activeOrder, mesa: table, tableNumero });
+    setIsCheckoutModalOpen(true);
+  };
+
+  const handlePrintPrecuenta = async (table) => {
     try {
-      const doc = new jsPDF();
+      const activeOrder = table.comandas?.[0];
+      if (!activeOrder || !activeOrder.detalles) return;
 
-      // Header Banner
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(20);
-      doc.setTextColor(0, 201, 180);
-      doc.text("Bunker - Cierre de Mesas", 14, 20);
+      const content = activeOrder.detalles.map(d => ({
+        cantidad: d.cantidad,
+        nombre: d.plato?.nombre || 'Plato',
+        observacion: d.observacion || ''
+      }));
 
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Generado el: ${new Date().toLocaleString()} | Fecha Reporte: ${selectedDate}`, 14, 26);
+      const hijasNumeros = table.mesasHijas?.length > 0
+        ? ' - ' + table.mesasHijas.map(h => h.numero).join(' - ')
+        : '';
+      const tableName = `Mesa ${table.numero}${hijasNumeros}`;
 
-      // Table data mapping
-      const headers = [["Mesa", "Hora Cierre", "Mozo Atendió", "Monto Final"]];
-      const tableRows = transactionsToExport.map(tx => [
-        tx.tableName,
-        tx.closedAt,
-        tx.waiterName,
-        `S/. ${(tx.total || 0).toFixed(2)}`
-      ]);
-
-      autoTable(doc, {
-        startY: 32,
-        head: headers,
-        body: tableRows,
-        headStyles: { fillColor: [0, 201, 180], textColor: [255, 255, 255], fontStyle: 'bold' },
-        styles: { fontSize: 9 },
-        alternateRowStyles: { fillColor: [245, 247, 250] }
-      });
-
-      doc.save(`Bunker_Cierre_Mesas_${selectedDate}.pdf`);
-      showToast("Reporte PDF descargado con éxito.", "success");
+      await enqueueTicket(tableName, activeOrder.usuario?.nombre || 'Mozo', content, 'Caja');
+      showToast(`Pre-cuenta de Mesa ${table.numero} enviada a la ticketera.`, 'success');
     } catch (e) {
       console.error(e);
-      showToast("Error al generar PDF.", "error");
+      showToast("Error al imprimir pre-cuenta: " + e.message, 'error');
     }
   };
 
-  // --- DERIVE PROPERTIES & DYNAMIC SYNC ---
-  const currentTransactions = transactions;
-  const currentEarning = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
+  const handlePaymentSuccess = () => {
+    setIsCheckoutModalOpen(false);
+    setSelectedTable(null);
+    loadDashboardData();
+    loadStaticData();
+  };
+
+  // Derive static properties
   const DAILY_GOAL = 1000;
+  const currentEarning = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
   const goalPercentage = Math.min(100, Math.round((currentEarning / DAILY_GOAL) * 100));
 
-  const currentWaiters = waitersList && waitersList.length > 0
-    ? [...waitersList].sort((a, b) => (b.totalSales || 0) - (a.totalSales || 0))
-    : [];
-  const topWaiter = currentWaiters.length > 0 ? currentWaiters[0] : null;
-
-  // Category statistics derived from real tables count
-  const totalTablesCount = tables.length || 15;
-  const occupiedTables = tables.filter(t => t.estado?.toLowerCase() === 'ocupada' || t.estado?.toLowerCase() === 'ocupado');
+  const occupiedTables = tables.filter(t => {
+    const state = t.estado?.toLowerCase();
+    return state === 'ocupada' || state === 'ocupado' || state === 'por pagar' || state === 'billing' || state === 'cuenta';
+  });
   const occupiedTablesCount = occupiedTables.length;
-  const activeOrdersCount = occupiedTablesCount;
+  const totalTablesCount = tables.length || 15;
 
-  // Real average wait time calculation
   let averageWaitTime = 0;
   let activeComandasWithTime = 0;
   let totalWaitTime = 0;
@@ -1179,7 +1864,7 @@ const HomeView = () => {
       const comandaDate = new Date(t.comandas[0].fecha);
       const diffMs = Date.now() - comandaDate.getTime();
       const diffMins = Math.max(0, Math.floor(diffMs / 60000));
-      if (diffMins < 90) { // filter out stale ones
+      if (diffMins < 90) {
         totalWaitTime += diffMins;
         activeComandasWithTime++;
       }
@@ -1192,153 +1877,190 @@ const HomeView = () => {
     averageWaitTime = occupiedTablesCount > 0 ? 12 : 0;
   }
 
-  const hasAbsoluteLayout = Object.values(layouts).some(l => l.absolute);
-
-  // Helper render function for the Welcome Header content
   const renderHeaderContent = () => (
-    <header id="widget-welcomeHeader" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 w-full relative z-30">
+    <header id="widget-welcomeHeader" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 w-full relative z-30 mb-2">
       <div className="flex flex-col">
         <h1 className="text-xl font-extrabold tracking-tight text-[var(--text-main)] flex items-center gap-2">
           ¡Bienvenido, {user?.nombre || 'Usuario'}!
-          {/* Discreet Button for Design Mode */}
+
           <button
             onClick={toggleDesignMode}
-            className="p-1 rounded-lg opacity-20 hover:opacity-100 text-[var(--text-muted)] hover:text-[var(--primary)] transition-all cursor-pointer bg-transparent border-none flex items-center justify-center"
-            title={designMode ? "Guardar y Salir" : "Alternar Modo Diseño (Estilo VisBug)"}
+            className="p-1 rounded-lg opacity-25 hover:opacity-100 text-[var(--text-muted)] hover:text-[var(--primary)] transition-all cursor-pointer bg-transparent border-none flex items-center justify-center animate-pulse"
+            title={designMode ? "Guardar y Salir" : "Alternar Modo Diseño"}
           >
-            <Sparkles className={`w-3.5 h-3.5 ${designMode ? 'text-[var(--primary)] animate-pulse' : ''}`} />
+            <Sparkles className={`w-3.5 h-3.5 ${designMode ? 'text-[var(--primary)] animate-spin-slow' : ''}`} />
           </button>
+
+          {hiddenWidgets.length > 0 && (
+            <button
+              onClick={() => {
+                setHiddenWidgets([]);
+                localStorage.removeItem('bunker_hidden_widgets');
+                showToast("Todas las tarjetas son visibles de nuevo.", "success");
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-all border border-zinc-700 ml-2"
+              title="Restaurar visibilidad de todas las tarjetas ocultadas"
+            >
+              <Eye className="w-3.5 h-3.5 text-emerald-450" />
+              <span>Restaurar ({hiddenWidgets.length})</span>
+            </button>
+          )}
         </h1>
         <p className="text-[11px] mt-0.5 flex items-center gap-1.5 text-[var(--text-muted)] font-sans">
           <ChefHat className="w-3 h-3 text-[var(--primary)]" />
-          Búnker &bull; Salón y Comandas &bull; Perú
+          Búnker &bull; Centro de Mando &bull; Perú
         </p>
       </div>
     </header>
   );
 
+  const hasAbsoluteLayout = Object.values(layouts).some(l => l && l.absolute);
+
   return (
-    <div id="dashboard-canvas" style={{ height: canvasHeight }} className="flex flex-col gap-3 text-[var(--text-main)] font-sans bg-[var(--bg-primary)] pb-1 relative w-full">
+    <div id="dashboard-canvas" style={{ height: canvasHeight }} className="flex flex-col gap-3 text-[var(--text-main)] font-sans bg-[var(--bg-primary)] pb-1 relative w-full select-none">
       {designMode || hasAbsoluteLayout ? (
-        // VisBug Drag and Resize Layout Canvas
+        // Absolute custom coordinate canvas
         <>
-          {/* If the header is NOT absolute yet, we render it at the top as static */}
-          {!layouts.welcomeHeader.absolute ? (
-            renderHeaderContent()
-          ) : null}
-
-          {/* If the header is absolute, we render it inside the canvas as an EditableWidget */}
-          {layouts.welcomeHeader.absolute && (
-            <EditableWidget id="welcomeHeader" layout={layouts.welcomeHeader} onLayoutChange={updateLayout} designMode={designMode} className="w-full">
-              {renderHeaderContent()}
-            </EditableWidget>
-          )}
-
-          <EditableWidget id="myCard" layout={layouts.myCard} onLayoutChange={updateLayout} designMode={designMode}>
-            <MyCardComponent
-              weeklyEarnings={weeklyEarnings}
-            />
+          <EditableWidget id="welcomeHeader" layout={layouts.welcomeHeader} onLayoutChange={updateLayout} designMode={designMode} className="w-full">
+            {renderHeaderContent()}
           </EditableWidget>
 
-          <EditableWidget id="categories" layout={layouts.categories} onLayoutChange={updateLayout} designMode={designMode}>
-            <CategoryPanelComponent
-              activeOrdersCount={activeOrdersCount}
-              averageWaitTime={averageWaitTime}
+          <EditableWidget id="quickKpiBar" layout={layouts.quickKpiBar} onLayoutChange={updateLayout} designMode={designMode} className="w-full">
+            <QuickKpiBarComponent
+              tables={tables}
               occupiedTablesCount={occupiedTablesCount}
               totalTablesCount={totalTablesCount}
+              averageWaitTime={averageWaitTime}
+              currentEarning={currentEarning}
+              DAILY_GOAL={DAILY_GOAL}
+              goalPercentage={goalPercentage}
+              lowStockInsumosCount={lowStockInsumosCount}
+              onHide={toggleWidgetVisibility}
+              hiddenWidgets={hiddenWidgets}
+              designMode={designMode}
             />
           </EditableWidget>
 
-          <EditableWidget id="pedidos" layout={layouts.pedidos} onLayoutChange={updateLayout} designMode={designMode}>
-            <PedidosAtendidosComponent
-              waiters={currentWaiters}
-              topWaiter={topWaiter}
+          <EditableWidget id="floorPlan" layout={layouts.floorPlan} onLayoutChange={updateLayout} designMode={designMode} className="w-full">
+            <FloorPlanComponent
+              tables={tables}
+              selectedTable={selectedTable}
+              onSelectTable={setSelectedTable}
+              activeZone={activeZone}
+              onChangeZone={setActiveZone}
+              onHide={toggleWidgetVisibility}
+              hiddenWidgets={hiddenWidgets}
+              designMode={designMode}
             />
           </EditableWidget>
 
-          <EditableWidget id="cierre" layout={layouts.cierre} onLayoutChange={updateLayout} designMode={designMode}>
-            <CierreMesasComponent
-              transactions={currentTransactions}
-              onDownloadPDF={() => handleDownloadPDF(currentTransactions)}
-            />
-          </EditableWidget>
-
-          <EditableWidget id="statistics" layout={layouts.statistics} onLayoutChange={updateLayout} designMode={designMode}>
-            <StatisticsPanelComponent
+          <EditableWidget id="revenueAnalytics" layout={layouts.revenueAnalytics} onLayoutChange={updateLayout} designMode={designMode} className="w-full">
+            <RevenueAnalyticsComponent
+              chartData={chartData}
+              transactions={transactions}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
-              goalPercentage={goalPercentage}
-              currentEarning={currentEarning}
-              chartData={chartData}
               fundFilter={fundFilter}
               setFundFilter={setFundFilter}
-              onShowToast={showToast}
-              unpaidTables={unpaidTables}
-              lowStockInsumos={lowStockInsumos}
+              revenuePeriod={revenuePeriod}
+              setRevenuePeriod={setRevenuePeriod}
+              onHide={toggleWidgetVisibility}
+              hiddenWidgets={hiddenWidgets}
+              designMode={designMode}
+            />
+          </EditableWidget>
+
+          <EditableWidget id="staffLeaderboard" layout={layouts.staffLeaderboard} onLayoutChange={updateLayout} designMode={designMode} className="w-full">
+            <StaffLeaderboardComponent
+              waitersList={waitersList}
+              cooksList={cooksList}
+              allUsersList={allUsersList}
+              onHide={toggleWidgetVisibility}
+              hiddenWidgets={hiddenWidgets}
+              designMode={designMode}
             />
           </EditableWidget>
         </>
       ) : (
-        // Standard Responsive Layout Grid
+        // Standard Bento Grid layout
         <>
           {renderHeaderContent()}
 
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-4 items-start w-full h-full">
-            {/* LEFT COMPONENT COLUMN (Occupies 7 columns out of 10) */}
-            <div className="xl:col-span-7 flex flex-col gap-4">
-              {/* Top Row: My Card + Categories */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-                <div id="widget-myCard" className="w-full">
-                  <MyCardComponent
-                    weeklyEarnings={weeklyEarnings}
-                  />
-                </div>
+          {/* Row 1: KPI Statistics bar */}
+          <QuickKpiBarComponent
+            tables={tables}
+            occupiedTablesCount={occupiedTablesCount}
+            totalTablesCount={totalTablesCount}
+            averageWaitTime={averageWaitTime}
+            currentEarning={currentEarning}
+            DAILY_GOAL={DAILY_GOAL}
+            goalPercentage={goalPercentage}
+            lowStockInsumosCount={lowStockInsumosCount}
+            onHide={toggleWidgetVisibility}
+            hiddenWidgets={hiddenWidgets}
+            designMode={designMode}
+          />
 
-                <div id="widget-categories" className="w-full">
-                  <CategoryPanelComponent
-                    activeOrdersCount={activeOrdersCount}
-                    averageWaitTime={averageWaitTime}
-                    occupiedTablesCount={occupiedTablesCount}
-                    totalTablesCount={totalTablesCount}
-                  />
-                </div>
-              </div>
-
-              {/* Bottom Row: Waiters commissions + Closed Tables */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-                <div id="widget-pedidos" className="w-full">
-                  <PedidosAtendidosComponent
-                    waiters={currentWaiters}
-                    topWaiter={topWaiter}
-                  />
-                </div>
-
-                <div id="widget-cierre" className="w-full">
-                  <CierreMesasComponent
-                    transactions={currentTransactions}
-                    onDownloadPDF={() => handleDownloadPDF(currentTransactions)}
-                  />
-                </div>
-              </div>
+          {/* Row 2: Bento Grid Layout */}
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch w-full">
+            {/* Bento Left: Seating Map (8 Columns) */}
+            <div className="xl:col-span-8">
+              <FloorPlanComponent
+                tables={tables}
+                selectedTable={selectedTable}
+                onSelectTable={setSelectedTable}
+                activeZone={activeZone}
+                onChangeZone={setActiveZone}
+                onHide={toggleWidgetVisibility}
+                hiddenWidgets={hiddenWidgets}
+                designMode={designMode}
+              />
             </div>
 
-            {/* RIGHT COMPONENT COLUMN (Occupies 3 columns out of 10) */}
-            <div id="widget-statistics" className="xl:col-span-3 h-full w-full">
-              <StatisticsPanelComponent
-                selectedDate={selectedDate}
-                setSelectedDate={setSelectedDate}
-                goalPercentage={goalPercentage}
-                currentEarning={currentEarning}
-                chartData={chartData}
-                fundFilter={fundFilter}
-                setFundFilter={setFundFilter}
-                onShowToast={showToast}
-                unpaidTables={unpaidTables}
-                lowStockInsumos={lowStockInsumos}
-              />
+            {/* Bento Right: Sales Curve & Leaderboard (4 Columns) */}
+            <div className="xl:col-span-4 flex flex-col gap-5">
+              <div className="flex-1">
+                <RevenueAnalyticsComponent
+                  chartData={chartData}
+                  transactions={transactions}
+                  selectedDate={selectedDate}
+                  setSelectedDate={setSelectedDate}
+                  fundFilter={fundFilter}
+                  setFundFilter={setFundFilter}
+                  revenuePeriod={revenuePeriod}
+                  setRevenuePeriod={setRevenuePeriod}
+                  onHide={toggleWidgetVisibility}
+                  hiddenWidgets={hiddenWidgets}
+                  designMode={designMode}
+                />
+              </div>
+
+              <div className="flex-1">
+                <StaffLeaderboardComponent
+                  waitersList={waitersList}
+                  cooksList={cooksList}
+                  allUsersList={allUsersList}
+                  onHide={toggleWidgetVisibility}
+                  hiddenWidgets={hiddenWidgets}
+                  designMode={designMode}
+                />
+              </div>
             </div>
           </div>
         </>
+      )}
+
+      {/* Checkout Payment Modal */}
+      {isCheckoutModalOpen && selectedCheckoutOrder && (
+        <CheckoutModal
+          isOpen={isCheckoutModalOpen}
+          onClose={() => {
+            setIsCheckoutModalOpen(false);
+            setSelectedCheckoutOrder(null);
+          }}
+          order={selectedCheckoutOrder}
+          onSuccess={handlePaymentSuccess}
+        />
       )}
     </div>
   );

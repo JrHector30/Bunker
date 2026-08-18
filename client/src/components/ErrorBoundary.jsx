@@ -44,9 +44,9 @@ export class ErrorBoundary extends React.Component {
               </p>
             </div>
             {this.state.error && (
-              <div className="bg-slate-950 p-3 rounded-lg border border-slate-850 text-left overflow-x-auto max-h-24 font-mono text-[10px] text-rose-400">
-                {this.state.error.toString()}
-              </div>
+              <pre className="bg-slate-950 p-3 rounded-lg border border-slate-850 text-left overflow-x-auto max-h-48 font-mono text-[9px] text-rose-400 whitespace-pre">
+                {this.state.error.stack || this.state.error.toString()}
+              </pre>
             )}
             <div className="flex gap-3 pt-2">
               <button

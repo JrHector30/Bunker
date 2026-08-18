@@ -1,6 +1,0 @@
-{
-  "name": "Búnker POS Navigation",
-  "description": "Interactive responsive navigation design playground for Búnker POS, presenting three high-fidelity proposals for mobile and tablet devices.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

@@ -10,7 +10,9 @@ export const offlineSnapshotService = {
    * 
    * @returns {Promise<Object>} Resultado del Readiness Inspector tras hidratar
    */
-  async hydrateOperationalSnapshot() {
+  async hydrateOperationalSnapshot(options = {}) {
+    const skipProducts = !!options.skipProducts;
+
     // 1. Exigir estado de red ONLINE
     if (networkStatus.isOffline()) {
       throw new Error('La hidratación requiere una conexión ONLINE activa con el backend.');
@@ -32,24 +34,26 @@ export const offlineSnapshotService = {
       });
 
       // 3. Ejecutar peticiones en paralelo a las APIs reales
-      const [tablesRes, productsRes, balanceRes] = await Promise.all([
+      const promises = [
         fetch('/api/tables'),
-        fetch('/api/products'),
+        skipProducts ? Promise.resolve(null) : fetch('/api/products'),
         fetch('/api/cashier/balance')
-      ]);
+      ];
 
-      if (!tablesRes.ok || !productsRes.ok || !balanceRes.ok) {
+      const [tablesRes, productsRes, balanceRes] = await Promise.all(promises);
+
+      if (!tablesRes.ok || (productsRes && !productsRes.ok) || !balanceRes.ok) {
         throw new Error('Error al consultar uno o más endpoints de hidratación del backend.');
       }
 
       const [tables, products, balance] = await Promise.all([
         tablesRes.json(),
-        productsRes.json(),
+        productsRes ? productsRes.json() : Promise.resolve(null),
         balanceRes.json()
       ]);
 
       // 4. Hidratar PRODUCTOS (Operación segura ya que platos están deshabilitados offline)
-      if (Array.isArray(products) && products.length > 0) {
+      if (!skipProducts && Array.isArray(products) && products.length > 0) {
         const productRecords = products.map(p => ({
           id: p.id,
           remoteId: p.id,

@@ -1,0 +1,6 @@
+{
+  "name": "Bunker Restaurant POS & Operations Dashboard",
+  "description": "Dashboard operativo y analítico para restaurantes con plano interactivo de mesas en tiempo real, análisis financiero con filtros dinámicos y tabla de clasificación de rendimiento para mozos y cocineros en estilo Bento Grid.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

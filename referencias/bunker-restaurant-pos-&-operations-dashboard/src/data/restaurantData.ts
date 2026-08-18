@@ -1,0 +1,710 @@
+import { TableItem, StaffMember, RevenueDataPoint, CategoryBreakdown, HourlyHeatPoint, OperationalAlert } from '../types';
+
+export const INITIAL_TABLES: TableItem[] = [
+  // SALÓN PRINCIPAL (Central)
+  {
+    id: 'tbl-1',
+    number: 1,
+    name: 'Mesa 01 - Ventanal',
+    zone: 'main_hall',
+    capacity: 4,
+    guestsCount: 4,
+    status: 'occupied',
+    waiterId: 'staff-1',
+    waiterName: 'Lucas Vega',
+    waiterAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '13:10',
+    seatedMinutes: 48,
+    activeOrders: [
+      { id: 'ord-101', name: 'Bife de Chorizo Angus 400g', category: 'principal', price: 34.5, quantity: 2, status: 'served', cookedBy: 'Chef Bruno', minutesElapsed: 28 },
+      { id: 'ord-102', name: 'Carpaccio de Res Trufado', category: 'entrante', price: 18.0, quantity: 1, status: 'served', cookedBy: 'Elena G.', minutesElapsed: 40 },
+      { id: 'ord-103', name: 'Vino Malbec Gran Reserva', category: 'bebida', price: 42.0, quantity: 1, status: 'served', minutesElapsed: 45 },
+    ],
+    notes: 'Cliente VIP - Aniversario',
+    position: { x: 8, y: 14, width: 14, height: 16, shape: 'rect' }
+  },
+  {
+    id: 'tbl-2',
+    number: 2,
+    name: 'Mesa 02 - Redonda Íntima',
+    zone: 'main_hall',
+    capacity: 2,
+    guestsCount: 2,
+    status: 'occupied',
+    waiterId: 'staff-1',
+    waiterName: 'Lucas Vega',
+    waiterAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '13:35',
+    seatedMinutes: 23,
+    activeOrders: [
+      { id: 'ord-201', name: 'Risotto de Hongos Silvestres', category: 'principal', price: 26.0, quantity: 2, status: 'cooking', cookedBy: 'Elena G.', minutesElapsed: 12 },
+      { id: 'ord-202', name: 'Negroni Ahumado Bunker', category: 'bebida', price: 14.0, quantity: 2, status: 'served', minutesElapsed: 20 },
+    ],
+    position: { x: 26, y: 14, width: 12, height: 16, shape: 'round' }
+  },
+  {
+    id: 'tbl-3',
+    number: 3,
+    name: 'Mesa 03 - Redonda Central',
+    zone: 'main_hall',
+    capacity: 4,
+    guestsCount: 0,
+    status: 'free',
+    activeOrders: [],
+    position: { x: 42, y: 14, width: 13, height: 16, shape: 'round' }
+  },
+  // MESA 84 (FEATURED LIVE INTERACTION TABLE)
+  {
+    id: 'tbl-84',
+    number: 84,
+    name: 'Mesa 84 - Salón Central',
+    zone: 'main_hall',
+    capacity: 4,
+    guestsCount: 4,
+    status: 'billing',
+    waiterId: 'staff-1',
+    waiterName: 'Lucas Vega',
+    waiterAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '12:10',
+    seatedMinutes: 84,
+    billRequestedAt: '13:30',
+    activeOrders: [
+      { id: 'ord-8401', name: '2 Cortes de Carne: Bife de Chorizo Angus 400g', category: 'principal', price: 45.0, quantity: 2, status: 'served', cookedBy: 'Chef Bruno', minutesElapsed: 55, notes: 'Punto jugoso a la leña' },
+      { id: 'ord-8402', name: '1 Botella de Vino: Gran Malbec Reserva 2019', category: 'bebida', price: 78.0, quantity: 1, status: 'served', minutesElapsed: 75, notes: 'Descorche servido en decantador' },
+      { id: 'ord-8403', name: 'Postres: Volcán de Dulce de Leche & Helado', category: 'postre', price: 14.0, quantity: 2, status: 'served', cookedBy: 'Sara K.', minutesElapsed: 25 },
+      { id: 'ord-8404', name: 'Cocktails de Autor "Bunker Smoke"', category: 'bebida', price: 10.0, quantity: 2, status: 'served', minutesElapsed: 80 }
+    ],
+    notes: 'Comanda lista para cobro • Solicita comprobante electrónico',
+    position: { x: 26, y: 40, width: 17, height: 16, shape: 'rect_h' }
+  },
+  {
+    id: 'tbl-4',
+    number: 4,
+    name: 'Mesa 04 - Familiar Larga',
+    zone: 'main_hall',
+    capacity: 6,
+    guestsCount: 5,
+    status: 'occupied',
+    waiterId: 'staff-2',
+    waiterName: 'Sofía Morales',
+    waiterAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '12:45',
+    seatedMinutes: 73,
+    activeOrders: [
+      { id: 'ord-401', name: 'Tomahawk Steak 1kg', category: 'principal', price: 95.0, quantity: 1, status: 'served', cookedBy: 'Chef Bruno', minutesElapsed: 55 },
+      { id: 'ord-402', name: 'Provoleta a la Brasa', category: 'entrante', price: 16.5, quantity: 2, status: 'served', cookedBy: 'Chef Bruno', minutesElapsed: 65 },
+      { id: 'ord-403', name: 'Gin Tonic Botánico', category: 'bebida', price: 13.0, quantity: 4, status: 'served', minutesElapsed: 68 },
+      { id: 'ord-404', name: 'Volcán de Dulce de Leche', category: 'postre', price: 12.0, quantity: 3, status: 'served', cookedBy: 'Sara K.', minutesElapsed: 20 }
+    ],
+    notes: 'Pide cuenta dividida en 2 tarjetas',
+    position: { x: 7, y: 40, width: 16, height: 16, shape: 'rect_h' }
+  },
+  {
+    id: 'tbl-5',
+    number: 5,
+    name: 'Mesa 05 - Demorada Cocina',
+    zone: 'main_hall',
+    capacity: 4,
+    guestsCount: 3,
+    status: 'occupied',
+    isDelayed: true,
+    delayMinutes: 18,
+    delayReason: 'Demora en cocina KDS (>18m)',
+    waiterId: 'staff-2',
+    waiterName: 'Sofía Morales',
+    waiterAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '13:05',
+    seatedMinutes: 45,
+    activeOrders: [
+      { id: 'ord-501', name: 'Salmón Glaseado al Miso', category: 'principal', price: 31.0, quantity: 2, status: 'cooking', cookedBy: 'Marco P.', minutesElapsed: 18, notes: 'Esperando partida caliente' },
+      { id: 'ord-502', name: 'Tartar de Atún Rojo', category: 'entrante', price: 21.0, quantity: 1, status: 'served', cookedBy: 'Marco P.', minutesElapsed: 32 },
+    ],
+    notes: '⚠️ ALERTA: Espera de plato principal supera 15 min.',
+    position: { x: 46, y: 40, width: 14, height: 16, shape: 'rect' }
+  },
+  {
+    id: 'tbl-6',
+    number: 6,
+    name: 'Mesa 06 - Box Acogedor',
+    zone: 'main_hall',
+    capacity: 4,
+    guestsCount: 0,
+    status: 'reserved',
+    reservationTime: '14:30',
+    reservationName: 'Dr. Alejandro Ruiz (4p)',
+    activeOrders: [],
+    position: { x: 8, y: 66, width: 14, height: 16, shape: 'booth' }
+  },
+  {
+    id: 'tbl-7',
+    number: 7,
+    name: 'Mesa 07 - Redonda Íntima',
+    zone: 'main_hall',
+    capacity: 2,
+    guestsCount: 2,
+    status: 'occupied',
+    waiterId: 'staff-3',
+    waiterName: 'Mateo Rojas',
+    waiterAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '13:40',
+    seatedMinutes: 18,
+    activeOrders: [
+      { id: 'ord-701', name: 'Ojo de Bife 350g', category: 'principal', price: 32.0, quantity: 1, status: 'cooking', cookedBy: 'Chef Bruno', minutesElapsed: 9 },
+      { id: 'ord-702', name: 'Gnocchis Rellenos de Brie', category: 'principal', price: 24.5, quantity: 1, status: 'cooking', cookedBy: 'Elena G.', minutesElapsed: 9 },
+    ],
+    position: { x: 26, y: 66, width: 12, height: 16, shape: 'round' }
+  },
+  {
+    id: 'tbl-8',
+    number: 8,
+    name: 'Mesa 08',
+    zone: 'main_hall',
+    capacity: 4,
+    guestsCount: 0,
+    status: 'cleaning',
+    notes: 'Mesa desocupada hace 3 min. Requiere sanitización.',
+    activeOrders: [],
+    position: { x: 42, y: 66, width: 14, height: 16, shape: 'rect' }
+  },
+
+  // TERRAZA EXTERIOR (Garden / Deck)
+  {
+    id: 'tbl-9',
+    number: 9,
+    name: 'Terraza 09 - Pérgola',
+    zone: 'terrace',
+    capacity: 4,
+    guestsCount: 4,
+    status: 'occupied',
+    waiterId: 'staff-4',
+    waiterName: 'Camila Torres',
+    waiterAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '13:15',
+    seatedMinutes: 43,
+    activeOrders: [
+      { id: 'ord-901', name: 'Pulpo a las Brasas', category: 'principal', price: 36.0, quantity: 2, status: 'served', cookedBy: 'Chef Bruno', minutesElapsed: 25 },
+      { id: 'ord-902', name: 'Ceviche Clásico Bunker', category: 'entrante', price: 19.5, quantity: 2, status: 'served', cookedBy: 'Marco P.', minutesElapsed: 38 },
+      { id: 'ord-903', name: 'Cerveza Artesanal IPA', category: 'bebida', price: 7.5, quantity: 4, status: 'served', minutesElapsed: 40 },
+    ],
+    position: { x: 68, y: 14, width: 12, height: 15, shape: 'square' }
+  },
+  {
+    id: 'tbl-10',
+    number: 10,
+    name: 'Terraza 10 - Demorada',
+    zone: 'terrace',
+    capacity: 4,
+    guestsCount: 3,
+    status: 'occupied',
+    isDelayed: true,
+    delayMinutes: 20,
+    delayReason: 'Demora en parrilla (20 min)',
+    waiterId: 'staff-4',
+    waiterName: 'Camila Torres',
+    waiterAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '13:08',
+    seatedMinutes: 42,
+    activeOrders: [
+      { id: 'ord-1001', name: 'Hamburguesa Bunker Doble Smash', category: 'principal', price: 18.0, quantity: 3, status: 'cooking', cookedBy: 'Chef Bruno', minutesElapsed: 20 },
+    ],
+    notes: 'Demora de entrega en terraza exterior',
+    position: { x: 84, y: 14, width: 12, height: 15, shape: 'square' }
+  },
+  {
+    id: 'tbl-11',
+    number: 11,
+    name: 'Terraza 11 - Familiar Deck',
+    zone: 'terrace',
+    capacity: 6,
+    guestsCount: 6,
+    status: 'occupied',
+    waiterId: 'staff-4',
+    waiterName: 'Camila Torres',
+    waiterAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '13:00',
+    seatedMinutes: 58,
+    activeOrders: [
+      { id: 'ord-1101', name: 'Parrillada Premium para 4', category: 'principal', price: 120.0, quantity: 1, status: 'served', cookedBy: 'Chef Bruno', minutesElapsed: 35 },
+      { id: 'ord-1102', name: 'Cocktails Variados', category: 'bebida', price: 15.0, quantity: 6, status: 'served', minutesElapsed: 50 },
+    ],
+    position: { x: 68, y: 35, width: 15, height: 16, shape: 'rect_h' }
+  },
+  {
+    id: 'tbl-12',
+    number: 12,
+    name: 'Terraza 12 - Redonda Jardín',
+    zone: 'terrace',
+    capacity: 2,
+    guestsCount: 0,
+    status: 'free',
+    activeOrders: [],
+    position: { x: 86, y: 35, width: 10, height: 15, shape: 'round' }
+  },
+  {
+    id: 'tbl-13',
+    number: 13,
+    name: 'Terraza 13',
+    zone: 'terrace',
+    capacity: 4,
+    guestsCount: 0,
+    status: 'reserved',
+    reservationTime: '15:00',
+    reservationName: 'Familia Santos (4p)',
+    activeOrders: [],
+    position: { x: 68, y: 56, width: 12, height: 15, shape: 'square' }
+  },
+  {
+    id: 'tbl-14',
+    number: 14,
+    name: 'Terraza 14 - Redonda Jardín',
+    zone: 'terrace',
+    capacity: 2,
+    guestsCount: 0,
+    status: 'free',
+    activeOrders: [],
+    position: { x: 86, y: 56, width: 10, height: 15, shape: 'round' }
+  },
+
+  // BARRA & LOUNGE (Taburetes y barra de coctelería)
+  {
+    id: 'tbl-15',
+    number: 15,
+    name: 'Taburete Barra T-01',
+    zone: 'bar_lounge',
+    capacity: 1,
+    guestsCount: 1,
+    status: 'occupied',
+    waiterId: 'staff-5',
+    waiterName: 'Diego Alarcón',
+    waiterAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '13:30',
+    seatedMinutes: 28,
+    activeOrders: [
+      { id: 'ord-1501', name: 'Tabla de Quesos y Embutidos', category: 'entrante', price: 28.0, quantity: 1, status: 'served', minutesElapsed: 22 },
+      { id: 'ord-1502', name: 'Old Fashioned Roble', category: 'bebida', price: 15.0, quantity: 1, status: 'served', minutesElapsed: 25 },
+    ],
+    position: { x: 48, y: 86, width: 7, height: 9, shape: 'bar_stool' }
+  },
+  {
+    id: 'tbl-16',
+    number: 16,
+    name: 'Taburete Barra T-02',
+    zone: 'bar_lounge',
+    capacity: 1,
+    guestsCount: 1,
+    status: 'occupied',
+    waiterId: 'staff-5',
+    waiterName: 'Diego Alarcón',
+    waiterAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '13:45',
+    seatedMinutes: 13,
+    activeOrders: [
+      { id: 'ord-1601', name: 'Gin Tonic Silvestre', category: 'bebida', price: 13.5, quantity: 2, status: 'ready', minutesElapsed: 6 },
+    ],
+    position: { x: 57, y: 86, width: 7, height: 9, shape: 'bar_stool' }
+  },
+  {
+    id: 'tbl-17',
+    number: 17,
+    name: 'Taburete Barra T-03',
+    zone: 'bar_lounge',
+    capacity: 1,
+    guestsCount: 0,
+    status: 'free',
+    activeOrders: [],
+    position: { x: 66, y: 86, width: 7, height: 9, shape: 'bar_stool' }
+  },
+  {
+    id: 'tbl-18',
+    number: 18,
+    name: 'Taburete Barra T-04',
+    zone: 'bar_lounge',
+    capacity: 1,
+    guestsCount: 0,
+    status: 'free',
+    activeOrders: [],
+    position: { x: 75, y: 86, width: 7, height: 9, shape: 'bar_stool' }
+  },
+  {
+    id: 'tbl-19',
+    number: 19,
+    name: 'Taburete Barra T-05',
+    zone: 'bar_lounge',
+    capacity: 1,
+    guestsCount: 0,
+    status: 'free',
+    activeOrders: [],
+    position: { x: 84, y: 86, width: 7, height: 9, shape: 'bar_stool' }
+  },
+
+  // SALA VIP / CAVA PRIVADA
+  {
+    id: 'tbl-20',
+    number: 20,
+    name: 'Cava VIP Presidencial',
+    zone: 'vip_room',
+    capacity: 8,
+    guestsCount: 8,
+    status: 'occupied',
+    waiterId: 'staff-3',
+    waiterName: 'Mateo Rojas',
+    waiterAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    seatedAt: '12:30',
+    seatedMinutes: 88,
+    activeOrders: [
+      { id: 'ord-2001', name: 'Menú Degustación Pasos x8', category: 'principal', price: 85.0, quantity: 8, status: 'served', cookedBy: 'Chef Bruno', minutesElapsed: 60 },
+      { id: 'ord-2002', name: 'Maridaje Vinos Premium', category: 'bebida', price: 45.0, quantity: 8, status: 'served', minutesElapsed: 75 },
+    ],
+    notes: 'Reunión Corporativa Directivos',
+    position: { x: 3, y: 86, width: 22, height: 10, shape: 'rect_h' }
+  },
+  {
+    id: 'tbl-21',
+    number: 21,
+    name: 'Cava VIP Reserva 02',
+    zone: 'vip_room',
+    capacity: 6,
+    guestsCount: 0,
+    status: 'reserved',
+    reservationTime: '20:30',
+    reservationName: 'Cena Privada Embajada (6p)',
+    activeOrders: [],
+    position: { x: 27, y: 86, width: 16, height: 10, shape: 'booth' }
+  }
+];
+
+export const STAFF_MEMBERS: StaffMember[] = [
+  // MOZOS (Waiters)
+  {
+    id: 'staff-1',
+    name: 'Lucas Vega',
+    role: 'waiter',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    zone: 'Salón Principal',
+    shiftStart: '12:00',
+    activeTablesCount: 2,
+    completedOrders: 38,
+    avgSpeedMinutes: 9.8,
+    targetSpeedMinutes: 14.0,
+    speedScore: 98,
+    totalSales: 1840.5,
+    estimatedTips: 195.0,
+    rating: 4.95,
+    rank: 1,
+    currentStatus: 'active',
+    trend: 'up',
+    badges: [
+      { id: 'b-gold', label: 'Top #1 Mozo', icon: 'Crown', color: 'amber', description: 'Mayor velocidad y satisfacción de clientes' },
+      { id: 'b-speed', label: 'Speed Demon (<10m)', icon: 'Zap', color: 'emerald', description: 'Entrega promedio bajo los 10 minutos' },
+      { id: 'b-sales', label: 'Top Seller $', icon: 'TrendingUp', color: 'cyan', description: 'Más de $1,800 en ventas hoy' }
+    ],
+    recentAchievements: ['Completó 8 comandas sin demoras', 'Calificación 5/5 en últimas 12 mesas']
+  },
+  {
+    id: 'staff-2',
+    name: 'Sofía Morales',
+    role: 'waiter',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+    zone: 'Salón Principal',
+    shiftStart: '12:00',
+    activeTablesCount: 2,
+    completedOrders: 32,
+    avgSpeedMinutes: 11.2,
+    targetSpeedMinutes: 14.0,
+    speedScore: 92,
+    totalSales: 1520.0,
+    estimatedTips: 160.0,
+    rating: 4.88,
+    rank: 2,
+    currentStatus: 'active',
+    trend: 'up',
+    badges: [
+      { id: 'b-silver', label: 'Plata #2', icon: 'Award', color: 'slate', description: 'Excelente rendimiento constante' },
+      { id: 'b-upsell', label: 'Master Upseller', icon: 'Sparkles', color: 'purple', description: 'Mayor ratio de venta en postres y licores' }
+    ],
+    recentAchievements: ['Venta récord en mesa 04', 'Tiempo de cobro < 2 minutos']
+  },
+  {
+    id: 'staff-4',
+    name: 'Camila Torres',
+    role: 'waiter',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    zone: 'Terraza Exterior',
+    shiftStart: '12:30',
+    activeTablesCount: 3,
+    completedOrders: 29,
+    avgSpeedMinutes: 12.4,
+    targetSpeedMinutes: 14.0,
+    speedScore: 88,
+    totalSales: 1390.0,
+    estimatedTips: 142.0,
+    rating: 4.82,
+    rank: 3,
+    currentStatus: 'busy',
+    trend: 'up',
+    badges: [
+      { id: 'b-bronze', label: 'Bronce #3', icon: 'Medal', color: 'amber', description: 'Control de la zona más dinámica' },
+      { id: 'b-terrace', label: 'Reina de Terraza', icon: 'Sun', color: 'orange', description: 'Manejo impecable de mesas exteriores' }
+    ],
+    recentAchievements: ['3 mesas activas atendidas simultáneamente']
+  },
+  {
+    id: 'staff-3',
+    name: 'Mateo Rojas',
+    role: 'waiter',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    zone: 'Salón & Cava VIP',
+    shiftStart: '12:00',
+    activeTablesCount: 2,
+    completedOrders: 22,
+    avgSpeedMinutes: 13.8,
+    targetSpeedMinutes: 14.0,
+    speedScore: 84,
+    totalSales: 1980.0,
+    estimatedTips: 210.0,
+    rating: 4.90,
+    rank: 4,
+    currentStatus: 'active',
+    trend: 'stable',
+    badges: [
+      { id: 'b-vip', label: 'Sommelier & VIP', icon: 'Wine', color: 'rose', description: 'Especialista en maridaje y Cava privada' }
+    ],
+    recentAchievements: ['Mayor ticket promedio del día ($165.00)']
+  },
+  {
+    id: 'staff-5',
+    name: 'Diego Alarcón',
+    role: 'waiter',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    zone: 'Barra & Lounge',
+    shiftStart: '13:00',
+    activeTablesCount: 2,
+    completedOrders: 21,
+    avgSpeedMinutes: 8.5,
+    targetSpeedMinutes: 14.0,
+    speedScore: 94,
+    totalSales: 740.0,
+    estimatedTips: 85.0,
+    rating: 4.78,
+    rank: 5,
+    currentStatus: 'active',
+    trend: 'up',
+    badges: [
+      { id: 'b-flash', label: 'Flash Bar (<9m)', icon: 'Zap', color: 'emerald', description: 'Servicio ultra veloz en barra' }
+    ],
+    recentAchievements: ['Promedio 8.5 minutos por cóctel']
+  },
+
+  // COCINEROS (Chefs / Kitchen KDS)
+  {
+    id: 'chef-1',
+    name: 'Chef Bruno Fontana',
+    role: 'chef',
+    avatar: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=150&auto=format&fit=crop&q=80',
+    zone: 'Cocina Central',
+    station: 'Parrilla, Brasas & Cortes',
+    shiftStart: '11:30',
+    activeTablesCount: 4,
+    completedOrders: 54,
+    avgSpeedMinutes: 12.8,
+    targetSpeedMinutes: 16.0,
+    speedScore: 96,
+    totalSales: 3420.0,
+    estimatedTips: 0,
+    rating: 4.96,
+    rank: 1,
+    currentStatus: 'busy',
+    trend: 'up',
+    badges: [
+      { id: 'b-king-grill', label: 'Maestro de Brasas #1', icon: 'Flame', color: 'rose', description: 'Punto de carne perfecto en 99.2% de órdenes' },
+      { id: 'b-zero-delay', label: 'Zero Delay', icon: 'CheckCircle', color: 'emerald', description: 'Cero tickets demorados > 20 min' }
+    ],
+    recentAchievements: ['18 Tomahawks y Bifes despachados a tiempo']
+  },
+  {
+    id: 'chef-2',
+    name: 'Elena Gómez',
+    role: 'chef',
+    avatar: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=150&auto=format&fit=crop&q=80',
+    zone: 'Cocina Central',
+    station: 'Pastas, Risottos & Entrantes',
+    shiftStart: '11:30',
+    activeTablesCount: 3,
+    completedOrders: 46,
+    avgSpeedMinutes: 10.5,
+    targetSpeedMinutes: 14.0,
+    speedScore: 93,
+    totalSales: 1680.0,
+    estimatedTips: 0,
+    rating: 4.91,
+    rank: 2,
+    currentStatus: 'active',
+    trend: 'up',
+    badges: [
+      { id: 'b-fast-pasta', label: 'Velocidad KDS #2', icon: 'Clock', color: 'amber', description: 'Promedio 10.5 min en platos calientes' }
+    ],
+    recentAchievements: ['42 raciones servidas sin devolución']
+  },
+  {
+    id: 'chef-3',
+    name: 'Marco Pellegrino',
+    role: 'chef',
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
+    zone: 'Cocina Fría',
+    station: 'Tartares, Ceviches & Ensaladas',
+    shiftStart: '12:00',
+    activeTablesCount: 2,
+    completedOrders: 35,
+    avgSpeedMinutes: 7.8,
+    targetSpeedMinutes: 10.0,
+    speedScore: 97,
+    totalSales: 980.0,
+    estimatedTips: 0,
+    rating: 4.88,
+    rank: 3,
+    currentStatus: 'active',
+    trend: 'stable',
+    badges: [
+      { id: 'b-cold-master', label: 'Sprint Frío (<8m)', icon: 'Snowflake', color: 'cyan', description: 'Entrantes listos antes del primer trago' }
+    ],
+    recentAchievements: ['Salidas de ceviche en récord 6.2 min']
+  },
+  {
+    id: 'chef-4',
+    name: 'Sara Krause',
+    role: 'chef',
+    avatar: 'https://images.unsplash.com/photo-1595273670150-bd0c3c392e46?w=150&auto=format&fit=crop&q=80',
+    zone: 'Pastelería',
+    station: 'Postres & Horno Dulce',
+    shiftStart: '12:30',
+    activeTablesCount: 1,
+    completedOrders: 28,
+    avgSpeedMinutes: 6.2,
+    targetSpeedMinutes: 8.0,
+    speedScore: 95,
+    totalSales: 460.0,
+    estimatedTips: 0,
+    rating: 4.94,
+    rank: 4,
+    currentStatus: 'active',
+    trend: 'up',
+    badges: [
+      { id: 'b-sweet', label: 'Dulce Precisión', icon: 'Sparkles', color: 'purple', description: 'Presentaciones gourmet calificadas 5 estrellas' }
+    ],
+    recentAchievements: ['Volcanes con cocción exacta de 5:30 min']
+  }
+];
+
+export const REVENUE_DATA = {
+  day: [
+    { timeLabel: '11:00', revenue: 240, previousRevenue: 190, ordersCount: 6, avgTicket: 40.0, guestsCount: 12 },
+    { timeLabel: '12:00', revenue: 680, previousRevenue: 520, ordersCount: 14, avgTicket: 48.5, guestsCount: 31 },
+    { timeLabel: '13:00', revenue: 1420, previousRevenue: 1150, ordersCount: 26, avgTicket: 54.6, guestsCount: 58 },
+    { timeLabel: '14:00', revenue: 1850, previousRevenue: 1540, ordersCount: 32, avgTicket: 57.8, guestsCount: 74 },
+    { timeLabel: '15:00', revenue: 730, previousRevenue: 620, ordersCount: 15, avgTicket: 48.6, guestsCount: 30 },
+    { timeLabel: '16:00', revenue: 290, previousRevenue: 250, ordersCount: 7, avgTicket: 41.4, guestsCount: 14 },
+    { timeLabel: '17:00', revenue: 180, previousRevenue: 210, ordersCount: 4, avgTicket: 45.0, guestsCount: 9 },
+    { timeLabel: '18:00', revenue: 410, previousRevenue: 360, ordersCount: 9, avgTicket: 45.5, guestsCount: 18 },
+    { timeLabel: '19:00', revenue: 890, previousRevenue: 750, ordersCount: 18, avgTicket: 49.4, guestsCount: 42 },
+    { timeLabel: '20:00', revenue: 1650, previousRevenue: 1400, ordersCount: 28, avgTicket: 58.9, guestsCount: 65 },
+    { timeLabel: '21:00', revenue: 2100, previousRevenue: 1820, ordersCount: 34, avgTicket: 61.7, guestsCount: 82 },
+    { timeLabel: '22:00', revenue: 1380, previousRevenue: 1190, ordersCount: 22, avgTicket: 62.7, guestsCount: 50 },
+    { timeLabel: '23:00', revenue: 620, previousRevenue: 480, ordersCount: 11, avgTicket: 56.3, guestsCount: 24 },
+  ],
+  week: [
+    { timeLabel: 'Lun', revenue: 3420, previousRevenue: 3100, ordersCount: 72, avgTicket: 47.5, guestsCount: 155 },
+    { timeLabel: 'Mar', revenue: 4150, previousRevenue: 3800, ordersCount: 85, avgTicket: 48.8, guestsCount: 180 },
+    { timeLabel: 'Mié', revenue: 4890, previousRevenue: 4200, ordersCount: 98, avgTicket: 49.9, guestsCount: 210 },
+    { timeLabel: 'Jue', revenue: 6250, previousRevenue: 5400, ordersCount: 115, avgTicket: 54.3, guestsCount: 260 },
+    { timeLabel: 'Vie', revenue: 9840, previousRevenue: 8500, ordersCount: 168, avgTicket: 58.5, guestsCount: 390 },
+    { timeLabel: 'Sáb', revenue: 11450, previousRevenue: 9900, ordersCount: 195, avgTicket: 58.7, guestsCount: 440 },
+    { timeLabel: 'Dom', revenue: 7850, previousRevenue: 6900, ordersCount: 140, avgTicket: 56.0, guestsCount: 320 },
+  ],
+  month: [
+    { timeLabel: 'Sem 1', revenue: 28400, previousRevenue: 24500, ordersCount: 520, avgTicket: 54.6, guestsCount: 1180 },
+    { timeLabel: 'Sem 2', revenue: 31200, previousRevenue: 26800, ordersCount: 560, avgTicket: 55.7, guestsCount: 1260 },
+    { timeLabel: 'Sem 3', revenue: 33850, previousRevenue: 29100, ordersCount: 610, avgTicket: 55.5, guestsCount: 1390 },
+    { timeLabel: 'Sem 4', revenue: 36400, previousRevenue: 30500, ordersCount: 645, avgTicket: 56.4, guestsCount: 1450 },
+  ],
+  year: [
+    { timeLabel: 'Ene', revenue: 98000, previousRevenue: 84000, ordersCount: 1800, avgTicket: 54.4, guestsCount: 4100 },
+    { timeLabel: 'Feb', revenue: 104500, previousRevenue: 89000, ordersCount: 1920, avgTicket: 54.4, guestsCount: 4350 },
+    { timeLabel: 'Mar', revenue: 112000, previousRevenue: 95000, ordersCount: 2050, avgTicket: 54.6, guestsCount: 4600 },
+    { timeLabel: 'Abr', revenue: 118000, previousRevenue: 101000, ordersCount: 2150, avgTicket: 54.8, guestsCount: 4800 },
+    { timeLabel: 'May', revenue: 125000, previousRevenue: 108000, ordersCount: 2260, avgTicket: 55.3, guestsCount: 5100 },
+    { timeLabel: 'Jun', revenue: 134000, previousRevenue: 114000, ordersCount: 2390, avgTicket: 56.0, guestsCount: 5400 },
+    { timeLabel: 'Jul', revenue: 146000, previousRevenue: 122000, ordersCount: 2580, avgTicket: 56.5, guestsCount: 5850 },
+    { timeLabel: 'Ago', revenue: 149850, previousRevenue: 126000, ordersCount: 2640, avgTicket: 56.7, guestsCount: 6020 },
+  ]
+};
+
+export const CATEGORIES_BREAKDOWN: CategoryBreakdown[] = [
+  { name: 'Cortes & Parrilla', amount: 4820, percentage: 42, color: '#f59e0b', ordersCount: 135 },
+  { name: 'Coctelería & Vinos', amount: 3210, percentage: 28, color: '#06b6d4', ordersCount: 220 },
+  { name: 'Entrantes & Tapas', amount: 1840, percentage: 16, color: '#10b981', ordersCount: 110 },
+  { name: 'Pastas & Risottos', amount: 1150, percentage: 10, color: '#8b5cf6', ordersCount: 54 },
+  { name: 'Postres de Autor', amount: 460, percentage: 4, color: '#f43f5e', ordersCount: 42 },
+];
+
+export const HOURLY_HEATMAP: HourlyHeatPoint[] = [
+  { hour: '12:00', occupancyRate: 45, revenue: 680, isPeak: false },
+  { hour: '13:00', occupancyRate: 85, revenue: 1420, isPeak: true },
+  { hour: '14:00', occupancyRate: 95, revenue: 1850, isPeak: true },
+  { hour: '15:00', occupancyRate: 50, revenue: 730, isPeak: false },
+  { hour: '16:00', occupancyRate: 20, revenue: 290, isPeak: false },
+  { hour: '19:00', occupancyRate: 60, revenue: 890, isPeak: false },
+  { hour: '20:00', occupancyRate: 90, revenue: 1650, isPeak: true },
+  { hour: '21:00', occupancyRate: 100, revenue: 2100, isPeak: true },
+  { hour: '22:00', occupancyRate: 75, revenue: 1380, isPeak: false },
+  { hour: '23:00', occupancyRate: 35, revenue: 620, isPeak: false },
+];
+
+export const INITIAL_ALERTS: OperationalAlert[] = [
+  {
+    id: 'alt-1',
+    type: 'urgent',
+    title: 'Mesa 04 solicita cuenta',
+    message: 'Total $135.50 (2 tarjetas). Tiempo de espera 3 min.',
+    timestamp: 'Hace 2 min',
+    tableNumber: 4,
+    actionText: 'Cobrar Mesa'
+  },
+  {
+    id: 'alt-2',
+    type: 'ready',
+    title: 'Plato listo en barra caliente',
+    message: 'Salmón Glaseado para Mesa 05 por Chef Marco.',
+    timestamp: 'Hace 3 min',
+    tableNumber: 5,
+    actionText: 'Marcar Servido'
+  },
+  {
+    id: 'alt-3',
+    type: 'info',
+    title: 'Próxima Reserva VIP',
+    message: 'Mesa 06: Dr. Alejandro Ruiz a las 14:30 (4 personas).',
+    timestamp: 'En 15 min',
+    tableNumber: 6,
+    actionText: 'Ver Reserva'
+  }
+];
+
+export const MENU_CATALOG = [
+  { id: 'm-1', name: 'Bife de Chorizo Angus 400g', category: 'principal' as const, price: 34.5 },
+  { id: 'm-2', name: 'Ojo de Bife con Romero 350g', category: 'principal' as const, price: 32.0 },
+  { id: 'm-3', name: 'Tomahawk Steak 1kg', category: 'principal' as const, price: 95.0 },
+  { id: 'm-4', name: 'Pulpo a las Brasas con Papines', category: 'principal' as const, price: 36.0 },
+  { id: 'm-5', name: 'Salmón Glaseado al Miso', category: 'principal' as const, price: 31.0 },
+  { id: 'm-6', name: 'Risotto de Hongos Silvestres', category: 'principal' as const, price: 26.0 },
+  { id: 'm-7', name: 'Gnocchis Rellenos de Brie', category: 'principal' as const, price: 24.5 },
+  { id: 'm-8', name: 'Carpaccio de Res Trufado', category: 'entrante' as const, price: 18.0 },
+  { id: 'm-9', name: 'Ceviche Clásico Bunker', category: 'entrante' as const, price: 19.5 },
+  { id: 'm-10', name: 'Tartar de Atún Rojo', category: 'entrante' as const, price: 21.0 },
+  { id: 'm-11', name: 'Provoleta a la Brasa Ahumada', category: 'entrante' as const, price: 16.5 },
+  { id: 'm-12', name: 'Negroni Ahumado Bunker', category: 'bebida' as const, price: 14.0 },
+  { id: 'm-13', name: 'Old Fashioned Roble Francés', category: 'bebida' as const, price: 15.0 },
+  { id: 'm-14', name: 'Gin Tonic Botánico', category: 'bebida' as const, price: 13.0 },
+  { id: 'm-15', name: 'Vino Malbec Gran Reserva', category: 'bebida' as const, price: 42.0 },
+  { id: 'm-16', name: 'Volcán de Dulce de Leche', category: 'postre' as const, price: 12.0 },
+  { id: 'm-17', name: 'Tarta de Queso Vasca Cremosa', category: 'postre' as const, price: 11.5 },
+];

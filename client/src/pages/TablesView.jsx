@@ -560,7 +560,7 @@ const TablesView = () => {
 
         fetchTables(); // Fetch immediately on mount to bypass cache delay
         fetchEditMode();
-        const interval = setInterval(handleRefresh, 1500); // Poll every 1.5 seconds (down from 3s)
+        const interval = setInterval(handleRefresh, 8000); // Poll every 8 seconds (down from 1.5s)
 
         // Local event listener
         window.addEventListener('refreshTables', handleRefresh);
@@ -937,7 +937,7 @@ const TablesView = () => {
                                                 </td>
                                                 <td style={{ padding: 10, textAlign: 'center' }}>
                                                     <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
-                                                        {(item.estado === 'lista' || item.estado === 'listo') ? (
+                                                        {(!item.enviarCocina && (item.estado === 'lista' || item.estado === 'listo')) ? (
                                                             <button
                                                                 className="glass-button primary"
                                                                 style={{ padding: '4px 8px', fontSize: '0.8rem' }}

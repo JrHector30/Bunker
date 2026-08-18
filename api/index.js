@@ -1773,7 +1773,11 @@ app.get('/api/staff/stats', async (req, res) => {
             });
 
             if (arqueos.length === 0) {
-                return res.json({ arqueo: null, waiters: [], cooks: [], comandas: [], requiresSessionSelection: false });
+                // Si no hay sesiones de caja registradas hoy, usar el día calendario completo como rango de fechas
+                arqueo = {
+                    fechaInicio: start,
+                    fechaFin: end
+                };
             } else if (arqueos.length === 1) {
                 arqueo = arqueos[0];
             } else {
@@ -1781,7 +1785,14 @@ app.get('/api/staff/stats', async (req, res) => {
                 return res.json({ arqueo: null, waiters: [], cooks: [], comandas: [], requiresSessionSelection: true });
             }
         } else {
-            return res.json({ arqueo: null, waiters: [], cooks: [], comandas: [], requiresSessionSelection: false });
+            // Default: hoy
+            const todayStr = new Date().toISOString().split('T')[0];
+            const start = new Date(`${todayStr}T00:00:00.000-05:00`);
+            const end = new Date(`${todayStr}T23:59:59.999-05:00`);
+            arqueo = {
+                fechaInicio: start,
+                fechaFin: end
+            };
         }
 
         // Determinar límites de tiempo de la sesión seleccionada
@@ -1814,7 +1825,7 @@ app.get('/api/staff/stats', async (req, res) => {
 
         // 2. Consolidar mozos
         const waiters = await prisma.user.findMany({
-            where: { rol: { in: ['mozo', 'admin'] } }
+            where: { rol: { in: ['mozo', 'admin', 'waiter', 'camarero'] } }
         });
 
         const waiterStats = waiters.map(w => {
@@ -1829,6 +1840,7 @@ app.get('/api/staff/stats', async (req, res) => {
                 id: w.id,
                 nombre: w.nombre,
                 rol: w.rol,
+                foto: w.foto,
                 totalTables,
                 totalSales
             };
@@ -1852,7 +1864,7 @@ app.get('/api/staff/stats', async (req, res) => {
         });
 
         const cooks = await prisma.user.findMany({
-            where: { rol: { in: ['cocina', 'admin'] } }
+            where: { rol: { in: ['cocina', 'admin', 'cocinero', 'chef', 'cocina_admin'] } }
         });
 
         const cookStats = cooks.map(c => {
@@ -1881,6 +1893,7 @@ app.get('/api/staff/stats', async (req, res) => {
                 id: c.id,
                 nombre: c.nombre,
                 rol: c.rol,
+                foto: c.foto,
                 totalDishes,
                 avgTimeMin
             };
@@ -2323,77 +2336,85 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
         const platosActivos = order.detalles.filter(d => d.estado !== 'anulado');
         const platoIds = platosActivos.map(d => d.platoId);
 
-        if (platoIds.length > 0) {
-            // Fetch all recipes and their current insumo stocks in one query
-            const recetas = await prisma.recetaInsumo.findMany({
-                where: { platoId: { in: platoIds } },
-                include: { insumo: true }
-            });
-
-            // Aggregate stock changes in memory to avoid multiple queries for the same insumo
-            const insumoUpdates = {};
-
-            for (const detalle of platosActivos) {
-                const recetaDelPlato = recetas.filter(r => r.platoId === detalle.platoId);
-                for (const ingrediente of recetaDelPlato) {
-                    if (!ingrediente.insumo) continue;
-                    
-                    const cantidadConsumida = round2(ingrediente.cantidad * detalle.cantidad);
-                    const insumoId = ingrediente.insumoId;
-
-                    if (!insumoUpdates[insumoId]) {
-                        insumoUpdates[insumoId] = {
-                            change: 0,
-                            currentStock: ingrediente.insumo.stock,
-                            name: ingrediente.insumo.nombre,
-                            motivos: []
-                        };
-                    }
-                    insumoUpdates[insumoId].change = round2(insumoUpdates[insumoId].change + cantidadConsumida);
-                    insumoUpdates[insumoId].motivos.push(`Plato: ${detalle.plato.nombre} (x${detalle.cantidad})`);
-                }
-            }
-
-            // Perform Insumo stock updates in parallel (without transaction)
-            const updatePromises = Object.entries(insumoUpdates).map(([insumoId, data]) => {
-                const newStock = round2(data.currentStock - data.change);
-                return prisma.insumo.update({
-                    where: { id: parseInt(insumoId) },
-                    data: { stock: newStock }
-                }).catch(e => {
-                    console.error(`[KARDEX] Error updating stock for insumo ${insumoId}:`, e.message);
-                });
-            });
-            await Promise.all(updatePromises);
-
-            // Create Movement logs in batch
-            const movimientosData = Object.entries(insumoUpdates).map(([insumoId, data]) => ({
-                insumoId: parseInt(insumoId),
-                tipoMovimiento: 'VENTA',
-                cantidad: round2(-1 * data.change),
-                motivo: `Venta automática Comanda ID: ${order.id} - ${data.motivos.join(', ')}`,
-                usuarioId: order.usuarioId,
-                fecha: order.fecha
-            }));
-
-            if (movimientosData.length > 0) {
-                try {
-                    await prisma.movimientoInsumo.createMany({
-                        data: movimientosData
-                    });
-                } catch (e) {
-                    console.error("[KARDEX] Error creating batch movimientos:", e.message);
-                }
-            }
-        }
-
-        if (email) {
-            sendReceiptEmail(email, closedOrder, order.detalles).catch(err => {
-                console.error("[Checkout] Error al enviar comprobante en background:", err);
-            });
-        }
-
+        // Responder al cliente de forma inmediata
         res.json({ ...closedOrder, total, message: "Ticket generated" });
+
+        // Procesar la explosión de insumos e email asíncronamente en segundo plano
+        process.nextTick(async () => {
+            try {
+                if (platoIds.length > 0) {
+                    // Fetch all recipes and their current insumo stocks in one query
+                    const recetas = await prisma.recetaInsumo.findMany({
+                        where: { platoId: { in: platoIds } },
+                        include: { insumo: true }
+                    });
+
+                    // Aggregate stock changes in memory to avoid multiple queries for the same insumo
+                    const insumoUpdates = {};
+
+                    for (const detalle of platosActivos) {
+                        const recetaDelPlato = recetas.filter(r => r.platoId === detalle.platoId);
+                        for (const ingrediente of recetaDelPlato) {
+                            if (!ingrediente.insumo) continue;
+                            
+                            const cantidadConsumida = round2(ingrediente.cantidad * detalle.cantidad);
+                            const insumoId = ingrediente.insumoId;
+
+                            if (!insumoUpdates[insumoId]) {
+                                insumoUpdates[insumoId] = {
+                                    change: 0,
+                                    currentStock: ingrediente.insumo.stock,
+                                    name: ingrediente.insumo.nombre,
+                                    motivos: []
+                                };
+                            }
+                            insumoUpdates[insumoId].change = round2(insumoUpdates[insumoId].change + cantidadConsumida);
+                            insumoUpdates[insumoId].motivos.push(`Plato: ${detalle.plato.nombre} (x${detalle.cantidad})`);
+                        }
+                    }
+
+                    // Perform Insumo stock updates in parallel (without transaction)
+                    const updatePromises = Object.entries(insumoUpdates).map(([insumoId, data]) => {
+                        const newStock = round2(data.currentStock - data.change);
+                        return prisma.insumo.update({
+                            where: { id: parseInt(insumoId) },
+                            data: { stock: newStock }
+                        }).catch(e => {
+                            console.error(`[KARDEX] Error updating stock for insumo ${insumoId}:`, e.message);
+                        });
+                    });
+                    await Promise.all(updatePromises);
+
+                    // Create Movement logs in batch
+                    const movimientosData = Object.entries(insumoUpdates).map(([insumoId, data]) => ({
+                        insumoId: parseInt(insumoId),
+                        tipoMovimiento: 'VENTA',
+                        cantidad: round2(-1 * data.change),
+                        motivo: `Venta automática Comanda ID: ${order.id} - ${data.motivos.join(', ')}`,
+                        usuarioId: order.usuarioId,
+                        fecha: order.fecha
+                    }));
+
+                    if (movimientosData.length > 0) {
+                        try {
+                            await prisma.movimientoInsumo.createMany({
+                                data: movimientosData
+                            });
+                        } catch (e) {
+                            console.error("[KARDEX] Error creating batch movimientos:", e.message);
+                        }
+                    }
+                }
+
+                if (email) {
+                    sendReceiptEmail(email, closedOrder, order.detalles).catch(err => {
+                        console.error("[Checkout] Error al enviar comprobante en background:", err);
+                    });
+                }
+            } catch (bgError) {
+                console.error("[Checkout Background Process Error]:", bgError);
+            }
+        });
 
     } catch (error) {
         console.error("Error finalizing payment:", error);

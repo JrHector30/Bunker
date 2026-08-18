@@ -31,6 +31,7 @@ export function useCache(key, fetcher, initialData = []) {
 
     // Identificador incremental para rastrear el último fetch iniciado y evitar respuestas fuera de orden
     const lastFetchIdRef = useRef(0);
+    const lastResolvedFetchIdRef = useRef(0);
 
     const applyLocks = useCallback((currentKey, data) => {
         if (currentKey !== 'tables' || !Array.isArray(data)) return data;
@@ -100,7 +101,8 @@ export function useCache(key, fetcher, initialData = []) {
         // Refrescar en segundo plano al cambiar la clave para tener datos frescos
         fetcherRef.current()
             .then(result => {
-                if (!isMounted || fetchId !== lastFetchIdRef.current) return;
+                if (!isMounted || fetchId <= lastResolvedFetchIdRef.current) return;
+                lastResolvedFetchIdRef.current = fetchId;
                 const lockedResult = applyLocks(key, result);
                 const newString = JSON.stringify(lockedResult);
                 globalCache[key] = lockedResult;
@@ -147,8 +149,9 @@ export function useCache(key, fetcher, initialData = []) {
             globalCache[currentKey] = lockedResult;
             localStorage.setItem(currentKey, newString);
 
-            // Solo actualizar UI si es la petición más reciente y coincide con la clave activa
-            if (isMountedRef.current && keyRef.current === currentKey && fetchId === lastFetchIdRef.current) {
+            // Solo actualizar UI si es la petición más reciente o más nueva que el último resultado procesado
+            if (isMountedRef.current && keyRef.current === currentKey && fetchId > lastResolvedFetchIdRef.current) {
+                lastResolvedFetchIdRef.current = fetchId;
                 setData(lockedResult);
             }
         } catch (error) {

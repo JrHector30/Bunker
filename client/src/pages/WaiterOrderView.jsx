@@ -192,8 +192,8 @@ const WaiterOrderView = () => {
                     enqueueTicket(tableInfo.numero || parsedTableId, user.nombre || 'Mozo', ticketContent, 'Cocina')
                         .catch(err => console.error("Error al encolar ticket en la nube:", err));
 
-                    // Hidratar snapshot de fondo para incorporar comanda recién creada
-                    offlineSnapshotService.hydrateOperationalSnapshot().catch(() => {});
+                    // Hidratar snapshot de fondo para incorporar comanda recién creada (omitiendo productos)
+                    offlineSnapshotService.hydrateOperationalSnapshot({ skipProducts: true }).catch(() => {});
 
                     // Dispatch synchronization events
                     window.dispatchEvent(new CustomEvent('refreshTables'));

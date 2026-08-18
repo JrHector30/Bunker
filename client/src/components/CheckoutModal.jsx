@@ -3,7 +3,7 @@ import { X, DollarSign, Smartphone, CreditCard, Receipt, Printer, ArrowRight, Ch
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { setOptimisticLock } from '../hooks/useCache';
-import { networkStatus, NetworkState, offlineCheckoutService, offlineSnapshotService, resolveItemPrice } from '../offline';
+import { networkStatus, NetworkState, offlineCheckoutService, offlineSnapshotService, resolveItemPrice, db } from '../offline';
 
 export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
   const { showConfirmation } = useConfirmation();
@@ -285,6 +285,18 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
       if (networkStatus.isOffline()) {
         performOfflineCheckout();
       } else {
+        // Optimistic UI update: Immediately mark the table as free locally in Dexie database
+        if (targetTableId) {
+          db.table('tables').update(parseInt(targetTableId), { estado: 'libre' }).then(() => {
+            window.dispatchEvent(new CustomEvent('refreshTables'));
+            try {
+              const channel = new BroadcastChannel('bunker');
+              channel.postMessage('refreshTables');
+              channel.close();
+            } catch (e) {}
+          }).catch(err => console.error("Error optimistically freeing table:", err));
+        }
+
         // Send checkout details to backend
         fetch(`/api/checkout/${targetTableId}`, {
           method: 'POST',
@@ -306,8 +318,8 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
             if (res.ok) {
               showToast('Pago registrado correctamente.', 'success');
               if (enviarWhatsapp) sendWhatsAppReceipt();
-              // Hidratar balance y mesas de fondo
-              offlineSnapshotService.hydrateOperationalSnapshot().catch(() => {});
+              // Hidratar balance y mesas de fondo (omitiendo productos para mayor velocidad)
+              offlineSnapshotService.hydrateOperationalSnapshot({ skipProducts: true }).catch(() => {});
 
               window.dispatchEvent(new CustomEvent('refreshCashCount'));
               window.dispatchEvent(new CustomEvent('refreshTables'));

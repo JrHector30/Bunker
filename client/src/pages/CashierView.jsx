@@ -487,19 +487,42 @@ const CashierView = () => {
     }
   }, [history, currentStatus, selectedArqueoId]);
 
+  // Modal Close Callbacks (Stabilized)
+  const handleClosePaloteoModal = useCallback(() => {
+    setIsPaloteoModalOpen(false);
+    setSelectedPaloteoArqueoId(null);
+  }, []);
+
+  const handleCloseSummaryModal = useCallback(() => {
+    setIsSummaryModalOpen(false);
+    setSelectedSummaryArqueoId(null);
+  }, []);
+
+  const handleCloseCheckoutModal = useCallback(() => {
+    setIsCheckoutModalOpen(false);
+    setSelectedCheckoutOrder(null);
+  }, []);
+
+  const handleCloseDetailModal = useCallback(() => {
+    setIsDetailModalOpen(false);
+    setSelectedDetailArqueoId(null);
+  }, []);
+
   // Synchronizers and Polling
   const statusRef = useRef(fetchStatus);
   const tablesRef = useRef(fetchTables);
+  const historyRef = useRef(fetchHistory);
   useEffect(() => {
     statusRef.current = fetchStatus;
     tablesRef.current = fetchTables;
+    historyRef.current = fetchHistory;
   });
 
   useEffect(() => {
     const handleRefresh = () => {
       statusRef.current?.();
       tablesRef.current?.();
-      fetchHistory();
+      historyRef.current?.();
     };
 
     fetchTables(); // immediate query
@@ -508,7 +531,7 @@ const CashierView = () => {
     const interval = setInterval(() => {
       statusRef.current?.();
       tablesRef.current?.();
-    }, 2000);
+    }, 8000);
 
     window.addEventListener('refreshCashCount', handleRefresh);
     window.addEventListener('refreshTables', handleRefresh);
@@ -533,7 +556,7 @@ const CashierView = () => {
         channel.close();
       }
     };
-  }, [fetchHistory]);
+  }, []);
 
   const hasPricingError = useMemo(() => {
     const tableError = openTables?.some(cuenta =>
@@ -604,8 +627,8 @@ const CashierView = () => {
         return body;
       })
       .then(async () => {
-        // Hidratar snapshot de fondo para incorporar el cambio de sesión
-        offlineSnapshotService.hydrateOperationalSnapshot().catch(() => { });
+        // Hidratar snapshot de fondo para incorporar el cambio de sesión (omitiendo productos)
+        offlineSnapshotService.hydrateOperationalSnapshot({ skipProducts: true }).catch(() => { });
 
         fetchStatus();
         setCurrentPage(1);
@@ -649,8 +672,8 @@ const CashierView = () => {
       .then(async res => {
         if (res.ok) {
           showToast('Movimiento registrado con éxito.', 'success');
-          // Hidratar snapshot de fondo para incorporar el movimiento de caja
-          offlineSnapshotService.hydrateOperationalSnapshot().catch(() => { });
+          // Hidratar snapshot de fondo para incorporar el movimiento de caja (omitiendo productos)
+          offlineSnapshotService.hydrateOperationalSnapshot({ skipProducts: true }).catch(() => { });
 
           fetchStatus();
           fetchHistory();
@@ -2032,10 +2055,7 @@ const CashierView = () => {
         selectedCheckoutOrder && (
           <CheckoutModal
             isOpen={isCheckoutModalOpen}
-            onClose={() => {
-              setIsCheckoutModalOpen(false);
-              setSelectedCheckoutOrder(null);
-            }}
+            onClose={handleCloseCheckoutModal}
             order={selectedCheckoutOrder}
             onSuccess={handlePaymentSuccess}
           />
@@ -2045,30 +2065,21 @@ const CashierView = () => {
       {/* Paloteo aggregations modal */}
       <PaloteoModal
         isOpen={isPaloteoModalOpen}
-        onClose={() => {
-          setIsPaloteoModalOpen(false);
-          setSelectedPaloteoArqueoId(null);
-        }}
+        onClose={handleClosePaloteoModal}
         arqueoId={selectedPaloteoArqueoId}
       />
 
       {/* Summary ticket monospace receipt modal */}
       <SummaryTicketModal
         isOpen={isSummaryModalOpen}
-        onClose={() => {
-          setIsSummaryModalOpen(false);
-          setSelectedSummaryArqueoId(null);
-        }}
+        onClose={handleCloseSummaryModal}
         arqueoId={selectedSummaryArqueoId}
       />
 
       {/* Detailed session auditor modal */}
       <DetailModal
         isOpen={isDetailModalOpen}
-        onClose={() => {
-          setIsDetailModalOpen(false);
-          setSelectedDetailArqueoId(null);
-        }}
+        onClose={handleCloseDetailModal}
         arqueoId={selectedDetailArqueoId}
       />
     </div >
