@@ -8,28 +8,42 @@ import {
 import RevealOnScroll from '../components/RevealOnScroll';
 import CircularCarousel from '../components/CircularCarousel';
 import Aurora from '../components/Aurora';
-import img1 from '../../public/uploads/home/img1.png';
-import img2 from '../../public/uploads/home/img2.png';
-import img3 from '../../public/uploads/home/img3.png';
+import imgDashboard from '../../public/uploads/home/dashboard_centro_mando.png';
+import imgSalon from '../../public/uploads/home/salon_mesas.png';
+import imgCocina from '../../public/uploads/home/cocina_kds.png';
+import imgCaja from '../../public/uploads/home/caja_arqueo.png';
+import imgCategorias from '../../public/uploads/home/gestion_categorias.png';
 
 const carouselItems = [
   {
-    src: img1,
+    src: imgDashboard,
+    alt: 'Centro de Mando de Búnker',
+    title: 'Centro de Mando',
+    subtitle: 'Métricas en Vivo y Control de Salón'
+  },
+  {
+    src: imgSalon,
     alt: 'Salón Interactivo y Control de Mesas',
     title: 'Salón Interactivo',
-    subtitle: 'Gestión de Mesas en Vivo'
+    subtitle: 'Distribución y Estados en Tiempo Real'
   },
   {
-    src: img2,
-    alt: 'Búnker de Caja Blindada',
-    title: 'Caja Blindada',
-    subtitle: 'Control Financiero de Turno'
-  },
-  {
-    src: img3,
-    alt: 'Bandeja KDS de Cocina',
+    src: imgCocina,
+    alt: 'Monitor KDS de Cocina en Tiempo Real',
     title: 'Monitor de Cocina',
     subtitle: 'Despacho y Tiempos KDS'
+  },
+  {
+    src: imgCaja,
+    alt: 'Caja Blindada y Arqueo de Turnos',
+    title: 'Caja Blindada',
+    subtitle: 'Arqueo de Turnos y Cierre de Cuentas'
+  },
+  {
+    src: imgCategorias,
+    alt: 'Gestión de Menú y Categorías',
+    title: 'Gestión de Categorías',
+    subtitle: 'Configuración de Carta y Cocina'
   }
 ];
 
@@ -209,14 +223,14 @@ export default function LandingView() {
 
         <RevealOnScroll variant="scale" delay={700} duration={1200} className="w-full flex justify-center">
           <div className="w-full max-w-6xl relative flex justify-center mb-12">
-            <div style={{ width: '100%', height: '680px', position: 'relative' }}>
+            <div style={{ width: '100%', height: '620px', position: 'relative' }}>
               <CircularCarousel
                 items={carouselItems}
                 preset="cylinder"
                 intro="rise"
-                cardWidth={780}
-                aspectRatio={1.55}
-                curve={0.18}
+                cardWidth={820}
+                aspectRatio={2.09}
+                curve={0.16}
                 gap={36}
                 speed={12}
                 scale={1.4}
