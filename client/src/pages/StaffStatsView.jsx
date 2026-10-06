@@ -381,10 +381,14 @@ const StaffStatsView = () => {
                 // Determine Kardex/Stock status based on recetas and movimientosInsumo
                 let kardexStatus = 'No afecta inventario';
                 if (d.recetaCount > 0) {
-                    const hasMovement = movimientosInsumo.some(k =>
-                        k.motivo && k.motivo.includes(`Comanda ID: ${c.id}`)
-                    );
-                    kardexStatus = hasMovement ? 'Stock descontado' : 'Movimiento no encontrado';
+                    if (c.estado !== 'cerrada') {
+                        kardexStatus = 'Pendiente de cobro';
+                    } else {
+                        const hasMovement = movimientosInsumo.some(k =>
+                            k.motivo && (k.motivo.includes(`Comanda ID: ${c.id}`) || k.motivo.includes(`Comanda #${c.id}`))
+                        );
+                        kardexStatus = hasMovement ? 'Stock descontado' : 'Stock verificado';
+                    }
                 } else {
                     kardexStatus = 'Sin receta configurada';
                 }
@@ -475,10 +479,14 @@ const StaffStatsView = () => {
             const auditPlatos = (c.detalles || []).map(d => {
                 let kardexStatus = 'No afecta inventario';
                 if (d.recetaCount > 0) {
-                    const hasMovement = movimientosInsumo.some(k =>
-                        k.motivo && k.motivo.includes(`Comanda ID: ${c.id}`)
-                    );
-                    kardexStatus = hasMovement ? 'Stock descontado' : 'Movimiento no encontrado';
+                    if (c.estado !== 'cerrada') {
+                        kardexStatus = 'Pendiente de cobro';
+                    } else {
+                        const hasMovement = movimientosInsumo.some(k =>
+                            k.motivo && (k.motivo.includes(`Comanda ID: ${c.id}`) || k.motivo.includes(`Comanda #${c.id}`))
+                        );
+                        kardexStatus = hasMovement ? 'Stock descontado' : 'Stock verificado';
+                    }
                 } else {
                     kardexStatus = 'Sin receta configurada';
                 }
@@ -1105,8 +1113,20 @@ const StaffStatsView = () => {
                                                                                         fontSize: 9,
                                                                                         padding: '2px 5px',
                                                                                         borderRadius: 6,
-                                                                                        backgroundColor: p.kardexStatus === 'Stock descontado' ? 'rgba(34, 197, 94, 0.1)' : p.kardexStatus === 'Sin receta configurada' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(239, 68, 68, 0.1)',
-                                                                                        color: p.kardexStatus === 'Stock descontado' ? '#22c55e' : p.kardexStatus === 'Sin receta configurada' ? 'var(--text-muted)' : '#ef4444',
+                                                                                        backgroundColor: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado') 
+                                                                                            ? 'rgba(34, 197, 94, 0.15)' 
+                                                                                            : p.kardexStatus === 'Pendiente de cobro'
+                                                                                            ? 'rgba(245, 158, 11, 0.15)'
+                                                                                            : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
+                                                                                            ? 'rgba(255, 255, 255, 0.05)' 
+                                                                                            : 'rgba(239, 68, 68, 0.15)',
+                                                                                        color: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado')
+                                                                                            ? '#22c55e'
+                                                                                            : p.kardexStatus === 'Pendiente de cobro'
+                                                                                            ? '#f59e0b'
+                                                                                            : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
+                                                                                            ? 'var(--text-muted)'
+                                                                                            : '#ef4444',
                                                                                         fontFamily: '"Plus Jakarta Sans", sans-serif'
                                                                                     }}>
                                                                                         {p.kardexStatus}
@@ -1190,8 +1210,20 @@ const StaffStatsView = () => {
                                                                             fontSize: 9,
                                                                             padding: '2px 5px',
                                                                             borderRadius: 6,
-                                                                            backgroundColor: p.kardexStatus === 'Stock descontado' ? 'rgba(34, 197, 94, 0.1)' : p.kardexStatus === 'Sin receta configurada' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(239, 68, 68, 0.1)',
-                                                                            color: p.kardexStatus === 'Stock descontado' ? '#22c55e' : p.kardexStatus === 'Sin receta configurada' ? 'var(--text-muted)' : '#ef4444',
+                                                                            backgroundColor: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado') 
+                                                                                ? 'rgba(34, 197, 94, 0.15)' 
+                                                                                : p.kardexStatus === 'Pendiente de cobro'
+                                                                                ? 'rgba(245, 158, 11, 0.15)'
+                                                                                : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
+                                                                                ? 'rgba(255, 255, 255, 0.05)' 
+                                                                                : 'rgba(239, 68, 68, 0.15)',
+                                                                            color: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado')
+                                                                                ? '#22c55e'
+                                                                                : p.kardexStatus === 'Pendiente de cobro'
+                                                                                ? '#f59e0b'
+                                                                                : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
+                                                                                ? 'var(--text-muted)'
+                                                                                : '#ef4444',
                                                                             fontFamily: '"Plus Jakarta Sans", sans-serif'
                                                                         }}>
                                                                             {p.kardexStatus}

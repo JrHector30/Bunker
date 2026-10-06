@@ -13,6 +13,9 @@ import imgSalon from '../../public/uploads/home/salon_mesas.png';
 import imgCocina from '../../public/uploads/home/cocina_kds.png';
 import imgCaja from '../../public/uploads/home/caja_arqueo.png';
 import imgCategorias from '../../public/uploads/home/gestion_categorias.png';
+import imgReportes from '../../public/uploads/home/reportes_rendimiento.png';
+import imgSoporte from '../../public/uploads/home/soporte_asistencia.png';
+import imgImpresion from '../../public/uploads/home/impresion_dispositivos.png';
 
 const carouselItems = [
   {
@@ -44,6 +47,24 @@ const carouselItems = [
     alt: 'Gestión de Menú y Categorías',
     title: 'Gestión de Categorías',
     subtitle: 'Configuración de Carta y Cocina'
+  },
+  {
+    src: imgReportes,
+    alt: 'Rendimiento y Reportes Financieros',
+    title: 'Rendimiento y Reportes',
+    subtitle: 'Analítica Financiera y Tiempos'
+  },
+  {
+    src: imgSoporte,
+    alt: 'Atención y Soporte AI',
+    title: 'Atención y Soporte AI',
+    subtitle: 'Tickets de Incidencia y Diagnóstico por Voz'
+  },
+  {
+    src: imgImpresion,
+    alt: 'Administrador de Dispositivos de Impresión',
+    title: 'Impresión Térmica Cloud',
+    subtitle: 'Control de Impresoras USB y Red Ethernet'
   }
 ];
 
@@ -74,6 +95,7 @@ export default function LandingView() {
     }
   });
   const [legalModal, setLegalModal] = useState(null); // 'terms' | 'privacy' | null
+  const [expandedIndex, setExpandedIndex] = useState(null);
   const navigate = useNavigate();
 
   const acceptCookies = () => {
@@ -84,6 +106,17 @@ export default function LandingView() {
     }
     setShowCookies(false);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (expandedIndex === null) return;
+      if (e.key === 'Escape') setExpandedIndex(null);
+      else if (e.key === 'ArrowRight') setExpandedIndex((prev) => (prev + 1) % carouselItems.length);
+      else if (e.key === 'ArrowLeft') setExpandedIndex((prev) => (prev - 1 + carouselItems.length) % carouselItems.length);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [expandedIndex]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -228,14 +261,19 @@ export default function LandingView() {
                 items={carouselItems}
                 preset="cylinder"
                 intro="rise"
-                cardWidth={820}
+                cardWidth={780}
                 aspectRatio={2.09}
-                curve={0.16}
-                gap={36}
+                curve={1}
+                gap={40}
                 speed={12}
-                scale={1.4}
+                scale={1.35}
                 captions={false}
+                onItemClick={(item, index) => setExpandedIndex(index)}
               />
+            </div>
+            <div className="text-center text-xs text-gray-500 mt-2 flex items-center justify-center gap-1.5 pointer-events-none">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
+              Haz clic en cualquier pantalla para verla en tamaño completo
             </div>
           </div>
         </RevealOnScroll>
@@ -615,6 +653,77 @@ export default function LandingView() {
                 Cerrar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL LIGHTBOX EXPANDIR IMAGEN */}
+      {expandedIndex !== null && (
+        <div
+          className="fixed inset-0 z-50 bg-black/92 backdrop-blur-md flex flex-col items-center justify-center p-3 md:p-8 animate-fade-in select-none"
+          onClick={() => setExpandedIndex(null)}
+        >
+          {/* Barra Superior */}
+          <div
+            className="w-full max-w-6xl flex items-center justify-between pb-3 mb-2 border-b border-gray-800/80 text-white z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h3 className="text-base md:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-teal-400"></span>
+                {carouselItems[expandedIndex].title}
+              </h3>
+              <p className="text-xs md:text-sm text-teal-400 font-medium uppercase tracking-wider">
+                {carouselItems[expandedIndex].subtitle}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-400 font-mono tabular-nums px-2.5 py-1 bg-gray-900/80 border border-gray-800 rounded-lg">
+                {expandedIndex + 1} / {carouselItems.length}
+              </span>
+              <button
+                onClick={() => setExpandedIndex(null)}
+                className="p-2 rounded-lg bg-gray-900/80 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white transition-all cursor-pointer"
+                title="Cerrar (Esc)"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* Contenedor Principal de la Imagen */}
+          <div
+            className="relative w-full max-w-6xl flex items-center justify-center my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Botón Anterior */}
+            <button
+              onClick={() => setExpandedIndex((prev) => (prev - 1 + carouselItems.length) % carouselItems.length)}
+              className="absolute left-2 md:-left-12 z-20 p-2.5 rounded-full bg-black/75 hover:bg-teal-500 hover:text-black border border-gray-700/60 text-white transition-all shadow-xl backdrop-blur-sm cursor-pointer"
+              title="Anterior"
+            >
+              <ChevronDown className="rotate-90" size={24} />
+            </button>
+
+            <img
+              src={carouselItems[expandedIndex].src}
+              alt={carouselItems[expandedIndex].alt}
+              className="w-full max-h-[76vh] object-contain rounded-xl border border-gray-800/80 shadow-[0_20px_60px_rgba(0,0,0,0.9)] bg-black/40"
+            />
+
+            {/* Botón Siguiente */}
+            <button
+              onClick={() => setExpandedIndex((prev) => (prev + 1) % carouselItems.length)}
+              className="absolute right-2 md:-right-12 z-20 p-2.5 rounded-full bg-black/75 hover:bg-teal-500 hover:text-black border border-gray-700/60 text-white transition-all shadow-xl backdrop-blur-sm cursor-pointer"
+              title="Siguiente"
+            >
+              <ChevronDown className="-rotate-90" size={24} />
+            </button>
+          </div>
+
+          <div className="text-[11px] text-gray-400 mt-2 z-10 hidden md:block">
+            Usa las flechas del teclado ← → para navegar o Esc para cerrar
           </div>
         </div>
       )}

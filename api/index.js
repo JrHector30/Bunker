@@ -1258,11 +1258,26 @@ app.get('/api/tables', async (req, res) => {
                                 }
                             }
                         }
-                    }
-                }
+        // Auto-heal ghost occupied tables (mesas marcadas ocupadas sin platos activos)
+        const ghostTablesToFree = [];
+        const sanitizedTables = tables.map(t => {
+            const hasActiveOrder = t.comandas && t.comandas.length > 0 && t.comandas[0].detalles && t.comandas[0].detalles.length > 0;
+            const isDaughter = t.mesaPadreId !== null;
+            if (t.estado === 'ocupada' && !hasActiveOrder && !isDaughter) {
+                ghostTablesToFree.push(t.id);
+                return { ...t, estado: 'libre', comandas: [] };
             }
+            return t;
         });
-        res.json(tables);
+
+        if (ghostTablesToFree.length > 0) {
+            prisma.mesa.updateMany({
+                where: { id: { in: ghostTablesToFree } },
+                data: { estado: 'libre' }
+            }).catch(err => console.error("Error auto-freeing ghost tables:", err));
+        }
+
+        res.json(sanitizedTables);
     } catch (error) {
         console.error('❌ Error optimizando /api/tables:', error);
         res.json([]);
@@ -2332,90 +2347,86 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
             })
         ]);
 
-        // 3. Explosión de insumos (Optimized Batch & Parallel)
+        // 3. Explosión de insumos (Synchronous & Robust)
         const platosActivos = order.detalles.filter(d => d.estado !== 'anulado');
         const platoIds = platosActivos.map(d => d.platoId);
 
-        // Responder al cliente de forma inmediata
-        res.json({ ...closedOrder, total, message: "Ticket generated" });
-
-        // Procesar la explosión de insumos e email asíncronamente en segundo plano
-        process.nextTick(async () => {
+        if (platoIds.length > 0) {
             try {
-                if (platoIds.length > 0) {
-                    // Fetch all recipes and their current insumo stocks in one query
-                    const recetas = await prisma.recetaInsumo.findMany({
-                        where: { platoId: { in: platoIds } },
-                        include: { insumo: true }
-                    });
+                // Fetch all recipes and their current insumo stocks in one query
+                const recetas = await prisma.recetaInsumo.findMany({
+                    where: { platoId: { in: platoIds } },
+                    include: { insumo: true }
+                });
 
-                    // Aggregate stock changes in memory to avoid multiple queries for the same insumo
-                    const insumoUpdates = {};
+                // Aggregate stock changes in memory to avoid multiple queries for the same insumo
+                const insumoUpdates = {};
 
-                    for (const detalle of platosActivos) {
-                        const recetaDelPlato = recetas.filter(r => r.platoId === detalle.platoId);
-                        for (const ingrediente of recetaDelPlato) {
-                            if (!ingrediente.insumo) continue;
-                            
-                            const cantidadConsumida = round2(ingrediente.cantidad * detalle.cantidad);
-                            const insumoId = ingrediente.insumoId;
+                for (const detalle of platosActivos) {
+                    const recetaDelPlato = recetas.filter(r => r.platoId === detalle.platoId);
+                    for (const ingrediente of recetaDelPlato) {
+                        if (!ingrediente.insumo) continue;
+                        
+                        const cantidadConsumida = round2(ingrediente.cantidad * (detalle.cantidad || 1));
+                        const insumoId = ingrediente.insumoId;
 
-                            if (!insumoUpdates[insumoId]) {
-                                insumoUpdates[insumoId] = {
-                                    change: 0,
-                                    currentStock: ingrediente.insumo.stock,
-                                    name: ingrediente.insumo.nombre,
-                                    motivos: []
-                                };
-                            }
-                            insumoUpdates[insumoId].change = round2(insumoUpdates[insumoId].change + cantidadConsumida);
-                            insumoUpdates[insumoId].motivos.push(`Plato: ${detalle.plato.nombre} (x${detalle.cantidad})`);
+                        if (!insumoUpdates[insumoId]) {
+                            insumoUpdates[insumoId] = {
+                                change: 0,
+                                currentStock: ingrediente.insumo.stock,
+                                name: ingrediente.insumo.nombre,
+                                motivos: []
+                            };
                         }
+                        insumoUpdates[insumoId].change = round2(insumoUpdates[insumoId].change + cantidadConsumida);
+                        insumoUpdates[insumoId].motivos.push(`Plato: ${detalle.plato?.nombre || 'Plato'} (x${detalle.cantidad})`);
                     }
+                }
 
-                    // Perform Insumo stock updates in parallel (without transaction)
-                    const updatePromises = Object.entries(insumoUpdates).map(([insumoId, data]) => {
-                        const newStock = round2(data.currentStock - data.change);
-                        return prisma.insumo.update({
-                            where: { id: parseInt(insumoId) },
-                            data: { stock: newStock }
-                        }).catch(e => {
-                            console.error(`[KARDEX] Error updating stock for insumo ${insumoId}:`, e.message);
+                // Perform Insumo stock updates
+                const updatePromises = Object.entries(insumoUpdates).map(([insumoId, data]) => {
+                    const newStock = round2(data.currentStock - data.change);
+                    return prisma.insumo.update({
+                        where: { id: parseInt(insumoId) },
+                        data: { stock: newStock }
+                    }).catch(e => {
+                        console.error(`[KARDEX] Error updating stock for insumo ${insumoId}:`, e.message);
+                    });
+                });
+                await Promise.all(updatePromises);
+
+                // Create Movement logs in batch
+                const movimientosData = Object.entries(insumoUpdates).map(([insumoId, data]) => ({
+                    insumoId: parseInt(insumoId),
+                    tipoMovimiento: 'VENTA',
+                    cantidad: round2(-1 * data.change),
+                    motivo: `Venta automática Comanda ID: ${order.id} - ${data.motivos.join(', ')}`,
+                    usuarioId: order.usuarioId || 1,
+                    fecha: order.fecha || new Date()
+                }));
+
+                if (movimientosData.length > 0) {
+                    try {
+                        await prisma.movimientoInsumo.createMany({
+                            data: movimientosData
                         });
-                    });
-                    await Promise.all(updatePromises);
-
-                    // Create Movement logs in batch
-                    const movimientosData = Object.entries(insumoUpdates).map(([insumoId, data]) => ({
-                        insumoId: parseInt(insumoId),
-                        tipoMovimiento: 'VENTA',
-                        cantidad: round2(-1 * data.change),
-                        motivo: `Venta automática Comanda ID: ${order.id} - ${data.motivos.join(', ')}`,
-                        usuarioId: order.usuarioId,
-                        fecha: order.fecha
-                    }));
-
-                    if (movimientosData.length > 0) {
-                        try {
-                            await prisma.movimientoInsumo.createMany({
-                                data: movimientosData
-                            });
-                        } catch (e) {
-                            console.error("[KARDEX] Error creating batch movimientos:", e.message);
-                        }
+                    } catch (e) {
+                        console.error("[KARDEX] Error creating batch movimientos:", e.message);
                     }
                 }
-
-                if (email) {
-                    sendReceiptEmail(email, closedOrder, order.detalles).catch(err => {
-                        console.error("[Checkout] Error al enviar comprobante en background:", err);
-                    });
-                }
-            } catch (bgError) {
-                console.error("[Checkout Background Process Error]:", bgError);
+            } catch (stockError) {
+                console.error("[Checkout Stock Explosion Error]:", stockError);
             }
-        });
+        }
 
+        if (email) {
+            sendReceiptEmail(email, closedOrder, order.detalles).catch(err => {
+                console.error("[Checkout] Error al enviar comprobante:", err);
+            });
+        }
+
+        // Responder al cliente una vez completadas las operaciones
+        res.json({ ...closedOrder, total, message: "Ticket generated" });
     } catch (error) {
         console.error("Error finalizing payment:", error);
         res.status(500).json({ error: "Error al registrar pago: " + error.message });
@@ -2762,10 +2773,13 @@ app.get('/api/cashier/open-accounts', async (req, res) => {
             },
             orderBy: { fecha: 'asc' }
         });
-        res.json(comandasActivas);
+
+        // Filtrar comandas que realmente tengan items activos
+        const validComandas = (comandasActivas || []).filter(c => c.detalles && c.detalles.length > 0);
+        res.json(validComandas);
     } catch (e) {
         console.error('Error en open-accounts:', e);
-        res.status(500).json([]);
+        res.json([]);
     }
 });
 
@@ -2794,7 +2808,7 @@ app.get('/api/cashier/balance', async (req, res) => {
 
         // Determine Time Range
         const startDate = lastArqueo.fechaInicio;
-        const endDate = lastArqueo.estado === 'abierto' ? new Date() : lastArqueo.fechaFin;
+        const endDate = lastArqueo.estado === 'abierto' ? new Date() : (lastArqueo.fechaFin || new Date());
 
         // Run queries in parallel
         const [sales, movements, pendingOrders] = await Promise.all([
@@ -2835,11 +2849,11 @@ app.get('/api/cashier/balance', async (req, res) => {
         };
 
         // Calculate manual incomes and egresos
-        const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + m.monto, 0);
-        const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
+        const manualIngresos = (movements || []).filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
+        const manualEgresos = (movements || []).filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
 
         // Dynamic Inicio -> Fixed initial amount
-        const inicio = lastArqueo.montoInicial;
+        const inicio = lastArqueo.montoInicial || 0;
         const egresos = manualEgresos;
 
         // Calculate Totals
@@ -2857,8 +2871,8 @@ app.get('/api/cashier/balance', async (req, res) => {
             manual: manualIngresos
         };
 
-        sales.forEach(order => {
-            const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+        (sales || []).forEach(order => {
+            const subtotal = (order.detalles || []).reduce((sum, d) => sum + ((d.plato?.precio || 0) * (d.cantidad || 0)), 0);
             const propina = order.propina || 0;
 
             totalBruto += subtotal;
@@ -2891,31 +2905,31 @@ app.get('/api/cashier/balance', async (req, res) => {
         const desglosePropinas = Object.values(propinasPorMozo);
 
         // Calculate total pending based on order state (lista or entregada)
-        const totalPendiente = pendingOrders.reduce((acc, order) => {
-            const hasKitchenItems = order.detalles.some(d => 
-                ['listo', 'lista', 'entregado', 'entregada'].includes(d.estado.toLowerCase())
+        const totalPendiente = (pendingOrders || []).reduce((acc, order) => {
+            const hasKitchenItems = (order.detalles || []).some(d => 
+                ['listo', 'lista', 'entregado', 'entregada'].includes((d.estado || '').toLowerCase())
             );
             if (hasKitchenItems) {
-                return acc + order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+                return acc + (order.detalles || []).reduce((sum, d) => sum + ((d.plato?.precio || 0) * (d.cantidad || 0)), 0);
             }
             return acc;
         }, 0);
 
         // totalCaja = Inicio + manualIngresos + cash sales - manualEgresos
-        const totalCaja = lastArqueo.montoInicial + manualIngresos + incomeDetails.efectivo - manualEgresos;
+        const totalCaja = (lastArqueo.montoInicial || 0) + manualIngresos + incomeDetails.efectivo - manualEgresos;
 
-        const ventasDetalladas = sales.map(order => ({
+        const ventasDetalladas = (sales || []).map(order => ({
             id: order.id,
             hora: order.fecha,
-            items: order.detalles.map(d => ({
-                cantidad: d.cantidad,
-                descripcion: d.plato.nombre,
-                precio: d.plato.precio,
-                total: d.cantidad * d.plato.precio
+            items: (order.detalles || []).map(d => ({
+                cantidad: d.cantidad || 1,
+                descripcion: d.plato?.nombre || 'Plato',
+                precio: d.plato?.precio || 0,
+                total: (d.cantidad || 1) * (d.plato?.precio || 0)
             })),
-            total: order.detalles.reduce((s, d) => s + (d.cantidad * d.plato.precio), 0),
-            metodo: order.metodoPago,
-            doc: order.tipoDocumento,
+            total: (order.detalles || []).reduce((s, d) => s + ((d.cantidad || 1) * (d.plato?.precio || 0)), 0),
+            metodo: order.metodoPago || 'efectivo',
+            doc: order.tipoDocumento || 'sin_comprobante',
             waiterName: order.usuario ? order.usuario.nombre : 'Mesero',
             mesaNum: order.mesa ? order.mesa.numero : order.mesaId
         }));

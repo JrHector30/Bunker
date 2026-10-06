@@ -75,6 +75,11 @@
   position: absolute;
   left: 0;
   top: 0;
+  cursor: zoom-in;
+}
+
+.circular-carousel__card:hover .circular-carousel__frame {
+  filter: brightness(1.08);
 }
 
 .circular-carousel__tile {
