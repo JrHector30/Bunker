@@ -579,7 +579,7 @@ export default function LandingView() {
             <div className="p-6 overflow-y-auto text-xs text-gray-300 space-y-4 leading-relaxed">
               {legalModal === 'terms' ? (
                 <>
-                  <p><strong>1. Identificación del Servicio:</strong> Búnker ComandaGo es una plataforma web especializada en la gestión operativa de restaurantes, salón interactivo, comandas de cocina y facturación comercial.</p>
+                  <p><strong>1. Identificación del Servicio:</strong> Búnker es una plataforma web especializada en la gestión operativa de restaurantes, salón interactivo, comandas de cocina y facturación comercial.</p>
                   <p><strong>2. Propiedad Intelectual y Licenciamiento:</strong> Todos los derechos sobre la plataforma, código fuente y marca pertenecen a sus desarrolladores. El usuario adquiere una licencia de uso intransferible para su establecimiento comercial.</p>
                   <p><strong>3. Responsabilidad Transaccional:</strong> La plataforma proporciona herramientas para control de caja y cuadre de turnos. El usuario es responsable de la exactitud de los montos ingresados y de la custodia de sus credenciales de acceso.</p>
                   <p><strong>4. Disponibilidad del Servicio:</strong> Operamos sobre infraestructura cloud de alta disponibilidad (99.9% uptime). La conectividad final depende del proveedor de Internet del establecimiento.</p>
