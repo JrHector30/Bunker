@@ -587,26 +587,39 @@ export default function LandingView() {
         </div>
       )}
 
-      {/* BOTÓN FLOTANTE DE WHATSAPP */}
+      {/* BOTÓN FLOTANTE DE WHATSAPP (Uiverse.io by Gaurang7717 + Neon Glow + Texto interactivo) */}
       <a
         href="https://wa.me/51924383883?text=Hola%20B%C3%BAnker%2C%20quisiera%20m%C3%A1s%20informaci%C3%B3n%20sobre%20el%20sistema%20gastron%C3%B3mico"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Contactar por WhatsApp"
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-[#25D366] hover:bg-[#20bd5a] text-white p-3.5 rounded-full shadow-[0_10px_25px_rgba(37,211,102,0.4)] hover:shadow-[0_15px_35px_rgba(37,211,102,0.6)] hover:scale-105 active:scale-95 transition-all duration-300 group cursor-pointer"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-3 group whatsapp-float-widget cursor-pointer select-none no-underline transition-transform duration-300 active:scale-95"
         title="Chatea con nosotros por WhatsApp (+51 924 383 883)"
       >
-        <span className="hidden sm:inline-block max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-500 text-xs font-bold pl-1 text-white">
-          ¿Dudas? Chatea con nosotros
-        </span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          className="w-6 h-6 text-white"
-        >
-          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 15 3.8 13.47 3.8 11.91C3.81 7.37 7.5 3.67 12.05 3.67M9.53 7.34C9.33 7.34 9.15 7.35 8.97 7.42C8.72 7.5 8.35 7.85 8.35 8.57C8.35 9.29 8.87 10.37 8.97 10.52C9.07 10.67 10.3 12.63 12.24 13.44C13.88 14.12 14.21 13.99 14.57 13.95C14.93 13.92 15.73 13.47 15.9 12.98C16.07 12.49 16.07 12.08 16.02 11.99C15.97 11.9 15.84 11.85 15.65 11.75C15.45 11.65 14.51 11.19 14.33 11.13C14.16 11.06 14.03 11.03 13.91 11.22C13.74 11.47 13.37 11.93 13.25 12.05C13.13 12.18 13.01 12.2 12.81 12.1C12.62 12 11.79 11.73 10.82 10.86C10.06 10.18 9.55 9.34 9.4 9.09C9.25 8.85 9.39 8.71 9.49 8.61C9.58 8.52 9.69 8.38 9.79 8.26C9.89 8.14 9.92 8.04 9.99 7.9C10.05 7.75 10.02 7.63 9.97 7.53C9.92 7.43 9.53 6.46 9.37 6.07C9.21 5.69 9.05 5.75 8.93 5.74C8.82 5.73 8.69 5.73 8.56 5.73" />
-        </svg>
+        {/* TEXTO EXPANDIBLE CON EFECTO NEON */}
+        <div className="hidden sm:flex items-center overflow-hidden max-w-0 group-hover:max-w-xs transition-all duration-500 ease-out">
+          <div className="whitespace-nowrap px-4 py-2.5 rounded-full bg-[#0a1510]/90 backdrop-blur-md border border-[#00d757]/60 text-white text-xs font-bold tracking-wide shadow-[0_0_20px_rgba(0,215,87,0.4)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#00d757] animate-pulse shadow-[0_0_8px_#00d757]" />
+            ¿Dudas? Chatea con nosotros
+          </div>
+        </div>
+
+        {/* BOTÓN ICONO ANIMADO DE WHATSAPP (UIVERSE) */}
+        <div className="Btn">
+          <span className="svgContainer">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="24"
+              height="24"
+              fill="white"
+              className="w-6 h-6 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+            >
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+            </svg>
+          </span>
+          <span className="BG"></span>
+        </div>
       </a>
 
       {/* MODAL LEGAL (TÉRMINOS Y PRIVACIDAD) */}

@@ -2508,3 +2508,62 @@ body {
 .login-dropdown::-webkit-scrollbar-track {
   background: transparent !important;
 }
+
+/* ============================================
+   WHATSAPP FLOATING BUTTON (Uiverse.io by Gaurang7717 + Neon Glow)
+   ============================================ */
+.Btn {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background-color: transparent;
+  position: relative;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.svgContainer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  letter-spacing: 0.8px;
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  z-index: 2;
+}
+
+.BG {
+  position: absolute;
+  content: "";
+  width: 100%;
+  height: 100%;
+  background: #00d757;
+  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#f09433', endColorstr='#bc1888',GradientType=1 );
+  z-index: 1;
+  border-radius: 9px;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 16px rgba(0, 215, 87, 0.65), 0 0 32px rgba(0, 215, 87, 0.35);
+}
+
+.whatsapp-float-widget:hover .BG,
+.Btn:hover .BG {
+  transform: rotate(35deg);
+  transform-origin: bottom;
+  box-shadow: 0 0 25px rgba(0, 215, 87, 0.9), 0 0 50px rgba(0, 215, 87, 0.5);
+}
+
+.whatsapp-float-widget:hover .svgContainer,
+.Btn:hover .svgContainer {
+  background-color: rgba(156, 156, 156, 0.466);
+}
