@@ -200,6 +200,7 @@ const CircularCarousel = ({
   innerShade = 0.6,
   cornerRadius = 12,
   captions = false,
+  scale = 1,
   onChange,
   onItemClick,
   className = '',
@@ -307,6 +308,7 @@ const CircularCarousel = ({
     stretch: reduced ? 0 : clamp(stretch, 0, 1),
     depthFade: clamp(depthFade, 0, 1),
     captions,
+    scale: Math.max(0.1, scale),
     reduced
   };
   const settingsRef = useRef(settings);
@@ -415,7 +417,8 @@ const CircularCarousel = ({
       }
       const spanX = Math.max(maxX - minX, 1);
       const spanY = Math.max(maxY - minY, 1);
-      const fit = Math.min(1, width / spanX, height / spanY);
+      const baseFit = Math.min(width / spanX, height / spanY);
+      const fit = Math.min(2.5, baseFit * (s.scale || 1));
       state.fit = fit;
       state.shift = -((minY + maxY) / 2) * fit - room / 2;
       state.drop = s.axis === 'x' ? (rect.width / fit) * 0.55 + s.cardW : (rect.height / fit) * 0.55 + s.cardH;
@@ -893,6 +896,19 @@ const CircularCarousel = ({
                 >
                   {tiles.map(tile => renderTile(item, tile, false))}
                   {layout.backfaces && tiles.map(tile => renderTile(item, tile, true))}
+                  {(item.title || item.subtitle) && (
+                    <div
+                      className="circular-carousel__card-label"
+                      style={{
+                        top: `${cardH / 2 + 18}px`,
+                        left: `${-cardW / 2}px`,
+                        width: `${cardW}px`
+                      }}
+                    >
+                      {item.title && <h3 className="circular-carousel__card-title">{item.title}</h3>}
+                      {item.subtitle && <p className="circular-carousel__card-subtitle">{item.subtitle}</p>}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

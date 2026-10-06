@@ -8,22 +8,25 @@ import {
 import RevealOnScroll from '../components/RevealOnScroll';
 import CircularCarousel from '../components/CircularCarousel';
 import Aurora from '../components/Aurora';
+import img1 from '../../public/uploads/home/img1.png';
+import img2 from '../../public/uploads/home/img2.png';
+import img3 from '../../public/uploads/home/img3.png';
 
 const carouselItems = [
   {
-    src: '/uploads/home/img1.png',
+    src: img1,
     alt: 'Salón Interactivo y Control de Mesas',
     title: 'Salón Interactivo',
     subtitle: 'Gestión de Mesas en Vivo'
   },
   {
-    src: '/uploads/home/img2.png',
+    src: img2,
     alt: 'Búnker de Caja Blindada',
     title: 'Caja Blindada',
     subtitle: 'Control Financiero de Turno'
   },
   {
-    src: '/uploads/home/img3.png',
+    src: img3,
     alt: 'Bandeja KDS de Cocina',
     title: 'Monitor de Cocina',
     subtitle: 'Despacho y Tiempos KDS'
@@ -205,22 +208,20 @@ export default function LandingView() {
         </RevealOnScroll>
 
         <RevealOnScroll variant="scale" delay={700} duration={1200} className="w-full flex justify-center">
-          <div className="w-full max-w-5xl relative group">
-            <div className="absolute left-1/2 w-[90%] h-[70%] pointer-events-none z-0 opacity-15 blur-[140px] top-[-10%] -translate-x-1/2 bg-teal-500 rounded-full" />
-            <div className="relative z-10 border border-gray-800/60 rounded-2xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.8)] bg-gray-950/60 transition-transform duration-700 hover:scale-[1.01]">
-              <div style={{ width: '100%', height: '600px', position: 'relative' }}>
-                <CircularCarousel
-                  items={carouselItems}
-                  preset="cylinder"
-                  intro="rise"
-                  cardWidth={500}
-                  aspectRatio={1.55}
-                  curve={0.25}
-                  gap={30}
-                  speed={12}
-                  captions
-                />
-              </div>
+          <div className="w-full max-w-6xl relative flex justify-center mb-12">
+            <div style={{ width: '100%', height: '680px', position: 'relative' }}>
+              <CircularCarousel
+                items={carouselItems}
+                preset="cylinder"
+                intro="rise"
+                cardWidth={780}
+                aspectRatio={1.55}
+                curve={0.18}
+                gap={36}
+                speed={12}
+                scale={1.4}
+                captions={false}
+              />
             </div>
           </div>
         </RevealOnScroll>
