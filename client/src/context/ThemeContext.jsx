@@ -20,15 +20,22 @@ export const ThemeProvider = ({ children }) => {
 
     useEffect(() => {
         const root = document.documentElement;
+        const isPublicPage = window.location.pathname === '/' || window.location.pathname === '/login';
+        const hasUser = !!localStorage.getItem('bunker_user');
 
-        // Remove all potential theme/mode classes
         // Remove all potential theme/mode classes
         root.classList.remove(...validThemes);
-        root.classList.remove('mode-dark', 'mode-light'); // If we decide to use classes for both
+        root.classList.remove('mode-dark', 'mode-light');
 
-        // Add current theme and mode
-        root.classList.add(theme);
-        root.classList.add(`mode-${mode}`);
+        if (hasUser && !isPublicPage) {
+            // Dentro del sistema: Aplica el tema y modo (claro/oscuro) elegido
+            root.classList.add(theme);
+            root.classList.add(`mode-${mode}`);
+        } else {
+            // Fuera del sistema (Landing Page y Login): SIEMPRE modo oscuro nativo
+            root.classList.add('theme-orange');
+            root.classList.add('mode-dark');
+        }
 
         // Persist
         localStorage.setItem('app-theme', theme);

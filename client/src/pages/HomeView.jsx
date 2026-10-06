@@ -452,20 +452,34 @@ const FloorPlanComponent = ({
       <div className="flex-1 mt-4 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch min-h-[410px] lg:min-h-[440px]">
         {/* Interactive Floor Plan (Left 8 Cols) */}
         <div
-          className="lg:col-span-8 bg-black/90 rounded-2xl border border-[var(--glass-border)] p-4 relative overflow-hidden select-none min-h-[390px] lg:min-h-[420px]"
+          className={`lg:col-span-8 rounded-2xl border p-4 relative overflow-hidden select-none min-h-[390px] lg:min-h-[420px] transition-colors ${
+            isDarkMode 
+              ? 'bg-black/90 border-[var(--glass-border)]' 
+              : 'bg-[#e9e9e9fd] border-zinc-300 shadow-inner'
+          }`}
           style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0)`,
+            backgroundImage: isDarkMode
+              ? `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0)`
+              : `radial-gradient(circle at 1px 1px, rgba(0,0,0,0.07) 1px, transparent 0)`,
             backgroundSize: '24px 24px'
           }}
         >
           {/* Zone Dividers */}
-          <div className="absolute top-3 left-3 text-[9px] uppercase font-bold tracking-wider text-zinc-500 flex items-center gap-1 pointer-events-none z-0">
+          <div className={`absolute top-3 left-3 text-[9px] uppercase font-bold tracking-wider flex items-center gap-1 pointer-events-none z-0 ${
+            isDarkMode ? 'text-zinc-500' : 'text-zinc-600'
+          }`}>
             🍷 Salón Principal
           </div>
-          <div className="absolute top-3 right-3 text-[9px] uppercase font-bold tracking-wider text-emerald-500/80 pointer-events-none z-0">
+          <div className={`absolute top-3 right-3 text-[9px] uppercase font-bold tracking-wider pointer-events-none z-0 ${
+            isDarkMode ? 'text-emerald-500/80' : 'text-emerald-700 font-extrabold'
+          }`}>
             🌿 Terraza Exterior
           </div>
-          <div className="absolute bottom-[3.5%] right-[10%] left-[45%] h-7 bg-zinc-900/95 border border-[var(--glass-border)] rounded-xl flex items-center justify-center text-[9px] font-bold text-amber-500/80 pointer-events-none z-0 shadow-lg shadow-black/80">
+          <div className={`absolute bottom-[3.5%] right-[10%] left-[45%] h-7 border rounded-xl flex items-center justify-center text-[9px] font-bold pointer-events-none z-0 shadow-lg ${
+            isDarkMode 
+              ? 'bg-zinc-900/95 border-[var(--glass-border)] text-amber-500/80 shadow-black/80' 
+              : 'bg-zinc-200/90 border-zinc-300 text-amber-700 shadow-zinc-400/30'
+          }`}>
             🍸 BARRA COCTELERÍA & LOUNGE
           </div>
 
@@ -489,8 +503,8 @@ const FloorPlanComponent = ({
             }
 
             const rawY = table.posY !== undefined && table.posY !== null ? table.posY : 25;
-            // Compress vertical range from [19, 95] to [6, 56] to strongly reduce vertical spacing and fit screen
-            const finalTop = 12 + ((rawY - 19) / 76) * 50;
+            // Distribute rows cleanly across the vertical canvas (from ~18% to ~78%) avoiding any overlaps
+            const finalTop = 18 + Math.max(0, Math.min(1, (rawY - 15) / 65)) * 60;
 
             return (
               <div

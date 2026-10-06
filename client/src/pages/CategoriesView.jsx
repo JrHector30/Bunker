@@ -2,12 +2,175 @@ import React, { useState, useEffect } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash, Save, X, ChefHat, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash, Save, X, ChefHat, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Smile } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 import { CustomCheckbox } from '../components/ui/CustomCheckbox';
 import { DeleteButton } from '../components/ui/DeleteButton';
 import { CloseButton } from '../components/ui/CloseButton';
 import { EditButton } from '../components/ui/EditButton';
+
+const EMOJI_CATEGORIES = [
+    {
+        id: 'platos',
+        name: 'Platos & Fondos',
+        icon: '🍽️',
+        emojis: ['🍽️', '🍲', '🍜', '🍝', '🍛', '🍚', '🥗', '🥘', '🥣', '🥢', '🍴', '🥟', '🍱', '🍙', '🍘', '🍳']
+    },
+    {
+        id: 'rapidas',
+        name: 'Comida Rápida',
+        icon: '🍔',
+        emojis: ['🍔', '🍕', '🌭', '🍟', '🥪', '🌮', '🌯', '🍗', '🍖', '🥓', '🧀', '🥨', '🥐', '🥖', '🥙', '🧆']
+    },
+    {
+        id: 'carnes',
+        name: 'Parrillas & Carnes',
+        icon: '🥩',
+        emojis: ['🥩', '🍖', '🍗', '🍢', '🍡', '🥓', '🐖', '🐂', '🐓', '🔥', '🫕', '🌶️']
+    },
+    {
+        id: 'mariscos',
+        name: 'Pescados & Mariscos',
+        icon: '🐟',
+        emojis: ['🐟', '🐠', '🦐', '🦑', '🦀', '🦞', '🐙', '🦪', '🐡', '🍣', '🍙', '🌊']
+    },
+    {
+        id: 'bebidas',
+        name: 'Bebidas & Tragos',
+        icon: '🍹',
+        emojis: ['🍹', '🍸', '🍺', '🍻', '🍷', '🥂', '🍾', '🥃', '🥤', '🧋', '🧃', '🧊', '🍶', '🧉', '🍸']
+    },
+    {
+        id: 'cafe',
+        name: 'Cafetería & Desayunos',
+        icon: '☕',
+        emojis: ['☕', '🍵', '🥛', '🧃', '🥞', '🧇', '🍳', '🍞', '🥐', '🥯', '🍯', '🧈', '🍪']
+    },
+    {
+        id: 'postres',
+        name: 'Postres & Dulces',
+        icon: '🍰',
+        emojis: ['🍰', '🎂', '🧁', '🍦', '🍨', '🍧', '🍩', '🍪', '🍫', '🍮', '🥧', '🍬', '🍭', '🍓', '🍌', '🍍', '🍎', '🍉']
+    },
+    {
+        id: 'otros',
+        name: 'Especiales & Extras',
+        icon: '⭐',
+        emojis: ['⭐', '🔥', '👑', '🎉', '🏷️', '📦', '🎁', '🥑', '🍋', '🧄', '🧅', '🍄', '🧂', '🍅', '🥬']
+    }
+];
+
+const EmojiSelector = ({ value, onChange }) => {
+    const [activeTab, setActiveTab] = useState('platos');
+    const [isOpen, setIsOpen] = useState(true); // Open by default for easy visual access
+
+    const currentCategory = EMOJI_CATEGORIES.find(c => c.id === activeTab) || EMOJI_CATEGORIES[0];
+
+    return (
+        <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold text-[var(--text-main)] flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                    <Smile size={14} className="text-[var(--primary)]" />
+                    <span>Icono (Emoji)</span>
+                </span>
+                <span className="text-[11px] text-[var(--text-muted)] font-normal">Toca cualquier icono para seleccionarlo</span>
+            </label>
+
+            {/* Current Selected Big Emoji Button + Manual Input */}
+            <div className="flex items-center gap-3">
+                <button
+                    type="button"
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="w-13 h-13 rounded-2xl bg-[var(--bg-surface)] border-2 flex items-center justify-center text-3xl shadow-md transition-all active:scale-95 cursor-pointer flex-shrink-0"
+                    title="Clic para desplegar u ocultar catálogo de emojis"
+                    style={{
+                        borderColor: value ? 'var(--primary)' : 'var(--glass-border)',
+                        boxShadow: value ? '0 0 12px rgba(249, 115, 22, 0.25)' : undefined
+                    }}
+                >
+                    {value || '❓'}
+                </button>
+
+                <div className="flex-1 flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="text"
+                            className="glass-input text-center text-lg font-bold"
+                            style={{ width: '70px', height: '40px', padding: '0 6px' }}
+                            value={value}
+                            onChange={e => onChange(e.target.value)}
+                            placeholder="🍕"
+                            maxLength={4}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setIsOpen(!isOpen)}
+                            className="px-3 py-2 rounded-xl text-xs font-bold border border-[var(--glass-border)] bg-[var(--bg-surface)] text-[var(--text-main)] hover:bg-[var(--primary)] hover:text-white transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+                        >
+                            <span>{isOpen ? '▲ Ocultar catálogo' : '🎨 Selector de Emojis'}</span>
+                        </button>
+                        {value && (
+                            <button
+                                type="button"
+                                onClick={() => onChange('')}
+                                className="p-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                                title="Limpiar icono"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Accessible Emoji Grid Panel */}
+            {isOpen && (
+                <div className="mt-1 p-2.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--glass-border)] shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                    {/* Category Navigation Tabs */}
+                    <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none border-b border-[var(--glass-border)]">
+                        {EMOJI_CATEGORIES.map(cat => (
+                            <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => setActiveTab(cat.id)}
+                                className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 transition-all cursor-pointer ${
+                                    activeTab === cat.id
+                                        ? 'bg-[var(--primary)] text-white shadow-sm font-bold scale-[1.03]'
+                                        : 'bg-black/20 text-[var(--text-muted)] hover:text-[var(--text-main)] border border-transparent hover:border-[var(--glass-border)]'
+                                }`}
+                            >
+                                <span className="text-xs">{cat.icon}</span>
+                                <span>{cat.name}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Emoji Touch Tiles Grid */}
+                    <div className="grid grid-cols-8 gap-1.5 p-1 max-h-40 overflow-y-auto scrollbar-thin">
+                        {currentCategory.emojis.map((emoji, index) => {
+                            const isSelected = value === emoji;
+                            return (
+                                <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => onChange(emoji)}
+                                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-xl transition-all cursor-pointer hover:scale-125 active:scale-95 ${
+                                        isSelected
+                                            ? 'bg-[var(--primary)]/20 border-2 border-[var(--primary)] shadow-[0_0_10px_rgba(249,115,22,0.4)] ring-2 ring-[var(--primary)]/50'
+                                            : 'bg-black/20 hover:bg-black/40 border border-[var(--glass-border)]/50'
+                                    }`}
+                                    title={`Seleccionar ${emoji}`}
+                                >
+                                    {emoji}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const CategoriesView = () => {
     const { showConfirmation } = useConfirmation();
@@ -303,17 +466,11 @@ const CategoriesView = () => {
                                 />
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 15 }}>
-                                <div>
-                                    <label>Icono (Emoji)</label>
-                                    <input
-                                        type="text"
-                                        className="glass-input"
-                                        value={formData.icono}
-                                        onChange={e => setFormData({ ...formData, icono: e.target.value })}
-                                        placeholder="🍕"
-                                    />
-                                </div>
+                            <div>
+                                <EmojiSelector
+                                    value={formData.icono}
+                                    onChange={val => setFormData({ ...formData, icono: val })}
+                                />
                             </div>
 
                             <div>

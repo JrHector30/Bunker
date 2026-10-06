@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /caja
+Disallow: /mesas
+Disallow: /cocina
+
+Sitemap: https://bunker-proyect.vercel.app/sitemap.xml

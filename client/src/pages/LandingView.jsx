@@ -28,7 +28,30 @@ export default function LandingView() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState(null);
   const [billingPeriod, setBillingPeriod] = useState('monthly');
+  const [showCookies, setShowCookies] = useState(() => {
+    try {
+      return !localStorage.getItem('bunker_cookies_accepted');
+    } catch {
+      return false;
+    }
+  });
+  const [legalModal, setLegalModal] = useState(null); // 'terms' | 'privacy' | null
   const navigate = useNavigate();
+
+  const acceptCookies = () => {
+    try {
+      localStorage.setItem('bunker_cookies_accepted', 'true');
+    } catch (e) {
+      console.error(e);
+    }
+    setShowCookies(false);
+  };
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('mode-light');
+    root.classList.add('mode-dark');
+  }, []);
 
   const stats = [
     { value: "+150k", label: "Órdenes Procesadas" },
@@ -419,8 +442,20 @@ export default function LandingView() {
             </div>
             <div className="flex flex-col gap-2">
               <span className="font-semibold text-gray-400 text-[11px] uppercase tracking-wider">Legal</span>
-              <span className="cursor-not-allowed">Términos de servicio</span>
-              <span className="cursor-not-allowed">Privacidad</span>
+              <button
+                type="button"
+                onClick={() => setLegalModal('terms')}
+                className="text-left hover:text-white transition-colors cursor-pointer text-gray-400 text-xs"
+              >
+                Términos de servicio
+              </button>
+              <button
+                type="button"
+                onClick={() => setLegalModal('privacy')}
+                className="text-left hover:text-white transition-colors cursor-pointer text-gray-400 text-xs"
+              >
+                Privacidad
+              </button>
             </div>
           </div>
         </div>
@@ -452,6 +487,89 @@ export default function LandingView() {
         </div>
       </footer>
 
+      {/* BANNER DE COOKIES */}
+      {showCookies && (
+        <div className="fixed bottom-4 left-4 right-4 md:left-6 md:right-auto md:max-w-md z-50 bg-[#0f172a]/95 backdrop-blur-md border border-gray-800 p-4 rounded-xl shadow-2xl text-xs text-gray-300 flex flex-col sm:flex-row items-center gap-3 animate-fade-in">
+          <p className="flex-1 text-center sm:text-left leading-relaxed">
+            Utilizamos cookies esenciales para optimizar la velocidad, seguridad y persistencia de sesión en <span className="text-teal-400 font-semibold">Búnker</span>.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={acceptCookies}
+              className="bg-teal-500 hover:bg-teal-400 text-black font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer text-xs"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* BOTÓN FLOTANTE DE WHATSAPP */}
+      <a
+        href="https://wa.me/51924383883?text=Hola%20B%C3%BAnker%2C%20quisiera%20m%C3%A1s%20informaci%C3%B3n%20sobre%20el%20sistema%20gastron%C3%B3mico"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Contactar por WhatsApp"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-[#25D366] hover:bg-[#20bd5a] text-white p-3.5 rounded-full shadow-[0_10px_25px_rgba(37,211,102,0.4)] hover:shadow-[0_15px_35px_rgba(37,211,102,0.6)] hover:scale-105 active:scale-95 transition-all duration-300 group cursor-pointer"
+        title="Chatea con nosotros por WhatsApp (+51 924 383 883)"
+      >
+        <span className="hidden sm:inline-block max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-500 text-xs font-bold pl-1 text-white">
+          ¿Dudas? Chatea con nosotros
+        </span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          className="w-6 h-6 text-white"
+        >
+          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 15 3.8 13.47 3.8 11.91C3.81 7.37 7.5 3.67 12.05 3.67M9.53 7.34C9.33 7.34 9.15 7.35 8.97 7.42C8.72 7.5 8.35 7.85 8.35 8.57C8.35 9.29 8.87 10.37 8.97 10.52C9.07 10.67 10.3 12.63 12.24 13.44C13.88 14.12 14.21 13.99 14.57 13.95C14.93 13.92 15.73 13.47 15.9 12.98C16.07 12.49 16.07 12.08 16.02 11.99C15.97 11.9 15.84 11.85 15.65 11.75C15.45 11.65 14.51 11.19 14.33 11.13C14.16 11.06 14.03 11.03 13.91 11.22C13.74 11.47 13.37 11.93 13.25 12.05C13.13 12.18 13.01 12.2 12.81 12.1C12.62 12 11.79 11.73 10.82 10.86C10.06 10.18 9.55 9.34 9.4 9.09C9.25 8.85 9.39 8.71 9.49 8.61C9.58 8.52 9.69 8.38 9.79 8.26C9.89 8.14 9.92 8.04 9.99 7.9C10.05 7.75 10.02 7.63 9.97 7.53C9.92 7.43 9.53 6.46 9.37 6.07C9.21 5.69 9.05 5.75 8.93 5.74C8.82 5.73 8.69 5.73 8.56 5.73" />
+        </svg>
+      </a>
+
+      {/* MODAL LEGAL (TÉRMINOS Y PRIVACIDAD) */}
+      {legalModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-gray-800 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in">
+            <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900/60">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Shield className="text-teal-400" size={18} />
+                {legalModal === 'terms' ? 'Términos y Condiciones de Servicio' : 'Política de Privacidad y Tratamiento de Datos'}
+              </h3>
+              <button
+                onClick={() => setLegalModal(null)}
+                className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto text-xs text-gray-300 space-y-4 leading-relaxed">
+              {legalModal === 'terms' ? (
+                <>
+                  <p><strong>1. Identificación del Servicio:</strong> Búnker ComandaGo es una plataforma web especializada en la gestión operativa de restaurantes, salón interactivo, comandas de cocina y facturación comercial.</p>
+                  <p><strong>2. Propiedad Intelectual y Licenciamiento:</strong> Todos los derechos sobre la plataforma, código fuente y marca pertenecen a sus desarrolladores. El usuario adquiere una licencia de uso intransferible para su establecimiento comercial.</p>
+                  <p><strong>3. Responsabilidad Transaccional:</strong> La plataforma proporciona herramientas para control de caja y cuadre de turnos. El usuario es responsable de la exactitud de los montos ingresados y de la custodia de sus credenciales de acceso.</p>
+                  <p><strong>4. Disponibilidad del Servicio:</strong> Operamos sobre infraestructura cloud de alta disponibilidad (99.9% uptime). La conectividad final depende del proveedor de Internet del establecimiento.</p>
+                </>
+              ) : (
+                <>
+                  <p><strong>1. Información Recopilada:</strong> Recopilamos datos estrictamente necesarios para la operativa del restaurante: nombres de usuarios del sistema, registros de comandas, comprobantes y números de RUC/DNI para facturación.</p>
+                  <p><strong>2. Uso de la Información:</strong> Los datos se emplean únicamente para la generación de reportes financieros, emisión de comprobantes y auditoría de inventario. No comercializamos ni transferimos datos a terceros.</p>
+                  <p><strong>3. Seguridad de Datos:</strong> Todas las contraseñas se almacenan mediante algoritmos de encriptación criptográfica (bcrypt). La comunicación viaja cifrada bajo certificados TLS/HTTPS.</p>
+                  <p><strong>4. Derechos ARCO:</strong> El titular de la cuenta puede solicitar en cualquier momento la exportación o eliminación de sus datos comunicándose a través de nuestros canales de soporte.</p>
+                </>
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-800 bg-gray-900/60 text-right">
+              <button
+                onClick={() => setLegalModal(null)}
+                className="bg-gray-800 hover:bg-gray-700 text-white px-5 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

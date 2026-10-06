@@ -15,6 +15,12 @@ const LoginPage = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
 
+    useEffect(() => {
+        const root = document.documentElement;
+        root.classList.remove('mode-light');
+        root.classList.add('mode-dark');
+    }, []);
+
     // Dynamic Users from API Cache
     const fetcher = () => fetch('/api/users').then(res => res.json()).then(data => {
         return data.map(u => ({

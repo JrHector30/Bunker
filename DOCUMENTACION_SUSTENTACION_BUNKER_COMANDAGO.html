@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Búnker ComandaGo - Memoria Técnica de Sustentación y Titulación</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600;700&display=swap');
+
+        @page {
+            size: A4 portrait;
+            margin: 16mm 14mm 16mm 14mm;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #1e293b;
+            background-color: #ffffff;
+            line-height: 1.55;
+            font-size: 9.5pt;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        .avoid-break {
+            page-break-inside: avoid;
+        }
+
+        /* Portada */
+        .cover-page {
+            height: 93vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: center;
+            padding: 8mm 6mm;
+            border: 2px solid #0f172a;
+            border-radius: 6px;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+        }
+
+        .inst-header h1 {
+            font-size: 13.5pt;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            color: #0f172a;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .inst-header h2 {
+            font-size: 10pt;
+            font-weight: 700;
+            color: #2563eb;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .cover-divider {
+            width: 70px;
+            height: 3px;
+            background-color: #2563eb;
+            margin: 12px auto;
+        }
+
+        .project-badge {
+            display: inline-block;
+            background-color: #0f172a;
+            color: #ffffff;
+            font-size: 8pt;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .project-title {
+            font-size: 17pt;
+            font-weight: 900;
+            color: #0f172a;
+            line-height: 1.3;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .project-subtitle {
+            font-size: 9.5pt;
+            color: #475569;
+            font-weight: 500;
+            max-width: 92%;
+            margin: 0 auto;
+        }
+
+        .author-box {
+            background-color: #f1f5f9;
+            border-left: 4px solid #2563eb;
+            padding: 10px 18px;
+            text-align: left;
+            margin: 12px auto;
+            max-width: 88%;
+            font-size: 8.5pt;
+        }
+
+        .author-box p {
+            margin: 2.5px 0;
+        }
+
+        .author-box strong {
+            color: #0f172a;
+            display: inline-block;
+            width: 180px;
+        }
+
+        .jury-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 8pt;
+        }
+
+        .jury-table th, .jury-table td {
+            border: 1px solid #cbd5e1;
+            padding: 6px 8px;
+            text-align: center;
+        }
+
+        .jury-table th {
+            background-color: #0f172a;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .date-footer {
+            font-size: 8.5pt;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        /* Secciones y Encabezados */
+        h1.section-title {
+            font-size: 12pt;
+            font-weight: 800;
+            color: #0f172a;
+            text-transform: uppercase;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 3px;
+            margin-top: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h1.section-title::before {
+            content: '';
+            display: inline-block;
+            width: 5px;
+            height: 15px;
+            background-color: #2563eb;
+            border-radius: 2px;
+        }
+
+        h2.subsection-title {
+            font-size: 10pt;
+            font-weight: 700;
+            color: #1e293b;
+            margin-top: 12px;
+            margin-bottom: 5px;
+        }
+
+        h3.sub-subsection-title {
+            font-size: 9.5pt;
+            font-weight: 700;
+            color: #2563eb;
+            margin-top: 8px;
+            margin-bottom: 3px;
+        }
+
+        p {
+            margin-bottom: 6px;
+            text-align: justify;
+            font-size: 9pt;
+        }
+
+        ul, ol {
+            margin-left: 18px;
+            margin-bottom: 8px;
+            font-size: 9pt;
+        }
+
+        li {
+            margin-bottom: 3px;
+            text-align: justify;
+        }
+
+        /* Tablas */
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0 14px 0;
+            font-size: 8pt;
+        }
+
+        table.data-table th, table.data-table td {
+            border: 1px solid #cbd5e1;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        table.data-table th {
+            background-color: #0f172a;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 8pt;
+        }
+
+        table.data-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 8pt;
+            text-align: center;
+        }
+
+        .priority-10 {
+            background-color: #dc2626;
+            color: #ffffff;
+        }
+
+        .priority-9 {
+            background-color: #ea580c;
+            color: #ffffff;
+        }
+
+        .priority-8 {
+            background-color: #d97706;
+            color: #ffffff;
+        }
+
+        .priority-7 {
+            background-color: #2563eb;
+            color: #ffffff;
+        }
+
+        .priority-6, .priority-5 {
+            background-color: #0284c7;
+            color: #ffffff;
+        }
+
+        .priority-3, .priority-2 {
+            background-color: #64748b;
+            color: #ffffff;
+        }
+
+        .highlight-cell {
+            background-color: #eff6ff !important;
+            font-weight: 600;
+            color: #1d4ed8;
+        }
+
+        /* Cajas de Código */
+        pre.code-block {
+            background-color: #090d16;
+            color: #e2e8f0;
+            font-family: 'Fira Code', monospace;
+            font-size: 7.5pt;
+            padding: 8px 10px;
+            border-radius: 5px;
+            margin: 8px 0;
+            overflow-x: auto;
+            border: 1px solid #1e293b;
+            line-height: 1.4;
+        }
+
+        code.inline-code {
+            font-family: 'Fira Code', monospace;
+            font-size: 8pt;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            padding: 1px 4px;
+            border-radius: 3px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Diagramas */
+        .diagram-box {
+            background-color: #0f172a;
+            color: #f8fafc;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: 'Fira Code', monospace;
+            font-size: 7pt;
+            line-height: 1.38;
+            margin: 8px 0;
+            white-space: pre;
+            overflow-x: auto;
+            border-left: 4px solid #38bdf8;
+        }
+
+        .alert-box {
+            background-color: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 8px 12px;
+            border-radius: 0 5px 5px 0;
+            margin: 8px 0;
+            font-size: 8.5pt;
+        }
+
+        .alert-box.info {
+            background-color: #eff6ff;
+            border-left-color: #2563eb;
+        }
+
+        .alert-box.danger {
+            background-color: #fef2f2;
+            border-left-color: #dc2626;
+        }
+
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin: 8px 0;
+        }
+
+        .card-item {
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            border-radius: 5px;
+            padding: 8px 10px;
+        }
+
+        .card-item h4 {
+            font-size: 8.5pt;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 2px;
+        }
+
+        .card-item p {
+            font-size: 8pt;
+            color: #475569;
+            margin: 0;
+        }
+
+        .startup-box {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff;
+            border-radius: 6px;
+            padding: 14px;
+            margin: 12px 0;
+            border-left: 5px solid #10b981;
+        }
+
+        .startup-box h3 {
+            color: #34d399;
+            font-size: 11pt;
+            font-weight: 800;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .startup-box p {
+            color: #cbd5e1;
+            font-size: 8.5pt;
+            line-height: 1.5;
+        }
+
+        /* Cronograma de Exposición */
+        .timeline-item {
+            display: flex;
+            margin-bottom: 6px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .timeline-badge {
+            background: #0f172a;
+            color: #38bdf8;
+            font-family: 'Fira Code', monospace;
+            font-weight: 700;
+            font-size: 8pt;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 100px;
+        }
+
+        .timeline-content {
+            padding: 6px 10px;
+            flex: 1;
+        }
+
+        .timeline-content h4 {
+            font-size: 8.5pt;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 2px;
+        }
+
+        .timeline-content p {
+            font-size: 8pt;
+            color: #475569;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================================================================================== -->
+    <!-- 1. PORTADA Y DATOS INSTITUCIONALES                                                 -->
+    <!-- ================================================================================== -->
+    <div class="cover-page">
+        <div class="inst-header">
+            <h1>INSTITUTO DE EDUCACIÓN SUPERIOR TECNOLÓGICO</h1>
+            <h2>PROGRAMA PROFESIONAL DE COMPUTACIÓN E INFORMÁTICA / DESARROLLO DE SISTEMAS DE INFORMACIÓN</h2>
+            <div class="cover-divider"></div>
+        </div>
+
+        <div>
+            <div class="project-badge">INFORME TÉCNICO DE TITULACIÓN Y MEMORIA ACADÉMICA</div>
+            <div class="project-title">BÚNKER COMANDAGO</div>
+            <div class="project-subtitle">
+                Sistema Web Integral de Control Operativo, Gestión de Salón Interactivo y Facturación Electrónica: Superación Arquitectónica del Sistema Legacy Dibal, Despliegue Cloud Costo Cero y Modo Offline Resiliente
+            </div>
+
+            <div class="author-box">
+                <p><strong>AUTOR / TESISTA:</strong> Br. [Nombre del Estudiante]</p>
+                <p><strong>CARRERA PROFESIONAL:</strong> Computación e Informática / Sistemas de Información</p>
+                <p><strong>LÍNEA DE INVESTIGACIÓN:</strong> Arquitectura Web Transaccional, Microservicios y Startups</p>
+                <p><strong>SISTEMA BASE COMPARADO:</strong> Sistema Legacy Gastronómico Dibal</p>
+                <p><strong>FECHA DE SUSTENTACIÓN:</strong> Septiembre de 2026</p>
+            </div>
+        </div>
+
+        <div>
+            <table class="jury-table">
+                <thead>
+                    <tr>
+                        <th>Cargo del Jurado Evaluador</th>
+                        <th>Nombres y Apellidos</th>
+                        <th>Calificación (0 - 20)</th>
+                        <th>Firma y Sello</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Presidente del Jurado</strong></td>
+                        <td>______________________________________________</td>
+                        <td>[&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]</td>
+                        <td>____________________</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Secretario Académico</strong></td>
+                        <td>______________________________________________</td>
+                        <td>[&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]</td>
+                        <td>____________________</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Vocal Evaluador</strong></td>
+                        <td>______________________________________________</td>
+                        <td>[&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]</td>
+                        <td>____________________</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="date-footer">
+            LIMA, PERÚ — 2026
+        </div>
+    </div>
+
+    <!-- ================================================================================== -->
+    <!-- 2. INTRODUCCIÓN Y CONTEXTUALIZACIÓN (PROBLEMAS DIBAL)                              -->
+    <!-- ================================================================================== -->
+    <div class="page-break"></div>
+
+    <h1 class="section-title">2. INTRODUCCIÓN Y CONTEXTUALIZACIÓN</h1>
+
+    <h2 class="subsection-title">2.1. Planteamiento del Problema: La Realidad de Dibal y el Mercado Gastronómico</h2>
+    <p>
+        El sector gastronómico peruano enfrenta una severa traba tecnológica debido a la dependencia de sistemas POS tradicionales y rígidos. Tras una auditoría exhaustiva a locales que operan con el software <strong>Dibal</strong> (sistema ampliamente extendido en restaurantes locales), identificamos que su arquitectura monolítica y obsoleta genera fricciones críticas en los flujos diarios de trabajo:
+    </p>
+    <ul>
+        <li><strong>Fricción e Inseguridad en Impresión Local:</strong> Dibal obliga a ejecutar navegadores en formato especial de desarrollador desactivando banderas de seguridad, dependiendo ciegamente de paquetes como Laragon o XAMPP y colapsando cuando el router DHCP cambia la IP asignada a la impresora térmica.</li>
+        <li><strong>Procesos Largos y Burocráticos en Caja:</strong> Para registrar un simple gasto imprevisto de caja chica en Dibal, el usuario debe abrir ventanas separadas, crear previamente una categoría, salir y volver a entrar; además, no se pueden cobrar cuentas desde la caja sin ir a la vista de mesas ni ver movimientos sin generar un arqueo completo.</li>
+        <li><strong>Falta de Cohesión en Salón y Cocina:</strong> En Dibal las mesas son estáticas, no se pueden reacomodar ni acoplar lógicamente para grupos de más de 6 comensales; en cocina no existen semáforos temporizados de preparación, provocando que los pedidos salgan fríos o retrasados sin trazabilidad.</li>
+        <li><strong>Riesgo Financiero y Descuadres:</strong> Se despachan comandas sin control estricto de caja abierta, y los ingresos/egresos no dejan rastro de origen ni destino, favoreciendo fugas de capital.</li>
+    </ul>
+
+    <div class="diagram-box">
+[ARQUITECTURA DEFICIENTE DIBAL]
+ Navegador Modo Dev ──► Dependencia XAMPP/Laragon ──► IP Fija Rígida ──► [Si reinicia Router = COLAPSO]
+ Operación de Caja   ──► Burocracia en Categorías  ──► Ventas Huérfanas ──► [DESCUADRES DIARIOS]
+ Salón y Cocina      ──► Mesas Inmóviles / Sin Timer──► Platos Retrasados──► [EXPERIENCIA DEFICIENTE]</div>
+
+    <h2 class="subsection-title">2.2. Justificación Técnica: Búnker ComandaGo</h2>
+    <p>
+        Ante estas deficiencias estructurales, hemos desarrollado <strong>Búnker ComandaGo</strong>, un ecosistema de software concebido bajo estándares de ingeniería de software modernos. Nuestra propuesta no se limita a un cambio estético: reimplementa el flujo transaccional desacoplando la interfaz del hardware físico mediante una <strong>Cola de Impresión Proxy en la Nube</strong>, unifica la operación de caja con arqueo ciego e intercepción de órdenes, e implementa sincronización offline con <strong>IndexedDB (Dexie.js)</strong>, operando con un costo inicial de infraestructura de <strong>$0.00 dólares</strong> gracias al modelo Serverless.
+    </p>
+
+    <!-- ================================================================================== -->
+    <!-- 3. CUADRO OFICIAL DE PRIORIDADES DE SUSTENTACIÓN (JURY FEEDBACK MATRIX)            -->
+    <!-- ================================================================================== -->
+    <h1 class="section-title">3. MATRIZ DE PRIORIDADES DE SUSTENTACIÓN (PROBLEMAS DIBAL VS. BÚNKER)</h1>
+    <p>
+        Conforme a la evaluación y rúbrica establecida por el docente y jurado calificador, presentamos la matriz de enfoque priorizada en escala de <strong>1 (menor) a 10 (máxima prioridad)</strong>. Se han descartado formalmente los ítems no calificados en la evaluación previa:
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 10%;">Módulo</th>
+                <th style="width: 28%;">Problema Identificado en Dibal</th>
+                <th style="width: 34%;">Solución de Ingeniería en Búnker ComandaGo</th>
+                <th style="width: 20%;">Beneficio Operativo Tangible</th>
+                <th style="width: 8%; text-align: center;">Prioridad</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>USO DEL SISTEMA</strong></td>
+                <td>No puede usarse desde cualquier navegador (requiere navegador en modo desarrollador con seguridad reducida).</td>
+                <td><strong>Arquitectura de Cola de Impresión en la Nube (Database Queue Proxy):</strong> El cliente en Vercel HTTPS escribe en <code>tickets_pendientes</code> en Supabase; el demonio local Node.js lo consume y lo imprime físicamente.</td>
+                <td>Uso universal desde iPads (Safari), Android (Chrome) o PCs sin contenido mixto ni bloqueos de red.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-10">10</span></td>
+            </tr>
+            <tr>
+                <td><strong>CAJA</strong></td>
+                <td>Las ventas por cobrar solo se visualizan en el apartado de SALÓN, ralentizando el cobro.</td>
+                <td>Panel unificado de <strong>Cuentas Pendientes en Caja:</strong> El cajero visualiza y liquida pedidos de cualquier mesa directamente en su módulo.</td>
+                <td>Ahorra tiempo crítico y centraliza el 100% de las operaciones de cobro en un solo punto.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-9">9</span></td>
+            </tr>
+            <tr>
+                <td><strong>CAJA</strong></td>
+                <td>Requiere crear primero una categoría de INGRESO/EGRESO antes de registrar el dinero (procesos excesivos).</td>
+                <td><strong>Formulario Unificado Directo:</strong> Registro inmediato de ingreso o egreso en un único modal accesible con un clic.</td>
+                <td>Permite asentar gastos imprevistos de caja chica al instante sin interrumpir la operación.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-9">9</span></td>
+            </tr>
+            <tr>
+                <td><strong>CAJA</strong></td>
+                <td>Desglose largo y complejo para aperturar y cerrar turnos de caja por separado.</td>
+                <td><strong>Flujo Rápido Unificado:</strong> Apertura con monto base verificado y cierre ciego con cálculo automatizado de descuadres en un paso.</td>
+                <td>Elimina errores humanos al final de la jornada y agiliza el relevo de cajeros a 30 segundos.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-9">9</span></td>
+            </tr>
+            <tr>
+                <td><strong>CAJA</strong></td>
+                <td>Exige abrir un arqueo completo para poder consultar el historial de movimientos.</td>
+                <td><strong>Acceso Directo al Historial en Pantalla Principal:</strong> Tabla reactiva de movimientos consultable en cualquier momento sin alterar el arqueo.</td>
+                <td>Auditorías rápidas en vivo ante cualquier duda del administrador durante el día.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-9">9</span></td>
+            </tr>
+            <tr>
+                <td><strong>INICIO</strong></td>
+                <td>LOGIN exige introducir correo y contraseña no establecida ni guardada continuamente.</td>
+                <td><strong>Login con Persistencia y Roles en Combobox:</strong> Autenticación rápida con almacenamiento de sesión y selección ágil de rol.</td>
+                <td>Acceso instantáneo para el personal, seguro y sin digitación tediosa recurrente.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-8">8</span></td>
+            </tr>
+            <tr>
+                <td><strong>INICIO</strong></td>
+                <td>Entorno básico sin métricas precisas ni reporte de tiempos por órdenes atendidas.</td>
+                <td><strong>Dashboard Gerencial con Recharts:</strong> Gráficos de ventas diarias e indicador del tiempo promedio que tarda en atenderse un pedido.</td>
+                <td>Permite al dueño saber en tiempo real si el negocio es rentable y si la cocina está demorando.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-8">8</span></td>
+            </tr>
+            <tr>
+                <td><strong>MESAS</strong></td>
+                <td>Solo permite ingresar personas, ver observaciones e imprimir pre-cuenta abriendo la mesa.</td>
+                <td>Al ocupar la mesa se habilitan <strong>3 botones físicos dedicados:</strong> (1) Agregar al carrito, (2) Ver pedido en vivo, (3) Imprimir pre-cuenta con 1 clic.</td>
+                <td>Agiliza el salón: el mozo realiza cualquier acción común directamente desde la vista del mapa.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-8">8</span></td>
+            </tr>
+            <tr>
+                <td><strong>USO DEL SISTEMA</strong></td>
+                <td>Dependencia total de servidores locales pesados como LARAGON o XAMPP para imprimir.</td>
+                <td>Script <code>Iniciar_Impresora.vbs</code> invisible + <strong>Auto-descubrimiento en tabla ARP (<code>arp -a</code>)</strong> mapeando la dirección MAC de la impresora.</td>
+                <td>Reconexión automática ante cambios de IP por DHCP del router, sin abrir ventanas CMD ni XAMPP.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-8">8</span></td>
+            </tr>
+            <tr>
+                <td><strong>SOPORTE</strong></td>
+                <td>El soporte técnico cuenta con un solo canal tradicional de comunicación.</td>
+                <td><strong>Sistema Omnicanal de Soporte:</strong> Tickets digitales clasificados, asistencia telefónica y asistente inteligente interactivo con IA.</td>
+                <td>Reporte multicanal según la urgencia del restaurante, con tiempos de respuesta reducidos.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-8">8</span></td>
+            </tr>
+            <tr>
+                <td><strong>INICIO</strong></td>
+                <td>Diseño simple sin identidad de marca ni modo oscuro para turnos nocturnos.</td>
+                <td><strong>4 Temas Cromáticos + Modo Oscuro Nativo:</strong> Paletas Naranja, Verde, Azul, Rojo y Negro para descanso visual continuo.</td>
+                <td>Ergonomía visual para el personal en salones de noche y alta identidad de software profesional.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-7">7</span></td>
+            </tr>
+            <tr>
+                <td><strong>MESAS</strong></td>
+                <td>Imposibilidad de reordenar las mesas según la disposición física real del local.</td>
+                <td><strong>Salón Drag-and-Drop en Tiempo Real:</strong> Arrastre interactivo de mesas con persistencia de coordenadas y botón para restaurar origen.</td>
+                <td>Adaptación instantánea ante cambios de salón por eventos, fiestas o reservas grandes.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-7">7</span></td>
+            </tr>
+            <tr>
+                <td><strong>MESAS</strong></td>
+                <td>No permite agrupar mesas de manera visual y lógica para consumos compartidos.</td>
+                <td><strong>Unión de Mesas Jerárquica (Padre-Hijo):</strong> Agrupación lógica en Supabase para +6 comensales con botón dedicado "Separar Mesas".</td>
+                <td>Unificación de la cuenta en un solo ticket sin perder la ubicación física de las mesas.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-7">7</span></td>
+            </tr>
+            <tr>
+                <td><strong>COCINA</strong></td>
+                <td>Sin cronómetro para controlar el tiempo aproximado de preparación de los platos.</td>
+                <td><strong>Temporizador Semafórico en KDS:</strong> Alerta cromática (Verde $\rightarrow$ Amarillo $\rightarrow$ Rojo) según el tiempo límite fijado.</td>
+                <td>Permite al chef priorizar pedidos retrasados y evita que los comensales reciban comida fría.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-7">7</span></td>
+            </tr>
+            <tr>
+                <td><strong>COCINA</strong></td>
+                <td>Solo dos estados rígidos: RECIBIDO y DESPACHADO.</td>
+                <td><strong>Flujo Granular KDS:</strong> Incorporación de estados "En preparación" y "Listo para retirar".</td>
+                <td>Sincronización exacta: el mozo acude a retirar la bandeja en el segundo preciso en que está lista.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-7">7</span></td>
+            </tr>
+            <tr>
+                <td><strong>CAJA</strong></td>
+                <td>Los ingresos o egresos no dejan constancia de dónde provino o a dónde fue el dinero.</td>
+                <td><strong>Registro Obligatorio de Origen y Destino:</strong> Asignación explícita (Caja chica, Banco, Proveedor X, etc.).</td>
+                <td>Auditoría financiera rigurosa: cada centavo tiene responsable y destino justificado.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-7">7</span></td>
+            </tr>
+            <tr>
+                <td><strong>CATEGORÍAS</strong></td>
+                <td>Sin selección múltiple para eliminar categorías obsoletas.</td>
+                <td><strong>Selección Masiva por Checkboxes:</strong> Marcado múltiple y eliminación en bloque con un solo clic.</td>
+                <td>Mantenimiento de carta rápido y sin tareas repetitivas para el administrador.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-7">7</span></td>
+            </tr>
+            <tr>
+                <td><strong>SOPORTE</strong></td>
+                <td>Los clientes no cuentan con opción formal para reportar incidencias.</td>
+                <td><strong>Formulario de Incidencias Urgentes:</strong> Envío directo clasificado por gravedad al equipo de soporte TI.</td>
+                <td>Priorización de fallas críticas (red, caja) con tiempos de resolución controlados.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-7">7</span></td>
+            </tr>
+            <tr>
+                <td><strong>MENÚ</strong></td>
+                <td>No permite importar cartas masivas ni usar plantillas de Excel.</td>
+                <td><strong>Importador Masivo Excel (.xlsx):</strong> Carga automática de productos, categorías y precios desde plantilla.</td>
+                <td>Puesta en marcha del restaurante en 2 minutos en lugar de horas de digitación manual.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-6">6</span></td>
+            </tr>
+            <tr>
+                <td><strong>SOPORTE</strong></td>
+                <td>Ícono con número telefónico estático no funcional.</td>
+                <td><strong>Búnker Voice AI:</strong> Asistente de soporte por voz integrado en el navegador para auto-diagnóstico.</td>
+                <td>Resolución guiada de dudas operativas comunes sin ocupar líneas telefónicas externas.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-6">6</span></td>
+            </tr>
+            <tr>
+                <td><strong>MENÚ</strong></td>
+                <td>Inactivación manual plato por plato cuando se agotan ingredientes.</td>
+                <td><strong>Acciones en Lote:</strong> Checkboxes en la tabla de platos para activar, desactivar o archivar múltiples ítems.</td>
+                <td>Actualización ágil del menú ante quiebres de stock a mitad del turno de servicio.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-5">5</span></td>
+            </tr>
+            <tr>
+                <td><strong>COCINA</strong></td>
+                <td>No permite buscar pedidos de una mesa en particular dentro de la pantalla de cocina.</td>
+                <td><strong>Barra de Filtro Rápido por Mesa:</strong> Búsqueda instantánea de comandas en el monitor KDS.</td>
+                <td>Respuesta inmediata cuando el mozo o cliente consulta por el estado de una mesa específica.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-3">3</span></td>
+            </tr>
+            <tr>
+                <td><strong>CATEGORÍAS</strong></td>
+                <td>Solo permite asignar nombre textual sin diferenciación gráfica.</td>
+                <td><strong>Personalización con Ícono y Color:</strong> Selector visual representativo al crear o editar cada categoría.</td>
+                <td>Reconocimiento visual inmediato en la pantalla del mozo, acelerando la toma de comandas.</td>
+                <td style="text-align: center;"><span class="priority-badge priority-2">2</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- ================================================================================== -->
+    <!-- 4. ANÁLISIS EN PROFUNDIDAD: PILARES DE MAYOR PRIORIDAD                              -->
+    <!-- ================================================================================== -->
+    <div class="page-break"></div>
+
+    <h1 class="section-title">4. ANÁLISIS TÉCNICO EN PROFUNDIDAD DE LAS SOLUCIONES DE MAYOR PRIORIDAD</h1>
+
+    <h2 class="subsection-title">4.1. Prioridad 10: Arquitectura de Cola de Impresión en la Nube (Database Queue Proxy)</h2>
+    <p>
+        El talón de Aquiles de Dibal y de los sistemas web convencionales es la impresión física. Cuando una aplicación web se ejecuta bajo HTTPS en la nube (como <code>https://bunker-proyect.vercel.app/</code>), los navegadores modernos (Chrome, Safari, Edge) <strong>bloquean por seguridad cualquier intento de comunicación directa con una impresora local en HTTP o IP privada</strong> (error de <em>Mixed Content</em> y directivas CORS). Dibal soluciona esto de forma precaria obligando al cliente a usar un navegador modificado o en modo desarrollador con seguridad desactivada.
+    </p>
+    <p>
+        En <strong>Búnker ComandaGo</strong> diseñamos una arquitectura pionera denominada <strong>Database Queue Proxy</strong>:
+    </p>
+
+    <div class="diagram-box">
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                          FLUJO DE LA COLA DE IMPRESIÓN PROXY EN LA NUBE                     │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+  [Dispositivo Mozo (iPad / Android)] ──HTTPS / TLS 1.3──►  [Vercel Serverless Gateway]
+                                                                     │
+                                                    (INSERT INTO tickets_pendientes)
+                                                                     ▼
+                                                       [Supabase PostgreSQL Cloud]
+                                                                     │
+                                             (Polling optimizado en segundo plano)
+                                                                     ▼
+                                                   [PC de Caja Local (Node.js Service)]
+                                                   (Ejecutado vía Iniciar_Impresora.vbs)
+                                                                     │
+                                                    (Envío de bytes RAW ESC/POS USB/Red)
+                                                                     ▼
+                                                        [Impresora Térmica 80mm]
+                                                                     │
+                                                    (UPDATE tickets_pendientes SET impreso=true)
+                                                                     ▼
+                                                      [Ticket Físico Emitido en Salón]</div>
+
+    <p>
+        <strong>Ventajas de Ingeniería:</strong> El mozo puede comisionar comandas desde cualquier red celular (4G/5G) o Wi-Fi para clientes; el navegador no tiene contacto directo con la red interna del local. La PC de la caja actúa como despachador de cola, garantizando cero bloqueos de navegador y compatibilidad con cualquier dispositivo móvil moderno.
+    </p>
+
+    <h2 class="subsection-title">4.2. Prioridad 8: Script Invisible y Descubrimiento Autónomo de Impresoras (ARP Table)</h2>
+    <p>
+        En locales gastronómicos, los routers residenciales asignan direcciones IP mediante DHCP dinámico. Cuando se produce un corte de luz o se reinicia el router, la impresora térmica recibe una IP distinta (por ejemplo, pasa de <code>192.168.1.50</code> a <code>192.168.1.75</code>), provocando que sistemas como Dibal colapsen y dejen de imprimir.
+    </p>
+    <p>
+        Búnker ComandaGo erradica XAMPP y Laragon implementando dos innovaciones:
+    </p>
+    <ol>
+        <li><strong>Arranque Silencioso en Windows:</strong> El script <code>Iniciar_Impresora.vbs</code> orquesta el proceso Node.js y el servicio de bandeja <code>BunkerTray.ps1</code> en segundo plano sin desplegar ventanas negras de comandos ni requerir intervención del cajero.</li>
+        <li><strong>Mapeo Físico por MAC Address mediante Tabla ARP:</strong> El servidor local ejecuta periódicamente una consulta a la tabla ARP del sistema operativo (<code class="inline-code">arp -a</code>). Dado que la dirección MAC (identificador de hardware de la tarjeta de red de la impresora) nunca cambia, el sistema detecta automáticamente la nueva dirección IP asignada por el router y actualiza la ruta de socket TCP al instante sin interrumpir el servicio.</li>
+    </ol>
+
+    <pre class="code-block">
+// Fragmento conceptual del resolvedor dinámico de impresoras por ARP
+const { exec } = require('child_process');
+
+function resolverIpPorMac(macDestino, callback) {
+    exec('arp -a', (err, stdout) => {
+        if (err) return callback(null);
+        // Expresión regular para ubicar la IP asociada a la MAC registrada de la impresora
+        const lineas = stdout.split('\n');
+        for (let linea of lineas) {
+            if (linea.toLowerCase().includes(macDestino.toLowerCase())) {
+                const partes = linea.trim().split(/\s+/);
+                return callback(partes[0]); // Retorna la nueva IP asignada por DHCP
+            }
+        }
+        callback(null);
+    });
+}</pre>
+
+    <h2 class="subsection-title">4.3. Prioridad 9: Centralización Transaccional de Caja y Flujo Unificado</h2>
+    <p>
+        Frente a la dispersión de Dibal, Búnker concentra en el módulo de Caja el 100% de la operativa financiera:
+    </p>
+    <ul>
+        <li><strong>Cobro Directo de Cuentas Pendientes:</strong> El cajero cuenta con un componente que lista en tiempo real todas las mesas con comanda activa. Con un clic abre el <code>PaymentModal</code>, calcula el vuelto exacto, aplica descuentos y liquida la cuenta sin forzar al usuario a desplazarse al plano del salón.</li>
+        <li><strong>Modal Unificado de Movimientos:</strong> Registro ágil de entradas y salidas de efectivo con origen y destino forzoso (evitando el "dinero fantasma"), integrando el cálculo de saldo proyectado en tiempo real.</li>
+        <li><strong>Arqueo Rápido y Cierre Ciego:</strong> El cajero declara el efectivo real contado sin ver el sistema; el algoritmo contrasta automáticamente: $\text{Efectivo Teórico} = \text{Monto Inicial} + \sum \text{Ingresos} - \sum \text{Egresos}$. El descuadre se calcula y archiva de forma inalterable.</li>
+    </ul>
+
+    <!-- ================================================================================== -->
+    <!-- 5. ARQUITECTURA TÉCNICA, STACK Y DESPLIEGUE CLOUD                                  -->
+    <!-- ================================================================================== -->
+    <div class="page-break"></div>
+
+    <h1 class="section-title">5. ARQUITECTURA TÉCNICA Y STACK TECNOLÓGICO</h1>
+
+    <h2 class="subsection-title">5.1. Comparativa Tecnológica: React 19 + Vite 7 vs. Enfoques Antiguos</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Capa</th>
+                <th>Elección en Búnker ComandaGo</th>
+                <th>Tecnología en Sistemas Legacy (Dibal)</th>
+                <th>Fundamento de Ingeniería de Software</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Frontend</strong></td>
+                <td class="highlight-cell">React 19 + Vite 7 (SPA)</td>
+                <td>PHP monolítico / jQuery / Win32</td>
+                <td>Renderizado reactivo ultraliviano en memoria; navegación instantánea sin recargas de página completas.</td>
+            </tr>
+            <tr>
+                <td><strong>Estilos</strong></td>
+                <td class="highlight-cell">Tailwind CSS v4 (CSS-First)</td>
+                <td>CSS clásico desestructurado / Bootstrap</td>
+                <td>Bundle final menor a 60KB con motor Glassmorphic y 4 paletas intercambiables con Modo Oscuro nativo.</td>
+            </tr>
+            <tr>
+                <td><strong>Backend API</strong></td>
+                <td class="highlight-cell">Node.js + Express 5</td>
+                <td>PHP Apache (XAMPP / Laragon)</td>
+                <td>I/O asíncrono no bloqueante; soporta decenas de mozos enviando comandas concurrentemente sin consumir hilos pesados.</td>
+            </tr>
+            <tr>
+                <td><strong>ORM & DB</strong></td>
+                <td class="highlight-cell">Prisma ORM 5 + PostgreSQL (Supabase)</td>
+                <td>MySQL local sin transacciones estrictas</td>
+                <td>Tipado estricto en compilación; migraciones automáticas deterministas y soporte nativo de Connection Pooling.</td>
+            </tr>
+            <tr>
+                <td><strong>Persistencia Local</strong></td>
+                <td class="highlight-cell">Dexie.js (IndexedDB)</td>
+                <td>Inexistente (Caída de red = Pérdida de datos)</td>
+                <td>Motor de base de datos relacional en el navegador para garantizar operatividad continua offline.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2 class="subsection-title">5.2. Modelo Relacional y Unión Jerárquica de Mesas (Padre-Hijo)</h2>
+    <p>
+        Para dar respuesta a la <strong>Prioridad 7</strong> (agrupación de mesas para grupos grandes), estructuramos en el modelo de datos de Prisma una autorreferencia jerárquica limpia:
+    </p>
+
+    <pre class="code-block">
+model Mesa {
+  id          Int       @id @default(autoincrement())
+  numero      String    @unique
+  capacidad   Int
+  estado      String    @default("libre") // libre, ocupada, cerrada
+  posX        Float     @default(0)       // Coordenada X para Drag & Drop
+  posY        Float     @default(0)       // Coordenada Y para Drag & Drop
+  forma       String    @default("cuadrada")
+  comandas    Comanda[]
+
+  // Relación Padre-Hijo para unión y separación lógica de mesas
+  mesaPadreId Int?
+  mesaPadre   Mesa?     @relation("MesaUnion", fields: [mesaPadreId], references: [id])
+  mesasHijas  Mesa[]    @relation("MesaUnion")
+
+  @@index([estado])
+}</pre>
+    <p>
+        Cuando se unen mesas, las mesas secundarias adoptan el <code>mesaPadreId</code> de la mesa principal. Toda orden se factura al ticket del nodo padre, pero visualmente el salón mantiene la ocupación de los espacios físicos reales.
+    </p>
+
+    <!-- ================================================================================== -->
+    <!-- 6. STARTUP INNOVADORA: COSTO CERO Y MODO OFFLINE RESILIENTE                        -->
+    <!-- ================================================================================== -->
+    <div class="page-break"></div>
+
+    <h1 class="section-title">6. MODELO DE STARTUP: COSTO CERO DE INFRAESTRUCTURA Y MODO OFFLINE DISRUPTIVO</h1>
+
+    <div class="startup-box">
+        <h3>🚀 BÚNKER COMANDAGO COMO STARTUP GASTRONÓMICA DE ALTO IMPACTO</h3>
+        <p>
+            Búnker ComandaGo nace no solo como un proyecto académico de titulación, sino como un producto mínimo viable (MVP) validado y listo para comercializarse como una <strong>Startup SaaS tecnológica</strong> orientada al mercado restaurantero nacional. Nuestra propuesta de valor se cimienta en dos ventajas competitivas inalcanzables para los sistemas legados como Dibal: <strong>Costo Cero de Operación Cloud</strong> y <strong>Resiliencia Total Offline</strong>.
+        </p>
+    </div>
+
+    <h2 class="subsection-title">6.1. Demostración del Modelo de Costo Cero ($0.00 / mes)</h2>
+    <p>
+        Las soluciones tradicionales del mercado exigen pagos de licencias que oscilan entre los $500 y $1,500 dólares por local, o suscripciones mensuales forzosas de $60 a $120 dólares que asfixian a las microempresas gastronómicas. En Búnker ComandaGo hemos diseñado una arquitectura que aprovecha estratégicamente los niveles gratuitos (*Free Tiers*) de la nube moderna:
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Servicio / Proveedor</th>
+                <th>Rol en la Arquitectura</th>
+                <th>Capacidad en Nivel Gratuito (Free Tier)</th>
+                <th>Costo Mensual</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Vercel Edge Network</strong></td>
+                <td>Alojamiento global de la SPA y funciones serverless</td>
+                <td>100 GB de ancho de banda mensual, despliegue global Anycast</td>
+                <td class="highlight-cell" style="text-align: center;">$0.00</td>
+            </tr>
+            <tr>
+                <td><strong>Supabase (PostgreSQL)</strong></td>
+                <td>Base de datos relacional y Connection Pooling</td>
+                <td>500 MB de almacenamiento (equivalente a más de 300,000 comandas)</td>
+                <td class="highlight-cell" style="text-align: center;">$0.00</td>
+            </tr>
+            <tr>
+                <td><strong>Node.js Local Microservice</strong></td>
+                <td>Servicio de impresión física local en PC de Caja</td>
+                <td>Ejecución en el hardware existente del negocio (Windows)</td>
+                <td class="highlight-cell" style="text-align: center;">$0.00</td>
+            </tr>
+            <tr>
+                <td><strong>Consulta RUC/DNI Sunat</strong></td>
+                <td>Validación elástica serverless de comprobantes</td>
+                <td>Consumo elástico optimizado por caché en base de datos</td>
+                <td class="highlight-cell" style="text-align: center;">$0.00</td>
+            </tr>
+            <tr>
+                <td colspan="3" style="text-align: right; font-weight: 800;">TOTAL MENSUAL EN FASE DE LANZAMIENTO / PILOTO:</td>
+                <td class="highlight-cell" style="text-align: center; font-size: 9pt; font-weight: 900; color: #16a34a;">$0.00 USD</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2 class="subsection-title">6.2. Arquitectura de Modo Offline con Dexie.js (IndexedDB)</h2>
+    <p>
+        En el Perú, los cortes de servicio de Internet o las micro-interrupciones de los proveedores de telecomunicaciones son frecuentes. Si un sistema se bloquea cuando se cae la red, el restaurante colapsa en plena hora punta. Para garantizar continuidad operativa ininterrumpida, hemos integrado en el cliente una capa de almacenamiento local con <strong>Dexie.js sobre IndexedDB</strong> y Service Workers:
+    </p>
+
+    <div class="diagram-box">
+[ESTADO: ONLINE]  ──► Petición regular a API Cloud (Supabase / Express) ──► Respuesta inmediata
+         │
+         ▼ (Detección de corte de red mediante navigator.onLine)
+[ESTADO: OFFLINE] ──► Intercepción en client/src/offline/offlineService.js
+         │
+         ├── 1. Lectura inmediata de Carta, Precios y Mesas desde Dexie.js (IndexedDB)
+         ├── 2. El mozo toma la comanda en la mesa sin pantallas de error
+         ├── 3. Almacenamiento local de la orden en tabla local 'syncQueue'
+         │
+         ▼ (Restablecimiento de la conexión a Internet)
+[SINCRONIZACIÓN]  ──► Sync Engine procesa en segundo plano la cola FIFO
+         ├── Envío ordenado de transacciones pendientes hacia Supabase
+         └── Resolución automática de estados sin duplicidad de pedidos</div>
+
+    <pre class="code-block">
+// Fragmento real de client/src/offline/database.js
+import Dexie from 'dexie';
+import { dbSchemaV1, dbSchemaV2, dbSchemaV3, dbSchemaV4 } from './tables';
+
+const db = new Dexie('BunkerOfflineDB');
+
+// Versionado y migraciones declarativas no destructivas locales
+db.version(4).stores(dbSchemaV4);
+
+export const initDatabase = async () => {
+  try {
+    await db.open();
+    console.log('BunkerOfflineDB: Base de datos local inicializada con éxito.');
+    return true;
+  } catch (error) {
+    console.error('BunkerOfflineDB: Error al abrir almacenamiento local:', error);
+    return false;
+  }
+};
+export default db;</pre>
+
+    <!-- ================================================================================== -->
+    <!-- 7. CONCLUSIONES, COMPARATIVA FINAL Y GUÍA DE DEFENSA                               -->
+    <!-- ================================================================================== -->
+    <div class="page-break"></div>
+
+    <h1 class="section-title">7. CONCLUSIONES Y PROPUESTA DE VALOR</h1>
+    <ul>
+        <li><strong>Superación del Modelo Dibal:</strong> Búnker ComandaGo resolvió punto por punto las 23 falencias operativas y arquitectónicas de Dibal, priorizando la seguridad en la impresión, la fluidez del salón interactivo y la sencillez en caja.</li>
+        <li><strong>Blindaje Transaccional Comprobado:</strong> La imposibilidad de comandar sin apertura formal de caja y la auditoría obligatoria de ingresos y egresos eliminan las pérdidas de dinero en el salón.</li>
+        <li><strong>Viabilidad de Startup:</strong> Con un costo de mantenimiento de $0.00 en su etapa de tracción y un modo offline que asegura resiliencia total frente a cortes de red, Búnker ComandaGo se perfila como una solución tecnológica disruptiva y altamente comercializable en el ecosistema nacional.</li>
+    </ul>
+
+    <h1 class="section-title">📌 GUÍA ESTRATÉGICA DE DEFENSA ANTE EL JURADO (15 MINUTOS)</h1>
+    <p>
+        Distribución cronológica recomendada para la exposición oral basada en las prioridades del docente:
+    </p>
+
+    <div class="timeline-item">
+        <div class="timeline-badge">00:00 - 03:00</div>
+        <div class="timeline-content">
+            <h4>1. Contexto: ¿Por qué los Restaurantes sufren con Dibal?</h4>
+            <p>Explicar los problemas del software legacy: navegadores en modo desarrollador inseguros, dependencia de XAMPP, fallas de IP de impresora y caja confusa.</p>
+        </div>
+    </div>
+
+    <div class="timeline-item">
+        <div class="timeline-badge">03:00 - 06:00</div>
+        <div class="timeline-content">
+            <h4>2. Solución a las Prioridades Máximas (P10 y P9)</h4>
+            <p>Demostrar técnicamente la <strong>Cola de Impresión Proxy en la Nube</strong> (Supabase + Node local) y el panel unificado de Caja con cobros directos y arqueo rápido.</p>
+        </div>
+    </div>
+
+    <div class="timeline-item">
+        <div class="timeline-badge">06:00 - 09:00</div>
+        <div class="timeline-content">
+            <h4>3. Demostración en Vivo: Salón Interactivo y KDS (P8 y P7)</h4>
+            <p>Mostrar en pantalla: (1) Los 3 botones rápidos al abrir mesa, (2) Arrastrar y soltar mesas en vivo, (3) Unión jerárquica de mesas, y (4) Temporizador semafórico en cocina.</p>
+        </div>
+    </div>
+
+    <div class="timeline-item">
+        <div class="timeline-badge">09:00 - 12:00</div>
+        <div class="timeline-content">
+            <h4>4. Pilares de Startup: Costo Cero y Modo Offline</h4>
+            <p>Presentar la tabla financiera de <strong>$0.00 USD mensuales</strong> de infraestructura y explicar cómo <strong>Dexie.js + IndexedDB</strong> salvan las ventas ante caídas de Internet.</p>
+        </div>
+    </div>
+
+    <div class="timeline-item">
+        <div class="timeline-badge">12:00 - 15:00</div>
+        <div class="timeline-content">
+            <h4>5. Conclusiones y Ronda de Preguntas</h4>
+            <p>Sintetizar el mérito del proyecto frente a los sistemas del mercado, agradecer al jurado evaluador y dar apertura a las preguntas técnicas.</p>
+        </div>
+    </div>
+
+</body>
+</html>

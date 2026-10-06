@@ -1,6 +1,6 @@
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 
 /* ============================================
    GLOBAL BOX-SIZING RESET
@@ -13,15 +13,9 @@
   box-sizing: border-box;
 }
 
-
-/* ============================================
-   BUNKER HYBRID FONT DEFINITIONS
-   Plus Jakarta Sans for text, JetBrains Mono for digits 0-9
-   ============================================ */
-
 /* ============================================
    BUNKER FONT DEFINITIONS
-   Plus Jakarta Sans for default text, JetBrains Mono for monospaced elements
+   Plus Jakarta Sans for all text, numbers and symbols
    ============================================ */
 
 /* Plus Jakarta Sans */
@@ -78,37 +72,13 @@
   src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_KUnNSg.ttf) format('truetype');
 }
 
-/* Standalone JetBrains Mono */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf) format('truetype');
-}
-
+/* Fallback mapping JetBrains Mono directly to Plus Jakarta Sans */
 @font-face {
   font-family: 'JetBrains Mono';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf) format('truetype');
-}
-
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD-qxjPQ.ttf) format('truetype');
-}
-
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8FqtjPQ.ttf) format('truetype');
+  src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_qU7NSg.ttf) format('truetype');
 }
 
 @font-face {
@@ -116,15 +86,7 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8FqtjPQ.ttf) format('truetype');
-}
-
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8FqtjPQ.ttf) format('truetype');
+  src: url(https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_TknNSg.ttf) format('truetype');
 }
 
 @layer theme, base, components, utilities;
@@ -228,6 +190,43 @@
   }
 }
 
+/* ========================================================
+   LANDING PAGE: BLINDAJE TOTAL DE MODO OSCURO
+   La página principal mantiene siempre fondo negro y textos claros
+   ======================================================== */
+.landing-root,
+.mode-light .landing-root,
+.mode-dark .landing-root {
+  --bg-primary: #060609 !important;
+  --bg-secondary: #0d0d15 !important;
+  --bg-card: rgba(13, 13, 21, 0.8) !important;
+  --text-main: #ffffff !important;
+  --text-muted: #94a3b8 !important;
+  background-color: #060609 !important;
+  color: #ffffff !important;
+}
+
+.landing-root *,
+.mode-light .landing-root * {
+  --text-main: #ffffff !important;
+  --text-muted: #94a3b8 !important;
+}
+
+.mode-light .landing-root h1,
+.mode-light .landing-root h2,
+.mode-light .landing-root h3,
+.mode-light .landing-root h4,
+.mode-light .landing-root p {
+  color: #ffffff;
+}
+
+.mode-light .landing-root .text-white { color: #ffffff !important; }
+.mode-light .landing-root .text-gray-400 { color: #9ca3af !important; }
+.mode-light .landing-root .text-gray-300 { color: #d1d5db !important; }
+.mode-light .landing-root .text-gray-500 { color: #6b7280 !important; }
+.mode-light .landing-root .text-teal-400 { color: #2dd4bf !important; }
+.mode-light .landing-root .text-black { color: #000000 !important; }
+
 :root {
   /* DEFAULT: CARBONO (OLED BLACK) - Fallback for everything */
   --bg-primary: #000000;
@@ -236,8 +235,9 @@
   --glass-border: rgba(255, 255, 255, 0.15);
 
   /* Font Families */
-  --font-sans: "BunkerFont", "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono-nums: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
   --primary: #F0544F;
   --primary-hover: #D8433E;
@@ -939,7 +939,7 @@ h2 {
 .theme-black table th {
   background-color: #000000 !important;
   color: #ffffff !important;
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   border-bottom: 2px solid var(--glass-border);
 }
 
@@ -1990,7 +1990,7 @@ body {
     margin: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace !important;
+    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif !important;
   }
 
   /* Ocultar elementos que no deben imprimirse, como botones */
@@ -1999,6 +1999,15 @@ body {
     display: none !important;
     visibility: hidden !important;
   }
+}
+
+/* ============================================
+   GLOBAL PLUS JAKARTA SANS ENFORCEMENT
+   ============================================ */
+.font-mono,
+.font-mono-nums,
+[class*="font-mono"] {
+  font-family: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif !important;
 }
 
 /* ============================================

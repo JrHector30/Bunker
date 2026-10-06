@@ -47,6 +47,17 @@ const DashboardLayout = () => {
 
     const isOffline = netState === NetworkState.OFFLINE_CONFIRMED || netState === NetworkState.REMOTE_RESULT_UNKNOWN;
 
+    // Sincroniza el modo claro/oscuro solo dentro del dashboard autenticado
+    useEffect(() => {
+        const root = document.documentElement;
+        root.classList.remove('mode-dark', 'mode-light');
+        root.classList.add(`mode-${mode}`);
+        return () => {
+            root.classList.remove('mode-light');
+            root.classList.add('mode-dark');
+        };
+    }, [mode]);
+
     // Suscripción al monitor de red y recuento de operaciones pendientes
     useEffect(() => {
         const unsubscribe = networkStatus.subscribe(setNetState);
@@ -219,25 +230,8 @@ const DashboardLayout = () => {
                             <div className="flex flex-col items-center gap-2 w-full">
                                 <div className="relative group cursor-pointer" onClick={() => navigate('/home')}>
                                     <div className="absolute -inset-1 rounded-2xl logo-glow opacity-30 blur-md group-hover:opacity-100 transition duration-500"></div>
-                                    <div className="relative w-11 h-11 rounded-xl bg-[#ffffff] border border-slate-800 flex items-center justify-center shadow-md">
-                                        <svg viewBox="0 0 100 100" className="w-7 h-7 text-slate-300">
-                                            <path
-                                                d="M 32,42 L 32,28 C 32,16 68,16 68,28 L 68,42"
-                                                fill="none"
-                                                stroke="var(--sidebar-brand-color)"
-                                                strokeWidth="9"
-                                                strokeLinecap="round"
-                                            />
-                                            <rect x="18" y="38" width="64" height="48" rx="12" fill="#090a0f" />
-                                            <path
-                                                d="M 40,48 L 40,74 M 40,48 H 51 C 55.5,48 58,50.5 58,54 C 58,57.5 55.5,61 51,61 M 40,61 H 52.5 C 57,61 59.5,63.5 59.5,67 C 59.5,70.5 57,74 52.5,74 H 40"
-                                                fill="none"
-                                                stroke="var(--sidebar-brand-color)"
-                                                strokeWidth="6.5"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            />
-                                        </svg>
+                                    <div className="relative w-11 h-11 rounded-xl bg-black border border-slate-800/90 flex items-center justify-center shadow-md overflow-hidden">
+                                        <img src="/android-chrome-192x192.png" alt="Búnker" className="w-7 h-7 object-contain" />
                                     </div>
                                 </div>
                                 <div className="text-[10px] font-extrabold text-brand tracking-widest uppercase">
@@ -249,25 +243,8 @@ const DashboardLayout = () => {
                             <div className="flex items-center gap-3.5 cursor-pointer group w-full" onClick={() => navigate('/home')}>
                                 <div className="relative">
                                     <div className="absolute -inset-1 rounded-2xl logo-glow opacity-30 blur-md group-hover:opacity-100 transition duration-500"></div>
-                                    <div className="relative w-11 h-11 rounded-xl bg-[#ffffff] border border-slate-800 flex items-center justify-center shadow-md">
-                                        <svg viewBox="0 0 100 100" className="w-7 h-7 text-slate-300">
-                                            <path
-                                                d="M 32,42 L 32,28 C 32,16 68,16 68,28 L 68,42"
-                                                fill="none"
-                                                stroke="var(--sidebar-brand-color)"
-                                                strokeWidth="9"
-                                                strokeLinecap="round"
-                                            />
-                                            <rect x="18" y="38" width="64" height="48" rx="12" fill="#090a0f" />
-                                            <path
-                                                d="M 40,48 L 40,74 M 40,48 H 51 C 55.5,48 58,50.5 58,54 C 58,57.5 55.5,61 51,61 M 40,61 H 52.5 C 57,61 59.5,63.5 59.5,67 C 59.5,70.5 57,74 52.5,74 H 40"
-                                                fill="none"
-                                                stroke="var(--sidebar-brand-color)"
-                                                strokeWidth="6.5"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            />
-                                        </svg>
+                                    <div className="relative w-11 h-11 rounded-xl bg-black border border-slate-800/90 flex items-center justify-center shadow-md overflow-hidden">
+                                        <img src="/android-chrome-192x192.png" alt="Búnker" className="w-7 h-7 object-contain" />
                                     </div>
                                 </div>
                                 <div className="flex flex-col">

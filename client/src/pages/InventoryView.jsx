@@ -1475,9 +1475,9 @@ const InventoryView = () => {
                                 const isPositive = ['COMPRA', 'AJUSTE_POSITIVO'].includes(mov.tipoMovimiento);
                                 const color = isPositive ? 'var(--success)' : (mov.tipoMovimiento === 'VENTA' ? 'var(--primary)' : 'var(--danger)');
                                 return (
-                                    <tr key={mov.id} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
-                                        <td style={{ padding: 15 }}>{new Date(mov.fecha).toLocaleString()}</td>
-                                        <td style={{ padding: 15, fontWeight: 'bold' }}>{mov.insumo?.nombre}</td>
+                                    <tr key={mov.id} style={{ borderBottom: '1px solid var(--table-row-border)', color: 'var(--text-main)' }}>
+                                        <td style={{ padding: 15, color: 'var(--text-main)' }}>{new Date(mov.fecha).toLocaleString()}</td>
+                                        <td style={{ padding: 15, fontWeight: 'bold', color: 'var(--text-main)' }}>{mov.insumo?.nombre}</td>
                                         <td style={{ padding: 15 }}>
                                             <span style={{ padding: '4px 8px', borderRadius: 4, background: `${color}40`, color: color, fontSize: '0.8rem', fontWeight: 'bold' }}>
                                                 {mov.tipoMovimiento}
@@ -1486,10 +1486,10 @@ const InventoryView = () => {
                                         <td style={{ padding: 15, color: color, fontWeight: 'bold' }}>
                                             {isPositive ? '+' : '-'}{mov.cantidad} {mov.insumo?.unidadMedida}
                                         </td>
-                                        <td style={{ padding: 15, color: 'rgba(255,255,255,0.8)' }}>
+                                        <td style={{ padding: 15, color: 'var(--text-main)' }}>
                                             {mov.usuario?.nombre || 'General / Sistema'}
                                         </td>
-                                        <td style={{ padding: 15, fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>{mov.motivo || '-'}</td>
+                                        <td style={{ padding: 15, fontSize: '0.9rem', color: 'var(--text-muted)' }}>{mov.motivo || '-'}</td>
                                     </tr>
                                 );
                             })}
