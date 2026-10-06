@@ -1258,6 +1258,11 @@ app.get('/api/tables', async (req, res) => {
                                 }
                             }
                         }
+                    }
+                }
+            }
+        });
+
         // Auto-heal ghost occupied tables (mesas marcadas ocupadas sin platos activos)
         const ghostTablesToFree = [];
         const sanitizedTables = tables.map(t => {
