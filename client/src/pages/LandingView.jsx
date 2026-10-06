@@ -208,14 +208,16 @@ export default function LandingView() {
           <div className="w-full max-w-5xl relative group">
             <div className="absolute left-1/2 w-[90%] h-[70%] pointer-events-none z-0 opacity-15 blur-[140px] top-[-10%] -translate-x-1/2 bg-teal-500 rounded-full" />
             <div className="relative z-10 border border-gray-800/60 rounded-2xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.8)] bg-gray-950/60 transition-transform duration-700 hover:scale-[1.01]">
-              <div style={{ width: '100%', height: '560px', position: 'relative' }}>
+              <div style={{ width: '100%', height: '600px', position: 'relative' }}>
                 <CircularCarousel
                   items={carouselItems}
                   preset="cylinder"
                   intro="rise"
-                  cardWidth={220}
-                  aspectRatio={1}
-                  speed={14}
+                  cardWidth={500}
+                  aspectRatio={1.55}
+                  curve={0.25}
+                  gap={30}
+                  speed={12}
                   captions
                 />
               </div>
