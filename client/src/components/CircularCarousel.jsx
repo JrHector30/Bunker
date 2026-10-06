@@ -561,8 +561,8 @@ const CircularCarousel = ({
         const world = wrap(base + angle);
         const facing = Math.cos(world * TO_RAD);
         if (s.layout.inward) card.style.visibility = Math.abs(world) > 86 ? 'hidden' : '';
-        const fade = s.depthFade * Math.pow((1 - facing) / 2, 1.25);
-        card.style.setProperty('--cc-depth', fade.toFixed(3));
+        const fade = s.depthFade * Math.pow((1 - facing) / 2, 0.95);
+        card.style.setProperty('--cc-depth', Math.min(1, fade).toFixed(3));
       }
 
       const index = ((Math.round(-state.angle / s.step) % s.count) + s.count) % s.count || 0;

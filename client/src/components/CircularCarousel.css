@@ -87,6 +87,7 @@
   outline: 1px solid transparent;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  opacity: calc(1 - var(--cc-depth, 0) * 0.45);
 }
 
 .circular-carousel__frame {
@@ -115,7 +116,7 @@
 }
 
 .circular-carousel__shade {
-  background: var(--cc-fade);
+  background: #000000;
   opacity: var(--cc-depth, 0);
 }
 

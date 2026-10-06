@@ -255,25 +255,22 @@ export default function LandingView() {
         </RevealOnScroll>
 
         <RevealOnScroll variant="scale" delay={700} duration={1200} className="w-full flex justify-center">
-          <div className="w-full max-w-6xl relative flex justify-center mb-12">
-            <div style={{ width: '100%', height: '620px', position: 'relative' }}>
+          <div className="w-full max-w-7xl relative flex justify-center mb-16">
+            <div style={{ width: '100%', height: '750px', position: 'relative' }}>
               <CircularCarousel
                 items={carouselItems}
                 preset="cylinder"
                 intro="rise"
-                cardWidth={780}
+                cardWidth={950}
                 aspectRatio={2.09}
                 curve={1}
-                gap={40}
+                gap={42}
                 speed={12}
-                scale={1.35}
+                scale={1.9}
+                depthFade={0.92}
                 captions={false}
                 onItemClick={(item, index) => setExpandedIndex(index)}
               />
-            </div>
-            <div className="text-center text-xs text-gray-500 mt-2 flex items-center justify-center gap-1.5 pointer-events-none">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
-              Haz clic en cualquier pantalla para verla en tamaño completo
             </div>
           </div>
         </RevealOnScroll>
