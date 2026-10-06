@@ -6,8 +6,29 @@ import {
   TrendingUp, Users, Printer, Store
 } from 'lucide-react';
 import RevealOnScroll from '../components/RevealOnScroll';
-import HeroCarousel from '../components/HeroCarousel';
+import CircularCarousel from '../components/CircularCarousel';
 import Aurora from '../components/Aurora';
+
+const carouselItems = [
+  {
+    src: '/uploads/home/img1.png',
+    alt: 'Salón Interactivo y Control de Mesas',
+    title: 'Salón Interactivo',
+    subtitle: 'Gestión de Mesas en Vivo'
+  },
+  {
+    src: '/uploads/home/img2.png',
+    alt: 'Búnker de Caja Blindada',
+    title: 'Caja Blindada',
+    subtitle: 'Control Financiero de Turno'
+  },
+  {
+    src: '/uploads/home/img3.png',
+    alt: 'Bandeja KDS de Cocina',
+    title: 'Monitor de Cocina',
+    subtitle: 'Despacho y Tiempos KDS'
+  }
+];
 
 // Componente reusable de Botón Premium
 const SaasButton = ({ variant = "default", className = "", children, ...props }) => {
@@ -187,7 +208,17 @@ export default function LandingView() {
           <div className="w-full max-w-5xl relative group">
             <div className="absolute left-1/2 w-[90%] h-[70%] pointer-events-none z-0 opacity-15 blur-[140px] top-[-10%] -translate-x-1/2 bg-teal-500 rounded-full" />
             <div className="relative z-10 border border-gray-800/60 rounded-2xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.8)] bg-gray-950/60 transition-transform duration-700 hover:scale-[1.01]">
-              <HeroCarousel />
+              <div style={{ width: '100%', height: '560px', position: 'relative' }}>
+                <CircularCarousel
+                  items={carouselItems}
+                  preset="cylinder"
+                  intro="rise"
+                  cardWidth={220}
+                  aspectRatio={1}
+                  speed={14}
+                  captions
+                />
+              </div>
             </div>
           </div>
         </RevealOnScroll>
