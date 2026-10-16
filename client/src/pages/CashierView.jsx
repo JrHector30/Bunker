@@ -1273,7 +1273,7 @@ const CashierView = () => {
         doc.text(`Total Propinas Recaudadas: S/. ${(fullData.totalPropinas || fullData.propinas || 0).toFixed(2)}`, 14, currentY);
         currentY += 10;
 
-        doc.text(`Resumen Turno #${fullData.id}: M. Inicial: S/. ${(fullData.montoInicial || fullData.inicio || 0).toFixed(2)} | Ventas: S/. ${fullData.totalBruto.toFixed(2)} | Saldo Final (Caja): S/. {fullData.totalCaja.toFixed(2)}`, 14, currentY);
+        doc.text(`Resumen Turno #${fullData.id}: M. Inicial: S/. ${(fullData.montoInicial || fullData.inicio || 0).toFixed(2)} | Ventas: S/. ${fullData.totalBruto.toFixed(2)} | Saldo Final (Caja): S/. ${fullData.totalCaja.toFixed(2)}`, 14, currentY);
       }
 
       const dateStr = new Date().toISOString().split('T')[0];

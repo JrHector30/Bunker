@@ -35,8 +35,8 @@ const PaymentModal = ({ order, onClose, onSuccess }) => {
     const [observation, setObservation] = useState('');
     const [email, setEmail] = useState('');
 
-    const finalTotal = pricingError ? null : totalOrder + (hasTip ? Number(tipAmount) : 0);
-    const change = (pricingError || paymentMethod !== 'efectivo') ? 0 : (Number(cashGiven) - finalTotal);
+    const finalTotal = pricingError ? null : Math.round(((totalOrder + (hasTip ? Number(tipAmount) : 0)) + Number.EPSILON) * 100) / 100;
+    const change = (pricingError || paymentMethod !== 'efectivo') ? 0 : Math.round((Math.max(0, Number(cashGiven) - finalTotal) + Number.EPSILON) * 100) / 100;
 
     const validateDocument = async () => {
         if (!documentoCliente) return;

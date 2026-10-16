@@ -79,17 +79,17 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
   }, 0);
 
   // Tip calculation
-  const propinaMonto = pricingError ? 0 : (
+  const propinaMonto = pricingError ? 0 : Math.round(((
     propinaPct === 'custom'
       ? parseFloat(customPropina) || 0
       : (subtotal * propinaPct) / 100
-  );
+  ) + Number.EPSILON) * 100) / 100;
 
-  const totalFinal = pricingError ? null : subtotal + propinaMonto;
+  const totalFinal = pricingError ? null : Math.round(((subtotal + propinaMonto) + Number.EPSILON) * 100) / 100;
 
   // Cash change (Vuelto) calculation
   const paidAmountNum = parseFloat(montoPagado) || 0;
-  const vuelto = pricingError ? 0 : Math.max(0, paidAmountNum - totalFinal);
+  const vuelto = pricingError ? 0 : Math.round((Math.max(0, paidAmountNum - totalFinal) + Number.EPSILON) * 100) / 100;
 
   // Document length rule
   const getRequiredLength = () => {

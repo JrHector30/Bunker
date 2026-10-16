@@ -2308,7 +2308,7 @@ app.post('/api/checkout/:mesaId', async (req, res) => {
             return res.status(404).json({ error: "No active order" });
 
         const order = activeOrders[0];
-        const total = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+        const total = round2(order.detalles.reduce((sum, d) => sum + ((d.plato?.precio || 0) * (d.cantidad || 0)), 0));
 
         // Anular comandas fantasma
         if (activeOrders.length > 1) {
@@ -2677,9 +2677,9 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
         };
 
         const salesData = sales.map(order => {
-            const subtotal = order.detalles.reduce((s, d) => s + (d.cantidad * d.plato.precio), 0);
-            const propina = order.propina || 0;
-            totalPropinas += propina;
+            const subtotal = round2(order.detalles.reduce((s, d) => s + ((d.cantidad || 0) * (d.plato?.precio || 0)), 0));
+            const propina = round2(order.propina || 0);
+            totalPropinas = round2(totalPropinas + propina);
 
             if (propina > 0 && order.usuario) {
                 const mozoId = order.usuario.id;
@@ -2690,49 +2690,49 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
                         propinas: 0
                     };
                 }
-                propinasPorMozo[mozoId].propinas += propina;
+                propinasPorMozo[mozoId].propinas = round2(propinasPorMozo[mozoId].propinas + propina);
             }
 
             const cat = parsePaymentMethod(order.metodoPago);
             if (incomeDetails[cat] !== undefined) {
-                incomeDetails[cat] += subtotal;
+                incomeDetails[cat] = round2(incomeDetails[cat] + subtotal);
             } else {
-                incomeDetails.efectivo += subtotal;
+                incomeDetails.efectivo = round2(incomeDetails.efectivo + subtotal);
             }
 
             return {
                 id: order.id,
                 hora: order.fecha,
                 items: order.detalles.map(d => ({
-                    cantidad: d.cantidad,
-                    descripcion: d.plato.nombre,
-                    precio: d.plato.precio,
-                    total: d.cantidad * d.plato.precio
+                    cantidad: d.cantidad || 1,
+                    descripcion: d.plato?.nombre || 'Plato',
+                    precio: d.plato?.precio || 0,
+                    total: round2((d.cantidad || 1) * (d.plato?.precio || 0))
                 })),
                 total: subtotal,
                 propina: propina,
-                metodo: order.metodoPago,
-                doc: order.tipoDocumento,
+                metodo: order.metodoPago || 'efectivo',
+                doc: order.tipoDocumento || 'sin_comprobante',
                 mozo: order.usuario?.nombre || 'General',
                 mesa: order.mesa?.numero || 'Barra'
             };
         });
 
         // Apply manual movements safely (no negative balance)
-        incomeDetails.yape = Math.max(0, incomeDetails.yape + manualIngresosYape - manualEgresosYape);
-        incomeDetails.plin = Math.max(0, incomeDetails.plin + manualIngresosPlin - manualEgresosPlin);
+        incomeDetails.yape = round2(Math.max(0, incomeDetails.yape + manualIngresosYape - manualEgresosYape));
+        incomeDetails.plin = round2(Math.max(0, incomeDetails.plin + manualIngresosPlin - manualEgresosPlin));
 
-        const totalPendiente = pendingOrders.reduce((acc, order) => {
+        const totalPendiente = round2(pendingOrders.reduce((acc, order) => {
             const hasKitchenItems = order.detalles.some(d => 
-                ['listo', 'lista', 'entregado', 'entregada'].includes(d.estado.toLowerCase())
+                ['listo', 'lista', 'entregado', 'entregada'].includes((d.estado || '').toLowerCase())
             );
             if (hasKitchenItems) {
-                return acc + order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
+                return acc + order.detalles.reduce((sum, d) => sum + ((d.plato?.precio || 0) * (d.cantidad || 0)), 0);
             }
             return acc;
-        }, 0);
+        }, 0));
 
-        const totalCaja = arq.montoInicial + manualIngresos + incomeDetails.efectivo - manualEgresos;
+        const totalCaja = round2(arq.montoInicial + manualIngresos + incomeDetails.efectivo - manualEgresos);
 
         res.json({
             ...arq,
@@ -2853,13 +2853,21 @@ app.get('/api/cashier/balance', async (req, res) => {
             return 'efectivo';
         };
 
-        // Calculate manual incomes and egresos
-        const manualIngresos = (movements || []).filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
-        const manualEgresos = (movements || []).filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
+        // Calculate manual incomes and egresos segregated by payment method
+        const manualIngresos = (movements || []).filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
+        const manualEgresos = (movements || []).filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
+
+        const manualIngresosYape = (movements || []).filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
+        const manualEgresosYape = (movements || []).filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
+
+        const manualIngresosPlin = (movements || []).filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+        const manualEgresosPlin = (movements || []).filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+
+        const totalEgresosAll = (movements || []).filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
 
         // Dynamic Inicio -> Fixed initial amount
-        const inicio = lastArqueo.montoInicial || 0;
-        const egresos = manualEgresos;
+        const inicio = round2(lastArqueo.montoInicial || 0);
+        const egresos = round2(totalEgresosAll);
 
         // Calculate Totals
         let totalBruto = 0;
@@ -2873,15 +2881,15 @@ app.get('/api/cashier/balance', async (req, res) => {
             izipay: 0,
             plin: 0,
             niubiz: 0,
-            manual: manualIngresos
+            manual: round2(manualIngresos)
         };
 
         (sales || []).forEach(order => {
-            const subtotal = (order.detalles || []).reduce((sum, d) => sum + ((d.plato?.precio || 0) * (d.cantidad || 0)), 0);
-            const propina = order.propina || 0;
+            const subtotal = round2((order.detalles || []).reduce((sum, d) => sum + ((d.plato?.precio || 0) * (d.cantidad || 0)), 0));
+            const propina = round2(order.propina || 0);
 
-            totalBruto += subtotal;
-            totalPropinas += propina;
+            totalBruto = round2(totalBruto + subtotal);
+            totalPropinas = round2(totalPropinas + propina);
 
             // Acumular propinas por mozo
             if (propina > 0 && order.usuario) {
@@ -2895,22 +2903,26 @@ app.get('/api/cashier/balance', async (req, res) => {
                         propinas: 0
                     };
                 }
-                propinasPorMozo[mozoId].propinas += propina;
+                propinasPorMozo[mozoId].propinas = round2(propinasPorMozo[mozoId].propinas + propina);
             }
 
             const cat = parsePaymentMethod(order.metodoPago);
             if (incomeDetails[cat] !== undefined) {
-                incomeDetails[cat] += subtotal;
+                incomeDetails[cat] = round2(incomeDetails[cat] + subtotal);
             } else {
-                incomeDetails.efectivo += subtotal;
+                incomeDetails.efectivo = round2(incomeDetails.efectivo + subtotal);
             }
         });
+
+        // Apply manual digital movements safely
+        incomeDetails.yape = round2(Math.max(0, incomeDetails.yape + manualIngresosYape - manualEgresosYape));
+        incomeDetails.plin = round2(Math.max(0, incomeDetails.plin + manualIngresosPlin - manualEgresosPlin));
 
         // Convertir objeto a array para frontend
         const desglosePropinas = Object.values(propinasPorMozo);
 
         // Calculate total pending based on order state (lista or entregada)
-        const totalPendiente = (pendingOrders || []).reduce((acc, order) => {
+        const totalPendiente = round2((pendingOrders || []).reduce((acc, order) => {
             const hasKitchenItems = (order.detalles || []).some(d => 
                 ['listo', 'lista', 'entregado', 'entregada'].includes((d.estado || '').toLowerCase())
             );
@@ -2918,10 +2930,10 @@ app.get('/api/cashier/balance', async (req, res) => {
                 return acc + (order.detalles || []).reduce((sum, d) => sum + ((d.plato?.precio || 0) * (d.cantidad || 0)), 0);
             }
             return acc;
-        }, 0);
+        }, 0));
 
-        // totalCaja = Inicio + manualIngresos + cash sales - manualEgresos
-        const totalCaja = (lastArqueo.montoInicial || 0) + manualIngresos + incomeDetails.efectivo - manualEgresos;
+        // totalCaja = Inicio + manualIngresos (efectivo) + cash sales - manualEgresos (efectivo)
+        const totalCaja = round2((lastArqueo.montoInicial || 0) + manualIngresos + incomeDetails.efectivo - manualEgresos);
 
         const ventasDetalladas = (sales || []).map(order => ({
             id: order.id,
@@ -3085,37 +3097,37 @@ app.post('/api/cashier/movimientos', async (req, res) => {
                 sales.forEach(order => {
                     const cat = parsePaymentMethod(order.metodoPago);
                     if (cat === 'efectivo') {
-                        const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
-                        gananciasEfectivo += subtotal;
+                        const subtotal = round2((order.detalles || []).reduce((sum, d) => sum + (((d.plato?.precio ?? 0)) * (d.cantidad || 0)), 0));
+                        gananciasEfectivo = round2(gananciasEfectivo + subtotal);
                     }
                 });
-                availableLimit = lastArqueo.montoInicial + manualIngresos + gananciasEfectivo - manualEgresos;
+                availableLimit = round2((lastArqueo.montoInicial || 0) + manualIngresos + gananciasEfectivo - manualEgresos);
             } else if (selectedMetodo === 'yape') {
-                const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
-                const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
+                const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
+                const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
                 
                 let gananciasYape = 0;
                 sales.forEach(order => {
                     const cat = parsePaymentMethod(order.metodoPago);
                     if (cat === 'yape') {
-                        const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
-                        gananciasYape += subtotal;
+                        const subtotal = round2((order.detalles || []).reduce((sum, d) => sum + (((d.plato?.precio ?? 0)) * (d.cantidad || 0)), 0));
+                        gananciasYape = round2(gananciasYape + subtotal);
                     }
                 });
-                availableLimit = Math.max(0, gananciasYape + manualIngresosYape - manualEgresosYape);
+                availableLimit = round2(Math.max(0, gananciasYape + manualIngresosYape - manualEgresosYape));
             } else if (selectedMetodo === 'plin') {
-                const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
-                const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
+                const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+                const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
                 
                 let gananciasPlin = 0;
                 sales.forEach(order => {
                     const cat = parsePaymentMethod(order.metodoPago);
                     if (cat === 'plin') {
-                        const subtotal = order.detalles.reduce((sum, d) => sum + (d.plato.precio * d.cantidad), 0);
-                        gananciasPlin += subtotal;
+                        const subtotal = round2((order.detalles || []).reduce((sum, d) => sum + (((d.plato?.precio ?? 0)) * (d.cantidad || 0)), 0));
+                        gananciasPlin = round2(gananciasPlin + subtotal);
                     }
                 });
-                availableLimit = Math.max(0, gananciasPlin + manualIngresosPlin - manualEgresosPlin);
+                availableLimit = round2(Math.max(0, gananciasPlin + manualIngresosPlin - manualEgresosPlin));
             }
 
             if (numericMonto > availableLimit) {
@@ -3356,17 +3368,19 @@ app.get('/api/cashier/history', async (req, res) => {
                 return 'efectivo';
             };
 
-            const manualIngresos = movements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + m.monto, 0);
-            const manualEgresos = movements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + m.monto, 0);
+            const manualIngresos = (movements || []).filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualEgresos = (movements || []).filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
 
-            const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
-            const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + m.monto, 0);
+            const manualIngresosYape = (movements || []).filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualEgresosYape = (movements || []).filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
 
-            const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
-            const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + m.monto, 0);
+            const manualIngresosPlin = (movements || []).filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualEgresosPlin = (movements || []).filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
 
-            const inicio = arq.montoInicial;
-            const egresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + m.monto, 0);
+            const totalEgresosAll = (movements || []).filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
+
+            const inicio = round2(arq.montoInicial || 0);
+            const egresos = round2(totalEgresosAll);
 
             let totalBruto = 0;
             let totalPropinas = 0;
@@ -3377,35 +3391,35 @@ app.get('/api/cashier/history', async (req, res) => {
                 izipay: 0,
                 plin: 0,
                 niubiz: 0,
-                manual: manualIngresos
+                manual: round2(manualIngresos)
             };
 
             comandasCerradas.forEach(order => {
-                const subtotal = order.detalles.reduce((sum, d) => sum + ((d.plato?.precio ?? 0) * d.cantidad), 0);
-                totalBruto += subtotal;
-                totalPropinas += order.propina || 0;
+                const subtotal = round2((order.detalles || []).reduce((sum, d) => sum + (((d.plato?.precio ?? 0)) * (d.cantidad || 0)), 0));
+                totalBruto = round2(totalBruto + subtotal);
+                totalPropinas = round2(totalPropinas + (order.propina || 0));
 
                 const cat = parsePaymentMethod(order.metodoPago);
                 if (incomeDetails[cat] !== undefined) {
-                    incomeDetails[cat] += subtotal;
+                    incomeDetails[cat] = round2(incomeDetails[cat] + subtotal);
                 } else {
-                    incomeDetails.efectivo += subtotal;
+                    incomeDetails.efectivo = round2(incomeDetails.efectivo + subtotal);
                 }
             });
 
             // Apply manual movements safely (no negative balance)
-            incomeDetails.yape = Math.max(0, incomeDetails.yape + manualIngresosYape - manualEgresosYape);
-            incomeDetails.plin = Math.max(0, incomeDetails.plin + manualIngresosPlin - manualEgresosPlin);
+            incomeDetails.yape = round2(Math.max(0, incomeDetails.yape + manualIngresosYape - manualEgresosYape));
+            incomeDetails.plin = round2(Math.max(0, incomeDetails.plin + manualIngresosPlin - manualEgresosPlin));
 
-            const totalPendiente = pendingOrders.reduce((acc, order) => {
-                const hasKitchenItems = order.detalles.some(d => 
-                    ['listo', 'lista', 'entregado', 'entregada'].includes(d.estado.toLowerCase())
+            const totalPendiente = round2(pendingOrders.reduce((acc, order) => {
+                const hasKitchenItems = (order.detalles || []).some(d => 
+                    ['listo', 'lista', 'entregado', 'entregada'].includes((d.estado || '').toLowerCase())
                 );
                 if (hasKitchenItems) {
-                    return acc + order.detalles.reduce((sum, d) => sum + ((d.plato?.precio ?? 0) * d.cantidad), 0);
+                    return acc + (order.detalles || []).reduce((sum, d) => sum + (((d.plato?.precio ?? 0)) * (d.cantidad || 0)), 0);
                 }
                 return acc;
-            }, 0);
+            }, 0));
 
             return {
                 id: arq.id,
@@ -3415,7 +3429,7 @@ app.get('/api/cashier/history', async (req, res) => {
                 inicio,
                 egresos,
                 ingresos: incomeDetails,
-                totalCaja: arq.montoInicial + manualIngresos + incomeDetails.efectivo - manualEgresos,
+                totalCaja: round2((arq.montoInicial || 0) + manualIngresos + incomeDetails.efectivo - manualEgresos),
                 totalBruto,
                 totalPropinas,
                 totalPendiente,
