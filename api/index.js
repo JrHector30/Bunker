@@ -1500,22 +1500,27 @@ app.post('/api/tables/unmerge', async (req, res) => {
 
 // Kitchen Queue Endpoint (Item-based)
 app.get('/api/kitchen/queue', async (req, res) => {
-    const queue = await prisma.detalleComanda.findMany({
-        where: {
-            estado: { notIn: ['entregado', 'anulado'] }, // Show everything not yet delivered or cancelled
-            comanda: { estado: { notIn: ['cerrada', 'anulada'] } }, // Only active orders
-            plato: {
-                categoria: { enviarCocina: true } // FILTER: Only Kitchen Categories
-            }
-        },
-        include: {
-            plato: true,
-            comanda: { include: { mesa: { include: { mesasHijas: true } } } },
-            cocinero: true
-        },
-        orderBy: { id: 'asc' } // FIFO
-    });
-    res.json(queue);
+    try {
+        const queue = await prisma.detalleComanda.findMany({
+            where: {
+                estado: { notIn: ['entregado', 'anulado'] }, // Show everything not yet delivered or cancelled
+                comanda: { estado: { notIn: ['cerrada', 'anulada'] } }, // Only active orders
+                plato: {
+                    categoria: { enviarCocina: true } // FILTER: Only Kitchen Categories
+                }
+            },
+            include: {
+                plato: true,
+                comanda: { include: { mesa: { include: { mesasHijas: true } } } },
+                cocinero: true
+            },
+            orderBy: { id: 'asc' } // FIFO
+        });
+        res.json(queue);
+    } catch (error) {
+        console.error('❌ Error en /api/kitchen/queue:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.post('/api/orders', async (req, res) => {
