@@ -2458,8 +2458,8 @@ app.get('/api/cashier/arqueo/report/range', async (req, res) => {
         });
 
         const detailedArqueos = await Promise.all(arqueos.map(async (arq) => {
-            const arqStart = arq.fechaInicio;
-            const arqEnd = arq.estado === 'abierto' ? new Date() : arq.fechaFin;
+            const arqStart = arq.fechaInicio || new Date(0);
+            const arqEnd = (arq.estado === 'abierto' || !arq.fechaFin) ? new Date() : arq.fechaFin;
 
             const [sales, movements, pendingOrders, user] = await Promise.all([
                 prisma.comanda.findMany({
@@ -2613,8 +2613,8 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
         const arq = await prisma.arqueo.findUnique({ where: { id: parseInt(id) } });
         if (!arq) return res.status(404).json({ error: "Arqueo not found" });
 
-        const startDate = arq.fechaInicio;
-        const endDate = arq.estado === 'abierto' ? new Date() : arq.fechaFin;
+        const startDate = arq.fechaInicio || new Date(0);
+        const endDate = (arq.estado === 'abierto' || !arq.fechaFin) ? new Date() : arq.fechaFin;
 
         // Run queries in parallel
         const [sales, movements, pendingOrders] = await Promise.all([
@@ -3309,8 +3309,8 @@ app.get('/api/cashier/history', async (req, res) => {
         ]);
 
         const historyData = await Promise.all(arqueos.map(async (arq) => {
-            const startDate = arq.fechaInicio;
-            const endDate = arq.estado === 'abierto' ? new Date() : arq.fechaFin;
+            const startDate = arq.fechaInicio || new Date(0);
+            const endDate = (arq.estado === 'abierto' || !arq.fechaFin) ? new Date() : arq.fechaFin;
             const isAbierto = arq.estado === 'abierto';
 
             // Parallelized sub-queries
