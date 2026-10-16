@@ -606,21 +606,31 @@ app.post('/api/login', async (req, res) => {
 // 2. Tables -> Moved to line 502
 
 app.post('/api/tables', async (req, res) => {
-    const { numero, capacidad } = req.body;
-    const table = await prisma.mesa.create({
-        data: { numero, capacidad }
-    });
-    res.json(table);
+    try {
+        const { numero, capacidad } = req.body;
+        const table = await prisma.mesa.create({
+            data: { numero: String(numero), capacidad: parseInt(capacidad) || 4 }
+        });
+        res.json(table);
+    } catch (error) {
+        console.error('❌ Error creando mesa:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.put('/api/tables/:id/status', async (req, res) => {
-    const { id } = req.params;
-    const { estado } = req.body;
-    const table = await prisma.mesa.update({
-        where: { id: parseInt(id) },
-        data: { estado }
-    });
-    res.json(table);
+    try {
+        const { id } = req.params;
+        const { estado } = req.body;
+        const table = await prisma.mesa.update({
+            where: { id: parseInt(id) },
+            data: { estado }
+        });
+        res.json(table);
+    } catch (error) {
+        console.error('❌ Error actualizando estado de mesa:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // 3. Categories (NEW)
@@ -1263,10 +1273,10 @@ app.get('/api/tables', async (req, res) => {
             }
         });
 
-        // Auto-heal ghost occupied tables (mesas marcadas ocupadas sin platos activos)
+        // Auto-heal ghost occupied tables (mesas marcadas ocupadas sin ninguna comanda activa)
         const ghostTablesToFree = [];
         const sanitizedTables = tables.map(t => {
-            const hasActiveOrder = t.comandas && t.comandas.length > 0 && t.comandas[0].detalles && t.comandas[0].detalles.length > 0;
+            const hasActiveOrder = t.comandas && t.comandas.length > 0;
             const isDaughter = t.mesaPadreId !== null;
             if (t.estado === 'ocupada' && !hasActiveOrder && !isDaughter) {
                 ghostTablesToFree.push(t.id);
@@ -1284,8 +1294,8 @@ app.get('/api/tables', async (req, res) => {
 
         res.json(sanitizedTables);
     } catch (error) {
-        console.error('❌ Error optimizando /api/tables:', error);
-        res.json([]);
+        console.error('❌ Error en /api/tables:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

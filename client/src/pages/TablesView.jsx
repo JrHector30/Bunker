@@ -117,27 +117,6 @@ const TablesView = () => {
 
     const { data: tables, mutate: fetchTables } = useCache('tables', fetcher, []);
 
-    // Reactividad multi-pestaña y local para sincronización de UI
-    useEffect(() => {
-        const channel = new BroadcastChannel('bunker-offline-tables');
-        const handleMessage = (e) => {
-            if (e.data === 'refreshTables') {
-                fetchTables();
-            }
-        };
-        channel.addEventListener('message', handleMessage);
-
-        const handleCustomEvent = () => {
-            fetchTables();
-        };
-        window.addEventListener('refreshTables', handleCustomEvent);
-
-        return () => {
-            channel.close();
-            window.removeEventListener('refreshTables', handleCustomEvent);
-        };
-    }, [fetchTables]);
-
     const [selectedTableId, setSelectedTableId] = useState(null);
     const { isCajaAbierta } = useCaja();
     const [modalType, setModalType] = useState(null); // 'view' | 'pre-check'
@@ -555,21 +534,27 @@ const TablesView = () => {
     useEffect(() => {
         const handleRefresh = () => {
             fetchTables();
-            fetchEditMode();
         };
 
-        fetchTables(); // Fetch immediately on mount to bypass cache delay
-        fetchEditMode();
-        const interval = setInterval(handleRefresh, 8000); // Poll every 8 seconds (down from 1.5s)
+        fetchTables(); // Iniciar inmediatamente al montar
+        fetchEditMode(); // Solo se consulta una vez al cargar la vista
+        const interval = setInterval(handleRefresh, 8000); // Polling ligero para estado de mesas
 
         // Local event listener
         window.addEventListener('refreshTables', handleRefresh);
 
-        // BroadcastChannel listener for cross-tab instant sync
-        let channel = null;
+        // BroadcastChannel listeners para sincronización entre pestañas
+        let channelBunker = null;
+        let channelOffline = null;
         try {
-            channel = new BroadcastChannel('bunker');
-            channel.onmessage = (event) => {
+            channelBunker = new BroadcastChannel('bunker');
+            channelBunker.onmessage = (event) => {
+                if (event.data === 'refreshTables') {
+                    handleRefresh();
+                }
+            };
+            channelOffline = new BroadcastChannel('bunker-offline-tables');
+            channelOffline.onmessage = (event) => {
                 if (event.data === 'refreshTables') {
                     handleRefresh();
                 }
@@ -581,9 +566,8 @@ const TablesView = () => {
         return () => {
             clearInterval(interval);
             window.removeEventListener('refreshTables', handleRefresh);
-            if (channel) {
-                channel.close();
-            }
+            if (channelBunker) channelBunker.close();
+            if (channelOffline) channelOffline.close();
         };
     }, []);
 
@@ -738,7 +722,7 @@ const TablesView = () => {
     };
 
     const calculateTotal = (groupedItems) => {
-        return groupedItems.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+        return Math.round(((groupedItems || []).reduce((sum, item) => sum + ((item.cantidad || 0) * (item.precio || 0)), 0) + Number.EPSILON) * 100) / 100;
     };
 
     const renderModalContent = () => {
