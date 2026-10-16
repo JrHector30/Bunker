@@ -3331,68 +3331,94 @@ app.get('/api/cashier/history', async (req, res) => {
                 where,
                 orderBy: { id: 'desc' },
                 skip,
-                take
+                take,
+                include: { movimientos: true }
             })
         ]);
 
-        const historyData = await Promise.all(arqueos.map(async (arq) => {
-            const startDate = arq.fechaInicio || new Date(0);
-            const endDate = (arq.estado === 'abierto' || !arq.fechaFin) ? new Date() : arq.fechaFin;
-            const isAbierto = arq.estado === 'abierto';
+        if (arqueos.length === 0) {
+            return res.json({
+                data: [],
+                meta: {
+                    total: totalCount,
+                    page: parseInt(page),
+                    totalPages: Math.max(1, Math.ceil(totalCount / take))
+                }
+            });
+        }
 
-            // Parallelized sub-queries
-            const [comandasCerradas, movements, pendingOrders, userObj] = await Promise.all([
-                prisma.comanda.findMany({
-                    where: {
-                        estado: 'cerrada',
-                        fecha: { gte: startDate, lte: endDate }
-                    },
-                    select: {
-                        metodoPago: true,
-                        propina: true,
-                        detalles: {
-                            select: {
-                                cantidad: true,
-                                plato: { select: { precio: true } }
-                            }
+        // 1. Single query for all users in this page
+        const userIds = [...new Set(arqueos.map(a => a.usuarioId).filter(Boolean))];
+        const users = userIds.length > 0 ? await prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, nombre: true }
+        }) : [];
+        const userMap = new Map(users.map(u => [u.id, u.nombre]));
+
+        // 2. Determine global min/max date range across the paginated arqueos to fetch all closed comandas at once
+        const minDate = new Date(Math.min(...arqueos.map(a => (a.fechaInicio ? new Date(a.fechaInicio).getTime() : 0))));
+        const maxDate = new Date(Math.max(...arqueos.map(a => (a.estado === 'abierto' || !a.fechaFin) ? Date.now() : new Date(a.fechaFin).getTime())));
+
+        const hasAbierto = arqueos.some(a => a.estado === 'abierto');
+
+        // 3. Run comanda queries in batch (only 1 or 2 fast queries total instead of 20+)
+        const [allComandasCerradas, pendingOrders] = await Promise.all([
+            prisma.comanda.findMany({
+                where: {
+                    estado: 'cerrada',
+                    fecha: { gte: minDate, lte: maxDate }
+                },
+                select: {
+                    fecha: true,
+                    metodoPago: true,
+                    propina: true,
+                    detalles: {
+                        select: {
+                            cantidad: true,
+                            plato: { select: { precio: true } }
                         }
                     }
-                }),
-                prisma.movimientoCaja.findMany({
-                    where: { arqueoId: arq.id }
-                }),
-                isAbierto
-                    ? prisma.comanda.findMany({
-                        where: { estado: { notIn: ['cerrada', 'anulada'] } },
-                        include: { detalles: { where: { estado: { not: 'anulado' } }, include: { plato: true } } }
-                      })
-                    : Promise.resolve([]),
-                prisma.user.findUnique({
-                    where: { id: arq.usuarioId },
-                    select: { nombre: true }
+                }
+            }),
+            hasAbierto
+                ? prisma.comanda.findMany({
+                    where: { estado: { notIn: ['cerrada', 'anulada'] } },
+                    include: { detalles: { where: { estado: { not: 'anulado' } }, include: { plato: true } } }
                 })
-            ]);
+                : Promise.resolve([])
+        ]);
 
-            const parsePaymentMethod = (metodoPago) => {
-                const m = (metodoPago || 'efectivo').toLowerCase();
-                if (m.includes('izipay') || m.includes('izi')) return 'izipay';
-                if (m.includes('niubiz')) return 'niubiz';
-                if (m.includes('plin')) return 'plin';
-                if (m.includes('yape')) return 'yape';
-                if (m.includes('tarjeta')) return 'tarjeta';
-                return 'efectivo';
-            };
+        const parsePaymentMethod = (metodoPago) => {
+            const m = (metodoPago || 'efectivo').toLowerCase();
+            if (m.includes('izipay') || m.includes('izi')) return 'izipay';
+            if (m.includes('niubiz')) return 'niubiz';
+            if (m.includes('plin')) return 'plin';
+            if (m.includes('yape')) return 'yape';
+            if (m.includes('tarjeta')) return 'tarjeta';
+            return 'efectivo';
+        };
 
-            const manualIngresos = (movements || []).filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
-            const manualEgresos = (movements || []).filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
+        const historyData = arqueos.map(arq => {
+            const startDate = arq.fechaInicio ? new Date(arq.fechaInicio) : new Date(0);
+            const endDate = (arq.estado === 'abierto' || !arq.fechaFin) ? new Date() : new Date(arq.fechaFin);
+            const isAbierto = arq.estado === 'abierto';
 
-            const manualIngresosYape = (movements || []).filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
-            const manualEgresosYape = (movements || []).filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const movements = arq.movimientos || [];
+            const comandasCerradas = allComandasCerradas.filter(order => {
+                const orderTime = new Date(order.fecha).getTime();
+                return orderTime >= startDate.getTime() && orderTime <= endDate.getTime();
+            });
 
-            const manualIngresosPlin = (movements || []).filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
-            const manualEgresosPlin = (movements || []).filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualIngresos = movements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualEgresos = movements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
 
-            const totalEgresosAll = (movements || []).filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
+
+            const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+
+            const totalEgresosAll = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
 
             const inicio = round2(arq.montoInicial || 0);
             const egresos = round2(totalEgresosAll);
@@ -3426,7 +3452,7 @@ app.get('/api/cashier/history', async (req, res) => {
             incomeDetails.yape = round2(Math.max(0, incomeDetails.yape + manualIngresosYape - manualEgresosYape));
             incomeDetails.plin = round2(Math.max(0, incomeDetails.plin + manualIngresosPlin - manualEgresosPlin));
 
-            const totalPendiente = round2(pendingOrders.reduce((acc, order) => {
+            const totalPendiente = isAbierto ? round2(pendingOrders.reduce((acc, order) => {
                 const hasKitchenItems = (order.detalles || []).some(d => 
                     ['listo', 'lista', 'entregado', 'entregada'].includes((d.estado || '').toLowerCase())
                 );
@@ -3434,7 +3460,9 @@ app.get('/api/cashier/history', async (req, res) => {
                     return acc + (order.detalles || []).reduce((sum, d) => sum + (((d.plato?.precio ?? 0)) * (d.cantidad || 0)), 0);
                 }
                 return acc;
-            }, 0));
+            }, 0)) : 0;
+
+            const userName = userMap.get(arq.usuarioId) || 'Hector';
 
             return {
                 id: arq.id,
@@ -3448,16 +3476,16 @@ app.get('/api/cashier/history', async (req, res) => {
                 totalBruto,
                 totalPropinas,
                 totalPendiente,
-                usuario: userObj ? { nombre: userObj.nombre } : { nombre: 'Hector' }
+                usuario: { nombre: userName }
             };
-        }));
+        });
 
         res.json({
             data: historyData,
             meta: {
                 total: totalCount,
                 page: parseInt(page),
-                totalPages: Math.ceil(totalCount / take)
+                totalPages: Math.max(1, Math.ceil(totalCount / take))
             }
         });
     } catch (error) {

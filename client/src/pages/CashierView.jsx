@@ -427,12 +427,21 @@ const CashierView = () => {
     }
   }, [currentPage, filterDateRange, searchQuery, user]);
 
+  const abortControllerRef = useRef(null);
+  const lastKnownTotalPagesRef = useRef(1);
+
   // API Call: Fetch historical sessions list
   const historyFetcher = useCallback(async () => {
     if (networkStatus.isOffline()) {
       setConnectionError(false);
       return loadHistoryLocal();
     }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     let url = `/api/cashier/history?page=${currentPage}&limit=5&_t=${Date.now()}`;
     if (searchQuery) {
@@ -449,12 +458,18 @@ const CashierView = () => {
     }
 
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) throw new Error('Error al conectar con el servidor');
       const data = await res.json();
       setConnectionError(false);
+      if (data?.meta?.totalPages) {
+        lastKnownTotalPagesRef.current = data.meta.totalPages;
+      }
       return data;
     } catch (err) {
+      if (err.name === 'AbortError') {
+        return { data: [], meta: { page: currentPage, totalPages: lastKnownTotalPagesRef.current || 1 } };
+      }
       console.error('[CashierView] historyFetcher falló:', err);
       setConnectionError(true);
       throw err; // Re-lanzar para conservar los últimos datos válidos en useCache
@@ -472,7 +487,7 @@ const CashierView = () => {
   const { data: history, loading: historyLoading, mutate: fetchHistory } = useCache(
     historyKey,
     historyFetcher,
-    { data: [], meta: { page: 1, totalPages: 1 } }
+    { data: [], meta: { page: currentPage, totalPages: lastKnownTotalPagesRef.current || 1 } }
   );
 
   // Sync selected arqueo ID cuando cambian los datos cargados o la clave
@@ -548,9 +563,11 @@ const CashierView = () => {
     fetchStatus();
 
     const interval = setInterval(() => {
-      statusRef.current?.();
-      tablesRef.current?.();
-    }, 8000);
+      if (currentPageRef.current === 1) {
+        statusRef.current?.();
+        tablesRef.current?.();
+      }
+    }, 10000);
 
     window.addEventListener('refreshCashCount', handleCashRefresh);
     window.addEventListener('refreshTables', handleTablesRefresh);
@@ -759,7 +776,7 @@ const CashierView = () => {
     );
   }, [history, searchQuery]);
 
-  const totalPages = history?.meta?.totalPages || 1;
+  const totalPages = history?.meta?.totalPages || lastKnownTotalPagesRef.current || 1;
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -1476,10 +1493,24 @@ const CashierView = () => {
                   </tr>
                 </thead>
                 <tbody className="text-xs">
-                  {historyLoading && (!history?.data || history.data.length === 0) ? (
+                  {connectionError ? (
+                    <tr>
+                      <td colSpan={9} className="py-10 text-center font-medium">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <span className="text-rose-500 font-semibold font-sans">Error al conectar con el servidor para la página {currentPage}.</span>
+                          <button
+                            onClick={() => { setConnectionError(false); fetchHistory(); }}
+                            className="px-3.5 py-1.5 rounded-lg bg-[var(--primary)] text-white text-xs font-semibold cursor-pointer hover:opacity-90 transition-opacity font-sans"
+                          >
+                            Reintentar carga
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : historyLoading && (!history?.data || history.data.length === 0) ? (
                     <tr>
                       <td colSpan={9} className="py-10 text-center text-sm text-[var(--text-muted)] font-medium">
-                        Cargando sesiones de caja...
+                        Cargando sesiones de caja... (Página {currentPage})
                       </td>
                     </tr>
                   ) : !history?.data || history.data.length === 0 ? (

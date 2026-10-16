@@ -9,6 +9,7 @@ export function PaloteoModal({ isOpen, onClose, arqueoId }) {
   const [paloteoData, setPaloteoData] = useState(null);
 
   useEffect(() => {
+    let isCurrent = true;
     if (isOpen && arqueoId) {
       setLoading(true);
       setPaloteoData(null);
@@ -17,28 +18,37 @@ export function PaloteoModal({ isOpen, onClose, arqueoId }) {
         try {
           if (networkStatus.isOffline()) {
             const data = await offlineCashService.getArqueoDetails(arqueoId);
-            setPaloteoData(data);
+            if (isCurrent) setPaloteoData(data);
           } else {
             const res = await fetch(`/api/cashier/arqueo/${arqueoId}`);
             if (res.ok) {
               const data = await res.json();
-              setPaloteoData(data);
+              if (isCurrent) setPaloteoData(data);
             } else {
-              showToast('Error al obtener los detalles del paloteo.', 'error');
-              onClose();
+              if (isCurrent) {
+                showToast('Error al obtener los detalles del paloteo.', 'error');
+                onClose();
+              }
             }
           }
         } catch (err) {
           console.error('[PaloteoModal] Error cargando paloteo:', err);
-          showToast('Error al obtener los detalles del paloteo.', 'error');
-          onClose();
+          if (isCurrent) {
+            showToast('Error al obtener los detalles del paloteo.', 'error');
+            onClose();
+          }
         } finally {
-          setLoading(false);
+          if (isCurrent) {
+            setLoading(false);
+          }
         }
       };
 
       loadData();
     }
+    return () => {
+      isCurrent = false;
+    };
   }, [isOpen, arqueoId, showToast, onClose]);
 
   if (!isOpen) return null;

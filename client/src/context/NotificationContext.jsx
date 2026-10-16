@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { CheckCircle, XCircle, Info, X } from 'lucide-react';
 
 const NotificationContext = createContext();
@@ -7,7 +7,7 @@ export const NotificationProvider = ({ children }) => {
     const [toast, setToast] = useState(null);
     const [isExiting, setIsExiting] = useState(false);
 
-    const showToast = (message, type = 'success') => {
+    const showToast = useCallback((message, type = 'success') => {
         setIsExiting(false);
         setToast({ message, type });
         
@@ -21,15 +21,15 @@ export const NotificationProvider = ({ children }) => {
             setToast(null);
             setIsExiting(false);
         }, 3350);
-    };
+    }, []);
 
-    const closeToast = () => {
+    const closeToast = useCallback(() => {
         setIsExiting(true);
         setTimeout(() => {
             setToast(null);
             setIsExiting(false);
         }, 350);
-    };
+    }, []);
 
     return (
         <NotificationContext.Provider value={{ showToast }}>
