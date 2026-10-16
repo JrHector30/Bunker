@@ -3433,7 +3433,7 @@ app.get('/api/cashier/history', async (req, res) => {
         });
     } catch (error) {
         console.error('❌ Error en /api/cashier/history:', error);
-        res.json({ data: [], meta: { total: 0, page: 1, totalPages: 1 } });
+        res.status(500).json({ error: error.message, data: [], meta: { total: 0, page: 1, totalPages: 1 } });
     }
 });
 

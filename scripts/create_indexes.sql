@@ -10,3 +10,9 @@ CREATE INDEX IF NOT EXISTS idx_recetainsumo_platoId ON "RecetaInsumo"("platoId")
 CREATE INDEX IF NOT EXISTS idx_recetainsumo_insumoId ON "RecetaInsumo"("insumoId");
 CREATE INDEX IF NOT EXISTS idx_movimientoinsumo_insumoId ON "MovimientoInsumo"("insumoId");
 CREATE INDEX IF NOT EXISTS idx_movimientoinsumo_usuarioId ON "MovimientoInsumo"("usuarioId");
+
+-- Índices de alto rendimiento para el módulo de Caja y Arqueos
+CREATE INDEX IF NOT EXISTS idx_comanda_estado_fecha ON "Comanda"("estado", "fecha");
+CREATE INDEX IF NOT EXISTS idx_comanda_fecha ON "Comanda"("fecha");
+CREATE INDEX IF NOT EXISTS idx_movimientocaja_arqueoid ON "MovimientoCaja"("arqueoId");
+CREATE INDEX IF NOT EXISTS idx_arqueo_fechainicio ON "Arqueo"("fechaInicio" DESC);

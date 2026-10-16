@@ -518,11 +518,30 @@ const CashierView = () => {
     historyRef.current = fetchHistory;
   });
 
+  const currentPageRef = useRef(currentPage);
+  const searchQueryRef = useRef(searchQuery);
+  const filterDateRangeRef = useRef(filterDateRange);
   useEffect(() => {
-    const handleRefresh = () => {
+    currentPageRef.current = currentPage;
+    searchQueryRef.current = searchQuery;
+    filterDateRangeRef.current = filterDateRange;
+  }, [currentPage, searchQuery, filterDateRange]);
+
+  useEffect(() => {
+    // Actualización ligera cuando mozos o cocina modifican mesas en el salón
+    const handleTablesRefresh = () => {
       statusRef.current?.();
       tablesRef.current?.();
-      historyRef.current?.();
+    };
+
+    // Actualización cuando se realiza un cobro o movimiento de caja explícito
+    const handleCashRefresh = () => {
+      statusRef.current?.();
+      tablesRef.current?.();
+      // Solo refrescar historial si estamos en la página inicial sin búsqueda para no desestabilizar la navegación
+      if (currentPageRef.current === 1 && !searchQueryRef.current && !filterDateRangeRef.current?.from) {
+        historyRef.current?.();
+      }
     };
 
     fetchTables(); // immediate query
@@ -533,15 +552,17 @@ const CashierView = () => {
       tablesRef.current?.();
     }, 8000);
 
-    window.addEventListener('refreshCashCount', handleRefresh);
-    window.addEventListener('refreshTables', handleRefresh);
+    window.addEventListener('refreshCashCount', handleCashRefresh);
+    window.addEventListener('refreshTables', handleTablesRefresh);
 
     let channel = null;
     try {
       channel = new BroadcastChannel('bunker');
       channel.onmessage = (event) => {
-        if (event.data === 'refreshCashCount' || event.data === 'refreshTables') {
-          handleRefresh();
+        if (event.data === 'refreshCashCount') {
+          handleCashRefresh();
+        } else if (event.data === 'refreshTables') {
+          handleTablesRefresh();
         }
       };
     } catch (e) {
@@ -550,8 +571,8 @@ const CashierView = () => {
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('refreshCashCount', handleRefresh);
-      window.removeEventListener('refreshTables', handleRefresh);
+      window.removeEventListener('refreshCashCount', handleCashRefresh);
+      window.removeEventListener('refreshTables', handleTablesRefresh);
       if (channel) {
         channel.close();
       }
