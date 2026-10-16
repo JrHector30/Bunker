@@ -651,8 +651,8 @@ app.get('/api/categories', async (req, res) => {
         });
         res.json(categories);
     } catch (error) {
-        console.error('❌ Error controlado en /api/categories:', error);
-        res.json([]); // Retorno seguro para evitar pantalla negra y crash del servidor
+        console.error('❌ Error en /api/categories:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -737,7 +737,7 @@ app.get('/api/products', async (req, res) => {
         res.json(products);
     } catch (e) {
         console.error("Error fetching products:", e);
-        res.status(500).json([]);
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -3750,7 +3750,7 @@ app.get('/api/insumos', async (req, res) => {
         res.json(insumos);
     } catch (e) {
         console.error("Error fetching insumos:", e);
-        res.status(500).json([]);
+        res.status(500).json({ error: e.message });
     }
 });
 

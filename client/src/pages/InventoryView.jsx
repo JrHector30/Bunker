@@ -40,11 +40,23 @@ const InventoryView = () => {
         setSearchParams({ tab: newTab });
     };
 
-    // Data States from Cache
-    const fetchProductsAPI = () => fetch('/api/products').then(res => res.json());
-    const fetchCategoriesAPI = () => fetch('/api/categories').then(res => res.json());
-    const fetchInsumosAPI = () => fetch('/api/insumos').then(res => res.json());
-    const fetchKardexAPI = () => fetch('/api/kardex').then(res => res.json());
+    // Data States from Cache con validación estricta de res.ok
+    const fetchProductsAPI = () => fetch('/api/products').then(res => {
+        if (!res.ok) throw new Error('Error al cargar productos');
+        return res.json();
+    });
+    const fetchCategoriesAPI = () => fetch('/api/categories').then(res => {
+        if (!res.ok) throw new Error('Error al cargar categorías');
+        return res.json();
+    });
+    const fetchInsumosAPI = () => fetch('/api/insumos').then(res => {
+        if (!res.ok) throw new Error('Error al cargar insumos');
+        return res.json();
+    });
+    const fetchKardexAPI = () => fetch('/api/kardex').then(res => {
+        if (!res.ok) throw new Error('Error al cargar kardex');
+        return res.json();
+    });
 
     const { data: products, mutate: refetchProducts } = useCache('products', fetchProductsAPI, []);
     const { data: categories, mutate: refetchCategories } = useCache('categories', fetchCategoriesAPI, []);
