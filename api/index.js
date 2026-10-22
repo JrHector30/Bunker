@@ -3188,6 +3188,7 @@ app.post('/api/cashier/toggle', async (req, res) => {
                     fechaInicio: new Date()
                 }
             });
+            closedArqueoCache.clear();
             return res.json({ message: "Caja Abierta", arqueo: newArqueo });
         } else {
             // CLOSE EXISTING SHIFT
@@ -3217,6 +3218,7 @@ app.post('/api/cashier/toggle', async (req, res) => {
                     // We could update final amounts here too if we want to freeze them
                 }
             });
+            closedArqueoCache.clear();
             return res.json({ message: "Caja Cerrada", arqueo: closedArqueo });
         }
     } catch (e) {
@@ -3225,10 +3227,13 @@ app.post('/api/cashier/toggle', async (req, res) => {
     }
 });
 
+// In-memory cache for immutable closed arqueo calculations
+const closedArqueoCache = new Map();
+
 // History Endpoint (Paginated & Filtered)
 app.get('/api/cashier/history', async (req, res) => {
     try {
-        const { date, startDate, endDate, search, page = 1, limit = 5 } = req.query;
+        const { date, startDate, endDate, search, page = 1, limit = 100 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const take = parseInt(limit);
 
@@ -3355,38 +3360,44 @@ app.get('/api/cashier/history', async (req, res) => {
         }) : [];
         const userMap = new Map(users.map(u => [u.id, u.nombre]));
 
-        // 2. Determine global min/max date range across the paginated arqueos to fetch all closed comandas at once
-        const minDate = new Date(Math.min(...arqueos.map(a => (a.fechaInicio ? new Date(a.fechaInicio).getTime() : 0))));
-        const maxDate = new Date(Math.max(...arqueos.map(a => (a.estado === 'abierto' || !a.fechaFin) ? Date.now() : new Date(a.fechaFin).getTime())));
+        // 2. Filter arqueos that need calculation (skip immutable cached closed arqueos)
+        const unCachedArqueos = arqueos.filter(a => a.estado === 'abierto' || !closedArqueoCache.has(a.id));
+        let allComandasCerradas = [];
+        let pendingOrders = [];
 
-        const hasAbierto = arqueos.some(a => a.estado === 'abierto');
+        if (unCachedArqueos.length > 0) {
+            const minDate = new Date(Math.min(...unCachedArqueos.map(a => (a.fechaInicio ? new Date(a.fechaInicio).getTime() : 0))));
+            const maxDate = new Date(Math.max(...unCachedArqueos.map(a => (a.estado === 'abierto' || !a.fechaFin) ? Date.now() : new Date(a.fechaFin).getTime())));
+            const hasAbierto = unCachedArqueos.some(a => a.estado === 'abierto');
 
-        // 3. Run comanda queries in batch (only 1 or 2 fast queries total instead of 20+)
-        const [allComandasCerradas, pendingOrders] = await Promise.all([
-            prisma.comanda.findMany({
-                where: {
-                    estado: 'cerrada',
-                    fecha: { gte: minDate, lte: maxDate }
-                },
-                select: {
-                    fecha: true,
-                    metodoPago: true,
-                    propina: true,
-                    detalles: {
-                        select: {
-                            cantidad: true,
-                            plato: { select: { precio: true } }
+            const [comandas, pending] = await Promise.all([
+                prisma.comanda.findMany({
+                    where: {
+                        estado: 'cerrada',
+                        fecha: { gte: minDate, lte: maxDate }
+                    },
+                    select: {
+                        fecha: true,
+                        metodoPago: true,
+                        propina: true,
+                        detalles: {
+                            select: {
+                                cantidad: true,
+                                plato: { select: { precio: true } }
+                            }
                         }
                     }
-                }
-            }),
-            hasAbierto
-                ? prisma.comanda.findMany({
-                    where: { estado: { notIn: ['cerrada', 'anulada'] } },
-                    include: { detalles: { where: { estado: { not: 'anulado' } }, include: { plato: true } } }
-                })
-                : Promise.resolve([])
-        ]);
+                }),
+                hasAbierto
+                    ? prisma.comanda.findMany({
+                        where: { estado: { notIn: ['cerrada', 'anulada'] } },
+                        include: { detalles: { where: { estado: { not: 'anulado' } }, include: { plato: true } } }
+                    })
+                    : Promise.resolve([])
+            ]);
+            allComandasCerradas = comandas;
+            pendingOrders = pending;
+        }
 
         const parsePaymentMethod = (metodoPago) => {
             const m = (metodoPago || 'efectivo').toLowerCase();
@@ -3399,6 +3410,9 @@ app.get('/api/cashier/history', async (req, res) => {
         };
 
         const historyData = arqueos.map(arq => {
+            if (arq.estado === 'cerrado' && closedArqueoCache.has(arq.id)) {
+                return closedArqueoCache.get(arq.id);
+            }
             const startDate = arq.fechaInicio ? new Date(arq.fechaInicio) : new Date(0);
             const endDate = (arq.estado === 'abierto' || !arq.fechaFin) ? new Date() : new Date(arq.fechaFin);
             const isAbierto = arq.estado === 'abierto';
@@ -3464,7 +3478,7 @@ app.get('/api/cashier/history', async (req, res) => {
 
             const userName = userMap.get(arq.usuarioId) || 'Hector';
 
-            return {
+            const result = {
                 id: arq.id,
                 fechaInicio: arq.fechaInicio,
                 fechaFin: arq.fechaFin,
@@ -3478,6 +3492,12 @@ app.get('/api/cashier/history', async (req, res) => {
                 totalPendiente,
                 usuario: { nombre: userName }
             };
+
+            if (arq.estado === 'cerrado') {
+                closedArqueoCache.set(arq.id, result);
+            }
+
+            return result;
         });
 
         res.json({

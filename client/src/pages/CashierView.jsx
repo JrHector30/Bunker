@@ -275,11 +275,6 @@ const CashierView = () => {
       }
 
       const totalCount = filtered.length;
-      const limit = 5;
-      const totalPages = Math.ceil(totalCount / limit) || 1;
-
-      const startIndex = (currentPage - 1) * limit;
-      const paginated = filtered.slice(startIndex, startIndex + limit);
 
       const [allOrders, allOrderItems, allProducts, allMovements] = await Promise.all([
         db.orders.toArray(),
@@ -308,7 +303,7 @@ const CashierView = () => {
         return 'efectivo';
       };
 
-      const data = paginated.map(arq => {
+      const data = filtered.map(arq => {
         const startDate = new Date(arq.fechaInicio);
         const endDate = arq.estado === 'abierto' ? new Date() : new Date(arq.fechaFin || arq.fechaInicio);
         const movements = allMovements.filter(m => m.arqueoId === arq.id);
@@ -428,9 +423,8 @@ const CashierView = () => {
   }, [currentPage, filterDateRange, searchQuery, user]);
 
   const abortControllerRef = useRef(null);
-  const lastKnownTotalPagesRef = useRef(1);
 
-  // API Call: Fetch historical sessions list
+  // API Call: Fetch complete historical dataset once for instant client-side pagination
   const historyFetcher = useCallback(async () => {
     if (networkStatus.isOffline()) {
       setConnectionError(false);
@@ -443,10 +437,7 @@ const CashierView = () => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    let url = `/api/cashier/history?page=${currentPage}&limit=5&_t=${Date.now()}`;
-    if (searchQuery) {
-      url += `&search=${encodeURIComponent(searchQuery)}`;
-    }
+    let url = `/api/cashier/history?limit=100&_t=${Date.now()}`;
     if (filterDateRange?.from) {
       const startStr = format(filterDateRange.from, 'yyyy-MM-dd');
       if (filterDateRange.to) {
@@ -462,32 +453,28 @@ const CashierView = () => {
       if (!res.ok) throw new Error('Error al conectar con el servidor');
       const data = await res.json();
       setConnectionError(false);
-      if (data?.meta?.totalPages) {
-        lastKnownTotalPagesRef.current = data.meta.totalPages;
-      }
       return data;
     } catch (err) {
       if (err.name === 'AbortError') {
-        return { data: [], meta: { page: currentPage, totalPages: lastKnownTotalPagesRef.current || 1 } };
+        return { data: [], meta: { page: 1, totalPages: 1 } };
       }
       console.error('[CashierView] historyFetcher falló:', err);
       setConnectionError(true);
-      throw err; // Re-lanzar para conservar los últimos datos válidos en useCache
+      throw err;
     }
-  }, [currentPage, filterDateRange, searchQuery, loadHistoryLocal]);
+  }, [filterDateRange, loadHistoryLocal]);
 
   const historyKey = useMemo(() => {
-    const searchPart = searchQuery ? `_search_${searchQuery}` : '';
-    if (!filterDateRange?.from) return `cashier_history_${currentPage}_none${searchPart}`;
+    if (!filterDateRange?.from) return 'cashier_history_dataset';
     const startStr = format(filterDateRange.from, 'yyyy-MM-dd');
     const endStr = filterDateRange.to ? format(filterDateRange.to, 'yyyy-MM-dd') : '';
-    return `cashier_history_${currentPage}_${startStr}_${endStr}${searchPart}`;
-  }, [currentPage, filterDateRange, searchQuery]);
+    return `cashier_history_${startStr}_${endStr}`;
+  }, [filterDateRange]);
 
   const { data: history, loading: historyLoading, mutate: fetchHistory } = useCache(
     historyKey,
     historyFetcher,
-    { data: [], meta: { page: currentPage, totalPages: lastKnownTotalPagesRef.current || 1 } }
+    { data: [], meta: { page: 1, totalPages: 1 } }
   );
 
   // Sync selected arqueo ID cuando cambian los datos cargados o la clave
@@ -763,7 +750,7 @@ const CashierView = () => {
 
   // Removed formatDate helper from here (moved to top of file)
 
-  // SEARCH AND FILTER HISTORY
+  // SEARCH AND FILTER HISTORY (Instant Client-side Search Across Complete Dataset)
   const filteredHistory = useMemo(() => {
     const data = history?.data || [];
     if (!searchQuery) return data;
@@ -776,7 +763,19 @@ const CashierView = () => {
     );
   }, [history, searchQuery]);
 
-  const totalPages = history?.meta?.totalPages || lastKnownTotalPagesRef.current || 1;
+  const ITEMS_PER_PAGE = 5;
+  const totalPages = Math.max(1, Math.ceil(filteredHistory.length / ITEMS_PER_PAGE));
+
+  const paginatedHistory = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredHistory.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredHistory, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -1520,7 +1519,7 @@ const CashierView = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredHistory.map((arq) => {
+                    paginatedHistory.map((arq) => {
                       const isSelected = arq.id === selectedArqueoId;
                       const isActiveSession = arq.estado === 'abierto';
 
@@ -1658,7 +1657,7 @@ const CashierView = () => {
                             <div className="flex justify-center items-center h-10">
                               <SmoothDropdown
                                 id={arq.id}
-                                dropUp={filteredHistory.indexOf(arq) >= filteredHistory.length - 2}
+                                dropUp={paginatedHistory.indexOf(arq) >= paginatedHistory.length - 2}
                                 items={cashierActions}
                                 onAction={(actionId) => handleRowAction(actionId, arq.id)}
                               />
@@ -1675,7 +1674,7 @@ const CashierView = () => {
             {/* Pagination controls */}
             {totalPages > 1 && (
               <div className="p-3 bg-transparent flex items-center justify-between text-xs text-[var(--text-muted)] font-sans animate-fade-in" style={{ borderTop: '1px solid var(--table-row-border)' }}>
-                <span className="font-medium">Total de Arqueos: {history?.meta?.totalItems || filteredHistory.length}</span>
+                <span className="font-medium">Total de Arqueos: {filteredHistory.length}</span>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handlePrevPage}
