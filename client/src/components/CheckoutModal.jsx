@@ -3,6 +3,7 @@ import { X, DollarSign, Smartphone, CreditCard, Receipt, Printer, ArrowRight, Ch
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { setOptimisticLock } from '../hooks/useCache';
+import { enqueueTicket } from '../utils/printer';
 import { networkStatus, NetworkState, offlineCheckoutService, offlineSnapshotService, resolveItemPrice, db } from '../offline';
 
 export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
@@ -228,6 +229,47 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
     if (await showConfirmation(titleMsg, { type: 'warning' })) {
       const targetTableId = order.mesaId || order.tableId || order.id;
 
+      // Prepare receipt printing payload
+      const rawTableNum = order.tableNumero || order.mesa?.numero || targetTableId;
+      const tableName = String(rawTableNum).toLowerCase().startsWith('mesa') 
+        ? String(rawTableNum) 
+        : `Mesa ${rawTableNum}`;
+      const cashierOrWaiter = order.usuario?.nombre || 'Caja';
+      const activeDetails = (order.detalles || []).filter(d => d.estado !== 'anulado');
+      const items = activeDetails.map(d => ({
+        cantidad: d.cantidad,
+        nombre: d.plato?.nombre || 'Producto',
+        precio: resolveItemPrice(d) ?? (d.plato?.precio || 0)
+      }));
+
+      const receiptPayload = {
+        type: 'comprobante',
+        tipoComprobante: comprobanteTipo,
+        mesaId: tableName,
+        items: items,
+        subtotal: subtotal,
+        propina: propinaMonto,
+        total: totalFinal,
+        metodoPago: resolvedPaymentMethod,
+        montoRecibido: metodo === 'efectivo' ? paidAmountNum : totalFinal,
+        vuelto: metodo === 'efectivo' ? vuelto : 0,
+        cliente: comprobanteTipo !== 'Ticket' ? (razonSocial || 'Cliente General') : null,
+        docTipo: comprobanteTipo !== 'Ticket' ? docTipo : null,
+        docNumero: comprobanteTipo !== 'Ticket' ? docNumero : null,
+        direccionFiscal: comprobanteTipo !== 'Ticket' ? direccionFiscal : null
+      };
+
+      const printReceipt = async () => {
+        if (!imprimirTicket) return;
+        try {
+          await enqueueTicket(tableName, cashierOrWaiter, receiptPayload, 'Caja');
+          showToast('Comprobante enviado a la ticketera de Caja.', 'success');
+        } catch (printErr) {
+          console.error('[CheckoutModal] Error al imprimir comprobante:', printErr);
+          showToast(`Error al imprimir comprobante: ${printErr.message}`, 'warning');
+        }
+      };
+
       // Close modal and refresh UI instantly (Optimistic)
       onSuccess();
 
@@ -261,6 +303,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
         })
           .then(() => {
             showToast('Pago registrado correctamente (Fallback Offline).', 'success');
+            if (imprimirTicket) printReceipt();
             if (enviarWhatsapp) sendWhatsAppReceipt();
             window.dispatchEvent(new CustomEvent('refreshCashCount'));
             window.dispatchEvent(new CustomEvent('refreshTables'));
@@ -317,6 +360,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
           .then(async res => {
             if (res.ok) {
               showToast('Pago registrado correctamente.', 'success');
+              if (imprimirTicket) printReceipt();
               if (enviarWhatsapp) sendWhatsAppReceipt();
               // Hidratar balance y mesas de fondo (omitiendo productos para mayor velocidad)
               offlineSnapshotService.hydrateOperationalSnapshot({ skipProducts: true }).catch(() => {});

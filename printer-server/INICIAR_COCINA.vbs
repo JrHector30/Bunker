@@ -8,6 +8,9 @@ strFolder = objFSO.GetParentFolderName(strPath)
 ' Cambiar el directorio de trabajo a la carpeta printer-server
 WshShell.CurrentDirectory = strFolder
 
+' Asegurar que Node.js esté en el PATH aunque se haya instalado recientemente
+WshShell.Environment("Process")("PATH") = WshShell.Environment("Process")("PATH") & ";C:\Program Files\nodejs;C:\Program Files (x86)\nodejs"
+
 ' Establecer la estación a Cocina
 WshShell.Environment("Process")("STATION_ID") = "Cocina"
 

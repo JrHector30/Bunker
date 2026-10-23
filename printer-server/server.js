@@ -40,16 +40,18 @@ lockServer.on('error', (err) => {
   }
 });
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL || "postgresql://postgres:71367006Hq.2026@db.iyskqnlikuwatulyotcb.supabase.co:5432/postgres";
 
-if (!databaseUrl) {
-  console.error("❌ Error: DATABASE_URL no está definido en el archivo .env del proyecto principal.");
-  process.exit(1);
-}
+// Fallback de conexión directa a IP para evitar errores de DNS (getaddrinfo ENOENT) en Windows
+const SUPABASE_HOST = 'db.iyskqnlikuwatulyotcb.supabase.co';
+const SUPABASE_DIRECT_IPV6 = '2600:1f14:131e:fd00:c121:2812:82a0:48f6';
+const connectionString = databaseUrl.includes(SUPABASE_HOST) 
+  ? databaseUrl.replace(SUPABASE_HOST, `[${SUPABASE_DIRECT_IPV6}]`)
+  : databaseUrl;
 
 // Inicializar Pool de conexiones a PostgreSQL
 const pool = new Pool({
-  connectionString: databaseUrl,
+  connectionString,
   ssl: {
     rejectUnauthorized: false // Requerido para conexiones externas de Supabase
   }
@@ -265,9 +267,103 @@ function formatTicket(ticket, lineWidth) {
     return formatArqueo(ticket, lineWidth);
   } else if (type === 'precuenta') {
     return formatPrecuenta(ticket, lineWidth);
+  } else if (type === 'comprobante' || type === 'boleta' || type === 'factura' || type === 'ticket') {
+    return formatComprobante(ticket, lineWidth);
   } else {
     return formatComanda(ticket, lineWidth);
   }
+}
+
+function formatComprobante(ticket, lineWidth) {
+  const dateStr = new Date(ticket.creado_a || Date.now()).toLocaleString('es-PE');
+  const data = ticket.contenido || {};
+  const separatorDouble = "=".repeat(lineWidth) + "\n";
+  const separatorSingle = "-".repeat(lineWidth) + "\n";
+  const center = (str) => {
+    const pad = Math.max(0, Math.floor((lineWidth - str.length) / 2));
+    return " ".repeat(pad) + str + "\n";
+  };
+  const alignLR = (left, right) => {
+    const pad = lineWidth - left.length - right.length;
+    return left + " ".repeat(Math.max(1, pad)) + right + "\n";
+  };
+
+  const rawTipo = String(data.tipoComprobante || 'TICKET DE VENTA').toUpperCase();
+  let tituloDoc = "TICKET DE VENTA";
+  if (rawTipo.includes('BOLETA')) tituloDoc = "BOLETA DE VENTA";
+  if (rawTipo.includes('FACTURA')) tituloDoc = "FACTURA ELECTRÓNICA";
+
+  let text = "";
+  text += separatorDouble;
+  text += center("BUNKER RESTOBAR");
+  text += center(tituloDoc);
+  text += separatorDouble;
+  text += `FECHA: ${dateStr}\n`;
+  if (ticket.mesa_id) {
+    const mesaLabel = String(ticket.mesa_id).toUpperCase().startsWith('MESA') 
+      ? ticket.mesa_id.toUpperCase() 
+      : `MESA ${ticket.mesa_id}`;
+    text += `${mesaLabel}\n`;
+  }
+  if (ticket.mozo) {
+    text += `ATENDIDO: ${ticket.mozo.toUpperCase()}\n`;
+  }
+
+  // Información del cliente si aplica
+  if (data.cliente || data.razonSocial) {
+    text += `CLIENTE: ${(data.razonSocial || data.cliente).toUpperCase()}\n`;
+  }
+  if (data.docNumero || data.documentoCliente) {
+    const num = data.docNumero || data.documentoCliente;
+    const docLabel = (data.docTipo || (String(num).length === 11 ? 'RUC' : 'DNI')).toUpperCase();
+    text += `${docLabel}: ${num}\n`;
+  }
+  if (data.direccionFiscal) {
+    text += `DIREC: ${data.direccionFiscal.toUpperCase()}\n`;
+  }
+
+  text += separatorSingle;
+  text += alignLR("CAN  PRODUCTO", "TOTAL");
+  text += separatorSingle;
+
+  const items = Array.isArray(data.items) ? data.items : [];
+  items.forEach(item => {
+    const qty = String(item.cantidad).padEnd(4, ' ');
+    const totalVal = `S/ ${(Number(item.precio || 0) * Number(item.cantidad || 1)).toFixed(2)}`;
+    const nameWidth = lineWidth - 4 - totalVal.length - 1;
+    const name = (item.nombre || 'PRODUCTO').substring(0, nameWidth).toUpperCase().padEnd(nameWidth, ' ');
+    text += `${qty}${name} ${totalVal}\n`;
+  });
+
+  text += separatorSingle;
+
+  // Montos
+  if (data.subtotal !== undefined && Number(data.subtotal) > 0 && Number(data.propina || 0) > 0) {
+    text += alignLR("SUBTOTAL:", `S/ ${Number(data.subtotal).toFixed(2)}`);
+    text += alignLR("PROPINA:", `S/ ${Number(data.propina).toFixed(2)}`);
+  }
+  const totalStr = `S/ ${Number(data.total || 0).toFixed(2)}`;
+  text += alignLR("TOTAL A PAGAR:", totalStr);
+
+  text += separatorSingle;
+
+  // Medio de pago y vuelto
+  if (data.metodoPago) {
+    text += alignLR("MÉTODO DE PAGO:", String(data.metodoPago).toUpperCase());
+  }
+  if (data.montoRecibido && Number(data.montoRecibido) > 0 && String(data.metodoPago).toLowerCase() === 'efectivo') {
+    text += alignLR("MONTO RECIBIDO:", `S/ ${Number(data.montoRecibido).toFixed(2)}`);
+    if (data.vuelto !== undefined) {
+      text += alignLR("VUELTO:", `S/ ${Number(data.vuelto).toFixed(2)}`);
+    }
+  }
+
+  text += separatorSingle;
+  text += center("NO POSEE VALIDEZ FISCAL.");
+  text += center("¡MUCHAS GRACIAS POR SU PREFERENCIA!");
+  text += separatorDouble;
+  text += "\n";
+  return text;
 }
 
 function formatComanda(ticket, lineWidth) {
