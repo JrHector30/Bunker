@@ -301,7 +301,7 @@ function formatComanda(ticket, lineWidth) {
   });
 
   text += separatorSingle;
-  text += "\n\n"; // Avance de papel
+  text += "\n";
   return text;
 }
 
@@ -351,7 +351,7 @@ function formatPrecuenta(ticket, lineWidth) {
   text += center("NO POSEE VALIDEZ FISCAL.");
   text += center("¡MUCHAS GRACIAS POR SU PREFERENCIA!");
   text += separatorDouble;
-  text += "\n\n"; // Avance de papel
+  text += "\n";
   return text;
 }
 
@@ -421,7 +421,7 @@ function formatArqueo(ticket, lineWidth) {
   text += separatorSingle;
   text += center("NO POSEE VALIDEZ FISCAL.");
   text += separatorDouble;
-  text += "\n\n"; // Avance de papel
+  text += "\n";
   return text;
 }
 
@@ -574,9 +574,22 @@ async function checkAndPrintQueue() {
     }
 
     if (!activeDevice) {
-      // Si no hay impresora activa, no hacemos nada
-      isProcessing = false;
-      return;
+      // Fallback inteligente: si no se ha asignado aún en Ajustes, usar la primera impresora física de Windows (excluyendo PDF/Fax)
+      const winPrinters = await getWindowsPrinters();
+      const physicalPrinter = winPrinters.find(p => !p.name.match(/pdf|xps|onenote|fax|root|microsoft/i));
+      if (physicalPrinter) {
+        activeDevice = {
+          nombre: physicalPrinter.name,
+          medida: '80mm',
+          perfil: 'Generic',
+          transport: 'USB'
+        };
+        console.log(`ℹ️ [Auto-Fallback] Usando impresora detectada en el equipo: "${physicalPrinter.name}" para la estación "${STATION_ID}".`);
+      } else {
+        // Si no hay ninguna impresora disponible, salir silenciosamente
+        isProcessing = false;
+        return;
+      }
     }
 
     const printerName = activeDevice.nombre;
