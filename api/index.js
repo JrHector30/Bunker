@@ -2632,7 +2632,11 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
         const endDate = (arq.estado === 'abierto' || !arq.fechaFin) ? new Date() : arq.fechaFin;
 
         // Run queries in parallel
-        const [sales, movements, pendingOrders] = await Promise.all([
+        const [userObj, sales, movements, pendingOrders] = await Promise.all([
+            prisma.user.findUnique({
+                where: { id: arq.usuarioId },
+                select: { id: true, nombre: true, usuario: true }
+            }),
             prisma.comanda.findMany({
                 where: {
                     estado: 'cerrada',
@@ -2760,7 +2764,9 @@ app.get('/api/cashier/arqueo/:id', async (req, res) => {
             totalPropinas,
             propinasPorMozo: Object.values(propinasPorMozo),
             totalPendiente,
-            movimientos: movements
+            movimientos: movements,
+            usuario: userObj ? { id: userObj.id, nombre: userObj.nombre, usuario: userObj.usuario } : { id: arq.usuarioId, nombre: 'Hector' },
+            responsable: userObj ? userObj.nombre : 'Hector'
         });
 
     } catch (e) {

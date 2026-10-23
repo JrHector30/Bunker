@@ -20,7 +20,8 @@ types.setTypeParser(1114, function(stringValue) {
   return new Date(stringValue.replace(' ', 'T') + 'Z');
 });
 
-const STATION_ID = process.env.STATION_ID || 'Caja';
+const stationArg = process.argv.find(arg => arg && arg.startsWith('--station='))?.split('=')[1] || (process.argv[2] && !process.argv[2].startsWith('-') ? process.argv[2] : null);
+const STATION_ID = process.env.STATION_ID || stationArg || 'Caja';
 
 // Prevenir múltiples instancias de la misma estación en segundo plano utilizando un puerto de bloqueo dinámico
 const getLockPort = (station) => {
@@ -300,7 +301,7 @@ function formatComanda(ticket, lineWidth) {
   });
 
   text += separatorSingle;
-  text += "\n\n\n\n\n\n\n\n"; // Avance de papel
+  text += "\n\n"; // Avance de papel
   return text;
 }
 
@@ -350,7 +351,7 @@ function formatPrecuenta(ticket, lineWidth) {
   text += center("NO POSEE VALIDEZ FISCAL.");
   text += center("¡MUCHAS GRACIAS POR SU PREFERENCIA!");
   text += separatorDouble;
-  text += "\n\n\n\n\n\n\n\n"; // Avance de papel
+  text += "\n\n"; // Avance de papel
   return text;
 }
 
@@ -368,17 +369,26 @@ function formatArqueo(ticket, lineWidth) {
     return left + " ".repeat(Math.max(1, pad)) + right + "\n";
   };
 
+  const responsable = (
+    data.responsable ||
+    data.usuario?.nombre ||
+    (typeof data.usuario === 'string' ? data.usuario : '') ||
+    (ticket.mozo && ticket.mozo !== 'Caja' ? ticket.mozo : '') ||
+    'ADMINISTRACIÓN'
+  ).toUpperCase();
+
   let text = "";
   text += separatorDouble;
   text += center("BUNKER RESTOBAR");
   text += center("RESUMEN DE CAJA");
   text += separatorDouble;
-  text += `FECHA IMP: ${dateStr}\n`;
-  text += `TURNO N°:  ${data.id}\n`;
-  text += `ESTADO:    ${data.estado.toUpperCase()}\n`;
-  text += `INICIO:    ${new Date(data.fechaInicio).toLocaleString('es-PE')}\n`;
+  text += `FECHA IMP:   ${dateStr}\n`;
+  text += `TURNO N°:    ${data.id}\n`;
+  text += `RESPONSABLE: ${responsable}\n`;
+  text += `ESTADO:      ${data.estado.toUpperCase()}\n`;
+  text += `INICIO:      ${new Date(data.fechaInicio).toLocaleString('es-PE')}\n`;
   if (data.fechaFin) {
-    text += `CIERRE:    ${new Date(data.fechaFin).toLocaleString('es-PE')}\n`;
+    text += `CIERRE:      ${new Date(data.fechaFin).toLocaleString('es-PE')}\n`;
   }
   text += alignLR("M. INICIAL:", `S/. ${(data.montoInicial || 0).toFixed(2)}`);
   text += separatorSingle;
@@ -411,7 +421,7 @@ function formatArqueo(ticket, lineWidth) {
   text += separatorSingle;
   text += center("NO POSEE VALIDEZ FISCAL.");
   text += separatorDouble;
-  text += "\n\n\n\n\n\n\n\n"; // Avance de papel
+  text += "\n\n"; // Avance de papel
   return text;
 }
 
@@ -573,11 +583,9 @@ async function checkAndPrintQueue() {
     const paperSize = activeDevice.medida || '80mm';
 
     // Determinar ancho de línea en caracteres monoespacio
-    let lineWidth = 42; // por defecto 80mm
-    if (paperSize === '58mm') {
-      lineWidth = 32;
-    } else if (paperSize === '50mm') {
-      lineWidth = 28;
+    let lineWidth = 48; // estándar 80mm (Font A 48 columnas completo)
+    if ((paperSize === '58mm' || paperSize === '50mm') && !printerName.toLowerCase().includes('80mm')) {
+      lineWidth = paperSize === '50mm' ? 28 : 32;
     }
 
     // 2. Obtener tickets pendientes asignados a esta estación ordenados cronológicamente

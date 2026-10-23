@@ -8,8 +8,11 @@ strFolder = objFSO.GetParentFolderName(strPath)
 ' Cambiar el directorio de trabajo a la carpeta printer-server
 WshShell.CurrentDirectory = strFolder
 
-' Iniciar el servidor de impresion invisible (0 = sin ventana, false = no esperar)
-WshShell.Run "cmd.exe /c node server.js", 0, false
+' Establecer la estación a Cocina
+WshShell.Environment("Process")("STATION_ID") = "Cocina"
+
+' Iniciar el servidor de impresion invisible como estacion Cocina (0 = sin ventana, false = no esperar)
+WshShell.Run "cmd.exe /c set STATION_ID=Cocina&& node server.js Cocina", 0, false
 
 ' Mostrar globo de confirmacion (opcional)
 Set objShell = CreateObject("WScript.Shell")

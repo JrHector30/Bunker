@@ -1,8 +1,8 @@
-# BunkerTray.ps1 - Bandeja de Sistema para Servidor de Impresión y Backend de Bunker
+﻿# BunkerTray.ps1 - Bandeja de Sistema para Servidor de Impresion y Backend de Bunker
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-# Control de Instancia Única mediante Mutex Global
+# Control de Instancia Unica mediante Mutex Global
 $createdNew = $false
 $mutex = New-Object System.Threading.Mutex($true, "Global\BunkerPOSTrayMutex", [ref]$createdNew)
 if (-not $createdNew) {
@@ -36,29 +36,30 @@ if (Test-Path $pngPath) {
 
 # Funciones de control de procesos
 function Stop-BunkerProcesses {
-    # Puertos: 3000 (backend) y 19999 (impresora)
-    $ports = @(3000, 19999)
     $killedCount = 0
-    foreach ($port in $ports) {
-        $connections = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
-        if ($connections) {
-            $pids = $connections | Select-Object -ExpandProperty OwningProcess | Unique
-            foreach ($pid in $pids) {
-                Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
-                $killedCount++
-            }
+    # 1. Puertos: 3000 (backend) y rango 19900..19999 (servidor de impresion)
+    $conns = Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -eq 3000 -or ($_.LocalPort -ge 19900 -and $_.LocalPort -le 19999) }
+    if ($conns) {
+        $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique
+        foreach ($p in $pids) {
+            Stop-Process -Id $p -Force -ErrorAction SilentlyContinue
+            $killedCount++
         }
+    }
+    # 2. Detener procesos node que ejecuten printer-server/server.js o api/index.js
+    $targetProcs = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*printer-server*server.js*" -or $_.CommandLine -like "*api*index.js*" }
+    foreach ($p in $targetProcs) {
+        Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
+        $killedCount++
     }
     return $killedCount
 }
 
 function Start-BunkerProcesses {
     if (Test-Path $vbsPath) {
-        # Ejecutar el VBS en segundo plano
         Start-Process -FilePath "wscript.exe" -ArgumentList "`"$vbsPath`"" -WindowStyle Hidden
     } else {
-        # Fallback de ejecución directa de cmd
-        Start-Process -FilePath "cmd.exe" -ArgumentList "/c node api/index.js" -WorkingDirectory $scriptDir -WindowStyle Hidden
+        Start-Process -FilePath "cmd.exe" -ArgumentList "/c node printer-server/server.js" -WorkingDirectory $scriptDir -WindowStyle Hidden
     }
 }
 
@@ -66,23 +67,32 @@ function Get-BunkerStatus {
     $backendActive = $false
     $printerActive = $false
     
-    # Comprobar puerto 3000
-    if (Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue) {
+    # Comprobar backend local (puerto 3000)
+    if (Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue) {
         $backendActive = $true
     }
-    # Comprobar puerto 19999
-    if (Get-NetTCPConnection -LocalPort 19999 -ErrorAction SilentlyContinue) {
+    
+    # Comprobar servidor de impresion:
+    # 1) Revisa puertos de bloqueo de estacion (19900..19999)
+    $lockConn = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -ge 19900 -and $_.LocalPort -le 19999 }
+    # 2) O proceso activo de node ejecutando server.js
+    $printerProc = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*printer-server*server.js*" }
+    
+    if ($lockConn -or $printerProc) {
         $printerActive = $true
     }
     
+    $printerStatusText = if ($printerActive) { "ACTIVO (Listo para imprimir)" } else { "DETENIDO" }
+    $backendStatusText = if ($backendActive) { "ACTIVO (http://localhost:3000)" } else { "DETENIDO (o en la nube)" }
+    
     if ($backendActive -and $printerActive) {
-        return "Bunker está corriendo normalmente.`nBackend (Puerto 3000): ACTIVO`nImpresora (Puerto 19999): ACTIVO"
-    } elseif ($backendActive) {
-        return "Bunker parcialmente activo.`nBackend (Puerto 3000): ACTIVO`nImpresora (Puerto 19999): DETENIDO"
+        return "Bunker está corriendo al 100%.`n• Impresora (USB/Red): $printerStatusText`n• Backend Local: $backendStatusText"
     } elseif ($printerActive) {
-        return "Bunker parcialmente activo.`nBackend (Puerto 3000): DETENIDO`nImpresora (Puerto 19999): ACTIVO"
+        return "Bunker listo para imprimir.`n• Impresora (USB/Red): $printerStatusText`n• Backend Local: $backendStatusText"
+    } elseif ($backendActive) {
+        return "Bunker parcialmente activo.`n• Backend Local: $backendStatusText`n• Impresora (USB/Red): $printerStatusText"
     } else {
-        return "Bunker está completamente DETENIDO."
+        return "Bunker está completamente DETENIDO.`n• Impresora (USB/Red): DETENIDO`n• Backend Local: DETENIDO"
     }
 }
 
@@ -91,7 +101,7 @@ $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
 $statusItem = New-Object System.Windows.Forms.ToolStripMenuItem("Ver Estado", $null, {
     $status = Get-BunkerStatus
-    $notifyIcon.ShowBalloonTip(3000, "Estado de Bunker", $status, [System.Windows.Forms.ToolTipIcon]::Info)
+    $notifyIcon.ShowBalloonTip(4000, "Estado de Bunker", $status, [System.Windows.Forms.ToolTipIcon]::Info)
 })
 
 $startItem = New-Object System.Windows.Forms.ToolStripMenuItem("Iniciar Bunker POS", $null, {
@@ -99,7 +109,7 @@ $startItem = New-Object System.Windows.Forms.ToolStripMenuItem("Iniciar Bunker P
     Start-BunkerProcesses
     Start-Sleep -Seconds 3
     $status = Get-BunkerStatus
-    $notifyIcon.ShowBalloonTip(3000, "Estado de Bunker", $status, [System.Windows.Forms.ToolTipIcon]::Info)
+    $notifyIcon.ShowBalloonTip(4000, "Estado de Bunker", $status, [System.Windows.Forms.ToolTipIcon]::Info)
 })
 
 $stopItem = New-Object System.Windows.Forms.ToolStripMenuItem("Detener Bunker POS", $null, {
@@ -115,7 +125,7 @@ $restartItem = New-Object System.Windows.Forms.ToolStripMenuItem("Reiniciar Bunk
     Start-BunkerProcesses
     Start-Sleep -Seconds 3
     $status = Get-BunkerStatus
-    $notifyIcon.ShowBalloonTip(3000, "Estado de Bunker", $status, [System.Windows.Forms.ToolTipIcon]::Info)
+    $notifyIcon.ShowBalloonTip(4000, "Estado de Bunker", $status, [System.Windows.Forms.ToolTipIcon]::Info)
 })
 
 $exitItem = New-Object System.Windows.Forms.ToolStripMenuItem("Salir de la Bandeja", $null, {

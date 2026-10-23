@@ -67,11 +67,13 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
 
   const handlePrint = async () => {
     try {
+      const respName = summaryData.responsable || summaryData.usuario?.nombre || 'Hector';
       const content = {
         type: 'arqueo',
+        responsable: respName,
         ...summaryData
       };
-      await enqueueTicket(summaryData.id, 'Caja', content, 'Caja');
+      await enqueueTicket(summaryData.id, respName, content, 'Caja');
       showToast('Resumen de caja encolado para impresión en la nube.', 'success');
     } catch (err) {
       console.error(err);
@@ -130,7 +132,8 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
                 <div className="space-y-3.5">
                   <div>
                     <div className="font-bold text-center border-b border-black pb-1 mb-2">TICKET RESUMEN DE CAJA</div>
-                    <div className="flex justify-between"><span>SESIÓN N°:</span><span className="font-bold">{summaryData.id}</span></div>
+                    <div className="flex justify-between"><span>TURNO N°:</span><span className="font-bold">{summaryData.id}</span></div>
+                    <div className="flex justify-between"><span>RESPONSABLE:</span><span className="font-bold">{(summaryData.responsable || summaryData.usuario?.nombre || 'Hector').toUpperCase()}</span></div>
                     <div className="flex justify-between"><span>ESTADO:</span><span className="font-bold">{summaryData.estado?.toUpperCase()}</span></div>
                     <div className="flex justify-between"><span>APERTURA:</span><span>{formatDate(summaryData.fechaInicio)}</span></div>
                     {summaryData.estado !== 'abierto' && (
