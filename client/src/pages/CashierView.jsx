@@ -489,6 +489,14 @@ const CashierView = () => {
     }
   }, [history, currentStatus, selectedArqueoId]);
 
+  const activeKpiData = useMemo(() => {
+    if (selectedArqueoId && history?.data?.length > 0) {
+      const found = history.data.find(a => a.id === selectedArqueoId);
+      if (found) return found;
+    }
+    return currentStatus || history?.data?.[0] || null;
+  }, [selectedArqueoId, history, currentStatus]);
+
   // Modal Close Callbacks (Stabilized)
   const handleClosePaloteoModal = useCallback(() => {
     setIsPaloteoModalOpen(false);
@@ -1533,7 +1541,8 @@ const CashierView = () => {
                           className="transition-colors cursor-pointer group hover:bg-[var(--item-hover)]"
                           style={{
                             borderBottom: '1px solid var(--table-row-border)',
-                            background: isSelected ? 'var(--item-hover)' : 'transparent'
+                            background: isSelected ? 'var(--item-hover)' : 'transparent',
+                            boxShadow: isSelected ? 'inset 3px 0 0 var(--primary)' : 'none'
                           }}
                         >
                           {/* Number */}
@@ -1673,9 +1682,9 @@ const CashierView = () => {
 
             {/* Pagination controls */}
             {totalPages > 1 && (
-              <div className="p-3 bg-transparent flex items-center justify-between text-xs text-[var(--text-muted)] font-sans animate-fade-in" style={{ borderTop: '1px solid var(--table-row-border)' }}>
+              <div className="p-3 bg-transparent relative flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-muted)] font-sans animate-fade-in" style={{ borderTop: '1px solid var(--table-row-border)' }}>
                 <span className="font-medium">Total de Arqueos: {filteredHistory.length}</span>
-                <div className="flex items-center gap-2">
+                <div className="sm:absolute sm:left-1/2 sm:-translate-x-1/2 flex items-center justify-center gap-2">
                   <button
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
@@ -1694,55 +1703,73 @@ const CashierView = () => {
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
+                <div className="hidden sm:block sm:w-28" />
               </div>
             )}
           </div>
 
           {/* KPI Analytics Cards */}
-          {currentStatus && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 font-sans cashier-kpi-grid">
-              <div className="glass-panel p-3.5 flex flex-col justify-between shadow-xs">
-                <div>
-                  <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Total en Caja</p>
-                  <h2 className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-450 mt-1 font-sans">
-                    S/. {(currentStatus.totalCaja || 0).toFixed(2)}
-                  </h2>
-                </div>
-                <p className="text-[10px] text-[var(--text-muted)] mt-2 font-sans">Saldo en efectivo disponible</p>
+          {activeKpiData && (
+            <div className="space-y-2 font-sans">
+              <div className="flex items-center justify-between px-1 text-xs">
+                <span className="font-semibold text-[var(--text-muted)] flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Métricas de Arqueo N° {activeKpiData.id} {activeKpiData.id === currentStatus?.id ? '(Turno Actual)' : '(Seleccionado)'}
+                </span>
+                {activeKpiData.id !== currentStatus?.id && currentStatus?.id && (
+                  <button
+                    onClick={() => setSelectedArqueoId(currentStatus.id)}
+                    className="text-[11px] text-[var(--primary)] hover:underline cursor-pointer font-medium"
+                  >
+                    Ver Turno Actual (N° {currentStatus.id})
+                  </button>
+                )}
               </div>
 
-              <div className="glass-panel p-3.5 flex flex-col justify-between shadow-xs">
-                <div>
-                  <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Total Bruto</p>
-                  <h2 className="text-2xl font-extrabold text-[var(--text-main)] mt-1 font-sans">
-                    S/. {(currentStatus.totalBruto || 0).toFixed(2)}
-                  </h2>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 cashier-kpi-grid">
+                <div className="glass-panel p-3.5 flex flex-col justify-between shadow-xs">
+                  <div>
+                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Total en Caja</p>
+                    <h2 className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-450 mt-1 font-sans">
+                      S/. {(activeKpiData.totalCaja || 0).toFixed(2)}
+                    </h2>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-2 font-sans">Saldo en efectivo disponible</p>
                 </div>
-                <div className="flex gap-1 mt-2">
-                  <div className="h-1 bg-emerald-400 rounded-full" style={{ width: `${Math.max(10, ((currentStatus.ingresos?.efectivo || 0) / (currentStatus.totalBruto || 1)) * 100)}%` }} title="Efectivo"></div>
-                  <div className="h-1 bg-blue-400 rounded-full" style={{ width: `${Math.max(10, (((currentStatus.ingresos?.yape || 0) + (currentStatus.ingresos?.plin || 0)) / (currentStatus.totalBruto || 1)) * 100)}%` }} title="Digital"></div>
-                  <div className="h-1 bg-amber-400 rounded-full" style={{ width: `${Math.max(10, (((currentStatus.ingresos?.tarjeta || 0) + (currentStatus.ingresos?.izipay || 0) + (currentStatus.ingresos?.niubiz || 0)) / (currentStatus.totalBruto || 1)) * 100)}%` }} title="Tarjeta"></div>
-                </div>
-              </div>
 
-              <div className="glass-panel p-3.5 flex flex-col justify-between shadow-xs">
-                <div>
-                  <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Flujo Digital</p>
-                  <h2 className="text-2xl font-extrabold text-blue-500 dark:text-blue-405 mt-1 font-sans">
-                    S/. {((currentStatus.ingresos?.yape || 0) + (currentStatus.ingresos?.plin || 0)).toFixed(2)}
-                  </h2>
+                <div className="glass-panel p-3.5 flex flex-col justify-between shadow-xs">
+                  <div>
+                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Total Bruto</p>
+                    <h2 className="text-2xl font-extrabold text-[var(--text-main)] mt-1 font-sans">
+                      S/. {(activeKpiData.totalBruto || 0).toFixed(2)}
+                    </h2>
+                  </div>
+                  <div className="flex gap-1 mt-2">
+                    <div className="h-1 bg-emerald-400 rounded-full" style={{ width: `${Math.max(10, ((activeKpiData.ingresos?.efectivo || 0) / (activeKpiData.totalBruto || 1)) * 100)}%` }} title="Efectivo"></div>
+                    <div className="h-1 bg-blue-400 rounded-full" style={{ width: `${Math.max(10, (((activeKpiData.ingresos?.yape || 0) + (activeKpiData.ingresos?.plin || 0)) / (activeKpiData.totalBruto || 1)) * 100)}%` }} title="Digital"></div>
+                    <div className="h-1 bg-amber-400 rounded-full" style={{ width: `${Math.max(10, (((activeKpiData.ingresos?.tarjeta || 0) + (activeKpiData.ingresos?.izipay || 0) + (activeKpiData.ingresos?.niubiz || 0)) / (activeKpiData.totalBruto || 1)) * 100)}%` }} title="Tarjeta"></div>
+                  </div>
                 </div>
-                <p className="text-[10px] text-[var(--text-muted)] mt-2 font-sans">Yape + Plin acumulado</p>
-              </div>
 
-              <div className="glass-panel p-3.5 flex flex-col justify-between shadow-xs">
-                <div>
-                  <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Flujo Tarjeta</p>
-                  <h2 className="text-2xl font-extrabold text-amber-500 dark:text-amber-450 mt-1 font-sans">
-                    S/. {((currentStatus.ingresos?.tarjeta || 0) + (currentStatus.ingresos?.izipay || 0) + (currentStatus.ingresos?.niubiz || 0)).toFixed(2)}
-                  </h2>
+                <div className="glass-panel p-3.5 flex flex-col justify-between shadow-xs">
+                  <div>
+                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Flujo Digital</p>
+                    <h2 className="text-2xl font-extrabold text-blue-500 dark:text-blue-405 mt-1 font-sans">
+                      S/. {((activeKpiData.ingresos?.yape || 0) + (activeKpiData.ingresos?.plin || 0)).toFixed(2)}
+                    </h2>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-2 font-sans">Yape + Plin acumulado</p>
                 </div>
-                <p className="text-[10px] text-[var(--text-muted)] mt-2 font-sans">Tarjetas POS registradas</p>
+
+                <div className="glass-panel p-3.5 flex flex-col justify-between shadow-xs">
+                  <div>
+                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Flujo Tarjeta</p>
+                    <h2 className="text-2xl font-extrabold text-amber-500 dark:text-amber-450 mt-1 font-sans">
+                      S/. {((activeKpiData.ingresos?.tarjeta || 0) + (activeKpiData.ingresos?.izipay || 0) + (activeKpiData.ingresos?.niubiz || 0)).toFixed(2)}
+                    </h2>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-2 font-sans">Tarjetas POS registradas</p>
+                </div>
               </div>
             </div>
           )}

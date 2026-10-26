@@ -6,10 +6,24 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
   const chartASvgRef = useRef(null);
   const chartBSvgRef = useRef(null);
 
-  // Take last 8 sessions chronologically for a clean line chart trend
-  const lastArqueos = [...arqueos]
-    .slice(-8)
-    .sort((a, b) => a.id - b.id);
+  // Take up to 8 sessions centered around the selected arqueo so it is always visible on the curve
+  const sortedArqueos = [...arqueos].sort((a, b) => a.id - b.id);
+  const selectedIndex = sortedArqueos.findIndex(a => a.id === selectedArqueoId);
+
+  let lastArqueos = [];
+  const windowSize = 8;
+  if (selectedIndex === -1) {
+    lastArqueos = sortedArqueos.slice(-windowSize);
+  } else {
+    const half = Math.floor(windowSize / 2);
+    let start = Math.max(0, selectedIndex - half);
+    let end = start + windowSize;
+    if (end > sortedArqueos.length) {
+      end = sortedArqueos.length;
+      start = Math.max(0, end - windowSize);
+    }
+    lastArqueos = sortedArqueos.slice(start, end);
+  }
 
   const selectedArqueo = arqueos.find(a => a.id === selectedArqueoId) || arqueos[0] || {
     id: 1,
@@ -190,23 +204,25 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
 
       {/* Gráfico A: Comparativa Ingresos vs Egresos */}
       <div id="chart-a" className="glass-panel p-4 flex flex-col justify-between transition-all">
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-start mb-3">
           <div>
             <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Análisis Histórico</span>
             <h3 className="text-base font-bold text-[var(--text-main)] tracking-tight flex items-center gap-1.5 mt-0.5 font-sans">
               <TrendingUp className="w-4 h-4 text-emerald-500" />
-              Comparativa de Ingresos vs. Egresos
+              Comparativa de Ingresos vs. Egresos (Arqueo N° {selectedArqueo.id})
             </h3>
           </div>
           <button
             onClick={() => {
               const details = [
                 `Historial de arqueos de caja (últimas ${lastArqueos.length} sesiones).`,
-                `Ingreso máximo registrado: S/. ${maxIngreso.toFixed(2)}`,
-                `Egreso máximo registrado: S/. ${maxEgreso.toFixed(2)}`,
+                `Arqueo seleccionado: N° ${selectedArqueo.id}`,
+                `Ingreso registrado: S/. ${(selectedArqueo.totalBruto || 0).toFixed(2)}`,
+                `Egreso registrado: S/. ${(selectedArqueo.egresos || selectedArqueo.egreso || 0).toFixed(2)}`,
+                `Balance Neto: S/. {((selectedArqueo.totalBruto || 0) - (selectedArqueo.egresos || selectedArqueo.egreso || 0)).toFixed(2)}`,
                 `Fecha de exportación: ${new Date().toLocaleString()}`
               ];
-              handleExportChart(chartASvgRef, 'Arqueos_Historial_Ingresos_Egresos.png', 'Comparativa de Ingresos vs. Egresos - Bunker', details);
+              handleExportChart(chartASvgRef, `Arqueos_Ingresos_Egresos_N${selectedArqueo.id}.png`, `Comparativa de Ingresos vs. Egresos (Arqueo N° ${selectedArqueo.id}) - Bunker`, details);
             }}
             className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans"
           >
@@ -215,15 +231,30 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
           </button>
         </div>
 
+        {/* Selected Arqueo Comparison Summary Pills */}
+        <div className="flex flex-wrap items-center gap-2 mb-3 text-xs font-sans">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 text-emerald-700 dark:text-emerald-400 font-semibold">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Ingresos: S/. {(selectedArqueo.totalBruto || 0).toFixed(2)}</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/30 text-rose-700 dark:text-rose-400 font-semibold">
+            <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+            <span>Egresos: S/. {(selectedArqueo.egresos || selectedArqueo.egreso || 0).toFixed(2)}</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/30 text-blue-700 dark:text-blue-400 font-semibold">
+            <span>Balance Neto: S/. {((selectedArqueo.totalBruto || 0) - (selectedArqueo.egresos || selectedArqueo.egreso || 0)).toFixed(2)}</span>
+          </div>
+        </div>
+
         {/* Legend */}
         <div className="flex gap-4 text-xs mb-3 text-[var(--text-muted)] font-medium font-sans">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 block"></span>
-            <span>Ingresos (Bruto)</span>
+            <span>Tendencia Ingresos</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-450 block"></span>
-            <span>Egresos</span>
+            <span>Tendencia Egresos</span>
           </div>
         </div>
 
@@ -298,17 +329,19 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
             {/* Interactive Vertical Hover Lines and Dots */}
             {pointsIngreso.map((p, index) => {
               const isActive = activeBarIndex === index;
+              const isSelected = p.id === selectedArqueoId;
               return (
                 <g key={index} className="cursor-pointer">
-                  {isActive && (
+                  {(isActive || isSelected) && (
                     <line
                       x1={p.x}
                       y1={padding}
                       x2={p.x}
                       y2={chartHeight - padding}
-                      stroke="var(--text-muted)"
-                      strokeWidth="1"
+                      stroke={isSelected ? '#10b981' : 'var(--text-muted)'}
+                      strokeWidth={isSelected ? '1.5' : '1'}
                       strokeDasharray="2 2"
+                      opacity={isSelected ? '0.75' : '0.4'}
                     />
                   )}
 
@@ -337,14 +370,27 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                     onClick={() => onSelectArqueo(p.id)}
                   />
 
+                  {/* Pulsing outer ring for selected arqueo */}
+                  {isSelected && (
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={9}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="1.5"
+                      opacity="0.45"
+                    />
+                  )}
+
                   {/* Node points for Ingresos */}
                   <circle
                     cx={p.x}
                     cy={p.y}
-                    r={isActive ? 6 : p.id === selectedArqueoId ? 5 : 3.5}
-                    fill={p.id === selectedArqueoId ? '#10b981' : '#ffffff'}
+                    r={isActive ? 6 : isSelected ? 5.5 : 3.5}
+                    fill={isSelected ? '#10b981' : '#ffffff'}
                     stroke="#10b981"
-                    strokeWidth={isActive ? 3 : p.id === selectedArqueoId ? 2.5 : 2}
+                    strokeWidth={isActive ? 3 : isSelected ? 2.5 : 2}
                     className="transition-all duration-150"
                   />
 
@@ -352,21 +398,21 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                   <circle
                     cx={p.x}
                     cy={pointsEgreso[index].y}
-                    r={isActive ? 5 : 3}
-                    fill="#ffffff"
+                    r={isActive ? 5 : isSelected ? 4.5 : 3}
+                    fill={isSelected ? '#f43f5e' : '#ffffff'}
                     stroke="#f43f5e"
-                    strokeWidth={isActive ? 2.5 : 1.5}
+                    strokeWidth={isActive ? 2.5 : isSelected ? 2 : 1.5}
                     className="transition-all duration-150"
                   />
 
                   {/* X Axis Labels */}
-                  {index % 2 === 0 && (
+                  {(index % 2 === 0 || isSelected) && (
                     <text
                       x={p.x}
                       y={chartHeight - 12}
                       textAnchor="middle"
-                      style={{ fill: 'var(--text-muted)' }}
-                      className="font-sans text-[10px]"
+                      style={{ fill: isSelected ? '#10b981' : 'var(--text-muted)' }}
+                      className={`font-sans text-[10px] ${isSelected ? 'font-bold' : ''}`}
                     >
                       N° {p.id}
                     </text>
