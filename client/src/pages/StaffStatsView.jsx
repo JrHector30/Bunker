@@ -631,12 +631,42 @@ const StaffStatsView = () => {
                         {arqueoInfo && (
                             <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginTop: 2 }}>
                                 Caja N° {arqueoInfo.id} ({arqueoInfo.estado === 'abierto' ? 'Abierta' : 'Cerrada'})
+                                {sessions.find(s => s.id === arqueoInfo.id)?.usuario?.nombre && (
+                                    <> • Resp: <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{sessions.find(s => s.id === arqueoInfo.id).usuario.nombre}</span></>
+                                )}
                             </span>
                         )}
                     </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* Badge informativo para un solo arqueo */}
+                    {sessions.length === 1 && (() => {
+                        const s = sessions[0];
+                        const startStr = format(new Date(s.fechaInicio), 'HH:mm');
+                        const endStr = s.fechaFin ? format(new Date(s.fechaFin), 'HH:mm') : 'Activa';
+                        const userName = s.usuario?.nombre || 'Hector';
+                        return (
+                            <div
+                                className="glass-button"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    padding: '6px 14px',
+                                    fontSize: 12,
+                                    borderRadius: 12,
+                                    fontWeight: 'bold',
+                                    cursor: 'default',
+                                    userSelect: 'none'
+                                }}
+                            >
+                                <CalendarDays size={16} className="text-teal-400" />
+                                <span>Arqueo #{s.id} ({startStr} - {endStr}) - Resp: {userName}</span>
+                            </div>
+                        );
+                    })()}
+
                     {/* Secondary selector for multiple arqueos */}
                     {sessions.length > 1 && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
