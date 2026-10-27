@@ -8,14 +8,14 @@ import {
 import RevealOnScroll from '../components/RevealOnScroll';
 import CircularCarousel from '../components/CircularCarousel';
 import Aurora from '../components/Aurora';
-import imgDashboard from '../../public/uploads/home/dashboard_centro_mando.png';
-import imgSalon from '../../public/uploads/home/salon_mesas.png';
-import imgCocina from '../../public/uploads/home/cocina_kds.png';
-import imgCaja from '../../public/uploads/home/caja_arqueo.png';
-import imgCategorias from '../../public/uploads/home/gestion_categorias.png';
-import imgReportes from '../../public/uploads/home/reportes_rendimiento.png';
-import imgSoporte from '../../public/uploads/home/soporte_asistencia.png';
-import imgImpresion from '../../public/uploads/home/impresion_dispositivos.png';
+import imgDashboard from '../../public/uploads/home/dashboard_centro_mando.webp';
+import imgSalon from '../../public/uploads/home/salon_mesas.webp';
+import imgCocina from '../../public/uploads/home/cocina_kds.webp';
+import imgCaja from '../../public/uploads/home/caja_arqueo.webp';
+import imgCategorias from '../../public/uploads/home/gestion_categorias.webp';
+import imgReportes from '../../public/uploads/home/reportes_rendimiento.webp';
+import imgSoporte from '../../public/uploads/home/soporte_asistencia.webp';
+import imgImpresion from '../../public/uploads/home/impresion_dispositivos.webp';
 
 const carouselItems = [
   {
@@ -116,6 +116,20 @@ export default function LandingView() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [expandedIndex]);
+
+  // Bloquear el scroll de la página cuando la imagen está expandida
+  useEffect(() => {
+    if (expandedIndex !== null) {
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
+      };
+    }
   }, [expandedIndex]);
 
   useEffect(() => {
@@ -670,8 +684,9 @@ export default function LandingView() {
       {/* MODAL LIGHTBOX EXPANDIR IMAGEN */}
       {expandedIndex !== null && (
         <div
-          className="fixed inset-0 z-50 bg-black/92 backdrop-blur-md flex flex-col items-center justify-center p-3 md:p-8 animate-fade-in select-none"
+          className="fixed inset-0 z-50 bg-black/92 backdrop-blur-md flex flex-col items-center justify-center p-3 md:p-8 animate-fade-in select-none overscroll-none"
           onClick={() => setExpandedIndex(null)}
+
         >
           {/* Barra Superior */}
           <div
@@ -694,6 +709,7 @@ export default function LandingView() {
               </span>
               <button
                 onClick={() => setExpandedIndex(null)}
+
                 className="p-2 rounded-lg bg-gray-900/80 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white transition-all cursor-pointer"
                 title="Cerrar (Esc)"
               >
