@@ -381,7 +381,7 @@ const StaffStatsView = () => {
                 // Determine Kardex/Stock status based on recetas and movimientosInsumo
                 let kardexStatus = 'No afecta inventario';
                 if (d.recetaCount > 0) {
-                    if (c.estado !== 'cerrada') {
+                    if (c.estado && c.estado !== 'cerrada') {
                         kardexStatus = 'Pendiente de cobro';
                     } else {
                         const hasMovement = movimientosInsumo.some(k =>
@@ -479,7 +479,7 @@ const StaffStatsView = () => {
             const auditPlatos = (c.detalles || []).map(d => {
                 let kardexStatus = 'No afecta inventario';
                 if (d.recetaCount > 0) {
-                    if (c.estado !== 'cerrada') {
+                    if (c.estado && c.estado !== 'cerrada') {
                         kardexStatus = 'Pendiente de cobro';
                     } else {
                         const hasMovement = movimientosInsumo.some(k =>

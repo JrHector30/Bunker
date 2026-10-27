@@ -1965,6 +1965,7 @@ app.get('/api/staff/stats', async (req, res) => {
             comandas: comandas.map(c => ({
                 id: c.id,
                 fecha: c.fecha,
+                estado: c.estado,
                 usuarioId: c.usuarioId,
                 usuarioNombre: c.usuario ? c.usuario.nombre : 'Mesero',
                 usuarioRol: c.usuario ? c.usuario.rol : 'mozo',
