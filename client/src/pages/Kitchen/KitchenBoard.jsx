@@ -154,7 +154,7 @@ export default function KitchenBoard() {
               title="Pendientes"
               icon={<Clock className="w-5 h-5 text-slate-450 dark:text-slate-500 animate-pulse" />}
               orders={pendingItems}
-              badgeColor="bg-slate-200 dark:bg-slate-850 text-black dark:text-black"
+              badgeColor="bg-slate-200 dark:bg-slate-850 text-black dark:text-white"
             />
             <KitchenColumn
               id="proceso"

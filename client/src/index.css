@@ -391,6 +391,101 @@
   opacity: 1 !important;
 }
 
+/* Active Sidebar Item in Minimal Dark: White Bg, Black Text, Black Icon */
+.theme-black #bunker-sidebar a.active,
+.theme-black #bunker-sidebar .active,
+.theme-black aside a.active,
+.theme-black aside .active,
+.theme-black aside .glass-button.active {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.25) !important;
+}
+
+.theme-black #bunker-sidebar a.active span,
+.theme-black #bunker-sidebar a.active p,
+.theme-black #bunker-sidebar .active span,
+.theme-black aside a.active span,
+.theme-black aside .active span,
+.theme-black aside .glass-button.active span {
+  color: #000000 !important;
+}
+
+.theme-black #bunker-sidebar a.active svg,
+.theme-black #bunker-sidebar .active svg,
+.theme-black aside a.active svg,
+.theme-black aside .active svg,
+.theme-black aside .glass-button.active svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+
+.theme-black #bunker-sidebar a.active .module-icon-svg,
+.theme-black aside .glass-button.active .module-icon-svg {
+  filter: brightness(0) !important;
+}
+
+/* Active Hover State in Minimal Dark */
+.theme-black #bunker-sidebar a.active:hover,
+.theme-black #bunker-sidebar .active:hover,
+.theme-black aside a.active:hover,
+.theme-black aside .active:hover {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.theme-black #bunker-sidebar a.active:hover span,
+.theme-black #bunker-sidebar .active:hover span,
+.theme-black #bunker-sidebar a.active:hover svg,
+.theme-black #bunker-sidebar .active:hover svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+
+/* More menu modal active items in Minimal Dark */
+.theme-black .bg-brand.active,
+.theme-black .bg-brand.border-brand,
+.theme-black [class*="bg-brand"].active {
+  background-color: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.theme-black .bg-brand.active span,
+.theme-black .bg-brand.border-brand span,
+.theme-black [class*="bg-brand"].active span,
+.theme-black .bg-brand.active svg,
+.theme-black .bg-brand.border-brand svg,
+.theme-black [class*="bg-brand"].active svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+
+/* Ensure buttons with primary / black background in Minimal Dark always have white text and white icons */
+.theme-black .bg-\[var\(--primary\)\],
+.theme-black [class*="bg-[var(--primary)]"],
+.theme-black button.bg-\[var\(--primary\)\],
+.theme-black a.bg-\[var\(--primary\)\],
+.theme-black button[type="submit"].bg-\[var\(--primary\)\],
+.theme-black .btn-primary,
+.theme-black button.bg-black,
+.theme-black a.bg-black {
+  color: #ffffff !important;
+}
+
+.theme-black .bg-\[var\(--primary\)\] svg,
+.theme-black [class*="bg-[var(--primary)]"] svg,
+.theme-black button.bg-\[var\(--primary\)\] svg,
+.theme-black a.bg-\[var\(--primary\)\] svg,
+.theme-black .btn-primary svg,
+.theme-black button.bg-black svg,
+.theme-black a.bg-black svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
 /* Active Item: White Bg, Black Text, No Border */
 .theme-black aside .glass-button.active {
   background: #ffffff !important;
@@ -2060,6 +2155,26 @@ body {
   color: #ffffff !important;
   box-shadow: 0 4px 12px var(--color-brand-glow) !important;
   border-radius: 12px !important;
+}
+
+/* In Minimal Dark, the active sidebar item has a white background with black text and icon */
+.theme-black #bunker-sidebar a.active,
+.theme-black #bunker-sidebar .active {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.25) !important;
+}
+
+.theme-black #bunker-sidebar a.active span,
+.theme-black #bunker-sidebar a.active p,
+.theme-black #bunker-sidebar .active span {
+  color: #000000 !important;
+}
+
+.theme-black #bunker-sidebar a.active svg,
+.theme-black #bunker-sidebar .active svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
 }
 
 #bunker-sidebar a:not(.active):hover,

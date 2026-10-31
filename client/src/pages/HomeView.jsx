@@ -1568,14 +1568,14 @@ const EditableWidget = ({ id, layout, onLayoutChange, designMode, children, clas
         }`}
     >
       {designMode && (
-        <div className="absolute top-1 left-2 px-1.5 py-0.5 rounded bg-[var(--primary)] text-white dark:text-black font-extrabold text-[8px] tracking-wider uppercase z-20 pointer-events-none">
+        <div className="absolute top-1 left-2 px-1.5 py-0.5 rounded bg-[var(--primary)] text-white font-extrabold text-[8px] tracking-wider uppercase z-20 pointer-events-none">
           {id}
         </div>
       )}
       {children}
       {designMode && (
         <div
-          className="resize-handle absolute bottom-1.5 right-1.5 w-4 h-4 rounded-br-2xl bg-[var(--primary)] cursor-se-resize flex items-center justify-center text-white dark:text-black z-30"
+          className="resize-handle absolute bottom-1.5 right-1.5 w-4 h-4 rounded-br-2xl bg-[var(--primary)] cursor-se-resize flex items-center justify-center text-white z-30"
           style={{ borderTopLeftRadius: '6px' }}
         >
           <svg width="6" height="6" viewBox="0 0 6 6" fill="none" className="rotate-90 opacity-80">

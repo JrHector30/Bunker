@@ -588,7 +588,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
         {!isCallActive ? (
           <button
             onClick={startVoiceCall}
-            className="w-full bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white dark:text-black font-extrabold text-xs py-3.5 rounded-2xl cursor-pointer transition-all flex items-center justify-center gap-2 border-none"
+            className="w-full bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white font-extrabold text-xs py-3.5 rounded-2xl cursor-pointer transition-all flex items-center justify-center gap-2 border-none"
           >
             <Phone className="w-4 h-4" />
             Iniciar Soporte de Voz IA
