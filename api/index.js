@@ -663,10 +663,10 @@ app.post('/api/categories', async (req, res) => {
             data: {
                 nombre,
                 color,
-                icono,
+                icono: icono || '',
                 orden: parseInt(orden || 0),
-                activo: activo !== undefined ? activo : true,
-                enviarCocina: enviarCocina !== undefined ? enviarCocina : true
+                activo: activo !== undefined ? Boolean(activo) : true,
+                enviarCocina: enviarCocina !== undefined ? Boolean(enviarCocina) : true
             }
         });
         res.json(category);
@@ -680,16 +680,17 @@ app.put('/api/categories/:id', async (req, res) => {
     const { nombre, color, icono, orden, activo, enviarCocina } = req.body;
 
     try {
+        const updateData = {};
+        if (nombre !== undefined) updateData.nombre = nombre;
+        if (color !== undefined) updateData.color = color;
+        if (icono !== undefined) updateData.icono = icono;
+        if (orden !== undefined) updateData.orden = parseInt(orden || 0);
+        if (activo !== undefined) updateData.activo = Boolean(activo);
+        if (enviarCocina !== undefined) updateData.enviarCocina = Boolean(enviarCocina);
+
         const category = await prisma.categoria.update({
             where: { id: parseInt(id) },
-            data: {
-                nombre,
-                color,
-                icono,
-                orden: orden ? parseInt(orden) : 0,
-                activo,
-                enviarCocina
-            }
+            data: updateData
         });
         res.json(category);
     } catch (e) {

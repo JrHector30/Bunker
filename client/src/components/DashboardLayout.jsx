@@ -37,7 +37,8 @@ import ErrorBoundary from './ErrorBoundary';
 
 const DashboardLayout = () => {
     const { user, logout, tienePermiso } = useAuth();
-    const { mode, toggleMode, showAlerts } = useTheme();
+    const { theme, mode, toggleMode, showAlerts } = useTheme();
+    const isMinimal = theme === 'theme-black';
     const { showToast } = useNotification();
     const navigate = useNavigate();
     const location = useLocation();
@@ -352,11 +353,11 @@ const DashboardLayout = () => {
                                                                 key={sub.id}
                                                                 to={sub.to}
                                                                 className={`rounded-lg flex items-center h-8 px-2.5 justify-start gap-2 transition-all duration-200 group cursor-pointer no-underline ${isSubActive
-                                                                    ? 'active bg-brand text-white shadow-md shadow-brand/20'
+                                                                    ? (isMinimal ? 'active !bg-white !text-black font-bold shadow-md shadow-white/20' : 'active bg-brand text-white shadow-md shadow-brand/20')
                                                                     : 'text-slate-500 hover:text-slate-300 hover:bg-[#151722]/50'
                                                                     }`}
                                                             >
-                                                                <SubIcon className="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                                                                <SubIcon className="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" style={isSubActive && isMinimal ? { color: '#000000', stroke: '#000000' } : undefined} />
                                                                 <span className="text-[11px] font-medium tracking-wide font-sans">{sub.label}</span>
                                                             </Link>
                                                         );
@@ -384,11 +385,11 @@ const DashboardLayout = () => {
                                         ? 'w-12 h-12 justify-center'
                                         : 'w-full h-10 px-3.5 justify-start gap-3.5'
                                         } ${isActive && (!isOffline || !isAdminItem)
-                                            ? 'active bg-brand text-white shadow-md shadow-brand/20'
+                                            ? (isMinimal ? 'active !bg-white !text-black font-bold shadow-md shadow-white/20' : 'active bg-brand text-white shadow-md shadow-brand/20')
                                             : 'text-slate-400 hover:text-slate-200 hover:bg-[#151722]'
                                         } ${isOffline && isAdminItem ? 'opacity-40 cursor-not-allowed' : ''}`}
                                 >
-                                    <Icon className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                                    <Icon className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" style={isMinimal ? { color: 'inherit', stroke: 'currentColor' } : undefined} />
 
                                     {!isRail && (
                                         <span className="text-sm font-semibold tracking-wide font-sans">{item.label}</span>
@@ -780,7 +781,7 @@ const DashboardLayout = () => {
                                                                             to={sub.to}
                                                                             onClick={() => setIsMoreOpen(false)}
                                                                             className={`rounded-lg flex items-center h-10 px-3.5 justify-start gap-2.5 transition-all duration-200 group cursor-pointer no-underline ${isSubActive
-                                                                                ? 'bg-brand text-white shadow-md shadow-brand/20 font-bold'
+                                                                                ? (isMinimal ? '!bg-white !text-black shadow-md shadow-white/20 font-bold' : 'bg-brand text-white shadow-md shadow-brand/20 font-bold')
                                                                                 : 'bg-[#0d0e15] border border-slate-800/60 text-slate-400 hover:text-slate-200 hover:bg-[#151722]'
                                                                                 }`}
                                                                         >
@@ -800,7 +801,7 @@ const DashboardLayout = () => {
                                                         to={item.to}
                                                         onClick={() => setIsMoreOpen(false)}
                                                         className={`rounded-xl flex flex-col justify-center items-center p-4 border transition-all duration-200 group cursor-pointer no-underline text-center gap-2 ${isPathActive
-                                                            ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20 font-bold'
+                                                            ? (isMinimal ? '!bg-white !border-white !text-black shadow-lg shadow-white/20 font-bold' : 'bg-brand border-brand text-white shadow-lg shadow-brand/20 font-bold')
                                                             : 'bg-[#141622]/40 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-[#151722]'
                                                             }`}
                                                         style={{ minHeight: '80px' }}

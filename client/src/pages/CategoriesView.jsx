@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash, Save, X, ChefHat, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Smile } from 'lucide-react';
+import { Plus, Edit, Trash, Save, X, ChefHat, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Smile, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 import { CustomCheckbox } from '../components/ui/CustomCheckbox';
 import { DeleteButton } from '../components/ui/DeleteButton';
@@ -62,68 +62,48 @@ const EMOJI_CATEGORIES = [
 
 const EmojiSelector = ({ value, onChange }) => {
     const [activeTab, setActiveTab] = useState('platos');
-    const [isOpen, setIsOpen] = useState(true); // Open by default for easy visual access
+    const [isOpen, setIsOpen] = useState(false); // Closed by default for sleek, clean UI
 
     const currentCategory = EMOJI_CATEGORIES.find(c => c.id === activeTab) || EMOJI_CATEGORIES[0];
 
     return (
-        <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-[var(--text-main)] flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
+        <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[var(--text-main)] font-sans uppercase tracking-wide flex items-center gap-1.5">
                     <Smile size={14} className="text-[var(--primary)]" />
-                    <span>Icono (Emoji)</span>
-                </span>
-                <span className="text-[11px] text-[var(--text-muted)] font-normal">Toca cualquier icono para seleccionarlo</span>
-            </label>
+                    <span>Icono de Categoría</span>
+                </label>
+                {value && (
+                    <button
+                        type="button"
+                        onClick={() => onChange('')}
+                        className="text-[11px] text-[var(--text-muted)] hover:text-rose-400 bg-transparent border-none cursor-pointer flex items-center gap-1 font-sans"
+                        title="Quitar icono"
+                    >
+                        <X size={12} /> Quitar
+                    </button>
+                )}
+            </div>
 
-            {/* Current Selected Big Emoji Button + Manual Input */}
-            <div className="flex items-center gap-3">
+            {/* Minimalist Compact Button */}
+            <div className="flex items-center gap-2">
                 <button
                     type="button"
                     onClick={() => setIsOpen(!isOpen)}
-                    className="w-13 h-13 rounded-2xl bg-[var(--bg-surface)] border-2 flex items-center justify-center text-3xl shadow-md transition-all active:scale-95 cursor-pointer flex-shrink-0"
-                    title="Clic para desplegar u ocultar catálogo de emojis"
-                    style={{
-                        borderColor: value ? 'var(--primary)' : 'var(--glass-border)',
-                        boxShadow: value ? '0 0 12px rgba(249, 115, 22, 0.25)' : undefined
-                    }}
+                    className={`h-10 px-3 rounded-xl border flex items-center gap-2.5 transition-all cursor-pointer bg-[var(--bg-surface)] hover:border-[var(--primary)] ${
+                        isOpen ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/20 shadow-sm' : 'border-[var(--glass-border)]'
+                    }`}
+                    title="Clic para seleccionar emoji"
                 >
-                    {value || '❓'}
+                    <span className="text-xl leading-none">{value || '🍽️'}</span>
+                    <span className="text-xs font-semibold text-[var(--text-muted)] font-sans">
+                        {value ? 'Cambiar icono' : 'Elegir icono'}
+                    </span>
+                    <ChevronDown size={14} className={`text-[var(--text-muted)] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
-
-                <div className="flex-1 flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="text"
-                            className="glass-input text-center text-lg font-bold"
-                            style={{ width: '70px', height: '40px', padding: '0 6px' }}
-                            value={value}
-                            onChange={e => onChange(e.target.value)}
-                            placeholder="🍕"
-                            maxLength={4}
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setIsOpen(!isOpen)}
-                            className="px-3 py-2 rounded-xl text-xs font-bold border border-[var(--glass-border)] bg-[var(--bg-surface)] text-[var(--text-main)] hover:bg-[var(--primary)] hover:text-white transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
-                        >
-                            <span>{isOpen ? '▲ Ocultar catálogo' : '🎨 Selector de Emojis'}</span>
-                        </button>
-                        {value && (
-                            <button
-                                type="button"
-                                onClick={() => onChange('')}
-                                className="p-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
-                                title="Limpiar icono"
-                            >
-                                <X size={16} />
-                            </button>
-                        )}
-                    </div>
-                </div>
             </div>
 
-            {/* Accessible Emoji Grid Panel */}
+            {/* Expandable Emoji Catalog Panel */}
             {isOpen && (
                 <div className="mt-1 p-2.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--glass-border)] shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* Category Navigation Tabs */}
@@ -153,7 +133,10 @@ const EmojiSelector = ({ value, onChange }) => {
                                 <button
                                     key={index}
                                     type="button"
-                                    onClick={() => onChange(emoji)}
+                                    onClick={() => {
+                                        onChange(emoji);
+                                        setIsOpen(false);
+                                    }}
                                     className={`w-9 h-9 rounded-xl flex items-center justify-center text-xl transition-all cursor-pointer hover:scale-125 active:scale-95 ${
                                         isSelected
                                             ? 'bg-[var(--primary)]/20 border-2 border-[var(--primary)] shadow-[0_0_10px_rgba(249,115,22,0.4)] ring-2 ring-[var(--primary)]/50'
@@ -176,7 +159,7 @@ const CategoriesView = () => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const navigate = useNavigate();
-    const fetcher = () => fetch('/api/categories').then(res => res.json());
+    const fetcher = () => fetch(`/api/categories?_t=${Date.now()}`).then(res => res.json());
     const { data: categories, mutate: fetchCategories } = useCache('categories', fetcher, []);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -275,18 +258,39 @@ const CategoriesView = () => {
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({
+                    ...formData,
+                    activo: Boolean(formData.activo),
+                    enviarCocina: Boolean(formData.enviarCocina)
+                })
             });
 
             if (res.ok) {
+                const savedCategory = await res.json();
                 showToast('Categoría guardada exitosamente', 'success');
                 setIsModalOpen(false);
-                fetchCategories();
+
+                // Optimistic Local State Update for instantaneous visual response
+                if (editingCategory) {
+                    const updated = (categories || []).map(c => 
+                        c.id === editingCategory.id ? { ...c, ...savedCategory, activo: Boolean(formData.activo) } : c
+                    );
+                    fetchCategories(updated);
+                } else {
+                    fetchCategories([...(categories || []), savedCategory]);
+                }
+
+                // Background sync
+                setTimeout(() => {
+                    fetchCategories();
+                }, 150);
             } else {
-                showToast('Error al guardar categoría', 'error');
+                const err = await res.json().catch(() => ({}));
+                showToast(err.error || 'Error al guardar categoría', 'error');
             }
         } catch (error) {
             console.error(error);
+            showToast('Error de conexión al guardar categoría', 'error');
         }
     };
 
@@ -454,14 +458,18 @@ const CategoriesView = () => {
                             <h2>{editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}</h2>
                             <CloseButton onClick={() => setIsModalOpen(false)} className="scale-90" />
                         </div>
-                        <form onSubmit={handleSubmit} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-                            <div>
-                                <label>Nombre</label>
+                        <form onSubmit={handleSubmit} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-[var(--text-main)] font-sans uppercase tracking-wide">
+                                    Nombre de la Categoría
+                                </label>
                                 <input
                                     type="text"
-                                    className="glass-input"
+                                    className="glass-input text-sm font-sans font-medium text-[var(--text-main)] px-3.5 py-2.5 rounded-xl border border-[var(--glass-border)] focus:outline-none"
+                                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                                     value={formData.nombre}
                                     onChange={e => setFormData({ ...formData, nombre: e.target.value })}
+                                    placeholder="Ej. Hamburguesas, Pastas..."
                                     required
                                 />
                             </div>
@@ -473,39 +481,83 @@ const CategoriesView = () => {
                                 />
                             </div>
 
-                            <div>
-                                <label>Color</label>
-                                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-[var(--text-main)] font-sans uppercase tracking-wide">Color de Distintivo</label>
+                                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                                     <input
                                         type="color"
                                         value={formData.color}
                                         onChange={e => setFormData({ ...formData, color: e.target.value })}
-                                        style={{ width: 50, height: 40, border: 'none', background: 'transparent' }}
+                                        className="cursor-pointer"
+                                        style={{ width: 44, height: 38, border: 'none', background: 'transparent', borderRadius: 8 }}
                                     />
-                                    <span>{formData.color}</span>
+                                    <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-lg bg-black/20 border border-[var(--glass-border)]">{formData.color}</span>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <CustomCheckbox
-                                    checked={formData.enviarCocina}
-                                    onChange={e => setFormData({ ...formData, enviarCocina: e.target.checked })}
-                                >
-                                    <span className="ml-2 text-sm flex items-center gap-1.5 select-none" style={{ color: 'var(--text-main)' }}>
-                                        <ChefHat size={16} /> Enviar a Cocina
-                                    </span>
-                                </CustomCheckbox>
+                            <div className="flex flex-col gap-2.5 pt-2 border-t border-[var(--glass-border)]">
+                                {/* Enviar a Cocina Toggle */}
+                                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/20 border border-[var(--glass-border)]">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center">
+                                            <ChefHat size={18} />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold font-sans text-[var(--text-main)]">Enviar a Cocina</span>
+                                            <span className="text-[11px] text-[var(--text-muted)] font-sans">
+                                                {formData.enviarCocina ? 'Genera comanda en pantalla de cocina' : 'No se envía a cocina'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={Boolean(formData.enviarCocina)}
+                                        onClick={() => setFormData(prev => ({ ...prev, enviarCocina: !prev.enviarCocina }))}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer border-none outline-none ${
+                                            formData.enviarCocina ? 'bg-amber-500' : 'bg-slate-600'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                                                formData.enviarCocina ? 'translate-x-6' : 'translate-x-1'
+                                            }`}
+                                        />
+                                    </button>
+                                </div>
+
+                                {/* Categoría Activa Toggle */}
+                                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/20 border border-[var(--glass-border)]">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formData.activo ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                                            {formData.activo ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold font-sans text-[var(--text-main)]">Categoría Activa</span>
+                                            <span className="text-[11px] text-[var(--text-muted)] font-sans">
+                                                {formData.activo ? 'Activa (Visible en la carta)' : 'Inactiva (Oculta en la carta)'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={Boolean(formData.activo)}
+                                        onClick={() => setFormData(prev => ({ ...prev, activo: !prev.activo }))}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer border-none outline-none ${
+                                            formData.activo ? 'bg-emerald-500' : 'bg-slate-600'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                                                formData.activo ? 'translate-x-6' : 'translate-x-1'
+                                            }`}
+                                        />
+                                    </button>
+                                </div>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <CustomCheckbox
-                                    checked={formData.activo}
-                                    onChange={e => setFormData({ ...formData, activo: e.target.checked })}
-                                    labelText="Categoría Activa"
-                                />
-                            </div>
-
-                            <button type="submit" className="glass-button primary" style={{ marginTop: 10 }}>
+                            <button type="submit" className="glass-button primary font-sans" style={{ marginTop: 8 }}>
                                 <Save size={18} /> Guardar
                             </button>
                         </form>

@@ -43,14 +43,14 @@ export default function SupportView() {
 
           <div className="flex flex-col gap-4">
             <div className="p-3.5 rounded-2xl flex items-center gap-3.5 bg-[var(--primary)]/5 border border-[var(--primary)]/20">
-              <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center text-white">
-                <Phone className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center !text-white shadow-sm" style={{ color: '#ffffff' }}>
+                <Phone className="w-5 h-5 !text-white" style={{ color: '#ffffff', stroke: '#ffffff' }} />
               </div>
               <div>
                 <span className="text-xs font-bold text-[var(--text-main)] block">Soporte Telefónico Exclusivo</span>
                 <span className="text-[11px] text-[var(--text-muted)]">+51 1 700-5555 &bull; Anexo 102</span>
               </div>
-              <a href="tel:+5117005555" className="ml-auto bg-[var(--primary)] hover:bg-[var(--primary)]/80 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer no-underline">Llamar</a>
+              <a href="tel:+5117005555" className="ml-auto bg-[var(--primary)] hover:bg-[var(--primary)]/80 !text-white text-[10px] font-bold px-3.5 py-2 rounded-lg transition-all cursor-pointer no-underline flex items-center justify-center shadow-sm" style={{ color: '#ffffff' }}>Llamar</a>
             </div>
 
             <div className="p-3.5 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex items-center gap-3.5">
@@ -110,7 +110,7 @@ export default function SupportView() {
             <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Mensaje Detallado</label>
             <textarea rows={3} required placeholder="Describa el inconveniente..." className="bg-[var(--primary)]/5 border border-zinc-200/50 p-2.5 rounded-xl text-xs text-[var(--text-main)] focus:outline-none" />
           </div>
-          <button type="submit" className="bg-[var(--primary)] hover:bg-[var(--primary)]/80 text-white font-extrabold text-xs py-3 rounded-xl cursor-pointer transition-all border-none">
+          <button type="submit" className="bg-[var(--primary)] hover:bg-[var(--primary)]/80 !text-white font-extrabold text-xs py-3 rounded-xl cursor-pointer transition-all border-none shadow-sm" style={{ color: '#ffffff' }}>
             Enviar Ticket IT
           </button>
         </form>

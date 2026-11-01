@@ -404,20 +404,11 @@
   box-shadow: 0 4px 14px rgba(255, 255, 255, 0.25) !important;
 }
 
-.theme-black #bunker-sidebar a.active span,
-.theme-black #bunker-sidebar a.active p,
-.theme-black #bunker-sidebar .active span,
-.theme-black aside a.active span,
-.theme-black aside .active span,
-.theme-black aside .glass-button.active span {
-  color: #000000 !important;
-}
-
-.theme-black #bunker-sidebar a.active svg,
-.theme-black #bunker-sidebar .active svg,
-.theme-black aside a.active svg,
-.theme-black aside .active svg,
-.theme-black aside .glass-button.active svg {
+.theme-black #bunker-sidebar a.active *,
+.theme-black #bunker-sidebar .active *,
+.theme-black aside a.active *,
+.theme-black aside .active *,
+.theme-black aside .glass-button.active * {
   color: #000000 !important;
   stroke: #000000 !important;
 }
@@ -463,25 +454,42 @@
   stroke: #000000 !important;
 }
 
-/* Ensure buttons with primary / black background in Minimal Dark always have white text and white icons */
-.theme-black .bg-\[var\(--primary\)\],
-.theme-black [class*="bg-[var(--primary)]"],
-.theme-black button.bg-\[var\(--primary\)\],
-.theme-black a.bg-\[var\(--primary\)\],
-.theme-black button[type="submit"].bg-\[var\(--primary\)\],
-.theme-black .btn-primary,
+/* Ensure buttons and elements with black or dark backgrounds always have white text and white icons */
+.theme-black button[class*="bg-[var(--primary)]"],
+.theme-black a[class*="bg-[var(--primary)]"],
+.theme-black div[class*="bg-[var(--primary)]"],
+.theme-black button[class*="bg-black"],
+.theme-black a[class*="bg-black"],
+.theme-black div[class*="bg-black"],
 .theme-black button.bg-black,
-.theme-black a.bg-black {
+.theme-black a.bg-black,
+.theme-black .btn-primary,
+button.bg-black,
+a.bg-black,
+button[class*="bg-black"],
+a[class*="bg-black"],
+button[style*="background: rgb(0, 0, 0)"],
+button[style*="background-color: rgb(0, 0, 0)"],
+button[style*="background: #000"],
+button[style*="background-color: #000"],
+button[style*="background: black"],
+button[style*="background-color: black"] {
   color: #ffffff !important;
 }
 
-.theme-black .bg-\[var\(--primary\)\] svg,
-.theme-black [class*="bg-[var(--primary)]"] svg,
-.theme-black button.bg-\[var\(--primary\)\] svg,
-.theme-black a.bg-\[var\(--primary\)\] svg,
-.theme-black .btn-primary svg,
-.theme-black button.bg-black svg,
-.theme-black a.bg-black svg {
+.theme-black button[class*="bg-[var(--primary)]"] *,
+.theme-black a[class*="bg-[var(--primary)]"] *,
+.theme-black div[class*="bg-[var(--primary)]"] *,
+.theme-black button[class*="bg-black"] *,
+.theme-black a[class*="bg-black"] *,
+.theme-black div[class*="bg-black"] *,
+.theme-black button.bg-black *,
+.theme-black a.bg-black *,
+.theme-black .btn-primary *,
+button.bg-black *,
+a.bg-black *,
+button[class*="bg-black"] *,
+a[class*="bg-black"] * {
   color: #ffffff !important;
   stroke: #ffffff !important;
 }
