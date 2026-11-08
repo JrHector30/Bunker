@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import CloseButton from './ui/CloseButton';
 import { useNotification } from '../context/NotificationContext';
 import { networkStatus, offlineCashService } from '../offline';
 
@@ -97,12 +98,7 @@ export function PaloteoModal({ isOpen, onClose, arqueoId }) {
               <h3 className="text-base font-bold text-[var(--text-main)]">Resumen de Ventas / Paloteo</h3>
               <p className="text-[11px] text-[var(--text-muted)] font-sans">Turno de Arqueo N° {arqueoId} • Conteo de unidades</p>
             </div>
-            <button
-              onClick={onClose}
-              className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer p-1 rounded-lg hover:bg-[var(--bg-secondary)] border-none bg-transparent"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <CloseButton onClick={onClose} className="scale-90" />
           </div>
 
           {/* Body */}

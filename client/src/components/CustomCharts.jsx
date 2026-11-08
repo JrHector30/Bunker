@@ -233,15 +233,15 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
 
         {/* Selected Arqueo Comparison Summary Pills */}
         <div className="flex flex-wrap items-center gap-2 mb-3 text-xs font-sans">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 text-emerald-700 dark:text-emerald-400 font-semibold">
+          <div className="chart-pill-ingresos flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
             <span>Ingresos: S/. {(selectedArqueo.totalBruto || 0).toFixed(2)}</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/30 text-rose-700 dark:text-rose-400 font-semibold">
+          <div className="chart-pill-egresos flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold">
             <span className="w-2 h-2 rounded-full bg-rose-500"></span>
             <span>Egresos: S/. {(selectedArqueo.egresos || selectedArqueo.egreso || 0).toFixed(2)}</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/30 text-blue-700 dark:text-blue-400 font-semibold">
+          <div className="chart-pill-balance flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold">
             <span>Balance Neto: S/. {((selectedArqueo.totalBruto || 0) - (selectedArqueo.egresos || selectedArqueo.egreso || 0)).toFixed(2)}</span>
           </div>
         </div>

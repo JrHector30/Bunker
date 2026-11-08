@@ -345,6 +345,10 @@ const TablesView = () => {
     };
 
     const handleMerge = async (padreId, hijaId) => {
+        if (!isCajaAbierta) {
+            showToast('Operación denegada. Se requiere la apertura de caja para unir mesas.', 'error');
+            return;
+        }
         // Encontrar la mesa padre actual y su comanda en el estado local de antemano
         const parentTable = tables.find(t => t.id === padreId);
         const activeComanda = parentTable?.comandas?.[0];
@@ -785,11 +789,22 @@ const TablesView = () => {
                                 <button
                                     className={`glass-button ${showMergeMode ? 'active' : ''}`}
                                     onClick={() => {
+                                        if (!isCajaAbierta) {
+                                            showToast('Operación denegada. Se requiere la apertura de caja para unir mesas.', 'error');
+                                            return;
+                                        }
                                         setShowMergeMode(!showMergeMode);
                                         setShowTransferMode(false);
                                     }}
-                                    title="Unir mesas"
-                                    style={{ borderColor: 'var(--success)', backgroundColor: 'var(--success)', color: 'white', fontWeight: 'bold' }}
+                                    title={!isCajaAbierta ? "Se requiere apertura de caja para unir mesas" : "Unir mesas"}
+                                    style={{
+                                        borderColor: 'var(--success)',
+                                        backgroundColor: !isCajaAbierta ? 'transparent' : 'var(--success)',
+                                        color: !isCajaAbierta ? 'var(--text-muted)' : 'white',
+                                        fontWeight: 'bold',
+                                        opacity: !isCajaAbierta ? 0.5 : 1,
+                                        cursor: !isCajaAbierta ? 'not-allowed' : 'pointer'
+                                    }}
                                 >
                                     🔗 Unir
                                 </button>
@@ -1321,11 +1336,21 @@ const TablesView = () => {
                     <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
                         <button
                             className="glass-button"
-                            onClick={() => { setShowGlobalMergeModal(true); setSelectedMergeTableIds([]); }}
+                            onClick={() => {
+                                if (!isCajaAbierta) {
+                                    showToast('Operación denegada. Se requiere la apertura de caja para unir mesas.', 'error');
+                                    return;
+                                }
+                                setShowGlobalMergeModal(true);
+                                setSelectedMergeTableIds([]);
+                            }}
+                            title={!isCajaAbierta ? "Se requiere apertura de caja para unir mesas" : "Unir mesas"}
                             style={{
                                 borderColor: 'var(--success)',
-                                color: 'var(--success)',
-                                fontWeight: 'bold'
+                                color: !isCajaAbierta ? 'var(--text-muted)' : 'var(--success)',
+                                fontWeight: 'bold',
+                                opacity: !isCajaAbierta ? 0.5 : 1,
+                                cursor: !isCajaAbierta ? 'not-allowed' : 'pointer'
                             }}
                         >
                             🔗 Unir Mesas

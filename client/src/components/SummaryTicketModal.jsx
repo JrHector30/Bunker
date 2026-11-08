@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Printer } from 'lucide-react';
+import CloseButton from './ui/CloseButton';
 import { useNotification } from '../context/NotificationContext';
 import { enqueueTicket } from '../utils/printer';
 import { networkStatus, offlineCashService } from '../offline';
@@ -95,20 +96,15 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
 
       <div className="flex min-h-full items-center justify-center p-4 text-center">
         {/* Container */}
-        <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-lg transition-all border border-slate-200 w-full max-w-sm font-sans no-print">
+        <div className="relative transform overflow-hidden rounded-lg bg-[var(--bg-surface)] text-left shadow-lg transition-all border border-[var(--glass-border)] w-full max-w-sm font-sans no-print text-[var(--text-main)]">
 
           {/* Header */}
-          <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center text-slate-900">
+          <div className="bg-[var(--bg-surface)] border-b border-[var(--glass-border)] px-6 py-4 flex justify-between items-center text-[var(--text-main)]">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Resumen de Caja</h3>
-              <p className="text-[11px] text-slate-400">Previsualización de Ticket</p>
+              <h3 className="text-base font-bold text-[var(--text-main)]">Resumen de Caja</h3>
+              <p className="text-[11px] text-[var(--text-muted)] font-sans">Previsualización de Ticket</p>
             </div>
-            <button
-              onClick={onClose}
-              className="border-none text-slate-400 hover:text-slate-600 transition-colors cursor-pointer p-1 rounded-lg hover:bg-slate-50"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <CloseButton onClick={onClose} className="scale-90" />
           </div>
 
           {/* Ticket Display Container */}
@@ -233,17 +229,18 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
           </div>
 
           {/* Footer Action Buttons */}
-          <div className="bg-slate-50 px-6 py-4 flex gap-3 border-t border-slate-200 justify-end rounded-b-lg no-print">
+          <div className="bg-[var(--bg-secondary)] px-6 py-4 flex gap-3 border-t border-[var(--glass-border)] justify-end rounded-b-lg no-print">
             <button
               onClick={onClose}
-              className="py-2.5 px-4 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-350 hover:bg-slate-50 transition-colors cursor-pointer"
+              className="glass-button text-xs font-bold px-4 py-2"
+              style={{ borderRadius: '8px' }}
             >
               Cancelar
             </button>
             <button
               onClick={handlePrint}
               disabled={loading || !summaryData}
-              className="py-2.5 px-4 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="py-2 px-4 rounded-lg text-xs font-bold text-white bg-[var(--primary)] hover:opacity-90 active:opacity-100 transition-colors cursor-pointer border-none flex items-center gap-1.5 disabled:opacity-50"
             >
               <Printer className="w-3.5 h-3.5" />
               Imprimir Ticket

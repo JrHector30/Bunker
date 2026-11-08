@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import CloseButton from './ui/CloseButton';
 import { X, DollarSign, Smartphone, CreditCard, HelpCircle, FileText, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { networkStatus, offlineCashService } from '../offline';
@@ -84,25 +85,20 @@ export function DetailModal({ isOpen, onClose, arqueoId }) {
       <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity" onClick={onClose} />
 
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-lg transition-all sm:my-8 sm:w-full sm:max-w-xl border border-slate-200 font-sans">
+        <div className="relative transform overflow-hidden rounded-lg bg-[var(--bg-surface)] text-left shadow-lg transition-all sm:my-8 sm:w-full sm:max-w-xl border border-[var(--glass-border)] font-sans text-[var(--text-main)]">
           
           {/* Header */}
-          <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center text-slate-900">
+          <div className="bg-[var(--bg-surface)] border-b border-[var(--glass-border)] px-6 py-4 flex justify-between items-center text-[var(--text-main)]">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-slate-50 text-slate-700 border border-slate-200">
-                <FileText className="w-4 h-4" />
+              <div className="p-1.5 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-main)] border border-[var(--glass-border)]">
+                <FileText className="w-4 h-4 text-[var(--primary)]" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Resumen Auditoría de Caja</h3>
-                <p className="text-[11px] text-slate-400">Arqueo Sesión N° {arqueo.id} • {arqueo.estado?.toUpperCase()}</p>
+                <h3 className="text-base font-bold text-[var(--text-main)]">Resumen Auditoría de Caja</h3>
+                <p className="text-[11px] text-[var(--text-muted)] font-sans">Arqueo Sesión N° {arqueo.id} • {arqueo.estado?.toUpperCase()}</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer p-1 rounded-lg hover:bg-slate-50"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <CloseButton onClick={onClose} className="scale-90" />
           </div>
 
           <div className="p-6 space-y-5 max-h-[500px] overflow-y-auto">
@@ -227,10 +223,10 @@ export function DetailModal({ isOpen, onClose, arqueoId }) {
           </div>
 
           {/* Footer action buttons */}
-          <div className="bg-slate-50 px-6 py-4 flex gap-3 border-t border-slate-200 justify-end rounded-b-lg">
+          <div className="bg-[var(--bg-secondary)] px-6 py-4 flex gap-3 border-t border-[var(--glass-border)] justify-end rounded-b-lg">
             <button
               onClick={onClose}
-              className="py-2 px-4 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors cursor-pointer"
+              className="py-2 px-4 rounded-lg text-xs font-bold text-white bg-[var(--primary)] hover:opacity-90 active:opacity-100 transition-colors cursor-pointer border-none"
             >
               Cerrar Vista
             </button>

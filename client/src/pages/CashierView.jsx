@@ -1349,64 +1349,23 @@ const CashierView = () => {
         <div className="flex-grow overflow-y-auto px-1 py-3 md:px-3 w-full space-y-3 bg-[var(--bg-primary)]">
 
           {/* Header toolbar */}
-          <div className="flex flex-col md:flex-row mr-10 md:items-center justify-between gap-3 pb-.5" style={{ borderBottom: '1px solid var(--glass-border)' }}>
+          <div className="flex flex-row items-center justify-between gap-3 pb-2" style={{ borderBottom: '1px solid var(--glass-border)' }}>
             <div className="flex items-center gap-3">
-
-              <div>
-                <h1 className="text-xl font-black tracking-tight text-[var(--text-main)] font-sans">Arqueo de Caja</h1>
-              </div>
+              <h1 className="text-xl font-black tracking-tight text-[var(--text-main)] font-sans">Arqueo de Caja</h1>
             </div>
 
-            {/* Actions Ribbon */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => {
-                  if (shiftStatus !== 'abierto') {
-                    showToast("Debe abrir caja antes de registrar un movimiento.", "error");
-                    return;
-                  }
-                  setIsMovModalOpen(true);
-                }}
-                disabled={shiftStatus !== 'abierto'}
-                className="glass-button primary flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group font-sans h-8"
-              >
-                <Plus className="w-3.5 h-3.5 text-emerald-450 group-hover:rotate-90 transition-transform" />
-                <span>Movimiento</span>
-              </button>
-
-              <button
-                onClick={handleExportExcel}
-                title="Descargar historial de caja en formato Excel"
-                className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans h-8"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span className="hidden sm:inline">Exportar Excel</span>
-              </button>
-
-              <DropdownRangeDatePicker
-                mode="range"
-                value={filterDateRange}
-                onChange={(range) => {
-                  setFilterDateRange(range);
-                  setCurrentPage(1);
-                }}
-                placeholder="Filtrar por Fecha"
-                triggerClassName="!w-[170px] [&_button]:h-8 [&_button]:text-xs [&_button]:px-2.5 [&_svg]:h-3.5 [&_svg]:w-3.5"
-              />
-
-              {/* Sidebar toggle button (Mobile) */}
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden relative inline-flex items-center justify-center p-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--glass-border)] text-[var(--text-main)] shadow-xs cursor-pointer h-8 w-8"
-              >
-                <Menu className="w-4 h-4" />
-                {openTables.length > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white font-mono text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-black">
-                    {openTables.length}
-                  </span>
-                )}
-              </button>
-            </div>
+            {/* Sidebar toggle button (Mobile) */}
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden relative inline-flex items-center justify-center p-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--glass-border)] text-[var(--text-main)] shadow-xs cursor-pointer h-8 w-8"
+            >
+              <Menu className="w-4 h-4" />
+              {openTables.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white font-mono text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-black">
+                  {openTables.length}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Active Shift Banner Button */}
@@ -1453,34 +1412,48 @@ const CashierView = () => {
 
           {/* Arqueos sessions table list */}
           <div className="glass-panel overflow-hidden" style={{ boxShadow: 'var(--panel-shadow, 0 8px 32px 0 rgba(0, 0, 0, 0.37)), -6px 0 25px -5px rgba(0, 0, 0, 0.3)' }}>
-            <div className="p-3 bg-transparent flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" style={{ borderBottom: '1px solid var(--glass-border)', height: '57px', transition: 'none' }} data-selected="true" data-label-id="0">
-              <div>
+            <div className="px-4 py-3.5 bg-transparent flex flex-col md:flex-row justify-between items-start md:items-center gap-4" style={{ borderBottom: '1px solid var(--glass-border)' }}>
+              <div className="pt-1.5">
                 <h2 className="text-base font-bold text-[var(--text-main)] font-sans">Historial de Sesiones de Arqueo</h2>
-                <p className="text-[12px] text-[var(--text-muted)] mt-0.5 font-sans">Auditoría completa de movimientos de caja registrados en el sistema.</p>
+                <p className="text-[12px] text-[var(--text-muted)] mt-1 font-sans">Auditoría completa de movimientos de caja registrados en el sistema.</p>
               </div>
 
-              {/* Search bar */}
-              <div className="relative w-full sm:w-64 font-sans" >
-                <Search className="absolute inset-y-0 left-3 my-auto w-4 h-4 text-[var(--text-muted)]" />
-                <input
-                  type="text"
-                  placeholder="Buscar arqueo por N°, fecha, estado..."
+              {/* Actions Ribbon */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (shiftStatus !== 'abierto') {
+                      showToast("Debe abrir caja antes de registrar un movimiento.", "error");
+                      return;
+                    }
+                    setIsMovModalOpen(true);
+                  }}
+                  disabled={shiftStatus !== 'abierto'}
+                  className="glass-button primary flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group font-sans h-8"
+                >
+                  <Plus className="w-3.5 h-3.5 text-emerald-450 group-hover:rotate-90 transition-transform" />
+                  <span>Movimiento</span>
+                </button>
 
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
+                <button
+                  onClick={handleExportExcel}
+                  title="Descargar historial de caja en formato Excel"
+                  className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans h-8"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="hidden sm:inline">Exportar Excel</span>
+                </button>
+
+                <DropdownRangeDatePicker
+                  mode="range"
+                  value={filterDateRange}
+                  onChange={(range) => {
+                    setFilterDateRange(range);
                     setCurrentPage(1);
                   }}
-                  className="w-52 font-sans bg-[var(--bg-secondary)] text-[var(--text-main)] border border-[var(--glass-border)] pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-hidden focus:border-[var(--primary)] transition-all font-medium"
+                  placeholder="Filtrar por Fecha"
+                  triggerClassName="!w-[170px] [&_button]:h-8 [&_button]:text-xs [&_button]:px-2.5 [&_svg]:h-3.5 [&_svg]:w-3.5"
                 />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute inset-y-0 right-0 my-auto text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer bg-transparent border-none"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
               </div>
             </div>
             {/* Custom Responsive Table */}
