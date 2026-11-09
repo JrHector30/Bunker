@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { clearGlobalCache } from '../hooks/useCache';
 
 const AuthContext = createContext(null);
 
@@ -65,6 +66,7 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setPermisosUsuario([]);
         localStorage.removeItem('bunker_user');
+        clearGlobalCache();
     };
 
     const tienePermiso = (modulo) => {

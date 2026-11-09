@@ -87,7 +87,7 @@ export function MovimientoModal({ isOpen, onClose, onAddMovimiento, activeArqueo
               </div>
               <div>
                 <h3 className="text-base font-bold text-[var(--text-main)] font-sans">Registrar Movimiento</h3>
-                <p className="text-[11px] text-[var(--text-muted)] font-sans">Arqueo en curso N° {activeArqueo.id}</p>
+                <p className="text-[11px] text-[var(--text-muted)] font-sans">Arqueo en curso N° {activeArqueo.numeroSesion || activeArqueo.id}</p>
               </div>
             </div>
             <button

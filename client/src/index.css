@@ -1,6 +1,7 @@
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ============================================
    GLOBAL BOX-SIZING RESET
@@ -254,7 +255,7 @@
   --warning: #fcc419;
   --danger: #ff6b6b;
 
-  --table-header-bg: rgba(255, 255, 255, 0.1);
+  --table-header-bg: var(--primary);
   --table-row-border: rgba(255, 255, 255, 0.1);
   --item-hover: rgba(255, 255, 255, 0.1);
 
@@ -457,10 +458,8 @@
 /* Ensure buttons and elements with black or dark backgrounds always have white text and white icons */
 .theme-black button[class*="bg-[var(--primary)]"],
 .theme-black a[class*="bg-[var(--primary)]"],
-.theme-black div[class*="bg-[var(--primary)]"],
 .theme-black button[class*="bg-black"],
 .theme-black a[class*="bg-black"],
-.theme-black div[class*="bg-black"],
 .theme-black button.bg-black,
 .theme-black a.bg-black,
 .theme-black .btn-primary,
@@ -479,10 +478,8 @@ button[style*="background-color: black"] {
 
 .theme-black button[class*="bg-[var(--primary)]"] *,
 .theme-black a[class*="bg-[var(--primary)]"] *,
-.theme-black div[class*="bg-[var(--primary)]"] *,
 .theme-black button[class*="bg-black"] *,
 .theme-black a[class*="bg-black"] *,
-.theme-black div[class*="bg-black"] *,
 .theme-black button.bg-black *,
 .theme-black a.bg-black *,
 .theme-black .btn-primary *,
@@ -492,6 +489,53 @@ button[class*="bg-black"] *,
 a[class*="bg-black"] * {
   color: #ffffff !important;
   stroke: #ffffff !important;
+}
+
+/* SuperAdmin Modals Light Mode Enforcement */
+.mode-light .superadmin-modal-card {
+  color: #18181b !important;
+}
+
+.mode-light .superadmin-modal-card h1,
+.mode-light .superadmin-modal-card h2,
+.mode-light .superadmin-modal-card h3,
+.mode-light .superadmin-modal-card h4 {
+  color: #09090b !important;
+}
+
+.mode-light .superadmin-modal-card p {
+  color: #52525b !important;
+}
+
+.mode-light .superadmin-modal-card label {
+  color: #18181b !important;
+}
+
+.mode-light .superadmin-modal-card input,
+.mode-light .superadmin-modal-card select {
+  color: #09090b !important;
+  background-color: #f4f4f5 !important;
+  border-color: #d4d4d8 !important;
+}
+
+.mode-light .superadmin-modal-card input::placeholder {
+  color: #a1a1aa !important;
+}
+
+.mode-light .superadmin-modal-card button.btn-cancel {
+  background-color: #e4e4e7 !important;
+  color: #18181b !important;
+}
+
+.mode-light .superadmin-modal-card button.btn-cancel * {
+  color: #18181b !important;
+}
+
+.mode-light .superadmin-modal-card .close-button-container .X,
+.mode-light .superadmin-modal-card .close-button-container .Y,
+.mode-light .close-button-container .X,
+.mode-light .close-button-container .Y {
+  background-color: #18181b !important;
 }
 
 /* Active Item: White Bg, Black Text, No Border */
@@ -667,17 +711,18 @@ a[class*="bg-black"] * {
   /* Use the THEME's primary color */
 }
 
-/* Make headers text white in light mode so they are readable against the primary color */
+/* Headers text on theme background */
 .mode-light th,
 .mode-light .table-responsive thead tr {
-  color: white !important;
+  color: #ffffff !important;
+  background-color: var(--primary) !important;
 }
 
 /* User wants borders thicker in Light Mode on desktop, respecting the theme color */
 @media (min-width: 769px) {
   .mode-light {
 
-    --table-row-border: var(--primary) !important;
+    --table-row-border: rgba(0, 0, 0, 0.08) !important;
   }
 
   .mode-light .glass-panel,
@@ -1210,7 +1255,7 @@ th {
   text-align: left;
   font-weight: 600;
   background: var(--table-header-bg);
-  color: var(--text-main);
+  color: #ffffff;
 }
 
 td {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bunker-v2';
+const CACHE_NAME = 'bunker-v3';
 
 // Instalar y activar inmediatamente sin esperar
 self.addEventListener('install', (event) => {
@@ -27,6 +27,16 @@ self.addEventListener('fetch', (event) => {
 
   // No interceptar peticiones que no sean GET
   if (request.method !== 'GET') return;
+
+  // NUNCA interceptar peticiones dinámicas a la API ni websockets
+  try {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith('/api') || url.pathname.startsWith('/socket.io')) {
+      return;
+    }
+  } catch (e) {
+    return;
+  }
 
   // 1. PÁGINAS HTML / NAVEGACIÓN: NETWORK-FIRST
   // Esto garantiza que con F5 siempre se obtenga la versión más reciente desplegada en Vercel,

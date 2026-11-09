@@ -4,6 +4,7 @@ import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { setOptimisticLock } from '../hooks/useCache';
 import { enqueueTicket } from '../utils/printer';
+import { getActiveRestaurantName } from '../utils/tenant';
 import { networkStatus, NetworkState, offlineCheckoutService, offlineSnapshotService, resolveItemPrice, db } from '../offline';
 
 export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
@@ -243,6 +244,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
       }));
 
       const receiptPayload = {
+        restauranteNombre: getActiveRestaurantName(),
         type: 'comprobante',
         tipoComprobante: comprobanteTipo,
         mesaId: tableName,

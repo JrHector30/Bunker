@@ -4,6 +4,37 @@ import { logStateChange } from '../utils/auditLogger';
 // Global cache object for fast memory retrieval
 const globalCache = {};
 
+// Helper multi-tenant para aislar las claves de caché por restaurante
+export function getScopedKey(baseKey) {
+    if (!baseKey) return baseKey;
+    try {
+        let tenantId = null;
+        const storedUser = localStorage.getItem('bunker_user');
+        if (storedUser) {
+            const user = JSON.parse(storedUser);
+            if (user?.restauranteId) tenantId = user.restauranteId;
+        }
+        if (!tenantId) {
+            const storedTenant = localStorage.getItem('bunker_current_tenant');
+            if (storedTenant) {
+                const t = JSON.parse(storedTenant);
+                if (t?.id) tenantId = t.id;
+            }
+        }
+        if (tenantId) {
+            if (baseKey.startsWith(`t${tenantId}_`)) return baseKey;
+            return `t${tenantId}_${baseKey}`;
+        }
+    } catch (e) {}
+    return baseKey;
+}
+
+export function clearGlobalCache() {
+    for (const k in globalCache) {
+        if (k !== 'locks') delete globalCache[k];
+    }
+}
+
 // Global locks object to override slow backend tables status
 if (!globalCache.locks) {
     globalCache.locks = {};
@@ -13,7 +44,8 @@ export function setOptimisticLock(tableId, estado) {
     globalCache.locks[tableId] = { estado, timestamp: Date.now() };
 }
 
-export function useCache(key, fetcher, initialData = []) {
+export function useCache(rawKey, fetcher, initialData = []) {
+    const key = getScopedKey(rawKey);
     const fetcherRef = useRef(fetcher);
     // Siempre actualizar el ref sin re-ejecutar effects
     useEffect(() => { fetcherRef.current = fetcher; });
@@ -34,7 +66,8 @@ export function useCache(key, fetcher, initialData = []) {
     const lastResolvedFetchIdRef = useRef(0);
 
     const applyLocks = useCallback((currentKey, data) => {
-        if (currentKey !== 'tables' || !Array.isArray(data)) return data;
+        const isTables = currentKey === 'tables' || (typeof currentKey === 'string' && currentKey.endsWith('_tables'));
+        if (!isTables || !Array.isArray(data)) return data;
         if (!globalCache.locks) return data;
         
         const now = Date.now();

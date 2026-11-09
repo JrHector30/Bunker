@@ -275,6 +275,7 @@ function formatTicket(ticket, lineWidth) {
 }
 
 function formatComprobante(ticket, lineWidth) {
+  const restaurantName = (ticket.contenido?.restauranteNombre || ticket.restaurante_nombre || "BUNKER RESTOBAR").toUpperCase();
   const dateStr = new Date(ticket.creado_a || Date.now()).toLocaleString('es-PE');
   const data = ticket.contenido || {};
   const separatorDouble = "=".repeat(lineWidth) + "\n";
@@ -295,7 +296,7 @@ function formatComprobante(ticket, lineWidth) {
 
   let text = "";
   text += separatorDouble;
-  text += center("BUNKER RESTOBAR");
+  text += center(restaurantName);
   text += center(tituloDoc);
   text += separatorDouble;
   text += `FECHA: ${dateStr}\n`;
@@ -367,6 +368,7 @@ function formatComprobante(ticket, lineWidth) {
 }
 
 function formatComanda(ticket, lineWidth) {
+  const restaurantName = (ticket.contenido?.restauranteNombre || ticket.restaurante_nombre || "BUNKER RESTOBAR").toUpperCase();
   const dateStr = new Date(ticket.creado_a).toLocaleString('es-PE');
   const separatorDouble = "=".repeat(lineWidth) + "\n";
   const separatorSingle = "-".repeat(lineWidth) + "\n";
@@ -377,7 +379,7 @@ function formatComanda(ticket, lineWidth) {
 
   let text = "";
   text += separatorDouble;
-  text += center("BUNKER RESTOBAR");
+  text += center(restaurantName);
   text += center("TICKET DE COCINA");
   text += separatorDouble;
   text += `FECHA: ${dateStr}\n`;
@@ -402,6 +404,7 @@ function formatComanda(ticket, lineWidth) {
 }
 
 function formatPrecuenta(ticket, lineWidth) {
+  const restaurantName = (ticket.contenido?.restauranteNombre || ticket.restaurante_nombre || "BUNKER RESTOBAR").toUpperCase();
   const dateStr = new Date(ticket.creado_a).toLocaleString('es-PE');
   const separatorDouble = "=".repeat(lineWidth) + "\n";
   const separatorSingle = "-".repeat(lineWidth) + "\n";
@@ -416,7 +419,7 @@ function formatPrecuenta(ticket, lineWidth) {
 
   let text = "";
   text += separatorDouble;
-  text += center("BUNKER RESTOBAR");
+  text += center(restaurantName);
   text += center("PRECUENTA");
   text += separatorDouble;
   text += `FECHA: ${dateStr}\n`;
@@ -452,6 +455,7 @@ function formatPrecuenta(ticket, lineWidth) {
 }
 
 function formatArqueo(ticket, lineWidth) {
+  const restaurantName = (ticket.contenido?.restauranteNombre || ticket.restaurante_nombre || "BUNKER RESTOBAR").toUpperCase();
   const dateStr = new Date(ticket.creado_a).toLocaleString('es-PE');
   const data = ticket.contenido;
   const separatorDouble = "=".repeat(lineWidth) + "\n";
@@ -475,7 +479,7 @@ function formatArqueo(ticket, lineWidth) {
 
   let text = "";
   text += separatorDouble;
-  text += center("BUNKER RESTOBAR");
+  text += center(restaurantName);
   text += center("RESUMEN DE CAJA");
   text += separatorDouble;
   text += `FECHA IMP:   ${dateStr}\n`;

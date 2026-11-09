@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 import { useCaja } from '../context/CajaContext';
 import { enqueueTicket } from '../utils/printer';
+import { getActiveRestaurant } from '../utils/tenant';
 import DeleteButton from '../components/ui/DeleteButton';
 import CloseButton from '../components/ui/CloseButton';
 import { networkStatus, NetworkState, db, offlineOrderService, offlineSnapshotService } from '../offline';

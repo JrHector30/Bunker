@@ -55,13 +55,13 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
   const pointsIngreso = lastArqueos.map((arq, index) => {
     const x = padding + (index * (chartWidth - padding * 2)) / Math.max(1, lastArqueos.length - 1);
     const y = chartHeight - padding - ((arq.totalBruto || 0) * (chartHeight - padding * 2)) / maxOverall;
-    return { x, y, val: arq.totalBruto || 0, id: arq.id, egreso: arq.egresos || arq.egreso || 0 };
+    return { x, y, val: arq.totalBruto || 0, id: arq.id, numeroSesion: arq.numeroSesion != null ? arq.numeroSesion : arq.id, egreso: arq.egresos || arq.egreso || 0 };
   });
 
   const pointsEgreso = lastArqueos.map((arq, index) => {
     const x = padding + (index * (chartWidth - padding * 2)) / Math.max(1, lastArqueos.length - 1);
     const y = chartHeight - padding - (((arq.egresos || arq.egreso || 0) * (chartHeight - padding * 2)) / maxOverall);
-    return { x, y, val: arq.egresos || arq.egreso || 0, id: arq.id };
+    return { x, y, val: arq.egresos || arq.egreso || 0, id: arq.id, numeroSesion: arq.numeroSesion != null ? arq.numeroSesion : arq.id };
   });
 
   // SVG Path generator helper
@@ -209,20 +209,20 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
             <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Análisis Histórico</span>
             <h3 className="text-base font-bold text-[var(--text-main)] tracking-tight flex items-center gap-1.5 mt-0.5 font-sans">
               <TrendingUp className="w-4 h-4 text-emerald-500" />
-              Comparativa de Ingresos vs. Egresos (Arqueo N° {selectedArqueo.id})
+              Comparativa de Ingresos vs. Egresos (Arqueo N° {selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id})
             </h3>
           </div>
           <button
             onClick={() => {
               const details = [
                 `Historial de arqueos de caja (últimas ${lastArqueos.length} sesiones).`,
-                `Arqueo seleccionado: N° ${selectedArqueo.id}`,
+                `Arqueo seleccionado: N° ${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}`,
                 `Ingreso registrado: S/. ${(selectedArqueo.totalBruto || 0).toFixed(2)}`,
                 `Egreso registrado: S/. ${(selectedArqueo.egresos || selectedArqueo.egreso || 0).toFixed(2)}`,
                 `Balance Neto: S/. {((selectedArqueo.totalBruto || 0) - (selectedArqueo.egresos || selectedArqueo.egreso || 0)).toFixed(2)}`,
                 `Fecha de exportación: ${new Date().toLocaleString()}`
               ];
-              handleExportChart(chartASvgRef, `Arqueos_Ingresos_Egresos_N${selectedArqueo.id}.png`, `Comparativa de Ingresos vs. Egresos (Arqueo N° ${selectedArqueo.id}) - Bunker`, details);
+              handleExportChart(chartASvgRef, `Arqueos_Ingresos_Egresos_N${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}.png`, `Comparativa de Ingresos vs. Egresos (Arqueo N° ${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}) - Bunker`, details);
             }}
             className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans"
           >
@@ -354,7 +354,7 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                     onMouseEnter={(e) => {
                       setActiveBarIndex(index);
                       setTooltipContent({
-                        label: `Arqueo N° ${p.id}`,
+                        label: `Arqueo N° ${p.numeroSesion != null ? p.numeroSesion : p.id}`,
                         ingreso: p.val,
                         egreso: p.egreso
                       });
@@ -414,7 +414,7 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                       style={{ fill: isSelected ? '#10b981' : 'var(--text-muted)' }}
                       className={`font-sans text-[10px] ${isSelected ? 'font-bold' : ''}`}
                     >
-                      N° {p.id}
+                      N° {p.numeroSesion != null ? p.numeroSesion : p.id}
                     </text>
                   )}
                 </g>
@@ -459,13 +459,13 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
             <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest font-sans">Análisis del Arqueo Seleccionado</span>
             <h3 className="text-base font-bold text-[var(--text-main)] tracking-tight flex items-center gap-1.5 mt-0.5 font-sans">
               <BarChart3 className="w-4 h-4 text-emerald-500" />
-              Distribución de Métodos de Pago (Arqueo N° {selectedArqueo.id})
+              Distribución de Métodos de Pago (Arqueo N° {selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id})
             </h3>
           </div>
           <button
             onClick={() => {
               const details = [
-                `Desglose del Arqueo de Caja N° ${selectedArqueo.id}.`,
+                `Desglose del Arqueo de Caja N° ${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}.`,
                 `Monto Neto Total: S/. ${selectedArqueo.totalBruto.toFixed(2)}`,
                 `Efectivo en caja: S/. ${detailEfectivo.toFixed(2)} (${((detailEfectivo / totalMethods) * 100).toFixed(0)}%)`,
                 `Digital (Yape/Plin): S/. ${detailDigital.toFixed(2)} (${((detailDigital / totalMethods) * 100).toFixed(0)}%)`,
@@ -473,7 +473,7 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
                 `Manual/Otros: S/. ${detailManual.toFixed(2)} (${((detailManual / totalMethods) * 100).toFixed(0)}%)`,
                 `Fecha de exportación: ${new Date().toLocaleString()}`
               ];
-              handleExportChart(chartBSvgRef, `Arqueo_${selectedArqueo.id}_Distribucion_Pagos.png`, `Distribución de Métodos de Pago (Arqueo N° ${selectedArqueo.id}) - Bunker`, details);
+              handleExportChart(chartBSvgRef, `Arqueo_${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}_Distribucion_Pagos.png`, `Distribución de Métodos de Pago (Arqueo N° ${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}) - Bunker`, details);
             }}
             className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans"
           >
@@ -573,7 +573,7 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-1">
                 <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Arqueo</span>
-                <span className="text-sm font-bold text-[var(--text-main)]">N° {selectedArqueo.id}</span>
+                <span className="text-sm font-bold text-[var(--text-main)]">N° {selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}</span>
                 <span className="text-[9px] text-[var(--text-muted)] font-mono">
                   S/. {(selectedArqueo.totalBruto || 0).toFixed(0)}
                 </span>

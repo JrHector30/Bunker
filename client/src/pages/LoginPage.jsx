@@ -22,15 +22,31 @@ const LoginPage = () => {
     }, []);
 
     // Dynamic Users from API Cache
-    const fetcher = () => fetch('/api/users').then(res => res.json()).then(data => {
-        return data.map(u => ({
-            ...u,
-            initial: u.nombre ? u.nombre.charAt(0).toUpperCase() : '?',
-            shift: u.rol === 'admin' ? 'Acceso 24/7' : (u.rol === 'mozo' ? '08:00 AM - 04:00 PM' : 'Turno Operativo')
-        }));
-    });
+    const currentTenant = (() => {
+        try {
+            const raw = localStorage.getItem('bunker_current_tenant');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
 
-    const { data: usersList, mutate: fetchUsers } = useCache('users', fetcher, []);
+    const fetcher = () => {
+        let url = '/api/users';
+        if (currentTenant?.id) {
+            url += `?restauranteId=${currentTenant.id}`;
+        }
+        return fetch(url).then(res => res.json()).then(data => {
+            return data.map(u => ({
+                ...u,
+                initial: u.nombre ? u.nombre.charAt(0).toUpperCase() : '?',
+                shift: u.rol === 'admin' ? 'Acceso 24/7' : (u.rol === 'mozo' ? '08:00 AM - 04:00 PM' : 'Turno Operativo')
+            }));
+        });
+    };
+
+    const cacheKey = currentTenant?.id ? `users_tenant_${currentTenant.id}` : 'users';
+    const { data: usersList, mutate: fetchUsers } = useCache(cacheKey, fetcher, []);
     const [isExiting, setIsExiting] = useState(false);
 
     // Password Recovery State

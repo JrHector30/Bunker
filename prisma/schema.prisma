@@ -9,6 +9,32 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model Restaurante {
+  id            Int          @id @default(autoincrement())
+  nombre        String
+  slug          String       @unique
+  activo        Boolean      @default(true)
+  tipoMembresia String       @default("Corporativo") // Emprendedor, Restaurante Pro, Corporativo
+  limiteMesas   Int?         @default(100)
+  fechaCreacion DateTime     @default(now())
+
+  // Datos del Cliente y Local
+  direccion        String?
+  telefono         String?
+  clienteNombres   String?
+  clienteApellidos String?
+  fechaPagos       String?
+
+  // Relaciones
+  usuarios      User[]
+  mesas         Mesa[]
+  categorias    Categoria[]
+  platos        Plato[]
+  comandas      Comanda[]
+  arqueos       Arqueo[]
+  insumos       Insumo[]
+}
+
 model User {
   id               Int               @id @default(autoincrement())
   nombre           String
@@ -17,10 +43,13 @@ model User {
   password         String
   foto             String?           // URL to profile photo
   correo           String?           // Correo del admin para recuperación
+  primerAcceso     Boolean           @default(false)
   passwordRecovery PasswordRecovery? // Relación 1:1 de recuperación
   comandas         Comanda[]
   detallesCocina   DetalleComanda[]  @relation("Cocinero")
   movimientosInsumo MovimientoInsumo[]
+  restauranteId    Int?
+  restaurante      Restaurante?      @relation(fields: [restauranteId], references: [id])
 }
 
 model PasswordRecovery {
@@ -38,7 +67,7 @@ model PasswordRecovery {
 
 model Mesa {
   id          Int       @id @default(autoincrement())
-  numero      String    @unique
+  numero      String
   capacidad   Int
   estado      String    @default("libre") // libre, ocupada, cerrada
   posX        Float     @default(0)
@@ -51,39 +80,47 @@ model Mesa {
   mesaPadre   Mesa?     @relation("MesaUnion", fields: [mesaPadreId], references: [id])
   mesasHijas  Mesa[]    @relation("MesaUnion")
 
+  restauranteId Int?
+  restaurante   Restaurante? @relation(fields: [restauranteId], references: [id])
+
+  @@unique([numero, restauranteId])
   @@index([estado])
 }
 
 
 
 model Categoria {
-  id      Int      @id @default(autoincrement())
-  nombre  String   @unique
-  icono   String?
-  color   String   @default("#000000")
-  orden   Int      @default(0)
-  activo  Boolean  @default(true)
-  deleted Boolean  @default(false) // Soft Delete
-  enviarCocina Boolean @default(true)
-  platos  Plato[]
+  id            Int          @id @default(autoincrement())
+  nombre        String       @unique
+  icono         String?
+  color         String       @default("#000000")
+  orden         Int          @default(0)
+  activo        Boolean      @default(true)
+  deleted       Boolean      @default(false) // Soft Delete
+  enviarCocina  Boolean      @default(true)
+  platos        Plato[]
+  restauranteId Int?
+  restaurante   Restaurante? @relation(fields: [restauranteId], references: [id])
 }
 
 model Plato {
-  id              Int              @id @default(autoincrement())
-  nombre          String
-  descripcion     String?
-  precio          Float
-  categoriaId     Int
-  categoria       Categoria        @relation(fields: [categoriaId], references: [id])
-  imagen          String?
-  activo          Boolean          @default(true)
-  deleted         Boolean          @default(false)
-  fechaCreacion   DateTime         @default(now())
-  ultimaModificacion DateTime      @updatedAt
-  costoProduccion Float            @default(0)
-  margenGanancia  Float            @default(0)
-  receta          RecetaInsumo[]
-  detalles        DetalleComanda[]
+  id                 Int              @id @default(autoincrement())
+  nombre             String
+  descripcion        String?
+  precio             Float
+  categoriaId        Int
+  categoria          Categoria        @relation(fields: [categoriaId], references: [id])
+  imagen             String?
+  activo             Boolean          @default(true)
+  deleted            Boolean          @default(false)
+  fechaCreacion      DateTime         @default(now())
+  ultimaModificacion DateTime         @updatedAt
+  costoProduccion    Float            @default(0)
+  margenGanancia     Float            @default(0)
+  receta             RecetaInsumo[]
+  detalles           DetalleComanda[]
+  restauranteId      Int?
+  restaurante        Restaurante?     @relation(fields: [restauranteId], references: [id])
 }
 
 model Comanda {
@@ -109,20 +146,26 @@ model Comanda {
   razonSocial     String? @map("razon_social")
   direccionFiscal String? @map("direccion_fiscal")
   
-  detalles  DetalleComanda[]
+  detalles      DetalleComanda[]
+  restauranteId Int?
+  restaurante   Restaurante? @relation(fields: [restauranteId], references: [id])
+  numeroComanda Int?
 
   @@index([mesaId, estado])
 }
 
 model Arqueo {
-  id           Int       @id @default(autoincrement())
-  fechaInicio  DateTime  @default(now())
-  fechaFin     DateTime?
-  montoInicial Float
-  montoFinal   Float?
-  estado       String    @default("abierto") // abierto, cerrado
-  usuarioId    Int
-  movimientos  MovimientoCaja[]
+  id            Int              @id @default(autoincrement())
+  numeroSesion  Int?
+  fechaInicio   DateTime         @default(now())
+  fechaFin      DateTime?
+  montoInicial  Float
+  montoFinal    Float?
+  estado        String           @default("abierto") // abierto, cerrado
+  usuarioId     Int
+  movimientos   MovimientoCaja[]
+  restauranteId Int?
+  restaurante   Restaurante?     @relation(fields: [restauranteId], references: [id])
 }
 
 model MovimientoCaja {
@@ -168,6 +211,8 @@ model Insumo {
   deleted         Boolean          @default(false)
   recetas         RecetaInsumo[]
   movimientos     MovimientoInsumo[]
+  restauranteId   Int?
+  restaurante     Restaurante?     @relation(fields: [restauranteId], references: [id])
 }
 
 model RecetaInsumo {

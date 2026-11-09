@@ -214,7 +214,7 @@ export default function LandingView() {
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </div>
           <div className="hidden md:flex items-center gap-4">
-            <SaasButton variant="ghost" onClick={() => navigate('/login')}>Iniciar Sesión</SaasButton>
+            <SaasButton variant="ghost" onClick={() => navigate('/acceso')}>Iniciar Sesión</SaasButton>
             <SaasButton variant="default" onClick={() => navigate('/login')}>Acceder Demo</SaasButton>
           </div>
           <button className="md:hidden text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -229,7 +229,7 @@ export default function LandingView() {
             <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 py-1">Precios</a>
             <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 py-1">FAQ</a>
             <div className="h-px bg-gray-900 my-2" />
-            <SaasButton className="w-full justify-start" variant="ghost" onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}>Iniciar Sesión</SaasButton>
+            <SaasButton className="w-full justify-start" variant="ghost" onClick={() => { setMobileMenuOpen(false); navigate('/acceso'); }}>Iniciar Sesión</SaasButton>
             <SaasButton className="w-full justify-start" variant="default" onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}>Acceder Demo</SaasButton>
           </div>
         )}

@@ -42,3 +42,18 @@ build
 # User Uploads
 public/uploads/*
 !public/uploads/.gitkeep
+
+# Backups & Private Data
+backups/
+*.json.bak
+*.bak
+
+# Playwright MCP
+.playwright-mcp/
+
+# Reference assets & exports
+referencias/
+EXPLICACION9Y11.pdf
+diagramas_bunker.html
+
+

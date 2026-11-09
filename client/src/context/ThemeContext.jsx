@@ -31,10 +31,16 @@ export const ThemeProvider = ({ children }) => {
             // Dentro del sistema: Aplica el tema y modo (claro/oscuro) elegido
             root.classList.add(theme);
             root.classList.add(`mode-${mode}`);
+            if (mode === 'dark') {
+                root.classList.add('dark');
+            } else {
+                root.classList.remove('dark');
+            }
         } else {
             // Fuera del sistema (Landing Page y Login): SIEMPRE modo oscuro nativo
             root.classList.add('theme-orange');
             root.classList.add('mode-dark');
+            root.classList.add('dark');
         }
 
         // Persist

@@ -53,23 +53,29 @@ export const offlineSnapshotService = {
       ]);
 
       // 4. Hidratar PRODUCTOS (Operación segura ya que platos están deshabilitados offline)
-      if (!skipProducts && Array.isArray(products) && products.length > 0) {
-        const productRecords = products.map(p => ({
-          id: p.id,
-          remoteId: p.id,
-          categoryId: p.categoriaId,
-          nombre: p.nombre,
-          precio: Number(p.precio),
-          activo: p.activo,
-          deleted: p.deleted,
-          syncStatus: 'SYNCED'
-        }));
+      if (!skipProducts && Array.isArray(products)) {
         await db.products.clear();
-        await db.products.bulkPut(productRecords);
+        if (products.length > 0) {
+          const productRecords = products.map(p => ({
+            id: p.id,
+            remoteId: p.id,
+            categoryId: p.categoriaId,
+            nombre: p.nombre,
+            precio: Number(p.precio),
+            activo: p.activo,
+            deleted: p.deleted,
+            syncStatus: 'SYNCED'
+          }));
+          await db.products.bulkPut(productRecords);
+        }
       }
 
       // 5. Hidratar MESAS, COMANDAS y DETALLES ABIERTOS de forma cohesiva
-      if (Array.isArray(tables) && tables.length > 0) {
+      if (Array.isArray(tables) && tables.length === 0) {
+        await db.table('tables').clear();
+        await db.orders.clear();
+        await db.orderItems.clear();
+      } else if (Array.isArray(tables) && tables.length > 0) {
         for (const mesa of tables) {
           const mesaIdStr = String(mesa.id);
           

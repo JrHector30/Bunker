@@ -12,8 +12,26 @@ const UsersView = () => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const navigate = useNavigate();
-    const fetcher = () => fetch('/api/users').then(res => res.json());
-    const { data: users, loading, mutate: fetchUsers } = useCache('users', fetcher, []);
+
+    const currentTenant = (() => {
+        try {
+            const raw = localStorage.getItem('bunker_current_tenant');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
+
+    const fetcher = () => {
+        let url = '/api/users';
+        if (currentTenant?.id) {
+            url += `?restauranteId=${currentTenant.id}`;
+        }
+        return fetch(url).then(res => res.json());
+    };
+
+    const cacheKey = currentTenant?.id ? `users_tenant_${currentTenant.id}` : 'users';
+    const { data: users, loading, mutate: fetchUsers } = useCache(cacheKey, fetcher, []);
 
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -179,10 +197,15 @@ const UsersView = () => {
 
             const method = editingUser ? 'PUT' : 'POST';
 
+            const payload = {
+                ...formData,
+                ...(!editingUser && currentTenant?.id ? { restauranteId: currentTenant.id } : {})
+            };
+
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
@@ -198,10 +221,24 @@ const UsersView = () => {
         }
     };
 
+    const adminCount = users.filter(u => u.rol === 'admin').length;
+    const isSoleAdmin = editingUser && editingUser.rol === 'admin' && adminCount <= 1;
+
     const handleDelete = async (id) => {
+        const userToDelete = users.find(u => u.id === id);
+        if (userToDelete && userToDelete.rol === 'admin' && adminCount <= 1) {
+            showToast('No es posible eliminar al único Administrador del local', 'error');
+            return;
+        }
+
         if (!await showConfirmation('¿Seguro de eliminar este usuario?', { type: 'danger' })) return;
         try {
-            await fetch(`/api/users/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const err = await res.json();
+                showToast(err.error || 'No se pudo eliminar el usuario', 'error');
+                return;
+            }
             fetchUsers();
         } catch (error) {
             console.error(error);
@@ -320,12 +357,23 @@ const UsersView = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
                                 <div>
                                     <label>Rol</label>
-                                    <select className="glass-input" value={formData.rol} onChange={e => setFormData({ ...formData, rol: e.target.value })}>
+                                    <select 
+                                        className="glass-input" 
+                                        value={formData.rol} 
+                                        onChange={e => setFormData({ ...formData, rol: e.target.value })}
+                                        disabled={isSoleAdmin}
+                                        style={isSoleAdmin ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
+                                    >
                                         <option value="mozo">Mozo</option>
                                         <option value="cocina">Cocina</option>
                                         <option value="caja">Caja</option>
                                         <option value="admin">Admin</option>
                                     </select>
+                                    {isSoleAdmin && (
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>
+                                            🔒 Único Administrador (no se puede cambiar el rol)
+                                        </span>
+                                    )}
                                 </div>
                                 <div>
                                     <label>Contraseña</label>

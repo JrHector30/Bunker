@@ -2,11 +2,12 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
+import { getActiveRestaurantName } from '../utils/tenant';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import {
   ArrowLeft, Plus, FileSpreadsheet, Eye, Printer, MoreVertical,
-  Trash, Search, X, Receipt, CheckCircle, ChevronLeft, ChevronRight,
+  Trash, Search, X, Receipt, CheckCircle, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast,
   TrendingUp, BarChart3, HelpCircle, FileText, Smartphone, CreditCard,
   SlidersHorizontal, Menu, CalendarDays, Download, AlertCircle
 } from 'lucide-react';
@@ -802,7 +803,7 @@ const CashierView = () => {
     const wsData = [
       ['N° Arqueo', 'Fecha Inicio', 'Fecha Cierre', 'Estado', 'Monto Inicial (S/.)', 'Egresos Caja (S/.)', 'Ingreso Efectivo (S/.)', 'Ingreso Yape (S/.)', 'Ingreso Plin (S/.)', 'Ingreso Tarjeta (S/.)', 'Ingreso Izipay (S/.)', 'Ingreso Niubiz (S/.)', 'Ingreso Manual (S/.)', 'Propinas (S/.)', 'Total Caja (S/.)', 'Total Bruto (S/.)', 'Pendiente (S/.)'],
       ...(history?.data || []).map(a => [
-        a.id,
+        a.numeroSesion != null ? a.numeroSesion : a.id,
         formatDate(a.fechaInicio),
         a.estado === 'cerrado' ? formatDate(a.fechaFin) : 'EN CURSO',
         a.estado.toUpperCase(),
@@ -1037,7 +1038,7 @@ const CashierView = () => {
         doc.setFontSize(22);
         doc.setTextColor(16, 185, 129); // Green brand color
         doc.setFont("helvetica", "bold");
-        doc.text("Bunker", 14, 20);
+        doc.text(getActiveRestaurantName(), 14, 20);
 
         doc.setFontSize(14);
         doc.setTextColor(40, 40, 40);
@@ -1084,7 +1085,7 @@ const CashierView = () => {
           runningAccumulated += arq.totalCaja;
           const manualIng = (arq.movimientos || []).filter(m => m.tipo === 'INGRESO').reduce((s, m) => s + m.monto, 0);
           return [
-            `#${arq.id}`,
+            `#${arq.numeroSesion || arq.id}`,
             arq.usuario?.nombre || 'Admin',
             formatDate(arq.fechaInicio, true),
             arq.fechaFin ? formatDate(arq.fechaFin, true) : 'Abierto',
@@ -1116,7 +1117,7 @@ const CashierView = () => {
         doc.setFontSize(22);
         doc.setTextColor(16, 185, 129);
         doc.setFont("helvetica", "bold");
-        doc.text("Bunker", 14, 20);
+        doc.text(getActiveRestaurantName(), 14, 20);
         doc.setFontSize(14);
         doc.setTextColor(40, 40, 40);
         doc.text("Tendencia Diaria de Ventas", 14, 28);
@@ -1133,7 +1134,7 @@ const CashierView = () => {
         doc.setFontSize(22);
         doc.setTextColor(16, 185, 129);
         doc.setFont("helvetica", "bold");
-        doc.text("Bunker", 14, 20);
+        doc.text(getActiveRestaurantName(), 14, 20);
 
         doc.setFontSize(11);
         doc.setTextColor(40, 40, 40);
@@ -1145,7 +1146,7 @@ const CashierView = () => {
         doc.setTextColor(100);
         doc.setFont("helvetica", "normal");
         doc.text(`Fecha del Turno: ${reportDate}`, 14, 35);
-        doc.text(`Turno ID: #${fullData.id} - Estado: ${fullData.estado.toUpperCase()}`, 14, 40);
+        doc.text(`Turno ID: #${fullData.numeroSesion || fullData.id} - Estado: ${fullData.estado.toUpperCase()}`, 14, 40);
         doc.text(`Usuario: ${fullData.usuario?.nombre || 'Administrador'}`, 14, 45);
 
         let currentY = 52;
@@ -1297,7 +1298,7 @@ const CashierView = () => {
         doc.text(`Total Propinas Recaudadas: S/. ${(fullData.totalPropinas || fullData.propinas || 0).toFixed(2)}`, 14, currentY);
         currentY += 10;
 
-        doc.text(`Resumen Turno #${fullData.id}: M. Inicial: S/. ${(fullData.montoInicial || fullData.inicio || 0).toFixed(2)} | Ventas: S/. ${fullData.totalBruto.toFixed(2)} | Saldo Final (Caja): S/. ${fullData.totalCaja.toFixed(2)}`, 14, currentY);
+        doc.text(`Resumen Turno #${fullData.numeroSesion || fullData.id}: M. Inicial: S/. ${(fullData.montoInicial || fullData.inicio || 0).toFixed(2)} | Ventas: S/. ${fullData.totalBruto.toFixed(2)} | Saldo Final (Caja): S/. ${fullData.totalCaja.toFixed(2)}`, 14, currentY);
       }
 
       const dateStr = new Date().toISOString().split('T')[0];
@@ -1346,12 +1347,12 @@ const CashierView = () => {
       <div className="flex-1 flex overflow-hidden">
 
         {/* Core Workspace Panel */}
-        <div className="flex-grow overflow-y-auto px-1 py-3 md:px-3 w-full space-y-3 bg-[var(--bg-primary)]">
+        <div className="-translate-y-8 flex-grow overflow-y-auto px-1 py-3 md:px-3 w-full space-y-3 bg-[var(--bg-primary)]">
 
           {/* Header toolbar */}
           <div className="flex flex-row items-center justify-between gap-3 pb-2" style={{ borderBottom: '1px solid var(--glass-border)' }}>
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-black tracking-tight text-[var(--text-main)] font-sans">Arqueo de Caja</h1>
+              <h1 className="translate-y-6 text-xl font-black tracking-tight text-[var(--text-main)] font-sans">Arqueo de Caja</h1>
             </div>
 
             {/* Sidebar toggle button (Mobile) */}
@@ -1414,12 +1415,12 @@ const CashierView = () => {
           <div className="glass-panel overflow-hidden" style={{ boxShadow: 'var(--panel-shadow, 0 8px 32px 0 rgba(0, 0, 0, 0.37)), -6px 0 25px -5px rgba(0, 0, 0, 0.3)' }}>
             <div className="px-4 py-3.5 bg-transparent flex flex-col md:flex-row justify-between items-start md:items-center gap-4" style={{ borderBottom: '1px solid var(--glass-border)' }}>
               <div className="pt-1.5">
-                <h2 className="text-base font-bold text-[var(--text-main)] font-sans">Historial de Sesiones de Arqueo</h2>
-                <p className="text-[12px] text-[var(--text-muted)] mt-1 font-sans">Auditoría completa de movimientos de caja registrados en el sistema.</p>
+                <h2 className="-translate-y-4 text-base font-bold text-[var(--text-main)] font-sans">Historial de Sesiones de Arqueo</h2>
+                <p className="-translate-y-6 text-[12px] text-[var(--text-muted)] mt-1 font-sans">Auditoría completa de movimientos de caja registrados en el sistema.</p>
               </div>
 
               {/* Actions Ribbon */}
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="-translate-y-4 flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => {
                     if (shiftStatus !== 'abierto') {
@@ -1457,7 +1458,7 @@ const CashierView = () => {
               </div>
             </div>
             {/* Custom Responsive Table */}
-            <div className="overflow-x-auto">
+            <div className="-translate-y-10 overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
                   <tr className="text-xs font-bold uppercase tracking-widest" style={{ background: 'var(--primary)', color: '#ffffff', borderBottom: '1px solid var(--table-row-border)' }}>
@@ -1520,7 +1521,7 @@ const CashierView = () => {
                         >
                           {/* Number */}
                           <td className="py-3 px-4 text-center font-bold font-sans text-[var(--text-main)] text-[13.5px]">
-                            {arq.id}
+                            {arq.numeroSesion || arq.id}
                           </td>
 
                           {/* Dates */}
@@ -1659,21 +1660,43 @@ const CashierView = () => {
                 <span className="font-medium">Total de Arqueos: {filteredHistory.length}</span>
                 <div className="sm:absolute sm:left-1/2 sm:-translate-x-1/2 flex items-center justify-center gap-2">
                   <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    title="Ir al inicio"
+                    aria-label="Primera página"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-surface)] text-[var(--text-main)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-sm"
+                  >
+                    <ChevronFirst className="w-4 h-4 text-[var(--text-main)]" />
+                  </button>
+                  <button
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
-                    className="glass-button flex items-center gap-1 py-1.5 px-3 disabled:opacity-40 cursor-pointer"
+                    title="Página anterior"
+                    aria-label="Página anterior"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-surface)] text-[var(--text-main)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-sm"
                   >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                    <span>Anterior</span>
+                    <ChevronLeft className="w-4 h-4 text-[var(--text-main)]" />
                   </button>
-                  <span className="font-semibold text-[var(--text-main)]">Página {currentPage} de {totalPages}</span>
+                  <span className="font-semibold text-[var(--text-main)] px-2 select-none whitespace-nowrap text-xs">
+                    Página {currentPage} de {totalPages}
+                  </span>
                   <button
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
-                    className="glass-button flex items-center gap-1 py-1.5 px-3 disabled:opacity-40 cursor-pointer"
+                    title="Página siguiente"
+                    aria-label="Página siguiente"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-surface)] text-[var(--text-main)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-sm"
                   >
-                    <span>Siguiente</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    <ChevronRight className="w-4 h-4 text-[var(--text-main)]" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    title="Ir al final"
+                    aria-label="Última página"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-surface)] text-[var(--text-main)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-sm"
+                  >
+                    <ChevronLast className="w-4 h-4 text-[var(--text-main)]" />
                   </button>
                 </div>
                 <div className="hidden sm:block sm:w-28" />
@@ -1687,14 +1710,14 @@ const CashierView = () => {
               <div className="flex items-center justify-between px-1 text-xs">
                 <span className="font-semibold text-[var(--text-muted)] flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Métricas de Arqueo N° {activeKpiData.id} {activeKpiData.id === currentStatus?.id ? '(Turno Actual)' : '(Seleccionado)'}
+                  Métricas de Arqueo N° {activeKpiData.numeroSesion != null ? activeKpiData.numeroSesion : activeKpiData.id} {activeKpiData.id === currentStatus?.id ? '(Turno Actual)' : '(Seleccionado)'}
                 </span>
                 {activeKpiData.id !== currentStatus?.id && currentStatus?.id && (
                   <button
                     onClick={() => setSelectedArqueoId(currentStatus.id)}
                     className="text-[11px] text-[var(--primary)] hover:underline cursor-pointer font-medium"
                   >
-                    Ver Turno Actual (N° {currentStatus.id})
+                    Ver Turno Actual (N° {currentStatus.numeroSesion != null ? currentStatus.numeroSesion : currentStatus.id})
                   </button>
                 )}
               </div>

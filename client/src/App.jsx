@@ -18,6 +18,8 @@ import StaffStatsView from './pages/StaffStatsView'; // New
 import SettingsView from './pages/SettingsView';     // New
 import HomeView from './pages/HomeView';             // New
 import LandingView from './pages/LandingView';       // New
+import TenantLoginView from './pages/TenantLoginView'; // Acceso de Negocio
+import SuperAdminView from './pages/SuperAdminView';   // Panel de Control Global Superadmin
 import SupportView from './pages/SupportView';       // New
 import NotFoundView from './views/NotFoundView';
 
@@ -73,9 +75,16 @@ function App() {
             <CajaProvider>
               <AuthProvider>
               <Routes>
+              <Route path="/superadmin" element={<SuperAdminView />} />
+              <Route path="/superadmin/login" element={<SuperAdminView />} />
+              <Route path="/acceso" element={<TenantLoginView />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={<RootRoute />} />
               <Route path="/app" element={<HomeRedirect />} />
+
+              {/* Redirecciones de Recetarios a /admin/inventory?tab=recetarios */}
+              <Route path="/admin/recipes" element={<Navigate to="/admin/inventory?tab=recetarios" replace />} />
+              <Route path="/admin/recetarios" element={<Navigate to="/admin/inventory?tab=recetarios" replace />} />
 
             <Route element={<DashboardLayout />}>
 

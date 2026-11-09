@@ -96,7 +96,7 @@ export function PaloteoModal({ isOpen, onClose, arqueoId }) {
           <div className="bg-[var(--bg-surface)] border-b border-[var(--glass-border)] px-6 py-4 flex justify-between items-center text-[var(--text-main)]">
             <div>
               <h3 className="text-base font-bold text-[var(--text-main)]">Resumen de Ventas / Paloteo</h3>
-              <p className="text-[11px] text-[var(--text-muted)] font-sans">Turno de Arqueo N° {arqueoId} • Conteo de unidades</p>
+              <p className="text-[11px] text-[var(--text-muted)] font-sans">Turno de Arqueo N° {paloteoData?.numeroSesion || arqueoId} • Conteo de unidades</p>
             </div>
             <CloseButton onClick={onClose} className="scale-90" />
           </div>

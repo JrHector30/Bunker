@@ -8,6 +8,7 @@ import {
     PieChart, Pie, Cell
 } from 'recharts';
 import jsPDF from 'jspdf';
+import { getActiveRestaurantName } from '../utils/tenant';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
@@ -396,6 +397,7 @@ const StaffStatsView = () => {
                 const itemDetail = {
                     mozo: uName,
                     comandaId: c.id,
+                    numeroComanda: c.numeroComanda || c.id,
                     mesa: c.mesaNum,
                     hora: new Date(c.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
                     fecha: new Date(c.fecha).toLocaleDateString('es-PE'),
@@ -446,6 +448,7 @@ const StaffStatsView = () => {
                     cooksMap[cid].platosList.push({
                         id: d.id,
                         comandaId: c.id,
+                        numeroComanda: c.numeroComanda || c.id,
                         mesa: c.mesaNum,
                         mozo: uName,
                         plato: d.descripcion,
@@ -504,6 +507,7 @@ const StaffStatsView = () => {
 
             return {
                 id: c.id,
+                numeroComanda: c.numeroComanda || c.id,
                 fecha: new Date(c.fecha).toLocaleDateString('es-PE'),
                 hora: new Date(c.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
                 mesa: c.mesaNum,
@@ -543,7 +547,7 @@ const StaffStatsView = () => {
     // 7. Cleanup/Daily Delete functionality
     const handleCleanDay = async () => {
         if (!arqueoInfo) return;
-        const arqueoLabel = `Arqueo N° ${arqueoInfo.id}`;
+        const arqueoLabel = `Arqueo N° ${arqueoInfo.numeroSesion != null ? arqueoInfo.numeroSesion : arqueoInfo.id}`;
         if (!await showConfirmation(`⚠ PELIGRO:\n\n¿Estás seguro de ELIMINAR PERMANENTEMENTE todas las ventas y registros asociados a la sesión de caja del día ${dateDisplayStr} (${arqueoLabel})?\n\nEsta acción NO se puede deshacer.`, { type: 'danger' })) return;
 
         try {
@@ -563,55 +567,214 @@ const StaffStatsView = () => {
     // 8. PDF Export Lógica
     const handleExportPDF = () => {
         if (!arqueoInfo) return;
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const restName = getActiveRestaurantName();
         const rangeLabel = arqueoInfo.fechaFin
             ? `${format(new Date(arqueoInfo.fechaInicio), 'dd/MM/yy HH:mm')} a ${format(new Date(arqueoInfo.fechaFin), 'dd/MM/yy HH:mm')}`
             : `${format(new Date(arqueoInfo.fechaInicio), 'dd/MM/yy HH:mm')} a Abierta`;
+        const sesionNum = arqueoInfo.numeroSesion != null ? arqueoInfo.numeroSesion : arqueoInfo.id;
 
+        // 1. BANNER DE ENCABEZADO EJECUTIVO
+        doc.setFillColor(15, 23, 42); // Slate 900
+        doc.rect(0, 0, 210, 36, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
-        doc.text("Bunker - Reporte de Rendimiento de Caja", 14, 20);
+        doc.text(restName.toUpperCase(), 14, 15);
+
         doc.setFontSize(10);
-        doc.text(`Arqueo N°: ${arqueoInfo.id} (${arqueoInfo.estado.toUpperCase()})`, 14, 27);
-        doc.text(`Rango: ${rangeLabel}`, 14, 33);
-        doc.text(`Filtro Activo: ${filteredDay === 'TODO' ? 'Todo el rango' : filteredDay}`, 14, 39);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(148, 163, 184); // Slate 400
+        doc.text("REPORTE INTEGRAL DE RENDIMIENTO & AUDITORÍA DE VENTAS", 14, 22);
+        doc.text(`Arqueo N° ${sesionNum} (${arqueoInfo.estado.toUpperCase()})  •  Período: ${rangeLabel}`, 14, 29);
 
-        // Waiters Table
-        doc.setFontSize(14);
-        doc.text("Rendimiento de Mozos", 14, 50);
+        // 2. TARJETAS DE KPIS PRINCIPALES
+        let startY = 44;
+        const cardWidth = 43;
+        const cardHeight = 18;
+        const totalPlatos = activeData.waiterPlatos.reduce((s, p) => s + (p.cantidad || 1), 0);
+        const kpis = [
+            { label: 'VENTAS TOTALES', val: `S/. ${activeData.totalSales.toFixed(2)}`, color: [16, 185, 129] },
+            { label: 'COMANDAS COBRADAS', val: `${activeData.totalOrders}`, color: [14, 165, 233] },
+            { label: 'PLATOS TOTALES', val: `${totalPlatos}`, color: [168, 85, 247] },
+            { label: 'FILTRO FECHA', val: filteredDay === 'TODO' ? 'Todo el rango' : filteredDay, color: [245, 158, 11] }
+        ];
 
-        const waiterRows = activeData.waiters.map(w => [
-            w.nombre,
-            w.totalTables,
-            `S/. ${parseFloat(Number(w.totalSales).toFixed(2))}`
-        ]);
+        kpis.forEach((kpi, idx) => {
+            const x = 14 + (idx * (cardWidth + 3));
+            doc.setFillColor(248, 250, 252);
+            doc.setDrawColor(226, 232, 240);
+            doc.roundedRect(x, startY, cardWidth, cardHeight, 2, 2, 'FD');
 
-        autoTable(doc, {
-            startY: 55,
-            head: [['Nombre', 'Pedidos', 'Venta Total']],
-            body: waiterRows,
-            theme: 'grid',
-            headStyles: { fillColor: [14, 165, 233] }
+            doc.setFontSize(7);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(100, 116, 139);
+            doc.text(kpi.label, x + 3, startY + 5);
+
+            doc.setFontSize(10);
+            doc.setTextColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+            doc.text(kpi.val, x + 3, startY + 13);
         });
 
-        // Cooks Table
-        const finalY = doc.lastAutoTable.finalY + 15;
-        doc.text("Rendimiento de Cocina", 14, finalY);
+        startY = 68;
+
+        // 3. TABLA: RENDIMIENTO DE MOZOS
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 41, 59);
+        doc.text("1. Rendimiento del Personal de Salón (Mozos)", 14, startY);
+
+        const waiterRows = activeData.waiters.map(w => {
+            const avg = w.totalTables > 0 ? (w.totalSales / w.totalTables).toFixed(2) : '0.00';
+            return [
+                w.nombre,
+                w.rol ? w.rol.toUpperCase() : 'MOZO',
+                `${w.totalTables} pedidos`,
+                `S/. ${w.totalSales.toFixed(2)}`,
+                `S/. ${avg}`
+            ];
+        });
+
+        autoTable(doc, {
+            startY: startY + 4,
+            head: [['Nombre', 'Rol', 'Pedidos Atendidos', 'Venta Total', 'Ticket Promedio']],
+            body: waiterRows.length > 0 ? waiterRows : [['Sin mozos registrados', '-', '0', 'S/. 0.00', 'S/. 0.00']],
+            theme: 'grid',
+            headStyles: { fillColor: [14, 165, 233], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+            bodyStyles: { fontSize: 8.5, textColor: 50 },
+            margin: { left: 14, right: 14 }
+        });
+
+        // 4. TABLA: RENDIMIENTO DE COCINA
+        let nextY = doc.lastAutoTable.finalY + 10;
+        if (nextY > 240) { doc.addPage(); nextY = 20; }
+
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 41, 59);
+        doc.text("2. Rendimiento de Cocina & Tiempos de Despacho", 14, nextY);
 
         const cookRows = activeData.cooks.map(c => [
             c.nombre,
-            c.totalDishes,
-            c.avgTimeMin > 0 ? `${parseFloat(Number(c.avgTimeMin).toFixed(2))} min` : '-'
+            `${c.totalDishes} platos`,
+            c.avgTimeMin > 0 ? `${c.avgTimeMin.toFixed(2)} min` : '-'
         ]);
 
         autoTable(doc, {
-            startY: finalY + 5,
-            head: [['Nombre', 'Platos Preparados', 'Tiempo Promedio']],
-            body: cookRows,
+            startY: nextY + 4,
+            head: [['Cocinero / Chef', 'Platos Preparados', 'Tiempo Promedio de Prep.']],
+            body: cookRows.length > 0 ? cookRows : [['Sin cocineros registrados', '0 platos', '-']],
             theme: 'grid',
-            headStyles: { fillColor: [239, 68, 68] }
+            headStyles: { fillColor: [239, 68, 68], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+            bodyStyles: { fontSize: 8.5, textColor: 50 },
+            margin: { left: 14, right: 14 }
         });
 
-        doc.save(`Reporte_Arqueo_${arqueoInfo.id}_Filtro_${filteredDay}.pdf`);
+        // 5. SECCIÓN: EVOLUCIÓN DIARIA Y VOLUMEN DE PEDIDOS
+        nextY = doc.lastAutoTable.finalY + 10;
+        if (dailyChartData && dailyChartData.length > 0) {
+            if (nextY > 220) { doc.addPage(); nextY = 20; }
+
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(30, 41, 59);
+            doc.text("3. Tendencia Diaria de Ventas & Volumen del Período", 14, nextY);
+
+            const dailyRows = dailyChartData.map(d => [
+                d.label,
+                `${d.ordersCount} pedidos`,
+                `${d.dishesCount} platos`,
+                `S/. ${d.salesTotal.toFixed(2)}`
+            ]);
+
+            autoTable(doc, {
+                startY: nextY + 4,
+                head: [['Fecha', 'Comandas', 'Platos Despachados', 'Venta Bruta (S/.)']],
+                body: dailyRows,
+                theme: 'striped',
+                headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+                bodyStyles: { fontSize: 8.5, textColor: 50 },
+                margin: { left: 14, right: 14 }
+            });
+        }
+
+        // 6. TABLA: PLATOS COMANDADOS POR MOZO
+        doc.addPage();
+        nextY = 20;
+
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 41, 59);
+        doc.text("4. Detalle de Platos Comandados por Mozo", 14, nextY);
+
+        const platosMozoRows = activeData.waiterPlatos.map(p => [
+            p.mozo,
+            `#${p.numeroComanda || p.comandaId}`,
+            `Mesa ${p.mesa}`,
+            p.hora,
+            p.plato,
+            `${p.cantidad}`,
+            `S/. ${p.precio.toFixed(2)}`,
+            `S/. ${p.subtotal.toFixed(2)}`
+        ]);
+
+        autoTable(doc, {
+            startY: nextY + 4,
+            head: [['Mozo', 'Comanda', 'Mesa', 'Hora', 'Plato / Producto', 'Cant.', 'P. Unit', 'Subtotal']],
+            body: platosMozoRows.length > 0 ? platosMozoRows : [['Sin platos comandados', '-', '-', '-', '-', '0', '0.00', '0.00']],
+            theme: 'grid',
+            headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+            bodyStyles: { fontSize: 7.5, textColor: 50 },
+            margin: { left: 14, right: 14 }
+        });
+
+        // 7. TABLA: AUDITORÍA DE COMANDAS & KARDEX
+        nextY = doc.lastAutoTable.finalY + 12;
+        if (nextY > 230) { doc.addPage(); nextY = 20; }
+
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 41, 59);
+        doc.text("5. Auditoría de Comandas del Período (Kardex e Inventario)", 14, nextY);
+
+        const auditoriaRows = [];
+        activeData.comandasPeriodo.forEach(c => {
+            (c.platos || []).forEach(p => {
+                auditoriaRows.push([
+                    `#${c.numeroComanda || c.id}`,
+                    `Mesa ${c.mesa}`,
+                    c.hora,
+                    c.mozo,
+                    `${p.cantidad} × ${p.plato}`,
+                    p.cocinero || 'No aplica',
+                    p.kardexStatus || 'Stock verificado',
+                    `S/. ${(p.precio * p.cantidad).toFixed(2)}`
+                ]);
+            });
+        });
+
+        autoTable(doc, {
+            startY: nextY + 4,
+            head: [['Comanda', 'Mesa', 'Hora', 'Mozo', 'Plato / Detalle', 'Cocinero', 'Estado Kardex', 'Subtotal']],
+            body: auditoriaRows.length > 0 ? auditoriaRows : [['Sin comandas auditadas', '-', '-', '-', '-', '-', '-', '0.00']],
+            theme: 'grid',
+            headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+            bodyStyles: { fontSize: 7.5, textColor: 50 },
+            margin: { left: 14, right: 14 }
+        });
+
+        // 8. NUMERACIÓN DE PÁGINAS AL PIE
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184);
+            doc.text(`Página ${i} de ${totalPages}  •  ${restName}  •  Generado el ${new Date().toLocaleString('es-PE')}`, 14, 290);
+        }
+
+        const safeName = restName.replace(/[^a-zA-Z0-9]/g, '_');
+        doc.save(`${safeName}_Reporte_Rendimiento_Arqueo_${sesionNum}.pdf`);
     };
 
     // Color palettes
@@ -630,7 +793,7 @@ const StaffStatsView = () => {
                         <h1 style={{ margin: 0, fontSize: '24px' }}>Rendimiento y Reportes</h1>
                         {arqueoInfo && (
                             <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginTop: 2 }}>
-                                Caja N° {arqueoInfo.id} ({arqueoInfo.estado === 'abierto' ? 'Abierta' : 'Cerrada'})
+                                Caja N° {arqueoInfo.numeroSesion != null ? arqueoInfo.numeroSesion : arqueoInfo.id} ({arqueoInfo.estado === 'abierto' ? 'Abierta' : 'Cerrada'})
                                 {sessions.find(s => s.id === arqueoInfo.id)?.usuario?.nombre && (
                                     <> • Resp: <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{sessions.find(s => s.id === arqueoInfo.id).usuario.nombre}</span></>
                                 )}
@@ -662,7 +825,7 @@ const StaffStatsView = () => {
                                 }}
                             >
                                 <CalendarDays size={16} className="text-teal-400" />
-                                <span>Arqueo #{s.id} ({startStr} - {endStr}) - Resp: {userName}</span>
+                                <span>Arqueo #{s.numeroSesion != null ? s.numeroSesion : s.id} ({startStr} - {endStr}) - Resp: {userName}</span>
                             </div>
                         );
                     })()}
@@ -693,7 +856,7 @@ const StaffStatsView = () => {
                                     const userName = s.usuario?.nombre || 'Hector';
                                     return (
                                         <option key={s.id} value={s.id}>
-                                            Arqueo #{s.id} ({startStr} - {endStr}) - Resp: {userName}
+                                            Arqueo #{s.numeroSesion != null ? s.numeroSesion : s.id} ({startStr} - {endStr}) - Resp: {userName}
                                         </option>
                                     );
                                 })}
@@ -774,7 +937,7 @@ const StaffStatsView = () => {
                                         borderRadius: 16
                                     }}
                                 >
-                                    <span style={{ fontWeight: 'black', fontSize: 14 }}>Arqueo N° {s.id}</span>
+                                    <span style={{ fontWeight: 'black', fontSize: 14 }}>Arqueo N° {s.numeroSesion != null ? s.numeroSesion : s.id}</span>
                                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{startStr} a {endStr} ({s.estado === 'abierto' ? 'Abierta' : 'Cerrada'})</span>
                                     <span style={{ fontSize: 11, color: 'var(--warning)', fontWeight: 'semibold', marginTop: 2 }}>Resp: {userName}</span>
                                 </button>
@@ -1036,7 +1199,7 @@ const StaffStatsView = () => {
                                                                     <tr key={idx}>
                                                                         <td style={{ padding: '6px 0' }}>{p.plato}</td>
                                                                         <td style={{ textAlign: 'center' }}>{p.cantidad}</td>
-                                                                        <td style={{ textAlign: 'center' }}>#{p.comandaId}</td>
+                                                                        <td style={{ textAlign: 'center' }}>#{p.numeroComanda || p.comandaId}</td>
                                                                         <td style={{ textAlign: 'center' }}>Mesa {p.mesa}</td>
                                                                         <td style={{ textAlign: 'center' }}>{p.mozo}</td>
                                                                         <td style={{ textAlign: 'center' }}>{p.tiempoPrep > 0 ? `${p.tiempoPrep.toFixed(1)} min` : '-'}</td>
@@ -1072,6 +1235,7 @@ const StaffStatsView = () => {
                                     if (!comandasMap[item.comandaId]) {
                                         comandasMap[item.comandaId] = {
                                             id: item.comandaId,
+                                            numeroComanda: item.numeroComanda || item.comandaId,
                                             mesa: item.mesa,
                                             fecha: item.fecha,
                                             hora: item.hora,
@@ -1119,7 +1283,7 @@ const StaffStatsView = () => {
                                                         {mozoComandas.map(c => (
                                                             <div key={c.id} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, border: '1px solid rgba(255,255,255,0.03)' }}>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px dashed rgba(255,255,255,0.08)', paddingBottom: 6 }}>
-                                                                    <span style={{ fontSize: 12, fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 'bold' }}>Comanda #{c.id} — Mesa {c.mesa} — {c.fecha} {c.hora}</span>
+                                                                    <span style={{ fontSize: 12, fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 'bold' }}>Comanda #{c.numeroComanda || c.id} — Mesa {c.mesa} — {c.fecha} {c.hora}</span>
                                                                     <span style={{ fontSize: 12, fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 'bold', color: 'var(--success)' }}>Total: S/. {c.total.toFixed(2)}</span>
                                                                 </div>
                                                                 <table style={{ width: '100%', fontSize: 11, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
@@ -1209,7 +1373,7 @@ const StaffStatsView = () => {
                                                 }}
                                             >
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                    <span style={{ fontWeight: 'bold', fontSize: 13, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Comanda #{c.id} — Mesa {c.mesa}</span>
+                                                    <span style={{ fontWeight: 'bold', fontSize: 13, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Comanda #{c.numeroComanda || c.id} — Mesa {c.mesa}</span>
                                                     <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>— {c.hora} ({c.mozo})</span>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>

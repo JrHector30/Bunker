@@ -210,6 +210,7 @@ const CategoriesView = () => {
                 // Optimistic Local Update
                 fetchCategories(categories.filter(c => c.id !== id)); // Sync and update optimistically
                 setSelectedCategoryIds(prev => prev.filter(selectedId => selectedId !== id));
+                window.dispatchEvent(new CustomEvent('categories-updated'));
             } else {
                 const err = await res.json();
                 showToast(err.error, 'error');
@@ -268,6 +269,7 @@ const CategoriesView = () => {
             if (res.ok) {
                 const savedCategory = await res.json();
                 showToast('Categoría guardada exitosamente', 'success');
+                window.dispatchEvent(new CustomEvent('categories-updated'));
                 setIsModalOpen(false);
 
                 // Optimistic Local State Update for instantaneous visual response

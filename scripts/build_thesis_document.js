@@ -383,7 +383,10 @@ async function buildHtml() {
   <div class="toc-row"><span class="toc-lead">PRESENTACIÓN</span><span>i</span></div>
   <div class="toc-row"><span class="toc-lead">1. TÍTULO DEL PROYECTO DE INNOVACIÓN TECNOLÓGICA</span><span>1</span></div>
   <div class="toc-row"><span class="toc-lead">2. RESUMEN EJECUTIVO DE PROYECTO DE INNOVACIÓN TECNOLÓGICA</span><span>2</span></div>
-  <div class="toc-row"><span class="toc-lead">3. IDENTIFICACIÓN DEL PROGRAMA DE ESTUDIOS</span><span>4</span></div>
+  <div class="toc-row"><span class="toc-lead">3. IDENTIFICACIÓN DE PROBLEMAS Y ALTERNATIVAS DE SOLUCIÓN</span><span>4</span></div>
+  <div class="toc-row"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.1 Diagnóstico del Sistema Predecesor (Dibal / Software Tradicional)</span><span>4</span></div>
+  <div class="toc-row"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.2 Matriz Comparativa de Problemas, Soluciones y Beneficios Operativos</span><span>5</span></div>
+  <div class="toc-row"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.3 Análisis del Proceso de Solución e Innovaciones Tecnológicas</span><span>8</span></div>
   <div class="toc-row"><span class="toc-lead">4. IDENTIFICACIÓN DEL PROCESO, PRODUCTO O SERVICIO</span><span>5</span></div>
   <div class="toc-row"><span class="toc-lead">5. JUSTIFICACIÓN DEL PROYECTO</span><span>8</span></div>
   <div class="toc-row"><span class="toc-lead">6. OBJETIVOS DE LA INNOVACIÓN</span><span>11</span></div>
@@ -496,52 +499,278 @@ async function buildHtml() {
 </div>
 
 <!-- ========================================== -->
-<!-- 3. IDENTIFICACIÓN DEL PROGRAMA             -->
+<!-- 3. IDENTIFICACIÓN DE PROBLEMAS Y SOLUCIONES -->
 <!-- ========================================== -->
-<h1 class="section-title">3. Identificación del Programa de Estudios</h1>
+<h1 class="section-title">3. Identificación de Problemas y Alternativas de Solución</h1>
+
+<h2>3.1 Diagnóstico de la Problemática Operativa en el Sistema Predecesor (Caso Dibal / Software Gastronómico Tradicional)</h2>
 <p>
-  El presente proyecto de innovación tecnológica se encuentra estrictamente articulado con las directrices formativas, académicas y metodológicas del <strong>Programa de Estudios de Desarrollo de Sistemas de Información</strong> del Instituto de Educación Superior Tecnológico Público “María Rosario Aráoz Pinto”, de acuerdo con los lineamientos del Catálogo Nacional de la Oferta Formativa (CNOF) establecido por el Ministerio de Educación (MINEDU).
+  En el sector gastronómico peruano, y en particular en el establecimiento gastronómico caso de estudio <em>Búnker</em>, la operación diaria estuvo históricamente condicionada por el uso del software gastronómico tradicional <strong>Dibal</strong> y sistemas de punto de venta (POS) heredados de arquitectura monolítica y de escritorio. Durante la fase de auditoría operativa y levantamiento técnico de requerimientos, se constataron severas deficiencias estructurales que generaban cuellos de botella, pérdidas económicas por fugas y descuadres de caja, mermas de insumos no cuantificadas y fricción constante entre el personal de salón, cocina y administración:
 </p>
+<ul>
+  <li><strong>Autenticación y Experiencia de Usuario Rígida:</strong> El sistema predecesor obligaba a digitar manualmente correo y contraseña en cada reinicio de terminal, sin persistencia de sesión ni selección interactiva de perfiles; carecía de paneles ejecutivos con métricas en tiempo real sobre ventas o tiempos promedio de atención por orden, y utilizaba interfaces monocromáticas de alto contraste que provocaban fatiga visual severa durante jornadas operativas continuas de 10 a 12 horas.</li>
+  <li><strong>Inflexibilidad en la Gestión Espacial de Mesas:</strong> El mapa de mesas de Dibal presentaba una cuadrícula estática inmutable. No permitía reorganizar visualmente el salón mediante arrastrar y soltar (<em>Drag and Drop</em>) para adaptarse a eventos especiales o reconfiguraciones de salón; asimismo, carecía de mecanismos para fusionar o agrupar mesas (relación jerárquica padre-hijo) para comensales de grupos numerosos (+6 personas), forzando a los mozos a abrir comandas separadas que luego dificultaban el cobro consolidado y generaban duplicidad de cuentas.</li>
+  <li><strong>Descoordinación en la Cadena de Preparación (Cocina / KDS):</strong> No existían temporizadores visuales de preparación, imposibilitando que el jefe de cocina priorizara pedidos demorados; la máquina de estados operaba con un esquema binario obsoleto (<em>Recibido</em> y <em>Despachado</em>), suprimiendo etapas intermedias indispensables como <em>"En preparación"</em> y <em>"Listo para retirar"</em>, lo que derivaba en platos enfriados en pase o mozos desinformados; tampoco existía un buscador de pedidos por mesa para resolver dudas de comensales en horas punta.</li>
+  <li><strong>Falta de Trazabilidad Financiera y Fugas en Caja:</strong> Los movimientos de caja chica e ingresos/egresos se descontaban ciegamente del total sin registrar el origen ni destino de los fondos (ej. banco, pago a proveedores, caja chica), propiciando descuadres sistemáticos y pérdidas no rastreables; las cuentas pendientes de cobro solo podían visualizarse desde el módulo de salón, obligando al cajero a alternar pantallas en horas punta; además, registrar un gasto menor requería crear previamente categorías en múltiples formularios, convirtiendo la apertura y el arqueo de caja en un proceso fragmentado y lento.</li>
+  <li><strong>Mantenimiento Lento y Obsoleto de la Carta Gastronómica:</strong> Las categorías eran simples etiquetas de texto sin diferenciación visual por colores ni iconos representativos (emojis temáticos), retrasando la localización de platos por parte del mozo; no existía selección múltiple para activar, desactivar o eliminar platos en lote; tampoco se contaba con importación masiva desde plantillas Excel, exigiendo horas de digitación manual ante cualquier cambio de carta de temporada.</li>
+  <li><strong>Descontrol de Mermas en Inventario por Falta de Precisión Decimal:</strong> El inventario tradicional solo permitía contabilizar insumos en unidades enteras, distorsionando el registro de productos fraccionables como carnes (kg/gr), verduras o licores (L/ml); adicionalmente, no contaba con escandallo automático (costeo de recetas por plato) ni alertas predictivas de stock mínimo.</li>
+  <li><strong>Colapso de Impresiones por Dependencia de Entornos Locales y Contenido Mixto:</strong> El sistema tradicional dependía obligatoriamente de suites pesadas locales como Laragon o XAMPP en Windows; cuando el router del local asignaba una nueva dirección IP dinámica por DHCP a la impresora de cocina, las comandas dejaban de imprimirse físicamente; además, la adopción de terminales móviles (iPads o smartphones Android) sobre HTTPS colapsaba debido a las restricciones de seguridad de los navegadores por <em>Contenido Mixto (Mixed Content)</em>, imposibilitando que una web en la nube acceda directamente a sockets HTTP o IPs locales de la red interna.</li>
+  <li><strong>Soporte Técnico Reactivo y Poco Accesible:</strong> El canal de asistencia era exclusivamente telefónico o por correo convencional, sin categorización de incidencias urgentes ni herramientas de autoreparación cuando fallaba la comandera o la sincronización en pleno servicio.</li>
+</ul>
+
+<h2>3.2 Matriz Comparativa de Problemas, Soluciones y Beneficios Operativos</h2>
+<p>
+  A continuación, se detalla la matriz integral de priorización de problemas detectados en el sistema predecesor (Dibal / métodos manuales) frente a las alternativas tecnológicas y soluciones de ingeniería implementadas en el sistema <strong>Búnker</strong>, evaluando su impacto y prioridad de sustentación:
+</p>
+
 <table class="table">
   <thead>
     <tr>
-      <th style="width: 30%;">Aspecto Institucional</th>
-      <th style="width: 70%;">Detalle Curricular y Operativo</th>
+      <th style="width: 14%;">Módulo</th>
+      <th style="width: 25%;">Problema Identificado (Sistema Tradicional / Dibal)</th>
+      <th style="width: 32%;">Solución Innovadora Implementada en Búnker</th>
+      <th style="width: 23%;">Beneficio Operativo y de Negocio</th>
+      <th style="width: 6%;">Prioridad (1-10)</th>
     </tr>
   </thead>
   <tbody>
+    <!-- INICIO -->
     <tr>
-      <td><strong>Institución:</strong></td>
-      <td>Instituto de Educación Superior Tecnológico Público “María Rosario Aráoz Pinto” (IESTP MRAP)</td>
+      <td rowspan="3" style="font-weight: 700; text-align: center; vertical-align: middle; background-color: #f8fafc;">INICIO</td>
+      <td><strong>Login rígido y desasistido:</strong> Se debe introducir un correo y contraseña no establecida ni guardada en cada acceso.</td>
+      <td>Implementación de login con persistencia local de sesión y selector interactivo de perfiles por roles dentro de un Combobox. Autenticación única validada por restaurante.</td>
+      <td>Inicio de sesión más rápido, seguro y sin fricción de reescritura de credenciales para el personal en cada turno.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">8</td>
     </tr>
     <tr>
-      <td><strong>Programa de Estudios:</strong></td>
-      <td>Desarrollo de Sistemas de Información (Código CNOF: J2982-3-001)</td>
+      <td><strong>Panel estático sin KPIs:</strong> Entorno de logros básicos sin interacción, sin datos precisos sobre ventas y sin reporte de tiempos por órdenes atendidas.</td>
+      <td>Panel de control ejecutivo (Dashboard) con gráficos dinámicos de ventas del día, ticket promedio y cálculo del tiempo medio que tarda en atenderse un pedido.</td>
+      <td>El administrador evalúa de un vistazo la rentabilidad de la jornada y la velocidad de atención del servicio.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">8</td>
     </tr>
     <tr>
-      <td><strong>Nivel Formativo:</strong></td>
-      <td>Profesional Técnico (Nivel 5 del Marco Nacional de Cualificaciones)</td>
+      <td><strong>Diseño monocromático y fatiga visual:</strong> Diseño plano de colores sin identidad de marca y sin soporte de modo oscuro para turnos nocturnos.</td>
+      <td>Sistema multitema con 5 paletas intercambiables (Naranja, Verde, Azul, Rojo y Minimal Dark) con Modo Oscuro nativo ergonómico.</td>
+      <td>Estética profesional, identidad de marca personalizable y reducción de la fatiga visual en jornadas prolongadas.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">7</td>
+    </tr>
+
+    <!-- MESAS -->
+    <tr>
+      <td rowspan="3" style="font-weight: 700; text-align: center; vertical-align: middle; background-color: #f8fafc;">MESAS (SALÓN)</td>
+      <td><strong>Comanda lenta y rígida:</strong> Solo se puede añadir comensales o ver observaciones e imprimir pre-cuenta abriendo la mesa en pantalla completa.</td>
+      <td>Selector instantáneo de comensales al abrir comanda y 3 botones físicos de acceso rápido: agregar productos, ver pedido activo en tiempo real e imprimir pre-cuenta con 1 clic.</td>
+      <td>Agiliza el servicio: el mozo ejecuta operaciones frecuentes con un solo clic directamente desde el plano de mesas.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">8</td>
     </tr>
     <tr>
-      <td><strong>Régimen y Turno:</strong></td>
-      <td>Modular por Competencias Laborales / Diurno y Nocturno</td>
+      <td><strong>Distribución espacial estática:</strong> No cuenta con función para ordenar o redistribuir las mesas según la disposición física real del local.</td>
+      <td>Sistema interactivo de arrastrar y soltar (<em>Drag and Drop</em>) con movimiento fluido y persistencia de coordenadas, más botón físico para restaurar posiciones de origen.</td>
+      <td>Permite adaptar la distribución del sistema en segundos ante reservas especiales, eventos o cambios de salón.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">7</td>
     </tr>
     <tr>
-      <td><strong>Línea de Investigación e Innovación:</strong></td>
-      <td>Ingeniería de Software, Sistemas Distribuidos, Bases de Datos Relacionales y Transformación Digital de las MYPEs</td>
+      <td><strong>Sin agrupación de mesas:</strong> No cuenta con funcionalidad para acoplar o agrupar mesas de forma visual y lógica para cuentas compartidas.</td>
+      <td>Módulo de <em>"Unir Mesas"</em> gobernado por relación jerárquica Padre-Hijo en base de datos para grupos grandes (+6 personas) y botón <em>"Separar Mesas"</em> para liberarlas.</td>
+      <td>Consolida pedidos y cobro en una sola cuenta sin perder el control de la ubicación física real de cada mesa.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">7</td>
+    </tr>
+
+    <!-- COCINA -->
+    <tr>
+      <td rowspan="3" style="font-weight: 700; text-align: center; vertical-align: middle; background-color: #f8fafc;">COCINA (KDS)</td>
+      <td><strong>Ausencia de cronometría:</strong> No cuenta con temporizador para controlar el tiempo aproximado de preparación de los pedidos.</td>
+      <td>Temporizador visual dinámico en cada comanda con semaforización cromática automática (verde en tiempo, amarillo alerta, rojo retraso crítico).</td>
+      <td>Permite al jefe de cocina priorizar platos demorados y evitar entregas tardías o alimentos fríos.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">7</td>
+    </tr>
+    <tr>
+      <td><strong>Sin filtro por mesa:</strong> Imposibilidad de buscar o filtrar rápidamente pedidos pertenecientes a una mesa específica.</td>
+      <td>Barra de búsqueda reactiva por número de mesa o mozo con filtrado instantáneo en la pantalla de cocina.</td>
+      <td>Respuesta inmediata ante consultas de mozos o clientes sobre el estado de su orden.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">3</td>
+    </tr>
+    <tr>
+      <td><strong>Flujo binario rígido:</strong> Solo cuenta con dos estados de pedido: <em>RECIBIDO</em> y <em>DESPACHADO</em>.</td>
+      <td>Flujo integral de 4 estados operativos: <em>Recibido</em>, <em>En preparación</em>, <em>Listo para retirar</em> y <em>Despachado</em>.</td>
+      <td>Sincronización perfecta: el mozo sabe exactamente cuándo retirar el plato caliente de pase y el cliente conoce el estado de cocción.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">7</td>
+    </tr>
+
+    <!-- CAJA -->
+    <tr>
+      <td rowspan="5" style="font-weight: 700; text-align: center; vertical-align: middle; background-color: #f8fafc;">CAJA BLINDADA</td>
+      <td><strong>Movimientos sin trazabilidad:</strong> Ingresos y egresos descuentan del saldo pero no dejan constancia de procedencia ni destino del dinero.</td>
+      <td>Registro obligatorio de origen y destino por transacción (caja chica, pago a proveedores, banco, etc.) con categorización auditada.</td>
+      <td>Elimina pérdidas y descuadres al dejar constancia inmutable de cada centavo que entra o sale de caja.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">7</td>
+    </tr>
+    <tr>
+      <td><strong>Cobros fragmentados:</strong> Las ventas por cobrar solo pueden gestionarse saliendo del módulo de caja e ingresando a Salón.</td>
+      <td>Panel centralizado de cuentas pendientes directamente en Caja, permitiendo cobrar cualquier mesa o pedido sin abandonar el módulo.</td>
+      <td>Ahorra tiempo crítico al cajero y centraliza todas las liquidaciones en un único punto seguro.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">9</td>
+    </tr>
+    <tr>
+      <td><strong>Procedimiento engorroso de gastos:</strong> Obliga a crear previamente categorías de egreso en pantallas separadas antes de poder asentar un gasto menor.</td>
+      <td>Formulario modal unificado de registro directo de Ingreso/Egreso con 1 solo clic y autocompletado de motivos frecuentes.</td>
+      <td>Permite asentar gastos urgentes de forma inmediata sin interrumpir el flujo continuo de facturación.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">9</td>
+    </tr>
+    <tr>
+      <td><strong>Cierre de turno fragmentado:</strong> Desglose extenso y manual para apertura y cierre por día o turno, propenso a errores de digitación.</td>
+      <td>Flujo consolidado de Apertura, Arqueo Ciego y Cierre de turno que calcula montos esperados y genera el ticket resumen de liquidación en 1 paso.</td>
+      <td>Minimiza errores humanos en el relevo de turnos y reduce el tiempo de cuadre nocturno de 30 a 2 minutos.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">9</td>
+    </tr>
+    <tr>
+      <td><strong>Historial bloqueado:</strong> Se debe forzosamente aperturar un arqueo para recién consultar transacciones pasadas.</td>
+      <td>Acceso directo al historial cronológico de movimientos de caja en la pantalla principal sin requerir apertura previa de turno.</td>
+      <td>Facilita auditorías relámpago e inspecciones del administrador en cualquier momento del día.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">9</td>
+    </tr>
+
+    <!-- CATEGORÍAS -->
+    <tr>
+      <td rowspan="2" style="font-weight: 700; text-align: center; vertical-align: middle; background-color: #f8fafc;">CATEGORÍAS</td>
+      <td><strong>Categorías planas:</strong> Solo admiten texto genérico sin personalización de colores ni iconos distintivos.</td>
+      <td>Selector de color de distintivo e iconos temáticos categorizados (emojis gastronómicos) por categoría.</td>
+      <td>Los mozos reconocen visualmente las secciones de la carta en fracciones de segundo, acelerando la comanda.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">2</td>
+    </tr>
+    <tr>
+      <td><strong>Eliminación individual lenta:</strong> Sin selección múltiple para depurar o reestructurar categorías obsoletas.</td>
+      <td>Casillas de verificación (<em>checkboxes</em>) de selección masiva y eliminación en lote con confirmación de seguridad.</td>
+      <td>Ahorro sustancial de tiempo en labores de mantenimiento y reorganización de la carta.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">7</td>
+    </tr>
+
+    <!-- MENÚ / PLATOS -->
+    <tr>
+      <td rowspan="3" style="font-weight: 700; text-align: center; vertical-align: middle; background-color: #f8fafc;">MENÚ (PLATOS)</td>
+      <td><strong>Inactivación manual uno por uno:</strong> Los platos agotados deben deshabilitarse de forma individual entrando a cada ficha técnica.</td>
+      <td>Selección múltiple en la lista de platos con botones de acción masiva para activar, desactivar o archivar en bloque.</td>
+      <td>Optimiza el tiempo del administrador, permitiendo retirar platos fuera de stock en horas punta con un solo clic.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">5</td>
+    </tr>
+    <tr>
+      <td><strong>Sin importación masiva:</strong> No cuenta con herramienta para subir cartas nuevas desde archivos externos.</td>
+      <td>Módulo importador automatizado mediante plantillas estandarizadas de Excel (.xlsx / .csv) con validación de datos.</td>
+      <td>Permite configurar o actualizar cartas completas de cientos de productos en cuestión de segundos.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">6</td>
+    </tr>
+    <tr>
+      <td><strong>Búsqueda lenta y sin fotos:</strong> No muestra fotografía del plato ni ofrece autocompletado en la barra de búsqueda.</td>
+      <td>Galería visual interactiva de platos y buscador predictivo con sugerencias dinámicas según el texto ingresado.</td>
+      <td>Interfaz interactiva que ayuda al mozo a identificar platos nuevos, guarniciones y alérgenos al instante.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">8</td>
+    </tr>
+
+    <!-- INVENTARIO -->
+    <tr>
+      <td rowspan="2" style="font-weight: 700; text-align: center; vertical-align: middle; background-color: #f8fafc;">INVENTARIO / KARDEX</td>
+      <td><strong>Unidades rígidas enteras:</strong> Solo permite registrar el inventario en unidades enteras (ud), sin admitir fracciones.</td>
+      <td>Kardex multiformato con soporte de precisión decimal en kilogramos (kg), gramos (gr), litros (L) y unidades (ud).</td>
+      <td>Control exacto de insumos fraccionables (carnes, quesos, licores) sin distorsiones por redondeo forzado.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">9</td>
+    </tr>
+    <tr>
+      <td><strong>Sin costeo por receta ni alertas:</strong> Desconocimiento del costo real de producción por plato y sin notificaciones de stock crítico.</td>
+      <td>Módulo de recetas que calcula el costo unitario de producción por plato según ingredientes y ventana de alertas automáticas de reposición en el Dashboard.</td>
+      <td>Visibilidad del margen bruto real por plato y prevención de quiebres de inventario durante el servicio.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">9</td>
+    </tr>
+
+    <!-- INFRAESTRUCTURA / IMPRESIÓN -->
+    <tr>
+      <td rowspan="2" style="font-weight: 700; text-align: center; vertical-align: middle; background-color: #f8fafc;">USO DEL SISTEMA E IMPRESIÓN</td>
+      <td><strong>Dependencia de Laragon/XAMPP y fallas IP:</strong> Requiere software pesado local para ejecutar impresiones y colapsa si el router cambia la IP de la impresora.</td>
+      <td>Servicio autónomo en segundo plano (<code>Iniciar_Impresora.vbs</code> + Node.js) con escaneo y autodescubrimiento en la tabla ARP del sistema operativo por dirección MAC.</td>
+      <td>Elimina Laragon/XAMPP. Las comandas nunca se detienen, reconectando la impresora automáticamente aunque cambie su IP por DHCP o haya cortes eléctricos.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">8</td>
+    </tr>
+    <tr>
+      <td><strong>Incompatibilidad móvil y Contenido Mixto:</strong> No puede ejecutarse desde navegadores estándar por bloqueos de seguridad HTTPS a impresoras locales.</td>
+      <td>Arquitectura híbrida de Cola de Impresión en la Nube (<em>Database Queue Proxy</em>) mediante PostgreSQL / Supabase y agente local de despacho ESC/POS.</td>
+      <td>Permite comandar desde cualquier navegador moderno y dispositivo (iPads, Android, Safari, Chrome) sin bloqueos por contenido mixto ni redes aisladas.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">10</td>
+    </tr>
+
+    <!-- ATENCIÓN AL CLIENTE -->
+    <tr>
+      <td rowspan="3" style="font-weight: 700; text-align: center; vertical-align: middle; background-color: #f8fafc;">ATENCIÓN AL CLIENTE Y SOPORTE</td>
+      <td><strong>Canal de soporte monomodal:</strong> La asistencia técnica se limita a un único canal externo y desconectado del software.</td>
+      <td>Mesa de ayuda omnicanal integrada directamente en la barra del sistema (tickets web directos, telefonía, WhatsApp y asistente de voz).</td>
+      <td>El personal reporta incidentes por el canal que resulte más oportuno según la criticidad del turno.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">8</td>
+    </tr>
+    <tr>
+      <td><strong>Sin reporte formal de fallas:</strong> Los usuarios no cuentan con un formulario formal para tipificar errores operativos.</td>
+      <td>Formulario de incidencias urgentes con clasificación automática de severidad (fallo de impresora, red, comanda, descuadre) enviado al equipo TI.</td>
+      <td>Centraliza incidencias, garantiza SLA de respuesta y facilita trazabilidad en la resolución de problemas.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">7</td>
+    </tr>
+    <tr>
+      <td><strong>Asistencia estática no interactiva:</strong> Icono de ayuda que solo muestra un número telefónico sin interactividad.</td>
+      <td>Asistente inteligente por voz <strong>Búnker Voice AI</strong> (integrado con Web Speech API) para diagnóstico y autoreparación de servicios del sistema.</td>
+      <td>El personal diagnostica impresoras, base de datos y comandero mediante comandos de voz interactivos sin interrumpir la atención.</td>
+      <td style="text-align: center; font-weight: 800; color: #0b2545;">6</td>
     </tr>
   </tbody>
 </table>
 
+<h2>3.3 Análisis del Proceso de Solución e Innovaciones Tecnológicas Implementadas</h2>
 <p>
-  <strong>Correspondencia con las Unidades de Competencia del Programa:</strong>
+  La resolución sistemática de los problemas diagnosticados en Dibal exigió un enfoque metodológico de reingeniería de procesos sustentado en una arquitectura de software moderna y desacoplada. A continuación, se detallan los procesos de solución técnica implementados:
 </p>
-<ol>
-  <li><strong>Unidad de Competencia 1 (Análisis y Diseño de Sistemas):</strong> Aplicada en el levantamiento riguroso de requerimientos con restauranteros, modelado de casos de uso del flujo de comanda y diseño de diagramas arquitectónicos bajo estándares C4 y UML.</li>
-  <li><strong>Unidad de Competencia 2 (Desarrollo y Programación de Software):</strong> Evidenciada en la construcción modular de la interfaz de usuario en React 18, control de estado reactivo, desarrollo de APIs RESTful en Node.js y control de asincronía en JavaScript/Node.js.</li>
-  <li><strong>Unidad de Competencia 3 (Gestión de Bases de Datos):</strong> Demostrada en la estructuración de la base de datos relacional PostgreSQL, definición del esquema mediante Prisma ORM, modelado relacional recursivo para mesas compuestas, indexación para consultas complejas y auditoría transaccional.</li>
-  <li><strong>Unidad de Competencia 4 (Seguridad, Redes y Despliegue):</strong> Implementada en la configuración de tokens JWT, cifrado de claves con bcrypt, integración de protocolos de impresión ESC/POS sobre sockets TCP/IP y despliegue continuo (CI/CD) en infraestructura cloud.</li>
-</ol>
+
+<h3>3.3.1 Solución a la Fragilidad de Impresión: Arquitectura Híbrida Cloud Database Queue Proxy y Autodescubrimiento ARP</h3>
+<p>
+  El principal cuello de botella de los sistemas web gastronómicos convencionales radica en las restricciones de seguridad impuestas por los navegadores modernos: una aplicación alojada en la nube bajo protocolo seguro <strong>HTTPS</strong> tiene terminantemente prohibido por políticas de CORS y <em>Mixed Content</em> establecer conexiones de red directas a sockets locales <strong>HTTP</strong> o puertos TCP/IP planos (como el puerto <code>9100</code> de las impresoras térmicas ESC/POS). Los sistemas tradicionales forzaban al usuario a instalar entornos pesados como Laragon o XAMPP y deshabilitar las defensas de seguridad del navegador.
+</p>
+<p>
+  En <strong>Búnker</strong>, este problema se resolvió mediante el diseño de una <strong>Cola de Impresión Desacoplada en Base de Datos</strong> (<em>Database Queue Proxy</em>). Cuando un mozo envía una comanda desde un iPad o smartphone sobre HTTPS, el cliente web no intenta conectarse a la impresora local; en su lugar, persiste el payload del ticket en la tabla relacional <code>tickets_pendientes</code> de la base de datos cloud (PostgreSQL / Supabase). De forma concurrente, en la computadora principal del restaurante corre un servicio ligero Node.js en segundo plano (iniciado de forma transparente por <code>Iniciar_Impresora.vbs</code> al encender Windows). Este servicio sondea en tiempo real la cola de la nube, descarga los tickets pendientes, compila el código binario ESC/POS y los despacha al socket de la impresora térmica correspondiente.
+</p>
+<p>
+  Adicionalmente, para erradicar las caídas por reasignación de IP dinámica (DHCP), el servicio local incorpora un algoritmo de <strong>Autodescubrimiento ARP</strong>: al iniciar y periódicamente, ejecuta una consulta a la tabla ARP del kernel del sistema operativo (<code>arp -a</code>), mapeando las direcciones físicas <strong>MAC</strong> de las impresoras registradas. Si el router del local reinicia y asigna una nueva IP a la impresora de cocina, Búnker detecta la nueva IP asociada a la MAC y actualiza la ruta de red en memoria de forma transparente, garantizando disponibilidad ininterrumpida.
+</p>
+
+<h3>3.3.2 Solución a la Rigidez de Salón: Plano Interactivo Drag-and-Drop y Fusión Jerárquica Padre-Hijo</h3>
+<p>
+  Frente al esquema tabular inmutable de Dibal, se desarrolló un módulo de salón reactivo construido sobre <strong>React 18</strong> y CSS Grid/Flexbox con soporte de <em>Drag and Drop</em> nativo. Los administradores pueden posicionar mesas en coordenadas espaciales continuas, replicando con exactitud la distribución física del salón y guardando el layout en la base de datos.
+</p>
+<p>
+  Para resolver la atención de grupos numerosos (+6 personas), se diseñó un modelo de datos recursivo de <strong>Unión de Mesas (Padre-Hijo)</strong>: al enlazar dos o más mesas, una mesa principal asume el rol de cabecera (padre) y las mesas acopladas (hijas) vinculan sus pedidos a la cuenta unificada. El mozo puede agregar productos desde cualquiera de las mesas físicas enlazadas, visualizando un único estado consolidado. Al momento de la liquidación, el cajero emite una única pre-cuenta con 1 clic, y al registrar el pago, el sistema desacopla automáticamente las mesas liberando sus estados para el siguiente turno.
+</p>
+
+<h3>3.3.3 Solución a los Tiempos de Espera en Cocina: Monitor KDS Cromático de 4 Estados</h3>
+<p>
+  Para sustituir el método tradicional de tickets de papel y estados binarios ciegos, se implementó un <strong>Monitor de Cocina KDS (Kitchen Display System)</strong> con cronometría dinámica en tiempo real. Cada comanda generada calcula su tiempo transcurrido respecto al reloj sincronizado del servidor. Mediante una máquina de estados de 4 fases (<em>Recibido</em> &rarr; <em>En preparación</em> &rarr; <em>Listo para retirar</em> &rarr; <em>Despachado</em>), el personal de cocina actualiza el avance con toques táctiles.
+</p>
+<p>
+  El sistema aplica semáforos cromáticos automatizados según el SLA configurado por tipo de plato: el encabezado de la comanda permanece en verde durante los primeros 10 minutos; transiciona a amarillo preventivo al superar dicho umbral; y vira a rojo parpadeante ante demoras críticas mayores a 20 minutos. Esto proporciona a la cocina una directriz visual inequívoca bajo el principio <strong>FIFO (First In, First Out)</strong>, eliminando platos fríos en pase y quejas por retrasos.
+</p>
+
+<h3>3.3.4 Solución al Riesgo de Fraude y Descuadres: Caja Blindada con Doble Partida y Arqueo Unificado</h3>
+<p>
+  Frente a los descuentos ciegos de efectivo en Dibal, Búnker implementó una arquitectura contable de <strong>Caja Blindada</strong> basada en el principio de doble partida simplificada: cada salida o ingreso de efectivo exige tipificar la procedencia y el destino exacto (pago a proveedor de insumos, retiro a cuenta bancaria, reposición de fondo de caja chica). Todas las operaciones quedan registradas con firma digital del usuario en sesión (auditoría inmutable).
+</p>
+<p>
+  Asimismo, se centralizó el cobro de pedidos directamente en la pantalla de caja: el cajero visualiza todas las mesas ocupadas con cuentas pendientes sin salir del módulo. El proceso de cierre de turno ejecuta un <strong>Arqueo Ciego Automatizado</strong>, donde el sistema compara el dinero físico declarado con el saldo teórico acumulado (efectivo, Yape, Plin, tarjetas), emitiendo al instante el ticket de cuadre y alertando desviaciones mayores a S/. 0.05.
+</p>
+
+<h3>3.3.5 Solución al Descontrol de Mermas: Kardex Multiformato Decimal y Escandallo por Receta</h3>
+<p>
+  La limitación a cantidades enteras del sistema predecesor se superó mediante un modelo de inventario con campos de precisión decimal en la base de datos PostgreSQL. Esto permite gestionar ingredientes con unidades de medida heterogéneas: carnes y pescados en kilogramos (kg) y gramos (gr); salsas y licores en litros (L) y mililitros (ml); panes y bebidas envasadas en unidades (ud).
+</p>
+<p>
+  Mediante el motor de recetas y escandallo, cada plato del menú tiene asociada su estructura de insumos requeridos. Al despacharse una orden en el sistema (por ejemplo, una porción de Parrilla Búnker), el backend descuenta en tiempo real 0.350 kg de carne, 0.050 kg de chorizo y 0.200 kg de papas. Si el saldo remanente desciende por debajo del umbral mínimo configurado, el Dashboard activa alertas preventivas para reabastecimiento antes de que ocurra una rotura de stock.
+</p>
+
+<h3>3.3.6 Solución a la Asistencia Técnica: Diagnóstico Omnicanal Asistido por Búnker Voice AI</h3>
+<p>
+  Como elemento de vanguardia, se diseñó e integró <strong>Búnker Voice AI</strong>, un asistente interactivo operado por voz directamente en el navegador a través de la <strong>Web Speech API</strong>. El personal del restaurante puede activar comandos por voz (ej. <em>"Diagnostica el estado de la impresora de cocina"</em>, <em>"Verifica la sincronización de base de datos"</em>). El asistente ejecuta diagnósticos asíncronos sobre la red local y los servicios en la nube, informando auditivamente el resultado y ofreciendo botones de recuperación automática en 1 clic. Esto empodera al personal no técnico para resolver contingencias en segundos sin requerir la presencia física de ingenieros de soporte durante horas punta de atención.
+</p>
 
 <!-- ========================================== -->
 <!-- 4. IDENTIFICACIÓN DEL PROCESO, PRODUCTO    -->

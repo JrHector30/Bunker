@@ -4,11 +4,13 @@ import CloseButton from './ui/CloseButton';
 import { useNotification } from '../context/NotificationContext';
 import { enqueueTicket } from '../utils/printer';
 import { networkStatus, offlineCashService } from '../offline';
+import { getActiveRestaurantName } from '../utils/tenant';
 
 export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
   const { showToast } = useNotification();
   const [loading, setLoading] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
+  const restaurantTitle = (getActiveRestaurantName() || 'BUNKER RESTOBAR').toUpperCase();
 
   useEffect(() => {
     if (isOpen && arqueoId) {
@@ -78,6 +80,7 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
       const content = {
         type: 'arqueo',
         responsable: respName,
+        restauranteNombre: restaurantTitle,
         ...summaryData
       };
       await enqueueTicket(summaryData.id, respName, content, 'Caja');
@@ -123,7 +126,7 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
               ) : (
                 <div className="space-y-1">
                   <div className="text-center font-bold tracking-tight text-slate-400">================================</div>
-                  <div className="text-center font-bold tracking-wider text-[13px]">BUNKER RESTOBAR</div>
+                  <div className="text-center font-bold tracking-wider text-[13px]">{restaurantTitle}</div>
                   <div className="text-center font-bold text-[12px]">RESUMEN DE CAJA</div>
                   <div className="text-center font-bold tracking-tight text-slate-400">================================</div>
 
@@ -134,7 +137,7 @@ export function SummaryTicketModal({ isOpen, onClose, arqueoId }) {
                     </div>
                     <div className="flex justify-between">
                       <span className="font-semibold">TURNO N°:</span>
-                      <span className="font-bold">{summaryData.id}</span>
+                      <span className="font-bold">{summaryData.numeroSesion || summaryData.id}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="font-semibold">RESPONSABLE:</span>

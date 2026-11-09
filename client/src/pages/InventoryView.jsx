@@ -17,6 +17,7 @@ import CloseButton from '../components/ui/CloseButton';
 import { CustomCheckbox } from '../components/ui/CustomCheckbox';
 import { motion } from 'motion/react';
 import { safeRecordProductShadow } from '../offline';
+import RecetarioEscandallo from '../components/recetario/RecetarioEscandallo';
 
 
 const InventoryView = () => {
@@ -26,14 +27,20 @@ const InventoryView = () => {
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const tabParam = searchParams.get('tab') || 'platos';
-    const [activeTab, setActiveTab] = useState(tabParam);
+    const normalizedTab = (tabParam === 'recetario' || tabParam === 'recetarios') ? 'recetarios' : tabParam;
+    const [activeTab, setActiveTab] = useState(normalizedTab);
 
     // Sync tab state when URL search params change
     useEffect(() => {
-        if (tabParam && tabParam !== activeTab) {
-            setActiveTab(tabParam);
+        if (tabParam) {
+            const norm = (tabParam === 'recetario' || tabParam === 'recetarios') ? 'recetarios' : tabParam;
+            if (norm !== activeTab) {
+                setActiveTab(norm);
+            }
         }
-    }, [tabParam]);
+    }, [tabParam, activeTab]);
+
+
 
     const handleTabChange = (newTab) => {
         setActiveTab(newTab);
@@ -45,7 +52,7 @@ const InventoryView = () => {
         if (!res.ok) throw new Error('Error al cargar productos');
         return res.json();
     });
-    const fetchCategoriesAPI = () => fetch('/api/categories').then(res => {
+    const fetchCategoriesAPI = () => fetch('/api/categories?_t=' + Date.now()).then(res => {
         if (!res.ok) throw new Error('Error al cargar categorías');
         return res.json();
     });
@@ -85,7 +92,13 @@ const InventoryView = () => {
     };
 
     useEffect(() => {
-        if (categories.length > 0 && formData.categoriaId === '') {
+        const handleCatUpdate = () => refetchCategories();
+        window.addEventListener('categories-updated', handleCatUpdate);
+        return () => window.removeEventListener('categories-updated', handleCatUpdate);
+    }, []);
+
+    useEffect(() => {
+        if (categories.length > 0 && (!formData.categoriaId || formData.categoriaId === '')) {
             setFormData(prev => ({ ...prev, categoriaId: categories[0].id }));
         }
     }, [categories]);
@@ -689,6 +702,7 @@ const InventoryView = () => {
     };
 
     const handleOpenModal = (product = null) => {
+        refetchCategories();
         if (product) {
             setEditingProduct(product);
             setModalMode('edit');
@@ -793,7 +807,12 @@ const InventoryView = () => {
             setFormError("El precio debe ser un número válido.");
             return;
         }
-        if (Number.isNaN(formData.categoriaId) || formData.categoriaId === null || formData.categoriaId === '') {
+        let targetCatId = formData.categoriaId;
+        if ((!targetCatId || Number.isNaN(targetCatId)) && categories.length > 0) {
+            targetCatId = categories[0].id;
+            formData.categoriaId = targetCatId;
+        }
+        if (Number.isNaN(targetCatId) || targetCatId === null || targetCatId === '') {
             setFormError("Debe seleccionar una categoría válida.");
             return;
         }
@@ -1210,131 +1229,19 @@ const InventoryView = () => {
     };
 
     const renderRecetarioTab = () => {
-        let draftCosto = 0;
-        currentRecipe.forEach(item => {
-            const insu = item.insumo || insumos.find(i => i.id === parseInt(item.insumoId));
-            if (insu && item.cantidad > 0) draftCosto += (insu.precioCompra * item.cantidad);
-        });
-
-        const isWarning = selectedPlatoObj && selectedPlatoObj.precio > 0 ? (draftCosto / selectedPlatoObj.precio) * 100 > 40 : false;
-
-        const comboboxItems = products.map(p => {
-            const cat = categories.find(c => c.id === p.categoriaId);
-            return {
-                id: p.id.toString(),
-                name: p.nombre,
-                category: cat ? cat.nombre : 'Otros',
-                precio: p.precio
-            };
-        });
-        const selectedComboboxItem = comboboxItems.find(item => item.id === selectedPlatoId) || null;
-        const categoriesList = categories.map(c => c.nombre);
-
         return (
-            <div className="glass-panel" style={{ padding: 30 }}>
-                <div style={{ position: 'relative', zIndex: 10, display: 'flex', gap: 30, marginBottom: 30, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                    <div style={{ flex: '1 1 300px' }}>
-                        <label style={{ display: 'block', marginBottom: 10, fontSize: '1.1rem', fontWeight: 'bold' }}>Seleccionar Plato del Menú</label>
-                        <CategorizedCombobox
-                            items={comboboxItems}
-                            selectedItem={selectedComboboxItem}
-                            onSelect={(item) => setSelectedPlatoId(item ? item.id : '')}
-                            categoriesList={categoriesList}
-                        />
-                        <p className="text-muted" style={{ marginTop: 10, fontSize: '0.9rem' }}>El costo se descontará del stock en Logística al venderse este plato.</p>
-                    </div>
-                    {selectedPlatoObj && (
-                        <div style={{ flex: '1 1 300px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--glass-border)', padding: 20, borderRadius: 16 }}>
-                            <h3 style={{ margin: '0 0 15px 0' }}>Análisis de Costos</h3>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: '1.1rem' }}>
-                                <span className="text-muted">Precio Venta (PVP):</span>
-                                <strong className="font-mono">S/. {selectedPlatoObj.precio.toFixed(2)}</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: '1.1rem' }}>
-                                <span className="text-muted">Costo Producción:</span>
-                                <strong style={{ color: isWarning ? 'var(--danger)' : 'var(--success)' }} className="font-mono">S/. {draftCosto.toFixed(2)}</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--glass-border)', paddingTop: 10, marginTop: 10, fontSize: '1.1rem' }}>
-                                <span className="text-muted">Margen Bruto:</span>
-                                <strong className="font-mono">S/. {(selectedPlatoObj.precio - draftCosto).toFixed(2)}</strong>
-                            </div>
-                            {isWarning && (
-                                <div style={{ background: 'var(--danger)', color: 'white', padding: '8px 15px', borderRadius: 8, marginTop: 15, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 'bold' }}>
-                                    <AlertTriangle size={18} /> El costo supera el 40% del Venta.
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {selectedPlatoId && (
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                            <h3>Ingredientes de la Receta</h3>
-                            <button className="glass-button" onClick={handleAddIngredientRow}><Plus size={18} /> Añadir Insumo</button>
-                        </div>
-
-                        {currentRecipe.length === 0 ? (
-                            <div className="text-muted" style={{ textAlign: 'center', padding: 40, border: '1px dashed var(--glass-border)', borderRadius: 12 }}>
-                                <Beaker size={48} style={{ opacity: 0.5, marginBottom: 15 }} />
-                                <div>Este plato no tiene insumos asignados.</div>
-                            </div>
-                        ) : (
-                            <div className="table-responsive">
-                                <table className="recipe-table" style={{ width: '100%', marginBottom: 20 }}>
-                                    <thead>
-                                        <tr style={{ background: 'var(--table-header-bg)', textAlign: 'left' }}>
-                                            <th style={{ padding: 15 }}>Insumo</th>
-                                            <th style={{ padding: 15 }}>Unidad</th>
-                                            <th style={{ padding: 15 }}>Cantidad a descontar</th>
-                                            <th style={{ padding: 15 }}>Costo Subtotal</th>
-                                            <th style={{ padding: 15, width: 60 }}></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {currentRecipe.map((item, index) => {
-                                            const insu = item.insumo || insumos.find(i => i.id === parseInt(item.insumoId));
-                                            const subtotal = insu && item.cantidad ? (insu.precioCompra * item.cantidad) : 0;
-                                            const insumoOptions = insumos.map(i => ({
-                                                id: i.id.toString(),
-                                                name: i.nombre
-                                            })).sort((a, b) => a.name.localeCompare(b.name));
-                                            const selectedInsumoOption = insumoOptions.find(opt => opt.id === item.insumoId?.toString()) || null;
-
-                                            return (
-                                                <tr key={index} style={{ borderBottom: '1px solid var(--table-row-border)' }}>
-                                                    <td style={{ padding: 15 }}>
-                                                        <SimpleCombobox
-                                                            items={insumoOptions}
-                                                            selectedItem={selectedInsumoOption}
-                                                            onSelect={(opt) => handleIngredientChange(index, 'insumoId', opt ? opt.id : '')}
-                                                            placeholder="Seleccionar Insumo..."
-                                                        />
-                                                    </td>
-                                                    <td style={{ padding: 15 }} className="text-muted">{insu ? insu.unidadMedida : '-'}</td>
-                                                    <td style={{ padding: 15 }}>
-                                                        <input type="number" step="0.01" className="glass-input font-sans text-xs" style={{ width: 120 }} placeholder="0.00" value={Number.isNaN(item.cantidad) ? '' : item.cantidad} onChange={e => handleIngredientChange(index, 'cantidad', e.target.valueAsNumber)} />
-                                                    </td>
-                                                    <td style={{ padding: 15 }} className="font-mono">{insu ? `S/. ${subtotal.toFixed(2)}` : '-'}</td>
-                                                    <td style={{ padding: 15 }}>
-                                                        <DeleteButton onClick={() => handleRemoveIngredient(index)} className="scale-75 -my-2 -mx-1" />
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-                            <button className="glass-button primary" onClick={handleSaveRecipe} style={{ fontSize: '1.1rem', padding: '12px 30px' }}>
-                                <Save size={20} /> Guardar Receta Completa
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
+            <RecetarioEscandallo
+                products={products}
+                categories={categories}
+                insumos={insumos}
+                selectedPlatoId={selectedPlatoId}
+                setSelectedPlatoId={setSelectedPlatoId}
+                selectedPlatoObj={selectedPlatoObj}
+                currentRecipe={currentRecipe}
+                setCurrentRecipe={setCurrentRecipe}
+                onSaveRecipe={handleSaveRecipe}
+                showToast={showToast}
+            />
         );
     };
 
@@ -1423,7 +1330,7 @@ const InventoryView = () => {
                     "Fecha y Hora": new Date(mov.fecha).toLocaleString(),
                     "Insumo": mov.insumo?.nombre || '-',
                     "Tipo": mov.tipoMovimiento,
-                    "Cantidad": `${sign}${mov.cantidad} ${mov.insumo?.unidadMedida || ''}`,
+                    "Cantidad": `${sign}${Math.abs(mov.cantidad)} ${mov.insumo?.unidadMedida || ''}`,
                     "Usuario": mov.usuario?.nombre || 'General / Sistema',
                     "Motivo": mov.motivo || '-'
                 };
@@ -1465,15 +1372,15 @@ const InventoryView = () => {
                 </div>
 
                 <div className="glass-panel table-responsive" style={{ padding: 0 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', justifyItems: 'center', alignItems: 'center', textAlign: 'center' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center' }}>
                         <thead>
-                            <tr style={{ background: 'var(--table-header-bg)', textAlign: 'left' }}>
-                                <th style={{ padding: 15 }}>Fecha y Hora</th>
-                                <th style={{ padding: 15 }}>Insumo</th>
-                                <th style={{ padding: 15 }}>Tipo</th>
-                                <th style={{ padding: 15 }}>Cantidad</th>
-                                <th style={{ padding: 15 }}>Usuario</th>
-                                <th style={{ padding: 15 }}>Motivo / Info</th>
+                            <tr style={{ background: 'var(--table-header-bg)', textAlign: 'center' }}>
+                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Fecha y Hora</th>
+                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Insumo</th>
+                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Tipo</th>
+                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Cantidad</th>
+                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Usuario</th>
+                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Motivo / Info</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1487,21 +1394,21 @@ const InventoryView = () => {
                                 const isPositive = ['COMPRA', 'AJUSTE_POSITIVO'].includes(mov.tipoMovimiento);
                                 const color = isPositive ? 'var(--success)' : (mov.tipoMovimiento === 'VENTA' ? 'var(--primary)' : 'var(--danger)');
                                 return (
-                                    <tr key={mov.id} style={{ borderBottom: '1px solid var(--table-row-border)', color: 'var(--text-main)' }}>
-                                        <td style={{ padding: 15, color: 'var(--text-main)' }}>{new Date(mov.fecha).toLocaleString()}</td>
-                                        <td style={{ padding: 15, fontWeight: 'bold', color: 'var(--text-main)' }}>{mov.insumo?.nombre}</td>
-                                        <td style={{ padding: 15 }}>
+                                    <tr key={mov.id} style={{ borderBottom: '1px solid var(--table-row-border)', color: 'var(--text-main)', textAlign: 'center' }}>
+                                        <td style={{ padding: 15, color: 'var(--text-main)', textAlign: 'center', verticalAlign: 'middle' }}>{new Date(mov.fecha).toLocaleString()}</td>
+                                        <td style={{ padding: 15, fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center', verticalAlign: 'middle' }}>{mov.insumo?.nombre}</td>
+                                        <td style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>
                                             <span style={{ padding: '4px 8px', borderRadius: 4, background: `${color}40`, color: color, fontSize: '0.8rem', fontWeight: 'bold' }}>
                                                 {mov.tipoMovimiento}
                                             </span>
                                         </td>
-                                        <td style={{ padding: 15, color: color, fontWeight: 'bold' }}>
-                                            {isPositive ? '+' : '-'}{mov.cantidad} {mov.insumo?.unidadMedida}
+                                        <td style={{ padding: 15, color: color, fontWeight: 'bold', textAlign: 'center', verticalAlign: 'middle' }}>
+                                            {isPositive ? '+' : '-'}{Math.abs(mov.cantidad)} {mov.insumo?.unidadMedida}
                                         </td>
-                                        <td style={{ padding: 15, color: 'var(--text-main)' }}>
+                                        <td style={{ padding: 15, color: 'var(--text-main)', textAlign: 'center', verticalAlign: 'middle' }}>
                                             {mov.usuario?.nombre || 'General / Sistema'}
                                         </td>
-                                        <td style={{ padding: 15, fontSize: '0.9rem', color: 'var(--text-muted)' }}>{mov.motivo || '-'}</td>
+                                        <td style={{ padding: 15, fontSize: '0.9rem', color: 'var(--text-muted)', textAlign: 'center', verticalAlign: 'middle' }}>{mov.motivo || '-'}</td>
                                     </tr>
                                 );
                             })}
@@ -1660,6 +1567,7 @@ const InventoryView = () => {
             case 'insumos':
                 return 'Inventario (Insumos)';
             case 'recetario':
+            case 'recetarios':
                 return 'Recetarios (Costeo)';
             case 'kardex':
                 return 'Kardex de Inventario';
@@ -1670,18 +1578,32 @@ const InventoryView = () => {
         }
     };
 
+    const isRecetarioTab = activeTab === 'recetario' || activeTab === 'recetarios';
+
     return (
-        <div className="fade-in" style={{ padding: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-                    <button className="glass-button" onClick={() => navigate('/')} style={{ padding: 10 }}><ArrowLeft size={24} /></button>
-                    <h1 style={{ margin: 0 }}>{getModuleTitle()}</h1>
+        <div className="fade-in flex flex-col h-full" style={{ padding: isRecetarioTab ? '6px 12px 6px 12px' : 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isRecetarioTab ? 6 : 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isRecetarioTab ? 10 : 15 }}>
+                    <button className="glass-button" onClick={() => navigate('/')} style={{ padding: isRecetarioTab ? '5px 8px' : 10 }}><ArrowLeft size={isRecetarioTab ? 18 : 24} /></button>
+                    <h1 style={{ margin: 0, fontSize: isRecetarioTab ? '1.25rem' : '1.75rem', fontWeight: 'bold' }}>{getModuleTitle()}</h1>
                 </div>
+                {isRecetarioTab && (
+                    <button
+                        type="button"
+                        onClick={handleSaveRecipe}
+                        className="rounded-full px-4 py-1.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md border-0 active:scale-95 text-white"
+                        style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}
+                        title="Guardar escandallo y actualizar costos en Búnker"
+                    >
+                        <Save size={14} />
+                        <span>Guardar Escandallo</span>
+                    </button>
+                )}
             </div>
 
             {activeTab === 'platos' && renderPlatosTab()}
             {activeTab === 'insumos' && renderInsumosTab()}
-            {activeTab === 'recetario' && renderRecetarioTab()}
+            {(activeTab === 'recetario' || activeTab === 'recetarios') && renderRecetarioTab()}
             {activeTab === 'kardex' && renderKardexTab()}
             {activeTab === 'auditoria' && renderAuditoriaTab()}
 
@@ -1825,7 +1747,7 @@ const InventoryView = () => {
 
                             {formError && <div style={{ color: 'white', background: 'var(--danger)', padding: 10, borderRadius: 8, marginBottom: 15 }}>{formError}</div>}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-                                <div><label>Categoría</label><select className="glass-input" value={formData.categoriaId} onChange={e => setFormData({ ...formData, categoriaId: Number(e.target.value) })} required>{categories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
+                                <div><label>Categoría</label><select className="glass-input" value={formData.categoriaId || (categories.length > 0 ? categories[0].id : '')} onChange={e => setFormData({ ...formData, categoriaId: Number(e.target.value) })} required>{categories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
                                 <div><label>Precio (S/.)</label><input type="number" step="0.01" className="glass-input" value={Number.isNaN(formData.precio) ? '' : formData.precio} onChange={e => setFormData({ ...formData, precio: e.target.valueAsNumber })} required /></div>
                             </div>
                             <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}><input type="checkbox" checked={formData.activo} onChange={e => setFormData({ ...formData, activo: e.target.checked })} /> Producto Activo</label>

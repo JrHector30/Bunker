@@ -2,10 +2,80 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
+
+// Interceptor global de red: inyecta automáticamente el ID del restaurante (multi-tenant)
+const _nativeFetch = window.fetch;
+window.fetch = function(input, init = {}) {
+    try {
+        let tenantId = null;
+        const storedUser = localStorage.getItem('bunker_user');
+        if (storedUser) {
+            const user = JSON.parse(storedUser);
+            if (user && user.restauranteId) {
+                tenantId = user.restauranteId;
+            }
+        }
+        if (!tenantId) {
+            const storedTenant = localStorage.getItem('bunker_current_tenant');
+            if (storedTenant) {
+                const tenant = JSON.parse(storedTenant);
+                if (tenant && tenant.id) {
+                    tenantId = tenant.id;
+                }
+            }
+        }
+
+        if (tenantId) {
+            init = init || {};
+            if (init.headers instanceof Headers) {
+                if (!init.headers.has('x-restaurante-id')) {
+                    init.headers.set('x-restaurante-id', String(tenantId));
+                }
+            } else if (Array.isArray(init.headers)) {
+                if (!init.headers.some(([k]) => k.toLowerCase() === 'x-restaurante-id')) {
+                    init.headers.push(['x-restaurante-id', String(tenantId)]);
+                }
+            } else {
+                init.headers = {
+                    ...init.headers,
+                    'x-restaurante-id': String(tenantId)
+                };
+            }
+        }
+    } catch (e) {
+        // Fallo silencioso si hay problemas con localStorage
+    }
+    return _nativeFetch.call(this, input, init);
+};
+
 import { initDatabase, db, offlineService, queueService, createOperation, QueueStatus, recordOperation, isRecordingEnabled, getRecordingMode, setRecordingMode, syncEngine, recoverStaleOperations, RecordingSource, SYNC_CONFIG, getCurrentDate, offlineReadiness, offlineSnapshotService, offlineKitchenService } from './offline'
 
 // Initialize local database passively
 initDatabase();
+
+// Purgar IndexedDB y caché si cambió el restaurante activo
+try {
+  let detectedTenantId = null;
+  const storedUser = localStorage.getItem('bunker_user');
+  if (storedUser) {
+    const u = JSON.parse(storedUser);
+    if (u && u.restauranteId) detectedTenantId = u.restauranteId;
+  }
+  if (!detectedTenantId) {
+    const storedTenant = localStorage.getItem('bunker_current_tenant');
+    if (storedTenant) {
+      const t = JSON.parse(storedTenant);
+      if (t && t.id) detectedTenantId = t.id;
+    }
+  }
+  const lastKnownTenantId = localStorage.getItem('bunker_last_known_tenant_id');
+  if (detectedTenantId && lastKnownTenantId && String(detectedTenantId) !== String(lastKnownTenantId)) {
+    offlineService.clear().catch(() => {});
+  }
+  if (detectedTenantId) {
+    localStorage.setItem('bunker_last_known_tenant_id', String(detectedTenantId));
+  }
+} catch (e) {}
 
 // Expose DevTools diagnostic helper only in development mode
 if (import.meta.env.DEV) {
@@ -631,6 +701,21 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>,
 )
+
+// Purgar inmediatamente cualquier entrada /api/ residual en Cache Storage
+if (typeof window !== 'undefined' && 'caches' in window) {
+  caches.keys().then(names => {
+    names.forEach(name => {
+      caches.open(name).then(cache => {
+        cache.keys().then(keys => {
+          keys.forEach(k => {
+            if (k.url.includes('/api/')) cache.delete(k);
+          });
+        });
+      });
+    });
+  }).catch(() => {});
+}
 
 // Register Service Worker
 if ('serviceWorker' in navigator) {

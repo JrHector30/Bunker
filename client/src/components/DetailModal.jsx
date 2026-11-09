@@ -86,7 +86,7 @@ export function DetailModal({ isOpen, onClose, arqueoId }) {
 
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div className="relative transform overflow-hidden rounded-lg bg-[var(--bg-surface)] text-left shadow-lg transition-all sm:my-8 sm:w-full sm:max-w-xl border border-[var(--glass-border)] font-sans text-[var(--text-main)]">
-          
+
           {/* Header */}
           <div className="bg-[var(--bg-surface)] border-b border-[var(--glass-border)] px-6 py-4 flex justify-between items-center text-[var(--text-main)]">
             <div className="flex items-center gap-2">
@@ -95,7 +95,7 @@ export function DetailModal({ isOpen, onClose, arqueoId }) {
               </div>
               <div>
                 <h3 className="text-base font-bold text-[var(--text-main)]">Resumen Auditoría de Caja</h3>
-                <p className="text-[11px] text-[var(--text-muted)] font-sans">Arqueo Sesión N° {arqueo.id} • {arqueo.estado?.toUpperCase()}</p>
+                <p className="text-[11px] text-[var(--text-muted)] font-sans">Arqueo Sesión N° {arqueo.numeroSesion || arqueo.id} • {arqueo.estado?.toUpperCase()}</p>
               </div>
             </div>
             <CloseButton onClick={onClose} className="scale-90" />

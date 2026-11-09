@@ -31,7 +31,9 @@ import {
     Beaker,
     Utensils,
     ChartColumn,
-    Menu
+    Menu,
+    PanelLeftClose,
+    PanelLeftOpen
 } from 'lucide-react';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -51,11 +53,15 @@ const DashboardLayout = () => {
     // Sincroniza el modo claro/oscuro solo dentro del dashboard autenticado
     useEffect(() => {
         const root = document.documentElement;
-        root.classList.remove('mode-dark', 'mode-light');
-        root.classList.add(`mode-${mode}`);
+        root.classList.remove('mode-dark', 'mode-light', 'dark');
+        if (mode === 'dark') {
+            root.classList.add('mode-dark', 'dark');
+        } else {
+            root.classList.add('mode-light');
+        }
         return () => {
             root.classList.remove('mode-light');
-            root.classList.add('mode-dark');
+            root.classList.add('mode-dark', 'dark');
         };
     }, [mode]);
 
@@ -131,6 +137,26 @@ const DashboardLayout = () => {
     const [popoverTop, setPopoverTop] = useState(240);
     const [isTabletRail, setIsTabletRail] = useState(() => window.innerWidth >= 640 && window.innerWidth < 900);
     const masButtonRef = useRef(null);
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    const profileMenuRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+                setIsProfileMenuOpen(false);
+            }
+        };
+        if (isProfileMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isProfileMenuOpen]);
+
+    useEffect(() => {
+        setIsProfileMenuOpen(false);
+    }, [location.pathname, collapsed]);
     const logisticaBtnRef = useRef(null);
 
     useEffect(() => {
@@ -212,6 +238,7 @@ const DashboardLayout = () => {
 
     const isDarkMode = mode === 'dark';
     const isCashier = location.pathname === '/cashier';
+    const isRecetarios = location.pathname.startsWith('/admin/inventory') && (location.search.includes('tab=recetarios') || location.search.includes('tab=recetario'));
     const isRail = isTabletRail || collapsed;
 
     return (
@@ -228,30 +255,56 @@ const DashboardLayout = () => {
                     <div className={`flex flex-col gap-5 w-full ${isRail ? 'items-center px-2' : ''}`}>
                         {isRail ? (
                             /* Collapsed Branding */
-                            <div className="flex flex-col items-center gap-2 w-full">
+                            <div className="flex flex-col items-center gap-2.5 w-full">
                                 <div className="relative group cursor-pointer" onClick={() => navigate('/home')}>
                                     <div className="absolute -inset-1 rounded-2xl logo-glow opacity-30 blur-md group-hover:opacity-100 transition duration-500"></div>
                                     <div className="relative w-11 h-11 rounded-xl bg-black border border-slate-800/90 flex items-center justify-center shadow-md overflow-hidden">
                                         <img src="/android-chrome-192x192.png" alt="Búnker" className="w-7 h-7 object-contain" />
                                     </div>
                                 </div>
-                                <div className="text-[10px] font-extrabold text-brand tracking-widest uppercase">
-                                    BKR
-                                </div>
+                                {!isTabletRail ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setCollapsed(false)}
+                                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all duration-200 cursor-pointer"
+                                        title="Expandir menú"
+                                    >
+                                        <PanelLeftOpen className="w-5 h-5" />
+                                    </button>
+                                ) : (
+                                    <div className="text-[10px] font-extrabold text-brand tracking-widest uppercase">
+                                        BKR
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             /* Expanded Branding */
-                            <div className="flex items-center gap-3.5 cursor-pointer group w-full" onClick={() => navigate('/home')}>
-                                <div className="relative">
-                                    <div className="absolute -inset-1 rounded-2xl logo-glow opacity-30 blur-md group-hover:opacity-100 transition duration-500"></div>
-                                    <div className="relative w-11 h-11 rounded-xl bg-black border border-slate-800/90 flex items-center justify-center shadow-md overflow-hidden">
-                                        <img src="/android-chrome-192x192.png" alt="Búnker" className="w-7 h-7 object-contain" />
+                            <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center gap-3.5 cursor-pointer group min-w-0" onClick={() => navigate('/home')}>
+                                    <div className="relative flex-shrink-0">
+                                        <div className="absolute -inset-1 rounded-2xl logo-glow opacity-30 blur-md group-hover:opacity-100 transition duration-500"></div>
+                                        <div className="relative w-11 h-11 rounded-xl bg-black border border-slate-800/90 flex items-center justify-center shadow-md overflow-hidden">
+                                            <img src="/android-chrome-192x192.png" alt="Búnker" className="w-7 h-7 object-contain" />
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="brand-title font-extrabold text-sm text-slate-200 tracking-wider font-sans leading-none">BÚNKER</span>
+                                        <span className="brand-subtitle text-[10px] font-bold text-brand tracking-widest uppercase mt-1">SISTEMA</span>
                                     </div>
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="brand-title font-extrabold text-sm text-slate-200 tracking-wider font-sans leading-none">BÚNKER</span>
-                                    <span className="brand-subtitle text-[10px] font-bold text-brand tracking-widest uppercase mt-1">SISTEMA</span>
-                                </div>
+                                {!isTabletRail && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCollapsed(true);
+                                        }}
+                                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all duration-200 cursor-pointer border border-transparent hover:border-slate-700/50 flex-shrink-0 ml-1"
+                                        title="Contraer menú"
+                                    >
+                                        <PanelLeftClose className="w-5 h-5" />
+                                    </button>
+                                )}
                             </div>
                         )}
 
@@ -267,12 +320,12 @@ const DashboardLayout = () => {
                                 const logisticaSubItems = [
                                     { id: 'logistica-platos', to: '/admin/inventory?tab=platos', icon: Utensils, label: 'Menú (Platos)' },
                                     { id: 'logistica-insumos', to: '/admin/inventory?tab=insumos', icon: Package, label: 'Inventario (Insumos)' },
-                                    { id: 'logistica-recetario', to: '/admin/inventory?tab=recetario', icon: Beaker, label: 'Recetarios (Costeo)' },
+                                    { id: 'logistica-recetario', to: '/admin/inventory?tab=recetarios', icon: Beaker, label: 'Recetarios (Costeo)' },
                                     { id: 'logistica-kardex', to: '/admin/inventory?tab=kardex', icon: History, label: 'Kardex' },
                                     { id: 'logistica-auditoria', to: '/admin/inventory?tab=auditoria', icon: ClipboardCheck, label: 'Auditoría' },
                                 ];
 
-                                const isPathActive = location.pathname.startsWith('/admin/inventory');
+                                const isPathActive = location.pathname.startsWith('/admin/inventory') || location.search.includes('tab=recetarios');
 
                                 return (
                                     <div key={item.id} className="w-full flex flex-col gap-1">
@@ -435,119 +488,125 @@ const DashboardLayout = () => {
                     </nav>
 
                     {/* Bottom Utility Panel */}
-                    <div className={`bottom-panel flex flex-col items-center gap-3 w-full mt-auto ${isRail ? 'px-2' : ''}`}>
-                        <div className={`${isRail ? 'w-12' : 'w-full'} h-px bg-slate-800/85`}></div>
-
-                        {/* Quick Light/Dark Mode Switcher */}
-                        <button
-                            id="sidebar-dark-toggle"
-                            onClick={toggleMode}
-                            className={`rounded-xl flex items-center transition-all duration-200 group cursor-pointer text-slate-400 hover:text-slate-200 hover:bg-[#151722] bg-transparent border-none outline-none ${isRail
-                                ? 'w-12 h-12 justify-center'
-                                : 'w-full h-10 px-3.5 justify-start gap-3.5'
-                                }`}
-                            title={isDarkMode ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
-                        >
-                            {isDarkMode ? (
-                                <Sun className="w-5 h-5 text-amber-500 transition-transform duration-300 group-hover:rotate-45" />
-                            ) : (
-                                <Moon className="w-5 h-5 text-slate-400 transition-transform duration-300 group-hover:-rotate-12" />
-                            )}
-
-                            {!isRail && (
-                                <span className="text-sm font-semibold tracking-wide font-sans">
-                                    {isDarkMode ? "Modo Claro" : "Modo Oscuro"}
-                                </span>
-                            )}
-
-                            {isRail && (
-                                <div className="absolute left-16 bg-[#12141c] text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-slate-800 z-50">
-                                    {isDarkMode ? "Modo Claro" : "Modo Oscuro"}
-                                </div>
-                            )}
-                        </button>
+                    <div ref={profileMenuRef} className={`bottom-panel relative flex flex-col items-center w-full mt-auto ${isRail ? 'px-2' : ''}`}>
+                        <div className={`${isRail ? 'w-12' : 'w-full'} h-px bg-slate-800/85 mb-3`}></div>
 
                         {/* Active Logged-In User Profile Display */}
                         {user && (
-                            isRail ? (
-                                <div className="relative group cursor-pointer">
-                                    <div className="w-9 h-9 rounded-full bg-slate-800 overflow-hidden border border-brand/40 flex items-center justify-center">
-                                        {user.foto ? (
-                                            <img src={user.foto} alt={user.nombre} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <User className="w-4 h-4 text-slate-300" />
-                                        )}
-                                    </div>
-                                    <div className="absolute left-16 bg-[#12141c] text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-slate-800 z-50">
-                                        <span className="block text-[11px] font-extrabold text-white font-sans">{user.nombre}</span>
-                                        <span className="block text-[9px] text-slate-400 uppercase tracking-wider mt-0.5 font-sans">
-                                            {getRoleName(user.rol)}
-                                        </span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="profile-card w-full px-4 py-2.5 rounded-xl bg-[#141622]/50 border border-slate-800/40 flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-slate-800 overflow-hidden border border-brand/40 flex items-center justify-center flex-shrink-0">
-                                        {user.foto ? (
-                                            <img src={user.foto} alt={user.nombre} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <User className="w-4 h-4 text-slate-300" />
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-xs font-bold text-white truncate font-sans">{user.nombre}</span>
-                                        <span className="text-[9px] text-slate-400 uppercase tracking-wider truncate mt-0.5 font-sans">
-                                            {getRoleName(user.rol)}
-                                        </span>
-                                    </div>
-                                </div>
-                            )
-                        )}
+                            <div className="relative w-full">
+                                {/* Windows-style Dropup Menu with SmoothDropdown style */}
+                                <AnimatePresence>
+                                    {isProfileMenuOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95, y: 6 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.95, y: 6 }}
+                                            transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
+                                            className={`smooth-dropdown-bg absolute bottom-full mb-2 p-1.5 rounded-xl border shadow-2xl z-50 ${
+                                                isRail ? 'left-0 w-44' : 'left-0 right-0 w-full'
+                                            }`}
+                                            style={{
+                                                backgroundColor: isDarkMode ? '#0c0c0e' : '#ffffff',
+                                                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.12)',
+                                                color: isDarkMode ? '#f8fafc' : '#1e293b',
+                                                boxShadow: isDarkMode 
+                                                    ? '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)' 
+                                                    : '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                                            }}
+                                        >
+                                            <div
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setIsProfileMenuOpen(false);
+                                                    handleLogout();
+                                                }}
+                                                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-colors duration-150 group"
+                                                style={{
+                                                    color: isDarkMode ? '#e2e8f0' : '#334155',
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = isDarkMode ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.08)';
+                                                    e.currentTarget.style.color = '#ef4444';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                    e.currentTarget.style.color = isDarkMode ? '#e2e8f0' : '#334155';
+                                                }}
+                                            >
+                                                <LogOut className="w-4 h-4 text-red-500 group-hover:scale-110 transition-transform duration-150 flex-shrink-0" />
+                                                <span className="font-sans font-medium text-xs">Cerrar Sesión</span>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
 
-                        {/* Collapse/Expand Toggle Button */}
-                        {!isTabletRail && (
-                            <button
-                                id="sidebar-collapse-toggle"
-                                onClick={() => setCollapsed(!collapsed)}
-                                className={`rounded-xl flex items-center transition-all duration-200 group cursor-pointer text-slate-500 hover:text-slate-200 hover:bg-[#151722] bg-transparent border-none outline-none ${isRail
-                                    ? 'w-12 h-12 justify-center'
-                                    : 'w-full h-10 px-3.5 justify-start gap-3.5'
-                                    }`}
-                                title={collapsed ? "Expandir menú" : "Contraer menú"}
-                            >
                                 {isRail ? (
-                                    <ChevronRight className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                                    <div 
+                                        onClick={() => setIsProfileMenuOpen(prev => !prev)}
+                                        className="relative group cursor-pointer flex justify-center py-1"
+                                        title={`${user.nombre} - Opciones de perfil`}
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-slate-800 overflow-hidden border border-brand/40 flex items-center justify-center hover:ring-2 hover:ring-brand/50 transition-all duration-200">
+                                            {user.foto ? (
+                                                <img src={user.foto} alt={user.nombre} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <User className="w-4 h-4 text-slate-300" />
+                                            )}
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <>
-                                        <ChevronLeft className="w-5 h-5 transition-transform duration-200 group-hover:-translate-x-0.5 flex-shrink-0" />
-                                        <span className="text-sm font-semibold tracking-wide font-sans">Contraer menú</span>
-                                    </>
+                                    <div 
+                                        onClick={() => setIsProfileMenuOpen(prev => !prev)}
+                                        className="profile-card w-full px-3 py-2 rounded-xl bg-[#141622]/60 hover:bg-[#141622] border border-slate-800/60 transition-all duration-200 flex items-center justify-between cursor-pointer group"
+                                        style={{
+                                            backgroundColor: isDarkMode ? 'rgba(20, 22, 34, 0.6)' : 'rgba(241, 245, 249, 0.8)',
+                                            borderColor: isDarkMode ? 'rgba(51, 65, 85, 0.6)' : 'rgba(203, 213, 225, 0.8)'
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-2.5 min-w-0 pr-1">
+                                            <div className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-brand/40 flex items-center justify-center flex-shrink-0">
+                                                {user.foto ? (
+                                                    <img src={user.foto} alt={user.nombre} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <User className="w-4 h-4 text-slate-300" />
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col min-w-0">
+                                                <span 
+                                                    className="text-xs font-bold truncate font-sans group-hover:text-brand transition-colors duration-200"
+                                                    style={{ color: isDarkMode ? '#ffffff' : '#0f172a' }}
+                                                >
+                                                    {user.nombre}
+                                                </span>
+                                                <span 
+                                                    className="text-[9px] uppercase tracking-wider truncate mt-0.5 font-sans"
+                                                    style={{ color: isDarkMode ? '#94a3b8' : '#64748b' }}
+                                                >
+                                                    {getRoleName(user.rol)}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Quick Light/Dark Mode Switcher Icon on the Right */}
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleMode();
+                                            }}
+                                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all duration-200 flex-shrink-0 cursor-pointer border border-transparent hover:border-slate-700/50"
+                                            title={isDarkMode ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
+                                        >
+                                            {isDarkMode ? (
+                                                <Sun className="w-4 h-4 text-amber-500 hover:rotate-45 transition-transform duration-300" />
+                                            ) : (
+                                                <Moon className="w-4 h-4 text-slate-500 hover:-rotate-12 transition-transform duration-300" />
+                                            )}
+                                        </button>
+                                    </div>
                                 )}
-                            </button>
+                            </div>
                         )}
-
-                        {/* Logout Action */}
-                        <button
-                            id="sidebar-logout-btn"
-                            onClick={handleLogout}
-                            className={`rounded-xl flex items-center transition-all duration-200 group cursor-pointer text-slate-500 hover:text-red-500 hover:bg-red-500/10 bg-transparent border-none outline-none ${isRail
-                                ? 'w-12 h-12 justify-center'
-                                : 'w-full h-10 px-3.5 justify-start gap-3.5'
-                                }`}
-                            title="Cerrar Sesión de Búnker"
-                        >
-                            <LogOut className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-0.5" />
-
-                            {!isRail && (
-                                <span className="text-sm font-semibold tracking-wide font-sans">Cerrar Sesión</span>
-                            )}
-
-                            {isRail && (
-                                <div className="absolute left-16 bg-[#12141c] text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-slate-800 z-50">
-                                    Cerrar Sesión
-                                </div>
-                            )}
-                        </button>
                     </div>
                 </aside>
 
@@ -571,7 +630,7 @@ const DashboardLayout = () => {
                             {[
                                 { id: 'logistica-platos', to: '/admin/inventory?tab=platos', icon: Utensils, label: 'Menú (Platos)' },
                                 { id: 'logistica-insumos', to: '/admin/inventory?tab=insumos', icon: Package, label: 'Inventario (Insumos)' },
-                                { id: 'logistica-recetario', to: '/admin/inventory?tab=recetario', icon: Beaker, label: 'Recetarios (Costeo)' },
+                                { id: 'logistica-recetario', to: '/admin/inventory?tab=recetarios', icon: Beaker, label: 'Recetarios (Costeo)' },
                                 { id: 'logistica-kardex', to: '/admin/inventory?tab=kardex', icon: History, label: 'Kardex' },
                                 { id: 'logistica-auditoria', to: '/admin/inventory?tab=auditoria', icon: ClipboardCheck, label: 'Auditoría' },
                             ].map((sub) => {
@@ -637,7 +696,7 @@ const DashboardLayout = () => {
                         </div>
                     </header>
 
-                    <main className={`main-content flex-1 overflow-y-auto flex flex-col ${isCashier ? 'p-0' : 'p-4 sm:p-6 lg:p-8'}`}>
+                    <main className={`main-content flex-1 overflow-y-auto flex flex-col ${isCashier || isRecetarios ? 'p-0' : 'p-4 sm:p-6 lg:p-8'}`}>
                         {isOffline && (
                             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 mb-6 flex items-center justify-between gap-4 animate-pulse backdrop-blur-md shadow-lg shadow-amber-500/5 mx-4 sm:mx-6 lg:mx-8 mt-4">
                                 <div className="flex items-center gap-2.5 text-amber-500 font-bold text-xs">
@@ -654,6 +713,7 @@ const DashboardLayout = () => {
                                 <Outlet />
                             </ErrorBoundary>
                         </div>
+                        {!isRecetarios && (
                         <footer className={`mt-auto pt-6 border-t border-slate-800/10 dark:border-slate-800/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[var(--text-muted)] font-medium ${isCashier ? 'mx-4 sm:mx-6 lg:mx-8 mb-4' : ''}`}>
                             <span>© 2026 Búnker - Sistema de Gestión de Comandas Inteligentes.</span>
                             <div className="flex items-center gap-1">
@@ -662,6 +722,7 @@ const DashboardLayout = () => {
                                 <span>por Hector y Melanie</span>
                             </div>
                         </footer>
+                        )}
                     </main>
                 </div>
 
@@ -768,7 +829,7 @@ const DashboardLayout = () => {
                                                                 {[
                                                                     { id: 'logistica-platos', to: '/admin/inventory?tab=platos', icon: Utensils, label: 'Menú (Platos)' },
                                                                     { id: 'logistica-insumos', to: '/admin/inventory?tab=insumos', icon: Package, label: 'Inventario (Insumos)' },
-                                                                    { id: 'logistica-recetario', to: '/admin/inventory?tab=recetario', icon: Beaker, label: 'Recetarios (Costeo)' },
+                                                                    { id: 'logistica-recetario', to: '/admin/inventory?tab=recetarios', icon: Beaker, label: 'Recetarios (Costeo)' },
                                                                     { id: 'logistica-kardex', to: '/admin/inventory?tab=kardex', icon: History, label: 'Kardex' },
                                                                     { id: 'logistica-auditoria', to: '/admin/inventory?tab=auditoria', icon: ClipboardCheck, label: 'Auditoría' },
                                                                 ].map(sub => {
