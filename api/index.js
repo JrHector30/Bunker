@@ -110,6 +110,7 @@ app.get('/uploads/:type/:file', (req, res) => {
 // --- PRINTERS PROXY ENDPOINTS ---
 app.get('/api/impresoras', async (req, res) => {
     const estacion = req.query.estacion || 'Caja';
+    const tenantId = getTenantId(req);
     try {
         // Fetch Windows printers from local station cache
         const config = await prisma.configuracion.findUnique({
@@ -128,10 +129,17 @@ app.get('/api/impresoras', async (req, res) => {
             ultimaRespuestaMs: 0
         }));
 
-        // Fetch registered Ethernet/USB printers from DB
+        // Fetch registered Ethernet/USB printers from DB for THIS restaurant
         const netPrinters = await prisma.dispositivoRed.findMany({
-            where: { estacion }
+            where: { estacion, restauranteId: tenantId }
         });
+
+        // Fetch printers already registered to OTHER restaurants so we don't leak them
+        const otherTenantsPrinters = await prisma.dispositivoRed.findMany({
+            where: { NOT: { restauranteId: tenantId } },
+            select: { nombre: true }
+        });
+        const otherPrinterNames = new Set(otherTenantsPrinters.map(p => p.nombre));
 
         // Merge real-time offline status for USB printers registered in DB
         const combinedNet = netPrinters.map(dev => {
@@ -145,9 +153,16 @@ app.get('/api/impresoras', async (req, res) => {
             return dev;
         });
 
-        // Combine with discovered Windows printers that are not yet registered
+        // Filter Windows printers:
+        // 1. Not already registered in this restaurant
+        // 2. NOT registered in any OTHER restaurant
+        // 3. Not virtual system drivers (pdf, xps, onenote, fax, root, microsoft, nitro)
         const netNames = new Set(netPrinters.map(n => n.nombre));
-        const newWin = winPrintersMapped.filter(w => !netNames.has(w.nombre));
+        const newWin = winPrintersMapped.filter(w => 
+            !netNames.has(w.nombre) && 
+            !otherPrinterNames.has(w.nombre) &&
+            !w.nombre.match(/pdf|xps|onenote|fax|root|microsoft|nitro/i)
+        );
 
         const combined = [...combinedNet, ...newWin];
         res.json(combined);
@@ -158,16 +173,20 @@ app.get('/api/impresoras', async (req, res) => {
 
 app.get('/api/impresoras/activa', async (req, res) => {
     const estacion = req.query.estacion || 'Caja';
+    const tenantId = getTenantId(req);
     try {
         const activeDevice = await prisma.dispositivoRed.findFirst({
-            where: { estacion, activo: true }
+            where: { estacion, activo: true, restauranteId: tenantId }
         });
         if (activeDevice) {
             res.json({ nombre: activeDevice.nombre, transport: activeDevice.transport, ultimaIp: activeDevice.ultimaIp });
         } else {
-            // Legacy fallback
+            // Legacy / tenant fallback
+            const configKey = tenantId === 1 
+                ? `impresora_activa_${estacion}` 
+                : `impresora_activa_${tenantId}_${estacion}`;
             const config = await prisma.configuracion.findUnique({
-                where: { clave: `impresora_activa_${estacion}` }
+                where: { clave: configKey }
             });
             res.json({ nombre: config ? config.valor : '', transport: 'USB' });
         }
@@ -180,16 +199,17 @@ app.post('/api/impresoras/seleccionar', async (req, res) => {
     const { nombre, estacion, transport, ip, mac } = req.body;
     const targetEstacion = estacion || 'Caja';
     const targetTransport = transport || 'USB';
+    const tenantId = getTenantId(req);
     try {
-        // 1. Marcar todas las impresoras de la estación como inactivas
+        // 1. Marcar todas las impresoras de la estación y restaurante como inactivas
         await prisma.dispositivoRed.updateMany({
-            where: { estacion: targetEstacion },
+            where: { estacion: targetEstacion, restauranteId: tenantId },
             data: { activo: false }
         });
 
-        // 2. Buscar o crear la impresora seleccionada en la base de datos
+        // 2. Buscar o crear la impresora seleccionada en la base de datos para este restaurante
         const existing = await prisma.dispositivoRed.findFirst({
-            where: { nombre: nombre, estacion: targetEstacion }
+            where: { nombre: nombre, estacion: targetEstacion, restauranteId: tenantId }
         });
 
         if (existing) {
@@ -207,16 +227,20 @@ app.post('/api/impresoras/seleccionar', async (req, res) => {
                     mac: mac || null,
                     ultimaIp: ip || null,
                     activo: true,
-                    ultimoEstado: 'ONLINE'
+                    ultimoEstado: 'ONLINE',
+                    restauranteId: tenantId
                 }
             });
         }
 
-        // Fallback legacy
+        // Configuración persistente aislada por tenant
+        const configKey = tenantId === 1 
+            ? `impresora_activa_${targetEstacion}` 
+            : `impresora_activa_${tenantId}_${targetEstacion}`;
         await prisma.configuracion.upsert({
-            where: { clave: `impresora_activa_${targetEstacion}` },
+            where: { clave: configKey },
             update: { valor: nombre },
-            create: { clave: `impresora_activa_${targetEstacion}`, valor: nombre }
+            create: { clave: configKey, valor: nombre }
         });
 
         res.json({ success: true });
@@ -243,8 +267,11 @@ app.post('/api/impresoras/solicitar-actualizacion', async (req, res) => {
 app.post('/api/impresoras/medida', async (req, res) => {
     const { impresora, medida, estacion } = req.body;
     const targetEstacion = estacion || 'Caja';
+    const tenantId = getTenantId(req);
     try {
-        const configKey = `impresora_medidas_${targetEstacion}`;
+        const configKey = tenantId === 1 
+            ? `impresora_medidas_${targetEstacion}` 
+            : `impresora_medidas_${tenantId}_${targetEstacion}`;
         const currentConfig = await prisma.configuracion.findUnique({
             where: { clave: configKey }
         });
@@ -257,9 +284,9 @@ app.post('/api/impresoras/medida', async (req, res) => {
             create: { clave: configKey, valor: JSON.stringify(map) }
         });
 
-        // Sincronizar con la tabla de dispositivos de red si existe
+        // Sincronizar con la tabla de dispositivos de red para este restaurante
         await prisma.dispositivoRed.updateMany({
-            where: { nombre: impresora, estacion: targetEstacion },
+            where: { nombre: impresora, estacion: targetEstacion, restauranteId: tenantId },
             data: { medida }
         });
 
@@ -271,9 +298,13 @@ app.post('/api/impresoras/medida', async (req, res) => {
 
 app.get('/api/impresoras/medidas', async (req, res) => {
     const estacion = req.query.estacion || 'Caja';
+    const tenantId = getTenantId(req);
     try {
+        const configKey = tenantId === 1 
+            ? `impresora_medidas_${estacion}` 
+            : `impresora_medidas_${tenantId}_${estacion}`;
         const config = await prisma.configuracion.findUnique({
-            where: { clave: `impresora_medidas_${estacion}` }
+            where: { clave: configKey }
         });
         const map = config ? JSON.parse(config.valor) : {};
         res.json(map);
@@ -285,8 +316,11 @@ app.get('/api/impresoras/medidas', async (req, res) => {
 app.post('/api/impresoras/perfil', async (req, res) => {
     const { impresora, perfil, estacion } = req.body;
     const targetEstacion = estacion || 'Caja';
+    const tenantId = getTenantId(req);
     try {
-        const configKey = `impresora_perfiles_${targetEstacion}`;
+        const configKey = tenantId === 1 
+            ? `impresora_perfiles_${targetEstacion}` 
+            : `impresora_perfiles_${tenantId}_${targetEstacion}`;
         const currentConfig = await prisma.configuracion.findUnique({
             where: { clave: configKey }
         });
@@ -299,9 +333,9 @@ app.post('/api/impresoras/perfil', async (req, res) => {
             create: { clave: configKey, valor: JSON.stringify(map) }
         });
 
-        // Sincronizar con la tabla de dispositivos de red si existe
+        // Sincronizar con la tabla de dispositivos de red para este restaurante
         await prisma.dispositivoRed.updateMany({
-            where: { nombre: impresora, estacion: targetEstacion },
+            where: { nombre: impresora, estacion: targetEstacion, restauranteId: tenantId },
             data: { perfil }
         });
 
@@ -313,9 +347,13 @@ app.post('/api/impresoras/perfil', async (req, res) => {
 
 app.get('/api/impresoras/perfiles', async (req, res) => {
     const estacion = req.query.estacion || 'Caja';
+    const tenantId = getTenantId(req);
     try {
+        const configKey = tenantId === 1 
+            ? `impresora_perfiles_${estacion}` 
+            : `impresora_perfiles_${tenantId}_${estacion}`;
         const config = await prisma.configuracion.findUnique({
-            where: { clave: `impresora_perfiles_${estacion}` }
+            where: { clave: configKey }
         });
         const map = config ? JSON.parse(config.valor) : {};
         res.json(map);
@@ -354,9 +392,10 @@ app.get('/api/impresoras/estaciones', async (req, res) => {
 // --- RECOVERY ENDPOINTS ---
 app.get('/api/recovery/dispositivos', async (req, res) => {
     const estacion = req.query.estacion || 'Caja';
+    const tenantId = getTenantId(req);
     try {
         const devices = await prisma.dispositivoRed.findMany({
-            where: { estacion }
+            where: { estacion, restauranteId: tenantId }
         });
         res.json(devices);
     } catch (err) {
@@ -372,10 +411,8 @@ app.get('/api/recovery/descubiertos', async (req, res) => {
         });
         const discovered = config ? JSON.parse(config.valor) : [];
 
-        // Traer dispositivos ya vinculados
-        const linked = await prisma.dispositivoRed.findMany({
-            where: { estacion }
-        });
+        // Traer dispositivos ya vinculados (globalmente para no duplicar MACs en la misma red)
+        const linked = await prisma.dispositivoRed.findMany();
         const linkedMacs = new Set(linked.map(d => d.mac).filter(Boolean));
 
         // Filtrar no vinculados
@@ -388,6 +425,7 @@ app.get('/api/recovery/descubiertos', async (req, res) => {
 
 app.post('/api/recovery/vincular', async (req, res) => {
     const { nombre, estacion, ip, mac, perfil, medida } = req.body;
+    const tenantId = getTenantId(req);
     try {
         const device = await prisma.dispositivoRed.create({
             data: {
@@ -399,7 +437,8 @@ app.post('/api/recovery/vincular', async (req, res) => {
                 ultimaIp: ip,
                 perfil: perfil || 'Generic',
                 medida: medida || '80mm',
-                ultimoEstado: 'ONLINE'
+                ultimoEstado: 'ONLINE',
+                restauranteId: tenantId
             }
         });
         res.json({ success: true, device });
@@ -410,9 +449,10 @@ app.post('/api/recovery/vincular', async (req, res) => {
 
 app.post('/api/recovery/desvincular', async (req, res) => {
     const { deviceId } = req.body;
+    const tenantId = getTenantId(req);
     try {
-        await prisma.dispositivoRed.delete({
-            where: { id: deviceId }
+        await prisma.dispositivoRed.deleteMany({
+            where: { id: deviceId, restauranteId: tenantId }
         });
         res.json({ success: true });
     } catch (err) {
@@ -448,9 +488,10 @@ app.post('/api/recovery/solicitar', async (req, res) => {
 
 app.get('/api/recovery/historial', async (req, res) => {
     const estacion = req.query.estacion || 'Caja';
+    const tenantId = getTenantId(req);
     try {
         const history = await prisma.historialReparacion.findMany({
-            where: { estacion },
+            where: { estacion, restauranteId: tenantId },
             orderBy: { creadoA: 'desc' },
             take: 10
         });
@@ -458,6 +499,7 @@ app.get('/api/recovery/historial', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
 });
 
 app.get('/api/recovery/estado-estacion', async (req, res) => {
@@ -502,6 +544,7 @@ app.post('/api/configuracion/:clave', async (req, res) => {
 
 app.post('/api/impresoras/imprimir', async (req, res) => {
     const { mesaId, mozo, contenido, estacion } = req.body;
+    const tenantId = getTenantId(req);
     try {
         const ticket = await prisma.ticketPendiente.create({
             data: {
@@ -509,7 +552,8 @@ app.post('/api/impresoras/imprimir', async (req, res) => {
                 mozo: mozo || 'Sistema',
                 contenido: contenido,
                 impreso: false,
-                estacion: estacion || 'Caja'
+                estacion: estacion || 'Caja',
+                restauranteId: tenantId
             }
         });
         res.json({ success: true, ticketId: ticket.id });

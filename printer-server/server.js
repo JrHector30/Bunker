@@ -726,10 +726,52 @@ async function checkAndPrintQueue() {
           continue;
         }
 
+        // Obtener la impresora activa asignada al restaurante de este ticket específico
+        const ticketTenantId = ticket.restaurante_id || 1;
+        let ticketActiveDevice = null;
+        const tenantDevRes = await client.query(
+          `SELECT * FROM dispositivos_red WHERE estacion = $1 AND activo = true AND (restaurante_id = $2 OR (restaurante_id IS NULL AND $2 = 1)) LIMIT 1`,
+          [STATION_ID, ticketTenantId]
+        );
+
+        if (tenantDevRes.rows.length > 0) {
+          ticketActiveDevice = tenantDevRes.rows[0];
+        } else {
+          const configKey = ticketTenantId === 1 ? `impresora_activa_${STATION_ID}` : `impresora_activa_${ticketTenantId}_${STATION_ID}`;
+          const legacyConfRes = await client.query(
+            `SELECT valor FROM "Configuracion" WHERE clave = $1`,
+            [configKey]
+          );
+          const legacyName = legacyConfRes.rows[0]?.valor;
+          if (legacyName) {
+            const medidasKey = ticketTenantId === 1 ? `impresora_medidas_${STATION_ID}` : `impresora_medidas_${ticketTenantId}_${STATION_ID}`;
+            const medidasRes = await client.query(
+              `SELECT valor FROM "Configuracion" WHERE clave = $1`,
+              [medidasKey]
+            );
+            const medidasMap = medidasRes.rows[0]?.valor ? JSON.parse(medidasRes.rows[0].valor) : {};
+            ticketActiveDevice = {
+              nombre: legacyName,
+              medida: medidasMap[legacyName] || '80mm',
+              perfil: 'Generic',
+              transport: 'USB'
+            };
+          }
+        }
+
+        const effectiveDevice = ticketActiveDevice || activeDevice;
+        const targetPrinterName = effectiveDevice.nombre;
+        const targetPaperSize = effectiveDevice.medida || '80mm';
+
+        let targetLineWidth = 48;
+        if ((targetPaperSize === '58mm' || targetPaperSize === '50mm') && !targetPrinterName.toLowerCase().includes('80mm')) {
+          targetLineWidth = targetPaperSize === '50mm' ? 28 : 32;
+        }
+
         // Ganamos el bloqueo, procedemos a imprimir físicamente
-        console.log(`⏳ Imprimiendo Ticket #${ticket.id} en "${printerName}" (${paperSize}) (Estación: ${STATION_ID})...`);
-        const formattedText = formatTicket(lockRes.rows[0], lineWidth);
-        await printTicketText(formattedText, ticket.id, printerName, paperSize);
+        console.log(`⏳ Imprimiendo Ticket #${ticket.id} en "${targetPrinterName}" (${targetPaperSize}) [Restaurante ID: ${ticketTenantId}] (Estación: ${STATION_ID})...`);
+        const formattedText = formatTicket(lockRes.rows[0], targetLineWidth);
+        await printTicketText(formattedText, ticket.id, targetPrinterName, targetPaperSize);
         console.log(`✅ Ticket #${ticket.id} impreso con éxito.`);
       } catch (err) {
         console.error(`❌ Falló la impresión física del Ticket #${ticket.id}:`, err.message);
@@ -1055,13 +1097,13 @@ async function runAutoRecovery(deviceId) {
         WHERE id = $4
       `, [match.ip, finalState, match.latency || 0, deviceId]);
       
-      // 5. Guardar en Historial de Reparaciones
+      // 5. Guardar en Historial de Reparaciones (aislado por restaurante)
       const { randomUUID } = require('crypto');
       const histId = randomUUID();
       await client.query(`
-        INSERT INTO historial_reparaciones (id, dispositivo_id, estacion, ip_anterior, nueva_ip, tiempo_ms, motivo, creado_a)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-      `, [histId, device.id, STATION_ID, device.ultima_ip || 'Desconocida', match.ip, elapsedMs, "IP no respondía (Auto Recovery)"]);
+        INSERT INTO historial_reparaciones (id, dispositivo_id, estacion, ip_anterior, nueva_ip, tiempo_ms, motivo, creado_a, restaurante_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
+      `, [histId, device.id, STATION_ID, device.ultima_ip || 'Desconocida', match.ip, elapsedMs, "IP no respondía (Auto Recovery)", device.restaurante_id || 1]);
       
       // 6. Si se requería imprimir e imprimir ticket completo de auditoría
       if (shouldPrint && isOperational) {

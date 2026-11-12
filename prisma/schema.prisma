@@ -33,6 +33,9 @@ model Restaurante {
   comandas      Comanda[]
   arqueos       Arqueo[]
   insumos       Insumo[]
+  dispositivos  DispositivoRed[]
+  historialReparaciones HistorialReparacion[]
+  ticketsPendientes     TicketPendiente[]
 }
 
 model User {
@@ -266,14 +269,17 @@ model Configuracion {
 }
 
 model TicketPendiente {
-  id        Int      @id @default(autoincrement())
-  mesa_id   String
-  mozo      String
-  contenido Json
-  impreso   Boolean  @default(false)
-  estacion  String   @default("Caja")
-  creado_a  DateTime @default(now())
+  id            Int          @id @default(autoincrement())
+  mesa_id       String
+  mozo          String
+  contenido     Json
+  impreso       Boolean      @default(false)
+  estacion      String       @default("Caja")
+  creado_a      DateTime     @default(now())
+  restauranteId Int?         @default(1) @map("restaurante_id")
+  restaurante   Restaurante? @relation(fields: [restauranteId], references: [id])
 
+  @@index([restauranteId])
   @@map("tickets_pendientes")
 }
 
@@ -301,21 +307,27 @@ model DispositivoRed {
   ultimaReparacion   DateTime?         @map("ultima_reparacion")
   creadoA            DateTime          @default(now()) @map("creado_a")
   actualizadoA       DateTime          @updatedAt @map("actualizado_a")
+  restauranteId      Int?              @default(1) @map("restaurante_id")
+  restaurante        Restaurante?      @relation(fields: [restauranteId], references: [id])
 
   @@index([mac])
+  @@index([restauranteId])
   @@map("dispositivos_red")
 }
 
 model HistorialReparacion {
-  id             String   @id @default(uuid())
-  dispositivoId  String   @map("dispositivo_id")
+  id             String       @id @default(uuid())
+  dispositivoId  String       @map("dispositivo_id")
   estacion       String
-  ipAnterior     String   @map("ip_anterior")
-  nuevaIp        String   @map("nueva_ip")
-  tiempoMs       Int      @map("tiempo_ms")
+  ipAnterior     String       @map("ip_anterior")
+  nuevaIp        String       @map("nueva_ip")
+  tiempoMs       Int          @map("tiempo_ms")
   motivo         String
-  creadoA        DateTime @default(now()) @map("creado_a")
+  creadoA        DateTime     @default(now()) @map("creado_a")
+  restauranteId  Int?         @default(1) @map("restaurante_id")
+  restaurante    Restaurante? @relation(fields: [restauranteId], references: [id])
 
+  @@index([restauranteId])
   @@map("historial_reparaciones")
 }
 

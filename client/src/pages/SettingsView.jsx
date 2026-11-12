@@ -6,10 +6,13 @@ import { useNavigate } from 'react-router-dom';
 import PermissionsConfig from '../components/PermissionsConfig';
 import { useNotification } from '../context/NotificationContext';
 import { enqueueTicket } from '../utils/printer';
+import { getActiveRestaurant } from '../utils/tenant';
 import { networkStatus, NetworkState } from '../offline/network/networkStatus';
 
 const SettingsView = () => {
     const { user } = useAuth();
+    const activeTenant = getActiveRestaurant();
+    const tenantId = user?.restauranteId || activeTenant?.id || 1;
     const { theme, changeTheme, showAlerts, setShowAlerts } = useTheme();
     const navigate = useNavigate();
     const { showToast } = useNotification();
@@ -18,16 +21,16 @@ const SettingsView = () => {
     const [localShowAlerts, setLocalShowAlerts] = useState(showAlerts);
     const hasChanges = localShowAlerts !== showAlerts;
 
-    // Printer settings state
+    // Printer settings state (aislado por restaurante)
     const [printers, setPrinters] = useState(() => {
         try {
-            const saved = localStorage.getItem('bunker_settings_printers');
+            const saved = localStorage.getItem(`bunker_settings_printers_${tenantId}`);
             return saved ? JSON.parse(saved) : [];
         } catch { return []; }
     });
     const [selectedPrinter, setSelectedPrinter] = useState(() => {
         try {
-            return localStorage.getItem('bunker_settings_selected_printer') || '';
+            return localStorage.getItem(`bunker_settings_selected_printer_${tenantId}`) || '';
         } catch { return ''; }
     });
     const [isScanning, setIsScanning] = useState(false);
@@ -36,26 +39,26 @@ const SettingsView = () => {
     const [selectedStation, setSelectedStation] = useState('Caja');
     const [printerSizes, setPrinterSizes] = useState(() => {
         try {
-            const saved = localStorage.getItem('bunker_settings_printer_sizes');
+            const saved = localStorage.getItem(`bunker_settings_printer_sizes_${tenantId}`);
             return saved ? JSON.parse(saved) : {};
         } catch { return {}; }
     });
     const [printerProfiles, setPrinterProfiles] = useState(() => {
         try {
-            const saved = localStorage.getItem('bunker_settings_printer_profiles');
+            const saved = localStorage.getItem(`bunker_settings_printer_profiles_${tenantId}`);
             return saved ? JSON.parse(saved) : {};
         } catch { return {}; }
     });
     const [serverOnline, setServerOnline] = useState(false);
     const [discoveredDevices, setDiscoveredDevices] = useState(() => {
         try {
-            const saved = localStorage.getItem('bunker_settings_discovered_devices');
+            const saved = localStorage.getItem(`bunker_settings_discovered_devices_${tenantId}`);
             return saved ? JSON.parse(saved) : [];
         } catch { return []; }
     });
     const [repairHistory, setRepairHistory] = useState(() => {
         try {
-            const saved = localStorage.getItem('bunker_settings_repair_history');
+            const saved = localStorage.getItem(`bunker_settings_repair_history_${tenantId}`);
             return saved ? JSON.parse(saved) : [];
         } catch { return []; }
     });
@@ -140,7 +143,8 @@ const SettingsView = () => {
 
     const loadPrintersData = async (station = selectedStation) => {
         try {
-            // Ejecutar todas las peticiones concurrentemente
+            // Ejecutar todas las peticiones concurrentemente con alcance multi-tenant
+            const reqHeaders = { 'x-restaurante-id': String(tenantId) };
             const [
                 serverRes,
                 activeRes,
@@ -151,13 +155,13 @@ const SettingsView = () => {
                 histRes,
                 auditConfRes
             ] = await Promise.all([
-                fetch(`/api/recovery/estado-estacion?estacion=${station}`),
-                fetch(`/api/impresoras/activa?estacion=${station}`),
-                fetch(`/api/impresoras?estacion=${station}`),
-                fetch(`/api/impresoras/medidas?estacion=${station}`),
-                fetch(`/api/impresoras/perfiles?estacion=${station}`),
-                fetch(`/api/recovery/descubiertos?estacion=${station}`),
-                fetch(`/api/recovery/historial?estacion=${station}`),
+                fetch(`/api/recovery/estado-estacion?estacion=${station}&restauranteId=${tenantId}`, { headers: reqHeaders }),
+                fetch(`/api/impresoras/activa?estacion=${station}&restauranteId=${tenantId}`, { headers: reqHeaders }),
+                fetch(`/api/impresoras?estacion=${station}&restauranteId=${tenantId}`, { headers: reqHeaders }),
+                fetch(`/api/impresoras/medidas?estacion=${station}&restauranteId=${tenantId}`, { headers: reqHeaders }),
+                fetch(`/api/impresoras/perfiles?estacion=${station}&restauranteId=${tenantId}`, { headers: reqHeaders }),
+                fetch(`/api/recovery/descubiertos?estacion=${station}&restauranteId=${tenantId}`, { headers: reqHeaders }),
+                fetch(`/api/recovery/historial?estacion=${station}&restauranteId=${tenantId}`, { headers: reqHeaders }),
                 fetch('/api/configuracion/imprimir_ticket_auditoria_recovery')
             ]);
 
@@ -170,41 +174,41 @@ const SettingsView = () => {
                 const activeData = await activeRes.json();
                 const activeVal = activeData.nombre || '';
                 setSelectedPrinter(activeVal);
-                localStorage.setItem('bunker_settings_selected_printer', activeVal);
+                localStorage.setItem(`bunker_settings_selected_printer_${tenantId}`, activeVal);
             }
 
             if (listRes.ok) {
                 const list = await listRes.json();
                 setPrinters(list);
-                localStorage.setItem('bunker_settings_printers', JSON.stringify(list));
+                localStorage.setItem(`bunker_settings_printers_${tenantId}`, JSON.stringify(list));
             }
 
             if (sizesRes.ok) {
                 const sizesData = await sizesRes.json();
                 const sizesVal = sizesData || {};
                 setPrinterSizes(sizesVal);
-                localStorage.setItem('bunker_settings_printer_sizes', JSON.stringify(sizesVal));
+                localStorage.setItem(`bunker_settings_printer_sizes_${tenantId}`, JSON.stringify(sizesVal));
             }
 
             if (profilesRes.ok) {
                 const profilesData = await profilesRes.json();
                 const profilesVal = profilesData || {};
                 setPrinterProfiles(profilesVal);
-                localStorage.setItem('bunker_settings_printer_profiles', JSON.stringify(profilesVal));
+                localStorage.setItem(`bunker_settings_printer_profiles_${tenantId}`, JSON.stringify(profilesVal));
             }
 
             if (discRes.ok) {
                 const discData = await discRes.json();
                 const discVal = discData || [];
                 setDiscoveredDevices(discVal);
-                localStorage.setItem('bunker_settings_discovered_devices', JSON.stringify(discVal));
+                localStorage.setItem(`bunker_settings_discovered_devices_${tenantId}`, JSON.stringify(discVal));
             }
 
             if (histRes.ok) {
                 const histData = await histRes.json();
                 const histVal = histData || [];
                 setRepairHistory(histVal);
-                localStorage.setItem('bunker_settings_repair_history', JSON.stringify(histVal));
+                localStorage.setItem(`bunker_settings_repair_history_${tenantId}`, JSON.stringify(histVal));
             }
 
             if (auditConfRes.ok) {
@@ -220,11 +224,12 @@ const SettingsView = () => {
         try {
             const res = await fetch('/api/impresoras/perfil', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
                 body: JSON.stringify({
                     impresora: printerName,
                     perfil: profile,
-                    estacion: selectedStation
+                    estacion: selectedStation,
+                    restauranteId: tenantId
                 })
             });
             if (res.ok) {
@@ -245,14 +250,15 @@ const SettingsView = () => {
         try {
             const res = await fetch('/api/recovery/vincular', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
                 body: JSON.stringify({
                     nombre: `Epson Ethernet (${device.ip})`,
                     estacion: selectedStation,
                     ip: device.ip,
                     mac: device.mac,
                     perfil: 'Generic',
-                    medida: '80mm'
+                    medida: '80mm',
+                    restauranteId: tenantId
                 })
             });
             if (res.ok) {
@@ -270,8 +276,8 @@ const SettingsView = () => {
         try {
             const res = await fetch('/api/recovery/desvincular', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deviceId })
+                headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
+                body: JSON.stringify({ deviceId, restauranteId: tenantId })
             });
             if (res.ok) {
                 showToast("Dispositivo desvinculado con éxito.", "success");
@@ -288,8 +294,8 @@ const SettingsView = () => {
         try {
             const res = await fetch('/api/recovery/solicitar', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deviceId, estacion: selectedStation })
+                headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
+                body: JSON.stringify({ deviceId, estacion: selectedStation, restauranteId: tenantId })
             });
             if (res.ok) {
                 showToast("Iniciando auto-recuperación de la impresora...", "info");
@@ -300,7 +306,9 @@ const SettingsView = () => {
                 let attempts = 0;
                 const pollInterval = setInterval(async () => {
                     attempts++;
-                    const listRes = await fetch(`/api/impresoras?estacion=${selectedStation}`);
+                    const listRes = await fetch(`/api/impresoras?estacion=${selectedStation}&restauranteId=${tenantId}`, {
+                        headers: { 'x-restaurante-id': String(tenantId) }
+                    });
                     if (listRes.ok) {
                         const list = await listRes.json();
                         const dev = list.find(d => d.id === deviceId);
@@ -315,7 +323,9 @@ const SettingsView = () => {
                                 showToast("No se pudo localizar el dispositivo en la red local.", "error");
                             }
                             // Refresh history
-                            const histRes = await fetch(`/api/recovery/historial?estacion=${selectedStation}`);
+                            const histRes = await fetch(`/api/recovery/historial?estacion=${selectedStation}&restauranteId=${tenantId}`, {
+                                headers: { 'x-restaurante-id': String(tenantId) }
+                            });
                             if (histRes.ok) {
                                 const histData = await histRes.json();
                                 setRepairHistory(histData || []);
@@ -356,11 +366,12 @@ const SettingsView = () => {
         try {
             const res = await fetch('/api/impresoras/medida', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
                 body: JSON.stringify({
                     impresora: printerName,
                     medida: size,
-                    estacion: selectedStation
+                    estacion: selectedStation,
+                    restauranteId: tenantId
                 })
             });
             if (res.ok) {
@@ -380,7 +391,7 @@ const SettingsView = () => {
     useEffect(() => {
         loadStations();
         loadPrintersData('Caja');
-    }, []);
+    }, [tenantId]);
 
     useEffect(() => {
         if (isScanning || isAnyPrinterRepairing) return;
@@ -390,7 +401,7 @@ const SettingsView = () => {
         }, 7000);
         
         return () => clearInterval(interval);
-    }, [selectedStation, isScanning, isAnyPrinterRepairing]);
+    }, [selectedStation, isScanning, isAnyPrinterRepairing, tenantId]);
 
     const handleStationChange = (station) => {
         setSelectedStation(station);
@@ -401,8 +412,8 @@ const SettingsView = () => {
         try {
             const res = await fetch('/api/impresoras/seleccionar', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre: name, estacion: selectedStation })
+                headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
+                body: JSON.stringify({ nombre: name, estacion: selectedStation, restauranteId: tenantId })
             });
             if (res.ok) {
                 setSelectedPrinter(name);
@@ -420,8 +431,8 @@ const SettingsView = () => {
         try {
             const res = await fetch('/api/impresoras/solicitar-actualizacion', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ estacion: selectedStation })
+                headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
+                body: JSON.stringify({ estacion: selectedStation, restauranteId: tenantId })
             });
             if (!res.ok) throw new Error("Error de conexión");
 
@@ -432,7 +443,7 @@ const SettingsView = () => {
             const interval = setInterval(async () => {
                 attempts++;
                 try {
-                    const statusRes = await fetch(`/api/impresoras/estado-solicitud?estacion=${selectedStation}`);
+                    const statusRes = await fetch(`/api/impresoras/estado-solicitud?estacion=${selectedStation}&restauranteId=${tenantId}`);
                     if (statusRes.ok) {
                         const statusData = await statusRes.json();
                         if (!statusData.solicitando) {

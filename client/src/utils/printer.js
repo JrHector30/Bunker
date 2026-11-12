@@ -1,3 +1,5 @@
+import { getActiveRestaurant } from './tenant';
+
 /**
  * Encolador de tickets mediante llamada al backend (Proxy de Base de Datos)
  * Esto permite imprimir desde cualquier dispositivo (celular/tablet/PC) 
@@ -12,14 +14,20 @@
  */
 export async function enqueueTicket(mesaId, mozoName, contenido, estacion = 'Caja') {
   try {
+    const activeRest = getActiveRestaurant();
+    const restId = activeRest?.id || 1;
     const res = await fetch('/api/impresoras/imprimir', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-restaurante-id': String(restId)
+      },
       body: JSON.stringify({
         mesaId: String(mesaId),
         mozo: mozoName || 'Sistema',
         contenido: contenido,
-        estacion: estacion
+        estacion: estacion,
+        restauranteId: restId
       })
     });
 
