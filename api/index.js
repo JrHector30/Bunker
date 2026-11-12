@@ -500,7 +500,6 @@ app.get('/api/recovery/historial', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-});
 
 app.get('/api/recovery/estado-estacion', async (req, res) => {
     const estacion = req.query.estacion || 'Caja';
