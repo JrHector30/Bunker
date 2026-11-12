@@ -135,16 +135,25 @@ app.get('/api/impresoras', async (req, res) => {
         });
 
         // Merge real-time offline status for USB printers registered in DB
-        const combinedNet = netPrinters.map(dev => {
-            if (dev.transport === 'USB') {
-                const winMatch = winPrintersMapped.find(w => w.nombre === dev.nombre);
-                return {
-                    ...dev,
-                    ultimoEstado: winMatch ? winMatch.ultimoEstado : 'OFFLINE'
-                };
-            }
-            return dev;
-        });
+        // If the station has reported its local Windows printers (winPrinters.length > 0),
+        // only keep USB printers that actually exist on THIS station's machine
+        const combinedNet = netPrinters
+            .filter(dev => {
+                if (dev.transport === 'USB' && winPrinters.length > 0) {
+                    return winPrintersMapped.some(w => w.nombre.toLowerCase() === dev.nombre.toLowerCase());
+                }
+                return true;
+            })
+            .map(dev => {
+                if (dev.transport === 'USB') {
+                    const winMatch = winPrintersMapped.find(w => w.nombre.toLowerCase() === dev.nombre.toLowerCase());
+                    return {
+                        ...dev,
+                        ultimoEstado: winMatch ? winMatch.ultimoEstado : 'OFFLINE'
+                    };
+                }
+                return dev;
+            });
 
         // Combine with discovered Windows printers that are not yet registered for this restaurant
         // Exclude virtual system drivers (pdf, xps, onenote, fax, root, microsoft, nitro)

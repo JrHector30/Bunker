@@ -207,6 +207,15 @@ async function handlePrinterScanRequests() {
           ON CONFLICT (clave) DO UPDATE SET valor = $2
         `, [`impresoras_descubiertas_${STATION_ID}`, jsonEthernet]);
 
+        // Limpiar de la BD cualquier impresora USB vieja de esta estación que ya no exista físicamente en este equipo
+        const winNames = printersList.map(p => p.name);
+        if (winNames.length > 0) {
+          await client.query(`
+            DELETE FROM dispositivos_red 
+            WHERE estacion = $1 AND transport = 'USB' AND NOT (nombre = ANY($2::text[]))
+          `, [STATION_ID, winNames]);
+        }
+
         // Actualizar dinámicamente el estado y la IP de impresoras vinculadas con los resultados del smart scan
         const dbDevsRes = await client.query(
           `SELECT * FROM dispositivos_red WHERE estacion = $1`,
