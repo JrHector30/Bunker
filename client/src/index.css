@@ -884,9 +884,67 @@ html {
   animation: fadeInCard 0.4s ease-out forwards;
 }
 
-/* === Custom Scrollbars Removed per User Request === */
-::-webkit-scrollbar {
-  display: none !important;
+/* ============================================
+   MINIMALIST THEMED SCROLLBAR (Web/Desktop only)
+   Uses active theme accent/primary color.
+   On mobile/cellphones it remains native/hidden.
+   ============================================ */
+@media (min-width: 768px) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--primary, #f97316) 50%, transparent) transparent;
+  }
+
+  *:hover {
+    scrollbar-color: color-mix(in srgb, var(--primary, #f97316) 85%, transparent) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    display: block !important;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--primary, #f97316) 50%, transparent);
+    border-radius: 9999px;
+    transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-hover, var(--primary, #ea580c));
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Preserve explicit scrollbar-none utilities */
+  .scrollbar-none::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  .scrollbar-none {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  ::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
 }
 
 /* Layout Utilities */
