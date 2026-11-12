@@ -644,12 +644,7 @@ app.put('/api/users/:id', async (req, res) => {
         if (usuario) updateData.usuario = usuario;
         if (activo !== undefined) {
             if (activo === false && currentUser.rol === 'admin') {
-                const activeAdminCount = await prisma.user.count({
-                    where: { restauranteId: currentUser.restauranteId, rol: 'admin', activo: true }
-                });
-                if (activeAdminCount <= 1) {
-                    return res.status(400).json({ error: "No es posible suspender al único Administrador activo del local." });
-                }
+                return res.status(400).json({ error: "No es posible suspender a un Administrador." });
             }
             updateData.activo = Boolean(activo);
         }
@@ -697,14 +692,9 @@ app.delete('/api/users/:id', async (req, res) => {
             return res.status(404).json({ error: "Usuario no encontrado." });
         }
 
-        // Impedir eliminar al único administrador del restaurante
+        // Impedir eliminar el perfil de administradores
         if (userToDelete.rol === 'admin') {
-            const adminCount = await prisma.user.count({
-                where: { restauranteId: userToDelete.restauranteId, rol: 'admin' }
-            });
-            if (adminCount <= 1) {
-                return res.status(400).json({ error: "No es posible eliminar al único Administrador del local." });
-            }
+            return res.status(400).json({ error: "No es posible eliminar el perfil de un Administrador." });
         }
 
         await prisma.user.delete({ where: { id: parseInt(id) } });

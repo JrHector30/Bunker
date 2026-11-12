@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Search, X, User, Save, Upload, ArrowLeft, Power, CheckCircle, ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, User, Save, Upload, ArrowLeft, Power, CheckCircle, ChevronLeft, ChevronRight, Users, Filter, ArrowUp, ArrowDown, ArrowUpDown, Check } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 import CloseButton from '../components/ui/CloseButton';
 import SmoothDropdown from '../components/ui/SmoothDropdown';
@@ -32,13 +32,40 @@ const UsersView = () => {
     const cacheKey = currentTenant?.id ? `users_tenant_${currentTenant.id}` : 'users';
     const { data: users, loading, mutate: fetchUsers } = useCache(cacheKey, fetcher, []);
 
+    // Search, Filters & Sorting
     const [searchTerm, setSearchTerm] = useState('');
+    const [sortColumn, setSortColumn] = useState('nombre'); // 'nombre' | 'estado' | 'rol'
+    const [sortDirection, setSortDirection] = useState('asc'); // 'asc' | 'desc'
+    const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
+    const [roleFilter, setRoleFilter] = useState('all'); // 'all' | 'admin' | 'caja' | 'cocina' | 'mozo'
+    const [openHeaderFilter, setOpenHeaderFilter] = useState(null); // 'estado' | 'rol' | null
+
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 6;
 
+    const handleSort = (column) => {
+        if (sortColumn === column) {
+            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortColumn(column);
+            setSortDirection('asc');
+        }
+    };
+
+    // Close header popovers on click outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (openHeaderFilter && !e.target.closest('.header-filter-popover')) {
+                setOpenHeaderFilter(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [openHeaderFilter]);
+
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm]);
+    }, [searchTerm, sortColumn, sortDirection, statusFilter, roleFilter]);
 
     // Modal State
     const [showModal, setShowModal] = useState(false);
@@ -231,12 +258,12 @@ const UsersView = () => {
 
     const handleDelete = async (id) => {
         const userToDelete = users.find(u => u.id === id);
-        if (userToDelete && userToDelete.rol === 'admin' && adminCount <= 1) {
-            showToast('No es posible eliminar al único Administrador del local', 'error');
+        if (userToDelete && userToDelete.rol === 'admin') {
+            showToast('No es posible eliminar el perfil de un Administrador', 'error');
             return;
         }
 
-        if (!await showConfirmation('¿Seguro de eliminar este usuario?', { type: 'danger' })) return;
+        if (!await showConfirmation(`¿Seguro de eliminar al usuario "${userToDelete?.nombre || ''}"?`, { type: 'danger' })) return;
         try {
             const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
             if (!res.ok) {
@@ -252,14 +279,14 @@ const UsersView = () => {
     };
 
     const handleToggleStatus = async (user) => {
+        if (user.rol === 'admin') {
+            showToast('No es posible suspender el perfil de un Administrador', 'error');
+            return;
+        }
+
         const isCurrentlyActive = user.activo !== false;
         const newStatus = !isCurrentlyActive;
         const actionText = newStatus ? 'activar' : 'suspender';
-
-        if (!newStatus && user.rol === 'admin' && adminCount <= 1) {
-            showToast('No es posible suspender al único Administrador del local', 'error');
-            return;
-        }
 
         const confirmed = await showConfirmation(
             `¿Deseas ${actionText} a "${user.nombre}"? ${!newStatus ? 'El usuario quedará Inactivo y no aparecerá en el inicio de sesión.' : 'El usuario volverá a estar Activo en el sistema.'}`,
@@ -288,7 +315,16 @@ const UsersView = () => {
     };
 
     const getUserActions = (user) => {
+        const isAdmin = user.rol === 'admin';
         const isSuspended = user.activo === false;
+
+        // Los administradores no pueden tener la acción de eliminar su perfil ni tampoco suspenderlo
+        if (isAdmin) {
+            return [
+                { id: 'editar', label: 'Editar', icon: Edit }
+            ];
+        }
+
         return [
             { id: 'editar', label: 'Editar', icon: Edit },
             { 
@@ -310,11 +346,41 @@ const UsersView = () => {
         }
     };
 
-    const filteredUsers = (users || []).filter(u =>
-        (u.nombre && u.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (u.usuario && u.usuario.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (u.correo && u.correo.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const filteredUsers = (users || [])
+        .filter(u => {
+            const matchesSearch =
+                !searchTerm ||
+                (u.nombre && u.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (u.usuario && u.usuario.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (u.correo && u.correo.toLowerCase().includes(searchTerm.toLowerCase()));
+            if (!matchesSearch) return false;
+
+            if (statusFilter === 'active' && u.activo === false) return false;
+            if (statusFilter === 'inactive' && u.activo !== false) return false;
+
+            if (roleFilter !== 'all' && u.rol !== roleFilter) return false;
+
+            return true;
+        })
+        .sort((a, b) => {
+            if (!sortColumn) return 0;
+            let valA = '';
+            let valB = '';
+
+            if (sortColumn === 'nombre') {
+                valA = a.nombre || '';
+                valB = b.nombre || '';
+            } else if (sortColumn === 'estado') {
+                valA = a.activo !== false ? 'Activo' : 'Inactivo';
+                valB = b.activo !== false ? 'Activo' : 'Inactivo';
+            } else if (sortColumn === 'rol') {
+                valA = a.rol || '';
+                valB = b.rol || '';
+            }
+
+            const cmp = valA.localeCompare(valB, 'es', { sensitivity: 'base' });
+            return sortDirection === 'asc' ? cmp : -cmp;
+        });
 
     const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
     const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -347,15 +413,27 @@ const UsersView = () => {
 
                 <div className="flex items-center gap-3">
                     {/* Search */}
-                    <div className="relative">
-                        <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[var(--text-muted)]" />
+                    <div className="relative flex items-center">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[var(--text-muted)]">
+                            <Search size={15} />
+                        </div>
                         <input
-                            type="search"
+                            type="text"
                             placeholder="Buscar usuarios..."
-                            className="glass-input h-9 w-48 sm:w-64 pl-9 pr-3 text-xs rounded-xl"
+                            className="h-9 w-48 sm:w-64 !pl-9 pr-8 text-xs rounded-xl border transition-colors bg-[var(--input-bg)] text-[var(--input-text)] border-[var(--glass-border)] focus:outline-none focus:border-[var(--primary)] placeholder:text-[var(--text-muted)]"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
+                        {searchTerm && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchTerm('')}
+                                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer"
+                                title="Limpiar búsqueda"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
                     </div>
 
                     {/* Nuevo Usuario Button */}
@@ -369,11 +447,61 @@ const UsersView = () => {
                 </div>
             </div>
 
+            {/* Active Filters Pill Bar (if any filter is on) */}
+            {(statusFilter !== 'all' || roleFilter !== 'all' || searchTerm) && (
+                <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-[var(--text-muted)] text-[11px] font-semibold uppercase tracking-wider">Filtros:</span>
+                    {statusFilter !== 'all' && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[var(--text-main)] font-medium">
+                            Estado: <strong>{statusFilter === 'active' ? 'Activos' : 'Inactivos'}</strong>
+                            <button 
+                                type="button" 
+                                onClick={() => setStatusFilter('all')} 
+                                className="hover:text-red-400 ml-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    )}
+                    {roleFilter !== 'all' && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[var(--text-main)] font-medium">
+                            Rol: <strong className="capitalize">{roleFilter}</strong>
+                            <button 
+                                type="button" 
+                                onClick={() => setRoleFilter('all')} 
+                                className="hover:text-red-400 ml-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    )}
+                    {searchTerm && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[var(--text-main)] font-medium">
+                            Texto: <strong>"{searchTerm}"</strong>
+                            <button 
+                                type="button" 
+                                onClick={() => setSearchTerm('')} 
+                                className="hover:text-red-400 ml-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => { setStatusFilter('all'); setRoleFilter('all'); setSearchTerm(''); }}
+                        className="text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] underline ml-1 cursor-pointer"
+                    >
+                        Limpiar todos
+                    </button>
+                </div>
+            )}
+
             {/* Table Card */}
-            <div className="glass-panel overflow-hidden p-0 rounded-2xl border" style={{ borderColor: 'var(--glass-border)' }}>
-                <div className="overflow-x-auto">
+            <div className="glass-panel overflow-visible p-0 rounded-2xl border" style={{ borderColor: 'var(--glass-border)' }}>
+                <div className="overflow-x-auto rounded-2xl">
                     <table className="w-full border-collapse">
-                        <thead>
+                        <thead className="relative select-none">
                             <tr 
                                 className="text-xs font-bold uppercase tracking-wider text-on-primary"
                                 style={{ 
@@ -382,10 +510,142 @@ const UsersView = () => {
                                     borderBottom: '1px solid var(--table-row-border)' 
                                 }}
                             >
-                                <th className="py-3.5 px-5 text-left font-semibold first:rounded-tl-2xl">Miembros</th>
-                                <th className="py-3.5 px-4 !text-center font-semibold">Estado</th>
-                                <th className="py-3.5 px-4 !text-center font-semibold">Rol</th>
-                                <th className="py-3.5 px-5 !text-center font-semibold w-24 last:rounded-tr-2xl">Acción</th>
+                                {/* 1. Columna Miembros */}
+                                <th className="py-3.5 px-5 text-left font-semibold first:rounded-tl-2xl">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSort('nombre')}
+                                        className="inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity uppercase tracking-wider font-semibold cursor-pointer"
+                                        title="Ordenar por Miembro"
+                                    >
+                                        <span>Miembros</span>
+                                        {sortColumn === 'nombre' ? (
+                                            sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                                        ) : (
+                                            <ArrowUpDown size={14} className="opacity-60" />
+                                        )}
+                                    </button>
+                                </th>
+
+                                {/* 2. Columna Estado */}
+                                <th className="py-3.5 px-4 !text-center font-semibold relative">
+                                    <div className="inline-flex items-center justify-center gap-1.5 header-filter-popover relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSort('estado')}
+                                            className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity uppercase tracking-wider font-semibold cursor-pointer"
+                                            title="Ordenar por Estado"
+                                        >
+                                            <span>Estado</span>
+                                            {sortColumn === 'estado' && (
+                                                sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                                            )}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenHeaderFilter(openHeaderFilter === 'estado' ? null : 'estado');
+                                            }}
+                                            className={`p-1 rounded-md transition-colors cursor-pointer ${statusFilter !== 'all' ? 'bg-white text-zinc-900 shadow-sm' : 'hover:bg-white/20 text-white'}`}
+                                            title="Filtrar por Estado"
+                                        >
+                                            <Filter size={13} />
+                                        </button>
+
+                                        {openHeaderFilter === 'estado' && (
+                                            <div 
+                                                className="smooth-dropdown-bg absolute top-full left-1/2 -translate-x-1/2 mt-2 w-36 rounded-xl border shadow-2xl p-1.5 z-50 text-xs normal-case font-normal"
+                                                style={{ borderColor: 'var(--glass-border)' }}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setStatusFilter('all'); setOpenHeaderFilter(null); }}
+                                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${statusFilter === 'all' ? 'bg-white/10 font-bold text-[var(--text-main)]' : 'text-[var(--text-muted)] hover:bg-white/5'}`}
+                                                >
+                                                    <span>Todos</span>
+                                                    {statusFilter === 'all' && <Check size={13} />}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setStatusFilter('active'); setOpenHeaderFilter(null); }}
+                                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${statusFilter === 'active' ? 'bg-white/10 font-bold text-emerald-400' : 'text-[var(--text-muted)] hover:bg-white/5'}`}
+                                                >
+                                                    <span>Activos</span>
+                                                    {statusFilter === 'active' && <Check size={13} />}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setStatusFilter('inactive'); setOpenHeaderFilter(null); }}
+                                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${statusFilter === 'inactive' ? 'bg-white/10 font-bold text-zinc-300' : 'text-[var(--text-muted)] hover:bg-white/5'}`}
+                                                >
+                                                    <span>Inactivos</span>
+                                                    {statusFilter === 'inactive' && <Check size={13} />}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </th>
+
+                                {/* 3. Columna Rol */}
+                                <th className="py-3.5 px-4 !text-center font-semibold relative">
+                                    <div className="inline-flex items-center justify-center gap-1.5 header-filter-popover relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSort('rol')}
+                                            className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity uppercase tracking-wider font-semibold cursor-pointer"
+                                            title="Ordenar por Rol"
+                                        >
+                                            <span>Rol</span>
+                                            {sortColumn === 'rol' && (
+                                                sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                                            )}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenHeaderFilter(openHeaderFilter === 'rol' ? null : 'rol');
+                                            }}
+                                            className={`p-1 rounded-md transition-colors cursor-pointer ${roleFilter !== 'all' ? 'bg-white text-zinc-900 shadow-sm' : 'hover:bg-white/20 text-white'}`}
+                                            title="Filtrar por Rol"
+                                        >
+                                            <Filter size={13} />
+                                        </button>
+
+                                        {openHeaderFilter === 'rol' && (
+                                            <div 
+                                                className="smooth-dropdown-bg absolute top-full left-1/2 -translate-x-1/2 mt-2 w-40 rounded-xl border shadow-2xl p-1.5 z-50 text-xs normal-case font-normal"
+                                                style={{ borderColor: 'var(--glass-border)' }}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {[
+                                                    { id: 'all', label: 'Todos los roles' },
+                                                    { id: 'admin', label: 'Administrador' },
+                                                    { id: 'caja', label: 'Caja' },
+                                                    { id: 'cocina', label: 'Cocina' },
+                                                    { id: 'mozo', label: 'Mozo' },
+                                                ].map((r) => (
+                                                    <button
+                                                        key={r.id}
+                                                        type="button"
+                                                        onClick={() => { setRoleFilter(r.id); setOpenHeaderFilter(null); }}
+                                                        className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${roleFilter === r.id ? 'bg-white/10 font-bold text-[var(--text-main)]' : 'text-[var(--text-muted)] hover:bg-white/5'}`}
+                                                    >
+                                                        <span>{r.label}</span>
+                                                        {roleFilter === r.id && <Check size={13} />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </th>
+
+                                {/* 4. Columna Acción */}
+                                <th className="py-3.5 px-5 !text-center font-semibold w-24 last:rounded-tr-2xl">
+                                    Acción
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y text-xs" style={{ borderColor: 'var(--table-row-border)' }}>
