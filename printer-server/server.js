@@ -790,8 +790,8 @@ async function checkAndPrintQueue() {
 }
 
 // --- 6. Inicializar Bucles de Vigilancia ---
-// Cada 2 segundos vigilar la cola de tickets
-setInterval(checkAndPrintQueue, 2000);
+// Cada 1 segundo vigilar la cola de tickets para respuesta casi instantánea
+setInterval(checkAndPrintQueue, 1000);
 
 // Cada 3 segundos vigilar si hay solicitudes de escaneo de impresoras
 setInterval(handlePrinterScanRequests, 3000);

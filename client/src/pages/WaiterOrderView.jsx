@@ -174,8 +174,10 @@ const WaiterOrderView = () => {
         };
 
         // 3. Perform the creation (Offline-First hybrid logic)
+        // Despachar el ticket de impresión a cocina inmediatamente en paralelo (ultra baja latencia)
+        sendKitchenTicket();
+
         if (networkStatus.isOffline()) {
-            sendKitchenTicket();
             offlineOrderService.createOrder({
                 mesaId: parsedTableId,
                 usuarioId: user.id,
@@ -225,9 +227,6 @@ const WaiterOrderView = () => {
                 .then(async res => {
                 if (res.ok) {
                     showToast('Pedido enviado a cocina!', 'success');
-                    
-                    // Enqueue the kitchen ticket with filtered items (only products for kitchen)
-                    sendKitchenTicket();
 
                     // Hidratar snapshot de fondo para incorporar comanda recién creada (omitiendo productos)
                     offlineSnapshotService.hydrateOperationalSnapshot({ skipProducts: true }).catch(() => {});
