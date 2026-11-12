@@ -36,7 +36,9 @@ const SettingsView = () => {
     const [isScanning, setIsScanning] = useState(false);
     const [testingPrint, setTestingPrint] = useState(false);
     const [stations, setStations] = useState(['Caja']);
-    const [selectedStation, setSelectedStation] = useState('Caja');
+    const [selectedStation, setSelectedStation] = useState(() => {
+        return localStorage.getItem('bunker_settings_selected_station') || 'Caja';
+    });
     const [printerSizes, setPrinterSizes] = useState(() => {
         try {
             const saved = localStorage.getItem(`bunker_settings_printer_sizes_${tenantId}`);
@@ -405,6 +407,9 @@ const SettingsView = () => {
 
     const handleStationChange = (station) => {
         setSelectedStation(station);
+        try {
+            localStorage.setItem('bunker_settings_selected_station', station);
+        } catch (_) {}
         loadPrintersData(station);
     };
 
