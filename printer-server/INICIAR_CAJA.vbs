@@ -7,31 +7,28 @@ strFolder = objFSO.GetParentFolderName(strPath)
 ' Asegurar Node.js en el PATH del proceso
 WshShell.Environment("Process")("PATH") = WshShell.Environment("Process")("PATH") & ";C:\Program Files\nodejs;C:\Program Files (x86)\nodejs;" & WshShell.ExpandEnvironmentStrings("%APPDATA%\npm")
 
-' Detectar ubicación de server.js
-Dim serverFile, runDir
+' Detectar directorio exacto de server.js
+Dim serverDir
 If objFSO.FileExists(strFolder & "\server.js") Then
-    serverFile = "server.js"
-    runDir = strFolder
+    serverDir = strFolder
 ElseIf objFSO.FileExists(strFolder & "\printer-server\server.js") Then
-    serverFile = "printer-server\server.js"
-    runDir = strFolder
+    serverDir = strFolder & "\printer-server"
 ElseIf objFSO.FileExists(objFSO.GetParentFolderName(strFolder) & "\printer-server\server.js") Then
-    serverFile = "printer-server\server.js"
-    runDir = objFSO.GetParentFolderName(strFolder)
+    serverDir = objFSO.GetParentFolderName(strFolder) & "\printer-server"
 Else
-    serverFile = "server.js"
-    runDir = strFolder
+    serverDir = strFolder
 End If
 
-WshShell.CurrentDirectory = runDir
+WshShell.CurrentDirectory = serverDir
 
-' Establecer estación CAJA
-WshShell.Environment("Process")("STATION_ID") = "Caja"
-WshShell.Run "cmd.exe /c set STATION_ID=Caja&& node " & serverFile & " Caja", 0, false
+' Iniciar estacion CAJA directamente dentro de la carpeta del servidor
+WshShell.Run "cmd.exe /c cd /d """ & serverDir & """ && set STATION_ID=Caja&& node server.js Caja", 0, false
 
-' Iniciar bandeja si existe en el directorio
-If objFSO.FileExists(runDir & "\Bunker_Bandeja.bat") Then
-    WshShell.Run "cmd.exe /c Bunker_Bandeja.bat", 0, false
+' Iniciar bandeja si existe
+If objFSO.FileExists(serverDir & "\Bunker_Bandeja.bat") Then
+    WshShell.Run "cmd.exe /c cd /d """ & serverDir & """ && Bunker_Bandeja.bat", 0, false
+ElseIf objFSO.FileExists(strFolder & "\Bunker_Bandeja.bat") Then
+    WshShell.Run "cmd.exe /c cd /d """ & strFolder & """ && Bunker_Bandeja.bat", 0, false
 End If
 
 WScript.Sleep 1500
