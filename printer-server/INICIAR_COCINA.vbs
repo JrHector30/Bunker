@@ -1,23 +1,33 @@
 Set WshShell = CreateObject("WScript.Shell")
-
-' Obtener la carpeta donde está este archivo VBS
-strPath = WScript.ScriptFullName
 Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+strPath = WScript.ScriptFullName
 strFolder = objFSO.GetParentFolderName(strPath)
 
-' Cambiar el directorio de trabajo a la carpeta printer-server
-WshShell.CurrentDirectory = strFolder
+' Asegurar Node.js en el PATH del proceso
+WshShell.Environment("Process")("PATH") = WshShell.Environment("Process")("PATH") & ";C:\Program Files\nodejs;C:\Program Files (x86)\nodejs;" & WshShell.ExpandEnvironmentStrings("%APPDATA%\npm")
 
-' Asegurar que Node.js esté en el PATH aunque se haya instalado recientemente
-WshShell.Environment("Process")("PATH") = WshShell.Environment("Process")("PATH") & ";C:\Program Files\nodejs;C:\Program Files (x86)\nodejs"
+' Detectar ubicación de server.js
+Dim serverFile, runDir
+If objFSO.FileExists(strFolder & "\server.js") Then
+    serverFile = "server.js"
+    runDir = strFolder
+ElseIf objFSO.FileExists(strFolder & "\printer-server\server.js") Then
+    serverFile = "printer-server\server.js"
+    runDir = strFolder
+ElseIf objFSO.FileExists(objFSO.GetParentFolderName(strFolder) & "\printer-server\server.js") Then
+    serverFile = "printer-server\server.js"
+    runDir = objFSO.GetParentFolderName(strFolder)
+Else
+    serverFile = "server.js"
+    runDir = strFolder
+End If
 
-' Establecer la estación a Cocina
+WshShell.CurrentDirectory = runDir
+
+' Establecer estación COCINA
 WshShell.Environment("Process")("STATION_ID") = "Cocina"
+WshShell.Run "cmd.exe /c set STATION_ID=Cocina&& node " & serverFile & " Cocina", 0, false
 
-' Iniciar el servidor de impresion invisible como estacion Cocina (0 = sin ventana, false = no esperar)
-WshShell.Run "cmd.exe /c set STATION_ID=Cocina&& node server.js Cocina", 0, false
-
-' Mostrar globo de confirmacion (opcional)
-Set objShell = CreateObject("WScript.Shell")
-WScript.Sleep 2000
-MsgBox "Impresora COCINA iniciada correctamente." & Chr(13) & "Puedes cerrar este mensaje.", 64, "Bunker - Cocina"
+WScript.Sleep 1500
+MsgBox "Servidor de Impresión Búnker iniciado correctamente." & vbCrLf & vbCrLf & "Estación asignada: ""Cocina""" & vbCrLf & "Este equipo imprimirá las comandas de Cocina.", 64, "Búnker POS - Estación Cocina"
