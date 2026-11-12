@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Search, X, User, Save, Upload, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, User, Save, Upload, ArrowLeft, Power, CheckCircle, ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
-import DeleteButton from '../components/ui/DeleteButton';
-import EditButton from '../components/ui/EditButton';
 import CloseButton from '../components/ui/CloseButton';
+import SmoothDropdown from '../components/ui/SmoothDropdown';
 
 const UsersView = () => {
     const { showConfirmation } = useConfirmation();
@@ -34,6 +33,12 @@ const UsersView = () => {
     const { data: users, loading, mutate: fetchUsers } = useCache(cacheKey, fetcher, []);
 
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 6;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
 
     // Modal State
     const [showModal, setShowModal] = useState(false);
@@ -239,83 +244,273 @@ const UsersView = () => {
                 showToast(err.error || 'No se pudo eliminar el usuario', 'error');
                 return;
             }
+            showToast('Usuario eliminado correctamente', 'success');
             fetchUsers();
         } catch (error) {
             console.error(error);
         }
     };
 
-    const filteredUsers = users.filter(u =>
-        u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (u.usuario && u.usuario.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const handleToggleStatus = async (user) => {
+        const isCurrentlyActive = user.activo !== false;
+        const newStatus = !isCurrentlyActive;
+        const actionText = newStatus ? 'activar' : 'suspender';
 
-    const getRoleColor = (rol) => {
-        switch (rol) {
-            case 'admin': return 'var(--danger)'; // Red
-            case 'cocina': return 'var(--warning)'; // Orange
-            case 'caja': return 'var(--success)'; // Green
-            default: return 'var(--primary)'; // Blue
+        if (!newStatus && user.rol === 'admin' && adminCount <= 1) {
+            showToast('No es posible suspender al único Administrador del local', 'error');
+            return;
+        }
+
+        const confirmed = await showConfirmation(
+            `¿Deseas ${actionText} a "${user.nombre}"? ${!newStatus ? 'El usuario quedará Inactivo y no aparecerá en el inicio de sesión.' : 'El usuario volverá a estar Activo en el sistema.'}`,
+            { type: newStatus ? 'info' : 'warning' }
+        );
+        if (!confirmed) return;
+
+        try {
+            const res = await fetch(`/api/users/${user.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ activo: newStatus })
+            });
+
+            if (res.ok) {
+                showToast(`Usuario ${newStatus ? 'activado' : 'suspendido'} exitosamente`, 'success');
+                fetchUsers();
+            } else {
+                const err = await res.json();
+                showToast(err.error || `Error al ${actionText} usuario`, 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast(`Error de red al ${actionText} usuario`, 'error');
         }
     };
 
+    const getUserActions = (user) => {
+        const isSuspended = user.activo === false;
+        return [
+            { id: 'editar', label: 'Editar', icon: Edit },
+            { 
+                id: 'toggle-status', 
+                label: isSuspended ? 'Activar' : 'Suspender', 
+                icon: Power 
+            },
+            { id: 'borrar', label: 'Eliminar', icon: Trash2 }
+        ];
+    };
+
+    const handleUserAction = (actionId, user) => {
+        if (actionId === 'editar') {
+            handleOpenModal(user);
+        } else if (actionId === 'toggle-status') {
+            handleToggleStatus(user);
+        } else if (actionId === 'borrar') {
+            handleDelete(user.id);
+        }
+    };
+
+    const filteredUsers = (users || []).filter(u =>
+        (u.nombre && u.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (u.usuario && u.usuario.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (u.correo && u.correo.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+    const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+    const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
     return (
-        <div style={{ padding: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <button className="glass-button" onClick={() => navigate('/')} style={{ padding: 8 }}>
-                        <ArrowLeft size={20} />
+        <div className="p-4 sm:p-6 max-w-6xl mx-auto w-full">
+            {/* Top Bar Header */}
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                    <button 
+                        type="button"
+                        className="glass-button p-2.5 rounded-xl hover:bg-white/10 transition-colors" 
+                        onClick={() => navigate('/')} 
+                        title="Volver"
+                    >
+                        <ArrowLeft size={18} />
                     </button>
-                    <h1 className="high-end-title" style={{ margin: 0 }}>Gestión de Usuarios</h1>
-                </div>
-                <button className="glass-button primary" onClick={() => handleOpenModal()}>
-                    <Plus size={20} style={{ marginRight: 5 }} /> Nuevo Usuario
-                </button>
-            </div>
-
-            {/* Search */}
-            <div style={{ marginBottom: 20 }}>
-                <div className="search-container">
-                    <Search size={22} className="text-muted" />
-                    <input
-                        type="text"
-                        placeholder="Buscar usuarios..."
-                        className="search-input"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
-
-            {/* Grid */}
-            <div className="responsive-grid">
-                {filteredUsers.length === 0 && <p className="text-muted" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>No hay datos registrados o cargando...</p>}
-                {filteredUsers.map(user => (
-                    <div key={user.id} className="glass-panel" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ height: 100, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                            {/* Role Badge */}
-                            <div className="badge text-on-primary" style={{ position: 'absolute', top: 10, right: 10, background: getRoleColor(user.rol) }}>{user.rol}</div>
-
-                            {user.foto ? (
-                                <img src={user.foto} alt={user.nombre} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--bg-dark)' }} />
-                            ) : (
-                                <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid var(--bg-dark)' }}>
-                                    <User size={40} className="text-muted" />
-                                </div>
-                            )}
-                        </div>
-
-                        <div style={{ padding: 20, textAlign: 'center', flex: 1 }}>
-                            <h3 style={{ margin: '0 0 5px 0' }}>{user.nombre}</h3>
-                            <div className="text-muted">@{user.usuario}</div>
-                        </div>
-
-                        <div style={{ padding: 15, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
-                            <EditButton onClick={() => handleOpenModal(user)} className="scale-75 -my-2 -mx-1" />
-                            <DeleteButton onClick={() => handleDelete(user.id)} className="scale-75 -my-2 -mx-1" />
-                        </div>
+                    <div className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[var(--text-main)]">
+                        <Users className="size-5" />
                     </div>
-                ))}
+                    <div>
+                        <h1 className="font-heading text-lg font-bold tracking-tight text-[var(--text-main)]">
+                            Gestión de Usuarios
+                        </h1>
+                        <p className="text-xs text-[var(--text-muted)]">
+                            {users.length} {users.length === 1 ? 'miembro registrado' : 'miembros registrados'} en este local
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    {/* Search */}
+                    <div className="relative">
+                        <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[var(--text-muted)]" />
+                        <input
+                            type="search"
+                            placeholder="Buscar usuarios..."
+                            className="glass-input h-9 w-48 sm:w-64 pl-9 pr-3 text-xs rounded-xl"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Nuevo Usuario Button */}
+                    <button 
+                        type="button"
+                        className="glass-button primary flex items-center gap-1.5 h-9 px-4 text-xs font-semibold rounded-xl"
+                        onClick={() => handleOpenModal()}
+                    >
+                        <Plus size={16} /> Nuevo Usuario
+                    </button>
+                </div>
+            </div>
+
+            {/* Table Card */}
+            <div className="glass-panel overflow-hidden p-0 rounded-2xl border" style={{ borderColor: 'var(--glass-border)' }}>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                        <thead>
+                            <tr 
+                                className="text-xs font-bold uppercase tracking-wider text-on-primary"
+                                style={{ 
+                                    background: 'var(--primary)', 
+                                    color: '#ffffff', 
+                                    borderBottom: '1px solid var(--table-row-border)' 
+                                }}
+                            >
+                                <th className="py-3.5 px-5 text-left font-semibold first:rounded-tl-2xl">Miembros</th>
+                                <th className="py-3.5 px-4 !text-center font-semibold">Estado</th>
+                                <th className="py-3.5 px-4 !text-center font-semibold">Rol</th>
+                                <th className="py-3.5 px-5 !text-center font-semibold w-24 last:rounded-tr-2xl">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y text-xs" style={{ borderColor: 'var(--table-row-border)' }}>
+                            {paginatedUsers.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="py-12 text-center text-sm text-[var(--text-muted)]">
+                                        {searchTerm ? 'No se encontraron usuarios coincidentes.' : 'No hay usuarios registrados o cargando...'}
+                                    </td>
+                                </tr>
+                            ) : (
+                                paginatedUsers.map((user, index) => {
+                                    const isActive = user.activo !== false;
+                                    const initial = user.nombre ? user.nombre.charAt(0).toUpperCase() : '?';
+
+                                    return (
+                                        <tr
+                                            key={user.id}
+                                            className="transition-colors hover:bg-white/[0.03]"
+                                            style={{ borderBottom: '1px solid var(--table-row-border)' }}
+                                        >
+                                            {/* 1. Columna Miembros */}
+                                            <td className="py-3 px-5">
+                                                <div className="flex items-center gap-3">
+                                                    {user.foto ? (
+                                                        <img
+                                                            src={user.foto}
+                                                            alt={user.nombre}
+                                                            className="w-9 h-9 rounded-full object-cover shrink-0 border border-white/10"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 bg-white/10 text-[var(--text-main)] border border-white/10">
+                                                            {initial}
+                                                        </div>
+                                                    )}
+                                                    <div className="min-w-0">
+                                                        <p className="font-semibold block truncate text-sm text-[var(--text-main)]">
+                                                            {user.nombre}
+                                                        </p>
+                                                        <p className="text-xs text-[var(--text-muted)] font-mono block truncate">
+                                                            @{user.usuario}{user.correo ? ` • ${user.correo}` : ''}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* 2. Columna Estado */}
+                                            <td className="py-3 px-4 !text-center">
+                                                {isActive ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                                        Activo
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-zinc-500/15 text-zinc-400 border border-zinc-500/30">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                                                        Inactivo
+                                                    </span>
+                                                )}
+                                            </td>
+
+                                            {/* 3. Columna Rol */}
+                                            <td className="py-3 px-4 !text-center">
+                                                <span
+                                                    className="inline-block px-3 py-1 rounded-lg text-xs font-semibold capitalize"
+                                                    style={{
+                                                        background: 'rgba(255, 255, 255, 0.05)',
+                                                        color: user.rol === 'admin' ? 'var(--text-main)' : 'var(--text-muted)',
+                                                        fontWeight: user.rol === 'admin' ? '700' : '500'
+                                                    }}
+                                                >
+                                                    {user.rol === 'admin' ? 'Administrador' : (user.rol ? user.rol.charAt(0).toUpperCase() + user.rol.slice(1) : '-')}
+                                                </span>
+                                            </td>
+
+                                            {/* 4. Columna Acción */}
+                                            <td className="py-3 px-5 !text-center relative" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex justify-center items-center h-10">
+                                                    <SmoothDropdown
+                                                        id={user.id}
+                                                        dropUp={index >= Math.max(1, paginatedUsers.length - 2)}
+                                                        items={getUserActions(user)}
+                                                        onAction={(actionId) => handleUserAction(actionId, user)}
+                                                    />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Footer Pagination */}
+                <div
+                    className="flex items-center justify-between gap-4 px-5 py-3 border-t text-xs text-[var(--text-muted)]"
+                    style={{ borderColor: 'var(--table-row-border)', background: 'rgba(0, 0, 0, 0.06)' }}
+                >
+                    <p>
+                        <span className="font-semibold text-[var(--text-main)]">{filteredUsers.length}</span> {filteredUsers.length === 1 ? 'Usuario' : 'Usuarios'}
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="glass-button p-1.5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                            aria-label="Página anterior"
+                        >
+                            <ChevronLeft size={16} />
+                        </button>
+                        <span className="px-2 text-xs font-mono">
+                            Página {currentPage} de {totalPages}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage >= totalPages}
+                            className="glass-button p-1.5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                            aria-label="Página siguiente"
+                        >
+                            <ChevronRight size={16} />
+                        </button>
+                    </div>
+                </div>
             </div>
 
 

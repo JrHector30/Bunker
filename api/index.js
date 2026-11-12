@@ -622,7 +622,7 @@ app.post('/api/users', async (req, res) => {
 
 app.put('/api/users/:id', async (req, res) => {
     const { id } = req.params;
-    const { nombre, usuario, rol, password, foto } = req.body;
+    const { nombre, usuario, rol, password, foto, activo } = req.body;
     try {
         const currentUser = await prisma.user.findUnique({ where: { id: parseInt(id) } });
         if (!currentUser) {
@@ -642,6 +642,17 @@ app.put('/api/users/:id', async (req, res) => {
         const updateData = {};
         if (nombre) updateData.nombre = nombre;
         if (usuario) updateData.usuario = usuario;
+        if (activo !== undefined) {
+            if (activo === false && currentUser.rol === 'admin') {
+                const activeAdminCount = await prisma.user.count({
+                    where: { restauranteId: currentUser.restauranteId, rol: 'admin', activo: true }
+                });
+                if (activeAdminCount <= 1) {
+                    return res.status(400).json({ error: "No es posible suspender al único Administrador activo del local." });
+                }
+            }
+            updateData.activo = Boolean(activo);
+        }
         if (rol) {
             updateData.rol = rol;
             if (rol === 'admin') {
@@ -711,6 +722,9 @@ app.post('/api/login', async (req, res) => {
             include: { restaurante: true }
         });
         if (user) {
+            if (user.activo === false) {
+                return res.status(403).json({ error: "Este usuario se encuentra inactivo o suspendido." });
+            }
             let isMatch = bcrypt.compareSync(password, user.password);
             // Compatibilidad para Hector (PIN tradicional 777777)
             if (!isMatch && user.usuario === 'admin' && password === '777777') {

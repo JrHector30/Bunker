@@ -43,6 +43,7 @@ model User {
   password         String
   foto             String?           // URL to profile photo
   correo           String?           // Correo del admin para recuperación
+  activo           Boolean           @default(true)
   primerAcceso     Boolean           @default(false)
   passwordRecovery PasswordRecovery? // Relación 1:1 de recuperación
   comandas         Comanda[]

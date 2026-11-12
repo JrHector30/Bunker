@@ -37,7 +37,8 @@ const LoginPage = () => {
             url += `?restauranteId=${currentTenant.id}`;
         }
         return fetch(url).then(res => res.json()).then(data => {
-            return data.map(u => ({
+            const list = Array.isArray(data) ? data : [];
+            return list.filter(u => u.activo !== false).map(u => ({
                 ...u,
                 initial: u.nombre ? u.nombre.charAt(0).toUpperCase() : '?',
                 shift: u.rol === 'admin' ? 'Acceso 24/7' : (u.rol === 'mozo' ? '08:00 AM - 04:00 PM' : 'Turno Operativo')
