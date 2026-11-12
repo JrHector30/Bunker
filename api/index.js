@@ -109,10 +109,6 @@ app.get('/uploads/:type/:file', (req, res) => {
 // --- PRINTERS PROXY ENDPOINTS ---
 // --- PRINTERS PROXY ENDPOINTS ---
 app.get('/api/impresoras', async (req, res) => {
-    const tenantId = getTenantId(req);
-    if (tenantId !== 1) {
-        return res.json([]);
-    }
     const estacion = req.query.estacion || 'Caja';
     try {
         // Fetch Windows printers from local station cache
@@ -161,10 +157,6 @@ app.get('/api/impresoras', async (req, res) => {
 });
 
 app.get('/api/impresoras/activa', async (req, res) => {
-    const tenantId = getTenantId(req);
-    if (tenantId !== 1) {
-        return res.json({ nombre: '', transport: 'USB' });
-    }
     const estacion = req.query.estacion || 'Caja';
     try {
         const activeDevice = await prisma.dispositivoRed.findFirst({
@@ -278,10 +270,6 @@ app.post('/api/impresoras/medida', async (req, res) => {
 });
 
 app.get('/api/impresoras/medidas', async (req, res) => {
-    const tenantId = getTenantId(req);
-    if (tenantId !== 1) {
-        return res.json({});
-    }
     const estacion = req.query.estacion || 'Caja';
     try {
         const config = await prisma.configuracion.findUnique({
@@ -324,10 +312,6 @@ app.post('/api/impresoras/perfil', async (req, res) => {
 });
 
 app.get('/api/impresoras/perfiles', async (req, res) => {
-    const tenantId = getTenantId(req);
-    if (tenantId !== 1) {
-        return res.json({});
-    }
     const estacion = req.query.estacion || 'Caja';
     try {
         const config = await prisma.configuracion.findUnique({
@@ -341,10 +325,6 @@ app.get('/api/impresoras/perfiles', async (req, res) => {
 });
 
 app.get('/api/impresoras/estado-solicitud', async (req, res) => {
-    const tenantId = getTenantId(req);
-    if (tenantId !== 1) {
-        return res.json({ solicitando: false });
-    }
     const estacion = req.query.estacion || 'Caja';
     try {
         const config = await prisma.configuracion.findUnique({
@@ -373,10 +353,6 @@ app.get('/api/impresoras/estaciones', async (req, res) => {
 
 // --- RECOVERY ENDPOINTS ---
 app.get('/api/recovery/dispositivos', async (req, res) => {
-    const tenantId = getTenantId(req);
-    if (tenantId !== 1) {
-        return res.json([]);
-    }
     const estacion = req.query.estacion || 'Caja';
     try {
         const devices = await prisma.dispositivoRed.findMany({
@@ -389,10 +365,6 @@ app.get('/api/recovery/dispositivos', async (req, res) => {
 });
 
 app.get('/api/recovery/descubiertos', async (req, res) => {
-    const tenantId = getTenantId(req);
-    if (tenantId !== 1) {
-        return res.json([]);
-    }
     const estacion = req.query.estacion || 'Caja';
     try {
         const config = await prisma.configuracion.findUnique({
@@ -475,10 +447,6 @@ app.post('/api/recovery/solicitar', async (req, res) => {
 });
 
 app.get('/api/recovery/historial', async (req, res) => {
-    const tenantId = getTenantId(req);
-    if (tenantId !== 1) {
-        return res.json([]);
-    }
     const estacion = req.query.estacion || 'Caja';
     try {
         const history = await prisma.historialReparacion.findMany({
@@ -493,10 +461,6 @@ app.get('/api/recovery/historial', async (req, res) => {
 });
 
 app.get('/api/recovery/estado-estacion', async (req, res) => {
-    const tenantId = getTenantId(req);
-    if (tenantId !== 1) {
-        return res.json({ enLinea: false });
-    }
     const estacion = req.query.estacion || 'Caja';
     try {
         const latido = await prisma.configuracion.findUnique({
