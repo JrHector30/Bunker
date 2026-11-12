@@ -134,13 +134,6 @@ app.get('/api/impresoras', async (req, res) => {
             where: { estacion, restauranteId: tenantId }
         });
 
-        // Fetch printers already registered to OTHER restaurants so we don't leak them
-        const otherTenantsPrinters = await prisma.dispositivoRed.findMany({
-            where: { NOT: { restauranteId: tenantId } },
-            select: { nombre: true }
-        });
-        const otherPrinterNames = new Set(otherTenantsPrinters.map(p => p.nombre));
-
         // Merge real-time offline status for USB printers registered in DB
         const combinedNet = netPrinters.map(dev => {
             if (dev.transport === 'USB') {
@@ -153,14 +146,11 @@ app.get('/api/impresoras', async (req, res) => {
             return dev;
         });
 
-        // Filter Windows printers:
-        // 1. Not already registered in this restaurant
-        // 2. NOT registered in any OTHER restaurant
-        // 3. Not virtual system drivers (pdf, xps, onenote, fax, root, microsoft, nitro)
+        // Combine with discovered Windows printers that are not yet registered for this restaurant
+        // Exclude virtual system drivers (pdf, xps, onenote, fax, root, microsoft, nitro)
         const netNames = new Set(netPrinters.map(n => n.nombre));
         const newWin = winPrintersMapped.filter(w => 
             !netNames.has(w.nombre) && 
-            !otherPrinterNames.has(w.nombre) &&
             !w.nombre.match(/pdf|xps|onenote|fax|root|microsoft|nitro/i)
         );
 

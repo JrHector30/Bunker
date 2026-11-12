@@ -16,9 +16,6 @@ If objFSO.FileExists(strFolder & "\server.js") Then
 ElseIf objFSO.FileExists(strFolder & "\printer-server\server.js") Then
     serverFile = "printer-server\server.js"
     runDir = strFolder
-ElseIf objFSO.FileExists(objFSO.GetParentFolderName(strFolder) & "\printer-server\server.js") Then
-    serverFile = "printer-server\server.js"
-    runDir = objFSO.GetParentFolderName(strFolder)
 Else
     serverFile = "server.js"
     runDir = strFolder
@@ -42,6 +39,13 @@ stationName = Trim(stationName)
 ' Iniciar el servidor asignando la estación seleccionada
 WshShell.Environment("Process")("STATION_ID") = stationName
 WshShell.Run "cmd.exe /c set STATION_ID=" & stationName & "&& node " & serverFile & " " & stationName, 0, false
+
+' Iniciar bandeja de sistema con icono B si existe
+If objFSO.FileExists(runDir & "\Bunker_Bandeja.bat") Then
+    WshShell.Run "cmd.exe /c Bunker_Bandeja.bat", 0, false
+ElseIf objFSO.FileExists(strFolder & "\Bunker_Bandeja.bat") Then
+    WshShell.Run "cmd.exe /c """ & strFolder & "\Bunker_Bandeja.bat""", 0, false
+End If
 
 ' Confirmación al usuario
 WScript.Sleep 1500

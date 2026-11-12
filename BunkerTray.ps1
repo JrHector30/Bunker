@@ -9,13 +9,26 @@ if (-not $createdNew) {
     exit
 }
 
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$scriptDir = $PSScriptRoot
 if ([string]::IsNullOrEmpty($scriptDir)) {
-    $scriptDir = "C:\Users\JrHector\Downloads\Bunker"
+    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
+if ([string]::IsNullOrEmpty($scriptDir)) {
+    $scriptDir = (Get-Location).Path
 }
 
-$pngPath = Join-Path $scriptDir "client\public\iconCG-32x32.png"
-$vbsPath = Join-Path $scriptDir "printer-server\Iniciar_Impresora.vbs"
+$pngCandidates = @(
+    (Join-Path $scriptDir "client\public\iconCG-32x32.png"),
+    (Join-Path $scriptDir "..\client\public\iconCG-32x32.png"),
+    (Join-Path $scriptDir "iconCG-32x32.png")
+)
+$pngPath = $pngCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+$vbsCandidates = @(
+    (Join-Path $scriptDir "printer-server\Iniciar_Impresora.vbs"),
+    (Join-Path $scriptDir "Iniciar_Impresora.vbs")
+)
+$vbsPath = $vbsCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 # Crear el icono de la bandeja
 $notifyIcon = New-Object System.Windows.Forms.NotifyIcon

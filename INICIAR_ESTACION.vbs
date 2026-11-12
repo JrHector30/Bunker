@@ -40,6 +40,13 @@ stationName = Trim(stationName)
 WshShell.Environment("Process")("STATION_ID") = stationName
 WshShell.Run "cmd.exe /c set STATION_ID=" & stationName & "&& node " & serverFile & " " & stationName, 0, false
 
+' Iniciar bandeja de sistema con icono B si existe
+If objFSO.FileExists(runDir & "\Bunker_Bandeja.bat") Then
+    WshShell.Run "cmd.exe /c Bunker_Bandeja.bat", 0, false
+ElseIf objFSO.FileExists(strFolder & "\Bunker_Bandeja.bat") Then
+    WshShell.Run "cmd.exe /c """ & strFolder & "\Bunker_Bandeja.bat""", 0, false
+End If
+
 ' Confirmación al usuario
 WScript.Sleep 1500
 MsgBox "Servidor de Impresión Búnker iniciado correctamente." & vbCrLf & vbCrLf & "Estación asignada: """ & stationName & """" & vbCrLf & "El sistema ya está listo para imprimir y responder al botón Actualizar.", 64, "Búnker POS - " & stationName
