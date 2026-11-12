@@ -368,8 +368,8 @@ function formatComprobante(ticket, lineWidth) {
 }
 
 function formatComanda(ticket, lineWidth) {
-  const restaurantName = (ticket.contenido?.restauranteNombre || ticket.restaurante_nombre || "BUNKER RESTOBAR").toUpperCase();
-  const dateStr = new Date(ticket.creado_a).toLocaleString('es-PE');
+  const dateStr = new Date(ticket.creado_a || Date.now()).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  const fullDate = new Date(ticket.creado_a || Date.now()).toLocaleDateString('es-PE');
   const separatorDouble = "=".repeat(lineWidth) + "\n";
   const separatorSingle = "-".repeat(lineWidth) + "\n";
   const center = (str) => {
@@ -377,29 +377,32 @@ function formatComanda(ticket, lineWidth) {
     return " ".repeat(pad) + str + "\n";
   };
 
+  const rawMesa = String(ticket.mesa_id || '').trim();
+  const mesaDisplay = rawMesa.toLowerCase().startsWith('mesa') ? rawMesa.toUpperCase() : `MESA ${rawMesa}`;
+  const mozoDisplay = (ticket.mozo || 'MOZO').toUpperCase();
+
   let text = "";
   text += separatorDouble;
-  text += center(restaurantName);
-  text += center("TICKET DE COCINA");
+  text += center("COMANDA - COCINA");
   text += separatorDouble;
-  text += `FECHA: ${dateStr}\n`;
-  text += `MESA:  MESA ${ticket.mesa_id}\n`;
-  text += `MOZO:  ${ticket.mozo.toUpperCase()}\n`;
+  text += `${mesaDisplay}\n`;
+  text += `MOZO: ${mozoDisplay}\n`;
+  text += `HORA: ${dateStr} (${fullDate})\n`;
   text += separatorSingle;
-  text += "CAN  PRODUCTO / OBSERVACIONES\n";
+  text += "CANT  PRODUCTO\n";
   text += separatorSingle;
 
   const items = Array.isArray(ticket.contenido) ? ticket.contenido : (ticket.contenido.items || []);
   items.forEach(item => {
-    const qty = String(item.cantidad).padEnd(4, ' ');
+    const qty = String(item.cantidad).padStart(2, ' ') + "   ";
     text += `${qty}${item.nombre.toUpperCase()}\n`;
     if (item.observacion && item.observacion.trim() !== '') {
-      text += `    * OBS: ${item.observacion.toUpperCase()}\n`;
+      text += `     * NOTA: ${item.observacion.trim().toUpperCase()}\n`;
     }
   });
 
   text += separatorSingle;
-  text += "\n";
+  text += "\n\n";
   return text;
 }
 

@@ -240,9 +240,9 @@ app.post('/api/impresoras/seleccionar', async (req, res) => {
 });
 
 app.post('/api/impresoras/solicitar-actualizacion', async (req, res) => {
-    const { estacion } = req.body;
-    const targetEstacion = estacion || 'Caja';
     try {
+        const { estacion } = req.body || {};
+        const targetEstacion = estacion || 'Caja';
         await prisma.configuracion.upsert({
             where: { clave: 'solicitar_actualizacion_impresoras' },
             update: { valor: targetEstacion },

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { Plus, Minus, Send, Trash2, ArrowLeft, Search, Image as ImageIcon, FileText, Info, X } from 'lucide-react';
 import { useCache, setOptimisticLock } from '../hooks/useCache';
 import { enqueueTicket } from '../utils/printer';
+import { getActiveRestaurant } from '../utils/tenant';
 import DeleteButton from '../components/ui/DeleteButton';
 import CloseButton from '../components/ui/CloseButton';
 import { networkStatus, NetworkState, offlineOrderService, offlineSnapshotService } from '../offline';
@@ -67,13 +68,15 @@ const WaiterOrderView = () => {
             if (existing) {
                 return prev.map(p => p.tempId === existing.tempId ? { ...p, cantidad: p.cantidad + 1 } : p);
             }
+            const sendsToKitchen = product.categoria?.enviarCocina ?? product.enviarCocina ?? true;
             return [...prev, {
                 tempId: Date.now() + Math.random(),
                 platoId: product.id,
                 nombre: product.nombre,
                 precio: product.precio,
                 cantidad: 1,
-                observacion: ''
+                observacion: '',
+                enviarCocina: sendsToKitchen
             }];
         });
     };
@@ -134,8 +137,45 @@ const WaiterOrderView = () => {
         // 2. Navigate immediately to Tables view
         navigate('/tables');
 
+        const activeRest = getActiveRestaurant();
+        const currentTenantId = user?.restauranteId || activeRest?.id || 1;
+
+        // Función para encolar ticket de cocina con solo los productos que tienen el check "enviarCocina"
+        const sendKitchenTicket = () => {
+            const kitchenItems = cart.filter(item => {
+                if (item.enviarCocina !== undefined) return item.enviarCocina;
+                const prod = products?.find(p => p.id === item.platoId);
+                return prod?.categoria?.enviarCocina ?? true;
+            });
+
+            if (kitchenItems.length > 0) {
+                const rawTableNum = tableInfo.numero || parsedTableId;
+                const tableName = String(rawTableNum).toLowerCase().startsWith('mesa') 
+                    ? String(rawTableNum) 
+                    : `Mesa ${rawTableNum}`;
+                const waiterName = user?.nombre || 'Mozo';
+
+                const kitchenTicket = {
+                    type: 'comanda',
+                    restauranteNombre: activeRest?.nombre || 'Bunker',
+                    mesaId: tableName,
+                    mozo: waiterName,
+                    items: kitchenItems.map(item => ({
+                        cantidad: item.cantidad,
+                        nombre: item.nombre,
+                        observacion: item.observacion || ''
+                    }))
+                };
+
+                enqueueTicket(tableName, waiterName, kitchenTicket, 'Cocina')
+                    .then(() => console.log('✅ Comanda enviada a la ticketera de Cocina.'))
+                    .catch(err => console.error("Error al encolar ticket de cocina:", err));
+            }
+        };
+
         // 3. Perform the creation (Offline-First hybrid logic)
         if (networkStatus.isOffline()) {
+            sendKitchenTicket();
             offlineOrderService.createOrder({
                 mesaId: parsedTableId,
                 usuarioId: user.id,
@@ -166,11 +206,15 @@ const WaiterOrderView = () => {
         } else {
             fetch('/api/orders', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-restaurante-id': String(currentTenantId)
+                },
                 body: JSON.stringify({
                     mesaId: parsedTableId,
                     usuarioId: user.id,
                     comensales: tableInfo.comensales, // Send captured count
+                    restauranteId: currentTenantId,
                     detalles: cart.map(item => ({
                         platoId: item.platoId,
                         cantidad: item.cantidad,
@@ -182,15 +226,8 @@ const WaiterOrderView = () => {
                 if (res.ok) {
                     showToast('Pedido enviado a cocina!', 'success');
                     
-                    // Enqueue the ticket asynchronously for cloud printing
-                    const ticketContent = cart.map(item => ({
-                        cantidad: item.cantidad,
-                        nombre: item.nombre,
-                        observacion: item.observacion || ''
-                    }));
-                    
-                    enqueueTicket(tableInfo.numero || parsedTableId, user.nombre || 'Mozo', ticketContent, 'Cocina')
-                        .catch(err => console.error("Error al encolar ticket en la nube:", err));
+                    // Enqueue the kitchen ticket with filtered items (only products for kitchen)
+                    sendKitchenTicket();
 
                     // Hidratar snapshot de fondo para incorporar comanda recién creada (omitiendo productos)
                     offlineSnapshotService.hydrateOperationalSnapshot({ skipProducts: true }).catch(() => {});
