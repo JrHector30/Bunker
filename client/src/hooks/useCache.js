@@ -137,9 +137,13 @@ export function useCache(rawKey, fetcher, initialData = []) {
                 if (!isMounted || fetchId <= lastResolvedFetchIdRef.current) return;
                 lastResolvedFetchIdRef.current = fetchId;
                 const lockedResult = applyLocks(key, result);
-                const newString = JSON.stringify(lockedResult);
                 globalCache[key] = lockedResult;
-                localStorage.setItem(key, newString);
+                try {
+                    const newString = JSON.stringify(lockedResult);
+                    localStorage.setItem(key, newString);
+                } catch (storageErr) {
+                    console.warn(`[useCache] localStorage cuota excedida para ${key}, manteniendo en memoria:`, storageErr);
+                }
                 setData(lockedResult);
             })
             .catch(error => {
@@ -160,7 +164,11 @@ export function useCache(rawKey, fetcher, initialData = []) {
         if (optimisticData !== null) {
             const lockedOptimistic = applyLocks(currentKey, optimisticData);
             globalCache[currentKey] = lockedOptimistic;
-            localStorage.setItem(currentKey, JSON.stringify(lockedOptimistic));
+            try {
+                localStorage.setItem(currentKey, JSON.stringify(lockedOptimistic));
+            } catch (storageErr) {
+                console.warn(`[useCache] localStorage cuota excedida para ${currentKey}:`, storageErr);
+            }
             if (isMountedRef.current && keyRef.current === currentKey) {
                 setData(lockedOptimistic);
             }
@@ -176,11 +184,15 @@ export function useCache(rawKey, fetcher, initialData = []) {
         try {
             const result = await fetcherRef.current();
             const lockedResult = applyLocks(currentKey, result);
-            const newString = JSON.stringify(lockedResult);
             
             // Siempre poblar memoria y disco localmente para la clave de origen
             globalCache[currentKey] = lockedResult;
-            localStorage.setItem(currentKey, newString);
+            try {
+                const newString = JSON.stringify(lockedResult);
+                localStorage.setItem(currentKey, newString);
+            } catch (storageErr) {
+                console.warn(`[useCache] localStorage cuota excedida para ${currentKey}:`, storageErr);
+            }
 
             // Solo actualizar UI si es la petición más reciente o más nueva que el último resultado procesado
             if (isMountedRef.current && keyRef.current === currentKey && fetchId > lastResolvedFetchIdRef.current) {

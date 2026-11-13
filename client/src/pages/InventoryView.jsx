@@ -18,6 +18,7 @@ import { CustomCheckbox } from '../components/ui/CustomCheckbox';
 import { motion } from 'motion/react';
 import { safeRecordProductShadow } from '../offline';
 import RecetarioEscandallo from '../components/recetario/RecetarioEscandallo';
+import { getActiveRestaurant } from '../utils/tenant';
 
 
 const InventoryView = () => {
@@ -47,20 +48,22 @@ const InventoryView = () => {
         setSearchParams({ tab: newTab });
     };
 
-    // Data States from Cache con validación estricta de res.ok
-    const fetchProductsAPI = () => fetch('/api/products').then(res => {
+    // Data States from Cache con validación estricta de res.ok y multi-tenant
+    const getTenantHeader = () => ({ 'x-restaurante-id': String(getActiveRestaurant()?.id || 1) });
+
+    const fetchProductsAPI = () => fetch('/api/products', { headers: getTenantHeader() }).then(res => {
         if (!res.ok) throw new Error('Error al cargar productos');
         return res.json();
     });
-    const fetchCategoriesAPI = () => fetch('/api/categories?_t=' + Date.now()).then(res => {
+    const fetchCategoriesAPI = () => fetch('/api/categories?_t=' + Date.now(), { headers: getTenantHeader() }).then(res => {
         if (!res.ok) throw new Error('Error al cargar categorías');
         return res.json();
     });
-    const fetchInsumosAPI = () => fetch('/api/insumos').then(res => {
+    const fetchInsumosAPI = () => fetch('/api/insumos', { headers: getTenantHeader() }).then(res => {
         if (!res.ok) throw new Error('Error al cargar insumos');
         return res.json();
     });
-    const fetchKardexAPI = () => fetch('/api/kardex').then(res => {
+    const fetchKardexAPI = () => fetch('/api/kardex', { headers: getTenantHeader() }).then(res => {
         if (!res.ok) throw new Error('Error al cargar kardex');
         return res.json();
     });
@@ -1271,7 +1274,11 @@ const InventoryView = () => {
         try {
             const payload = { ...kardexForm, usuarioId: user.id };
             const res = await fetch('/api/kardex', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getTenantHeader()
+                },
                 body: JSON.stringify(payload)
             });
             if (res.ok) {

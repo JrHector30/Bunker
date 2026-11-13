@@ -5140,9 +5140,30 @@ app.get('/api/kardex', async (req, res) => {
 
         const movimientos = await prisma.movimientoInsumo.findMany({
             where: whereClause,
-            include: {
-                insumo: true,
-                usuario: true
+            select: {
+                id: true,
+                insumoId: true,
+                tipoMovimiento: true,
+                cantidad: true,
+                motivo: true,
+                fecha: true,
+                usuarioId: true,
+                insumo: {
+                    select: {
+                        id: true,
+                        nombre: true,
+                        unidadMedida: true,
+                        precioCompra: true,
+                        stock: true
+                    }
+                },
+                usuario: {
+                    select: {
+                        id: true,
+                        nombre: true,
+                        rol: true
+                    }
+                }
             },
             orderBy: {
                 fecha: 'desc'
