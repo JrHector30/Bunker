@@ -45,11 +45,11 @@ export const PopularMenuCard = ({ popularMenu = {} }) => {
           Menú Popular
         </h2>
 
-        {/* High-end styled segmented pill buttons */}
+        {/* Botones de Período - Estilo Pill SuperAdmin sin borde gris */}
         <div
           role="tablist"
           aria-label="Seleccionar período"
-          className="flex items-center gap-1 rounded-xl bg-slate-100/90 p-1 border border-slate-200/70 dark:border-slate-700/60 dark:bg-[#1A2232] shadow-inner"
+          className="flex items-center gap-1.5 sm:gap-2 flex-wrap"
         >
           {PERIOD_OPTIONS.map((period) => {
             const isSelected = period === selectedPeriod;
@@ -60,10 +60,10 @@ export const PopularMenuCard = ({ popularMenu = {} }) => {
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setSelectedPeriod(period)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all whitespace-nowrap cursor-pointer select-none ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer border-0 active:scale-95 whitespace-nowrap select-none ${
                   isSelected
-                    ? 'bg-[var(--primary)] text-white shadow-sm scale-[1.02]'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/50'
+                    ? 'font-bold shadow-md bg-zinc-950 hover:bg-black text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-black'
+                    : 'shadow-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-300'
                 }`}
               >
                 {period}

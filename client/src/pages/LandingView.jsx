@@ -203,9 +203,38 @@ export default function LandingView() {
       {/* HEADER */}
       <header className="fixed top-0 w-full z-50 border-b border-gray-900/40 bg-[#060609]/70 backdrop-blur-md">
         <nav className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-lg font-bold tracking-tight cursor-pointer hover:scale-105 transition-transform origin-left" onClick={() => navigate('/')}>
-            <LayoutDashboard className="text-teal-400" size={22} />
-            BUNKER
+          {/* Authentic Búnker Padlock Logo replica with Cyan Shimmer Glow */}
+          <div
+            className="flex items-center gap-3 cursor-pointer group select-none transition-transform duration-200 active:scale-95 origin-left"
+            onClick={() => navigate('/')}
+          >
+            <div className="relative flex-shrink-0">
+              <div
+                className="absolute -inset-1 rounded-2xl opacity-40 blur-md group-hover:opacity-100 transition-all duration-500 pointer-events-none"
+                style={{
+                  backgroundColor: '#00d0b8',
+                  boxShadow: '0 0 16px rgba(0, 208, 184, 0.6), 0 0 32px rgba(0, 208, 184, 0.3)',
+                }}
+              />
+              <div className="relative w-10 h-10 rounded-xl bg-black border border-gray-800/90 flex items-center justify-center shadow-lg overflow-hidden">
+                <img
+                  src="/android-chrome-192x192.png"
+                  alt="Búnker"
+                  className="w-6 h-6 object-contain"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col min-w-0 text-left">
+              <span className="font-extrabold text-sm text-white tracking-wider font-sans leading-none">
+                BÚNKER
+              </span>
+              <span
+                className="text-[9px] font-bold tracking-widest uppercase mt-1"
+                style={{ color: '#00d0b8' }}
+              >
+                SISTEMA
+              </span>
+            </div>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
             <a href="#features" className="hover:text-white transition-colors">Beneficios</a>
@@ -526,8 +555,37 @@ export default function LandingView() {
       <footer className="border-t border-gray-900 bg-black/60 py-12 px-6 text-xs text-gray-500">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
           <div>
-            <div className="flex items-center justify-center md:justify-start gap-2 text-sm font-bold text-white tracking-tight mb-2 hover:scale-105 transition-transform origin-left cursor-pointer" onClick={() => navigate('/')}>
-              <LayoutDashboard className="text-teal-400" size={16} /> BUNKER
+            <div
+              className="flex items-center justify-center md:justify-start gap-3 cursor-pointer group mb-3 select-none transition-transform duration-200 active:scale-95 origin-left"
+              onClick={() => navigate('/')}
+            >
+              <div className="relative flex-shrink-0">
+                <div
+                  className="absolute -inset-1 rounded-2xl opacity-30 blur-md group-hover:opacity-90 transition-all duration-500 pointer-events-none"
+                  style={{
+                    backgroundColor: '#00d0b8',
+                    boxShadow: '0 0 12px rgba(0, 208, 184, 0.5)',
+                  }}
+                />
+                <div className="relative w-9 h-9 rounded-xl bg-black border border-gray-800/90 flex items-center justify-center shadow-md overflow-hidden">
+                  <img
+                    src="/android-chrome-192x192.png"
+                    alt="Búnker"
+                    className="w-5 h-5 object-contain"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="font-extrabold text-sm text-white tracking-wider font-sans leading-none">
+                  BÚNKER
+                </span>
+                <span
+                  className="text-[8.5px] font-bold tracking-widest uppercase mt-0.5"
+                  style={{ color: '#00d0b8' }}
+                >
+                  SISTEMA
+                </span>
+              </div>
             </div>
             <p className="leading-relaxed max-w-xs">Optimización transaccional de alta fidelidad para el control administrativo de locales gastronómicos.</p>
           </div>
