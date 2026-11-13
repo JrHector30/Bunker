@@ -74,6 +74,26 @@ export const CUSTOMER_REVIEWS = [
     date: 'Ayer, 12:40 PM',
     comment: 'Carne en su punto y papas crujientes. 10 de 10 el sazón.',
   },
+  {
+    id: 'REV-98',
+    customer: 'Ignacio Morales',
+    rating: 2,
+    sentiment: 'negative',
+    dish: 'Arroz con Pato',
+    channel: 'Salón',
+    date: 'Hace 3 días',
+    comment: 'El plato llegó algo tibio en hora punta. La sazón buena pero la temperatura pudo mejorar.',
+  },
+  {
+    id: 'REV-97',
+    customer: 'Daniela Cáceres',
+    rating: 3,
+    sentiment: 'negative',
+    dish: 'Caldo de Gallina',
+    channel: 'Delivery',
+    date: 'Hace 5 días',
+    comment: 'Demoró un poco más de lo estimado en llegar por la lluvia. El caldo rico pero el empaque llegó algo aplastado.',
+  },
 ];
 
 export const WEEKLY_SALES_DATA = [

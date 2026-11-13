@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Star } from 'lucide-react';
+import { Info } from '@/components/animate-ui/icons/info';
 import { RATINGS_SUMMARY } from './dashboardData';
 
 export const RatingsCard = ({ onOpenReviewsModal }) => {
@@ -49,20 +50,7 @@ export const RatingsCard = ({ onOpenReviewsModal }) => {
             onClick={() => setShowTooltip((prev) => !prev)}
             className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition-colors hover:text-[var(--primary)] hover:bg-slate-200/50 dark:text-slate-400 dark:hover:text-[var(--primary)] dark:hover:bg-slate-700/50 cursor-pointer"
           >
-            {/* Minimalist modern info icon */}
-            <svg
-              className="h-3.5 w-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <line x1="12" y1="16" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12.01" y2="8" strokeWidth="2.5" />
-            </svg>
+            <Info animateOnHover size={14} />
           </button>
         </div>
 

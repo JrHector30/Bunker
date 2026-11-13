@@ -25,24 +25,24 @@ export const ReviewsModal = ({ onClose }) => {
       aria-modal="true"
     >
       <div
-        className="w-full max-w-2xl rounded-2xl border border-slate-100 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-[#131A26]"
+        className="w-full max-w-2xl rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-[#131A26]"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4 dark:border-slate-800">
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
               Detalle de Reseñas · Búnker
             </h3>
             <p className="mt-0.5 text-xs text-slate-500 tabular-nums dark:text-slate-400">
-              {RATINGS_SUMMARY.score} estrellas promedio sobre{' '}
-              {RATINGS_SUMMARY.totalReviews} opiniones verificadas
+              {RATINGS_SUMMARY.score} estrellas promedio sobre {RATINGS_SUMMARY.totalReviews} opiniones verificadas
             </p>
           </div>
           <CloseButton onClick={onClose} className="scale-90 shrink-0" />
         </div>
 
         {/* Filter tabs */}
-        <div className="mt-4 flex w-fit items-center gap-1.5 rounded-xl bg-slate-100/90 p-1 border border-slate-200/60 dark:border-slate-700/60 dark:bg-[#1A2232]">
+        <div className="mt-4 flex w-fit items-center gap-1.5 rounded-xl bg-[#F8FAFC] p-1 border border-slate-200/60 dark:border-slate-800 dark:bg-[#1A2232]">
           {REVIEW_TABS.map((tab) => {
             const isActive = reviewFilter === tab.id;
             return (
@@ -50,10 +50,10 @@ export const ReviewsModal = ({ onClose }) => {
                 key={tab.id}
                 type="button"
                 onClick={() => setReviewFilter(tab.id)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all whitespace-nowrap cursor-pointer select-none ${
                   isActive
-                    ? 'bg-[var(--primary)] text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+                    ? 'bg-white text-slate-900 shadow-xs dark:bg-[#253045] dark:text-white'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
                 {tab.label}
@@ -62,36 +62,32 @@ export const ReviewsModal = ({ onClose }) => {
           })}
         </div>
 
-        <div className="mt-4 max-h-[380px] space-y-3 overflow-y-auto pr-1">
+        {/* Reviews List */}
+        <div className="mt-4 max-h-[420px] space-y-3 overflow-y-auto pr-1">
           {filteredReviews.length === 0 ? (
             <p className="py-8 text-center text-xs text-slate-400">
-              No hay reseñas para este filtro.
+              No hay opiniones registradas para este filtro.
             </p>
           ) : (
             filteredReviews.map((rev) => (
               <article
                 key={rev.id}
-                className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 transition-colors dark:border-slate-800 dark:bg-[#1A2232]/70"
+                className="rounded-2xl border border-slate-100/80 bg-[#F8FAFC] p-4 transition-colors dark:border-slate-800/80 dark:bg-[#1A2232]"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FFF1EB] text-xs font-bold text-[#F26522] dark:bg-[#F26522]/20 dark:text-[#FF7A3D]">
-                      {rev.author.charAt(0)}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm">
+                    <span className="font-bold text-slate-900 dark:text-slate-100">
+                      {rev.customer}
                     </span>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        {rev.author}
-                      </h4>
-                      <p className="text-[10px] text-slate-400">
-                        {rev.date} · Mesa {rev.table}
-                      </p>
-                    </div>
+                    <span className="text-slate-400 dark:text-slate-500 ml-1.5 font-medium">
+                      · {rev.dish} ({rev.channel})
+                    </span>
                   </div>
-                  <div className="flex items-center gap-0.5">
+                  <div className="flex items-center gap-0.5 shrink-0">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star
                         key={i}
-                        className={`h-3 w-3 ${
+                        className={`h-3.5 w-3.5 ${
                           i < rev.rating
                             ? 'fill-[#F59E0B] text-[#F59E0B]'
                             : 'fill-slate-200 text-slate-200 dark:fill-slate-700 dark:text-slate-700'
@@ -103,6 +99,9 @@ export const ReviewsModal = ({ onClose }) => {
                 <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                   {rev.comment}
                 </p>
+                <span className="mt-2.5 block text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                  {rev.date}
+                </span>
               </article>
             ))
           )}
@@ -111,3 +110,5 @@ export const ReviewsModal = ({ onClose }) => {
     </div>
   );
 };
+
+export default ReviewsModal;
