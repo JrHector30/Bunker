@@ -108,9 +108,9 @@ export const SalesChart = ({
         >
           <defs>
             <linearGradient id="bunkerSalesArea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#F26522" stopOpacity="0.22" />
-              <stop offset="85%" stopColor="#F26522" stopOpacity="0.03" />
-              <stop offset="100%" stopColor="#F26522" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.25" />
+              <stop offset="85%" stopColor="var(--primary)" stopOpacity="0.04" />
+              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -145,7 +145,7 @@ export const SalesChart = ({
           <path
             d={linePath}
             fill="none"
-            stroke="#F26522"
+            stroke="var(--primary)"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -160,8 +160,8 @@ export const SalesChart = ({
                   cy={point.y}
                   r={isActive ? 4.5 : 2.5}
                   className="transition-all duration-150"
-                  fill={isActive ? '#F26522' : '#FFFFFF'}
-                  stroke="#F26522"
+                  fill={isActive ? 'var(--primary)' : '#FFFFFF'}
+                  stroke="var(--primary)"
                   strokeWidth={isActive ? 2.5 : 1.75}
                 />
                 {isActive && (
@@ -169,7 +169,7 @@ export const SalesChart = ({
                     cx={point.x}
                     cy={point.y}
                     r={9}
-                    fill="#F26522"
+                    fill="var(--primary)"
                     fillOpacity="0.18"
                     className="animate-pulse"
                   />
@@ -191,9 +191,10 @@ export const SalesChart = ({
                   textAnchor="middle"
                   className={`text-[11px] font-medium transition-colors ${
                     isActive
-                      ? 'fill-[#F26522] font-semibold'
+                      ? 'font-bold'
                       : 'fill-slate-400 dark:fill-slate-500'
                   }`}
+                  style={isActive ? { fill: 'var(--primary)' } : undefined}
                 >
                   {point.data.day}
                 </text>
