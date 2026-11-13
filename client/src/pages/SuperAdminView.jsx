@@ -388,7 +388,7 @@ export default function SuperAdminView() {
     const greetingName = superadmin?.correo?.toLowerCase().includes('ychiyanagimel') ? 'Melanie' : 'Hector';
 
     return (
-        <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? 'bg-[#09090b] text-zinc-100 selection:bg-zinc-700 selection:text-white' : 'bg-[#fafafa] text-zinc-900 selection:bg-zinc-200'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? 'bg-[#09090b] text-zinc-100 selection:bg-zinc-700 selection:text-white' : 'bg-[#fafafa] text-zinc-900 selection:bg-zinc-200'}`} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             {/* Header Superadmin */}
             <header className={`border-b sticky top-0 z-40 px-6 py-4 backdrop-blur-md transition-colors duration-200 ${isDarkMode ? 'bg-[#09090b]/80 border-zinc-800/80 text-white' : 'bg-white/90 border-slate-200 text-slate-900 shadow-sm'
                 }`}>
@@ -399,16 +399,14 @@ export default function SuperAdminView() {
                             <img src={logoMinimalista} alt="Logo Bunker" className="w-full h-full object-contain" />
                         </div>
                         <div className="flex flex-col justify-center">
-                            <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">BUNKER MASTER</h1>
+                            <h1 className="text-xl translate-y-6 sm:text-2xl font-black tracking-tight leading-none">BUNKER MASTER</h1>
                             <div className="mt-1.5">
-                                <span className={`inline-block text-[9.5px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full ${isDarkMode ? 'bg-zinc-800 text-zinc-200' : 'bg-zinc-900 text-white'
+                                <span className={`inline-block -translate-y-0.7 text-[9.5px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full ${isDarkMode ? 'bg-zinc-800 text-zinc-200' : 'bg-zinc-900 text-white'
                                     }`}>
                                     SUPERADMIN
                                 </span>
                             </div>
-                            <p className={`text-xs font-bold mt-1.5 ${isDarkMode ? 'text-zinc-200' : 'text-zinc-800'}`}>
-                                Hola, {greetingName}
-                            </p>
+
                             <p className={`text-[11px] font-medium mt-0.5 ${isDarkMode ? 'text-zinc-400' : 'text-slate-500'}`}>
                                 Control Global de Restaurantes y Membresías
                             </p>

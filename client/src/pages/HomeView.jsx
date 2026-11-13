@@ -83,7 +83,7 @@ export default function HomeView() {
           loadDashboardData();
         }
       };
-    } catch (_) {}
+    } catch (_) { }
 
     const interval = setInterval(loadDashboardData, 12000);
 
@@ -309,7 +309,7 @@ export default function HomeView() {
         const ch = new BroadcastChannel('bunker');
         ch.postMessage('refreshKitchenQueue');
         ch.close();
-      } catch (_) {}
+      } catch (_) { }
     } catch (err) {
       console.error('Error al actualizar estado:', err);
       setToastMessage('Error al sincronizar estado del pedido.');
@@ -327,7 +327,7 @@ export default function HomeView() {
                 Resumen General
               </h1>
               {dashboardData.restauranteNombre && (
-                <span className="inline-flex items-center rounded-full bg-[var(--primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--primary)] border border-[var(--primary)]/20">
+                <span className="-translate-y-2 inline-flex items-center rounded-full bg-[var(--primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--primary)] border border-[var(--primary)]/20">
                   {dashboardData.restauranteNombre}
                 </span>
               )}

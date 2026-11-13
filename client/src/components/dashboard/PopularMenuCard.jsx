@@ -33,7 +33,7 @@ export const PopularMenuCard = ({ popularMenu = {} }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('Hoy');
 
   const rawDishes = popularMenu[selectedPeriod] || [];
-  const dishes = rawDishes.length > 0 ? rawDishes : (DEFAULT_POPULAR_MENU[selectedPeriod] || []);
+  const dishes = rawDishes.length >= 3 ? rawDishes : (DEFAULT_POPULAR_MENU[selectedPeriod] || []);
 
   return (
     <section
