@@ -40,8 +40,10 @@ export function Calendar({
   }
 
   const today = startOfDay(new Date());
-  const rangeVal = mode === "range" && selected && !(selected instanceof Date) ? selected : undefined;
-  const singleVal = mode === "single" && selected instanceof Date ? selected : undefined;
+  const rangeVal =
+    mode === "range" && selected && !(selected instanceof Date) ? selected : undefined;
+  const singleVal =
+    mode === "single" && selected instanceof Date ? selected : undefined;
 
   const hasRangeSpan = Boolean(
     mode === "range" &&
@@ -77,7 +79,7 @@ export function Calendar({
           type="button"
           aria-label="Mes anterior"
           onClick={() => onMonthChange?.(subMonths(monthStart, 1))}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 !bg-transparent !shadow-none text-slate-600 transition-colors hover:!bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:!bg-slate-800 cursor-pointer"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
@@ -90,13 +92,13 @@ export function Calendar({
           type="button"
           aria-label="Mes siguiente"
           onClick={() => onMonthChange?.(addMonths(monthStart, 1))}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 !bg-transparent !shadow-none text-slate-600 transition-colors hover:!bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:!bg-slate-800 cursor-pointer"
         >
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      {/* Sin espacio horizontal (gap-x-0) para unir la banda del rango */}
+      {/* Sin gap horizontal para unir la banda continua */}
       <div className="grid grid-cols-7 gap-x-0 gap-y-0.5 text-center">
         {WEEKDAYS.map((wd) => (
           <div
@@ -129,31 +131,32 @@ export function Calendar({
           const isSameEndpoint = isRangeStart && isRangeEnd;
           const isEndpoint = isRangeStart || isRangeEnd || isSingleSelected;
 
-          let radiusClass = "rounded-lg";
+          // Redondeo exacto: inicio (izq redonda, der cuadrada) / medio (cuadrado) / fin (izq cuadrada, der redonda)
+          let radiusClass = "!rounded-lg";
           if (hasRangeSpan) {
             if (isRangeStart && !isSameEndpoint) {
-              radiusClass = "rounded-l-lg rounded-r-none";
+              radiusClass = "!rounded-l-lg !rounded-r-none";
             } else if (isRangeEnd && !isSameEndpoint) {
-              radiusClass = "rounded-r-lg rounded-l-none";
+              radiusClass = "!rounded-r-lg !rounded-l-none";
             } else if (isInRange) {
-              radiusClass = "rounded-none";
+              radiusClass = "!rounded-none";
             }
           }
 
           let stateClass =
-            "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800";
+            "!bg-transparent text-slate-700 hover:!bg-slate-100 dark:text-slate-200 dark:hover:!bg-slate-800";
           if (isEndpoint) {
             stateClass =
-              "bg-slate-900 font-semibold text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200";
+              "!bg-slate-900 font-semibold !text-white hover:!bg-slate-800 dark:!bg-white dark:!text-black dark:hover:!bg-neutral-200";
           } else if (isInRange) {
             stateClass =
-              "bg-slate-200/80 font-medium text-slate-900 hover:bg-slate-200 dark:bg-[#1E222D] dark:text-slate-100 dark:hover:bg-[#262B38]";
+              "!bg-slate-200/80 font-medium !text-slate-900 hover:!bg-slate-200 dark:!bg-[#1E222D] dark:!text-slate-100 dark:hover:!bg-[#262B38]";
           } else if (isToday) {
             stateClass =
-              "border border-slate-300 font-semibold text-slate-900 hover:bg-slate-100 dark:border-slate-700 dark:text-white dark:hover:bg-slate-800";
+              "!bg-transparent !border !border-slate-300 font-semibold text-slate-900 hover:!bg-slate-100 dark:!border-slate-700 dark:text-white dark:hover:!bg-slate-800";
           } else if (!isCurrentMonth) {
             stateClass =
-              "text-slate-300 hover:bg-slate-50 dark:text-slate-700 dark:hover:bg-slate-800/40";
+              "!bg-transparent text-slate-300 hover:!bg-slate-50 dark:text-slate-700 dark:hover:!bg-slate-800/40";
           }
 
           return (
@@ -161,7 +164,7 @@ export function Calendar({
               key={day.toISOString()}
               type="button"
               onClick={() => handleDayClick(day)}
-              className={`flex h-8 w-9 items-center justify-center text-xs tabular-nums transition-colors cursor-pointer ${radiusClass} ${stateClass}`}
+              className={`flex h-8 w-9 items-center justify-center !border-0 !p-0 !shadow-none !outline-none text-xs tabular-nums transition-colors cursor-pointer ${radiusClass} ${stateClass}`}
             >
               {format(day, "d")}
             </button>
