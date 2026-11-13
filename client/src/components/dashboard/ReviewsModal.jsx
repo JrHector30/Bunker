@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
+import CloseButton from '../ui/CloseButton';
 import { CUSTOMER_REVIEWS, RATINGS_SUMMARY } from './dashboardData';
 
 const REVIEW_TABS = [
@@ -18,7 +19,7 @@ export const ReviewsModal = ({ onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[2px] dark:bg-black/65"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[2px] dark:bg-black/65 animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -37,75 +38,74 @@ export const ReviewsModal = ({ onClose }) => {
               {RATINGS_SUMMARY.totalReviews} opiniones verificadas
             </p>
           </div>
-          <button
-            type="button"
-            aria-label="Cerrar detalle de reseñas"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200 cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <CloseButton onClick={onClose} className="scale-90 shrink-0" />
         </div>
 
-        <div className="mt-4 flex w-fit items-center gap-1.5 rounded-xl bg-[#F8F9FA] p-1 dark:bg-[#1A2232]">
-          {REVIEW_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setReviewFilter(tab.id)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
-                reviewFilter === tab.id
-                  ? 'bg-white text-slate-900 shadow-xs dark:bg-[#253045] dark:text-white'
-                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Filter tabs */}
+        <div className="mt-4 flex w-fit items-center gap-1.5 rounded-xl bg-slate-100/90 p-1 border border-slate-200/60 dark:border-slate-700/60 dark:bg-[#1A2232]">
+          {REVIEW_TABS.map((tab) => {
+            const isActive = reviewFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setReviewFilter(tab.id)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? 'bg-[var(--primary)] text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="mt-4 max-h-[360px] space-y-3 overflow-y-auto pr-1">
-          {filteredReviews.map((review) => (
-            <article
-              key={review.id}
-              className="rounded-xl border border-slate-100 bg-[#F8F9FA] p-4 dark:border-slate-800 dark:bg-[#1A2232]"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    {review.customer}
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className="text-slate-300 dark:text-slate-600"
-                  >
-                    ·
-                  </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    {review.dish} ({review.channel})
-                  </span>
+        <div className="mt-4 max-h-[380px] space-y-3 overflow-y-auto pr-1">
+          {filteredReviews.length === 0 ? (
+            <p className="py-8 text-center text-xs text-slate-400">
+              No hay reseñas para este filtro.
+            </p>
+          ) : (
+            filteredReviews.map((rev) => (
+              <article
+                key={rev.id}
+                className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 transition-colors dark:border-slate-800 dark:bg-[#1A2232]/70"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FFF1EB] text-xs font-bold text-[#F26522] dark:bg-[#F26522]/20 dark:text-[#FF7A3D]">
+                      {rev.author.charAt(0)}
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                        {rev.author}
+                      </h4>
+                      <p className="text-[10px] text-slate-400">
+                        {rev.date} · Mesa {rev.table}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-3 w-3 ${
+                          i < rev.rating
+                            ? 'fill-[#F59E0B] text-[#F59E0B]'
+                            : 'fill-slate-200 text-slate-200 dark:fill-slate-700 dark:text-slate-700'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-3.5 w-3.5 ${
-                        i < review.rating
-                          ? 'fill-[#F59E0B] text-[#F59E0B]'
-                          : 'fill-slate-200 text-slate-200 dark:fill-slate-700 dark:text-slate-700'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                {review.comment}
-              </p>
-              <div className="mt-2 text-[10px] text-slate-400 dark:text-slate-500 tabular-nums">
-                {review.date}
-              </div>
-            </article>
-          ))}
+                <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                  {rev.comment}
+                </p>
+              </article>
+            ))
+          )}
         </div>
       </div>
     </div>

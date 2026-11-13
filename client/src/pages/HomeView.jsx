@@ -194,7 +194,7 @@ export default function HomeView() {
     ];
   }, [dashboardData, currency]);
 
-  // Kitchen segments from live kitchen status
+  // Kitchen segments from live kitchen status with short, concise relevant texts
   const kitchenSegments = useMemo(() => {
     const ks = dashboardData.kitchenStatus || { listos: 0, en_proceso: 0, pendientes: 0 };
     const target = ks.target || 50;
@@ -217,7 +217,8 @@ export default function HomeView() {
         avgPrepMinutes: 11,
         color: '#22C55E',
         softBg: '#DCFCE7',
-        description: 'Platos emplatados listos para entrega en mesa o despacho.',
+        shortInfo: 'Listos para servir en mesa',
+        description: 'Platos emplatados listos',
       },
       {
         id: 'en_proceso',
@@ -227,7 +228,8 @@ export default function HomeView() {
         avgPrepMinutes: 17,
         color: '#3B82F6',
         softBg: '#DBEAFE',
-        description: 'Platos en preparación activa en parrilla, barra y horno.',
+        shortInfo: 'En preparación en cocina',
+        description: 'En cocción y barra',
       },
       {
         id: 'pendientes',
@@ -237,7 +239,8 @@ export default function HomeView() {
         avgPrepMinutes: 23,
         color: '#EF4444',
         softBg: '#FEE2E2',
-        description: 'Platos recién ingresados esperando turno en cocina.',
+        shortInfo: 'En cola de preparación',
+        description: 'Esperando turno en cocina',
       },
     ];
   }, [dashboardData.kitchenStatus]);
@@ -314,10 +317,10 @@ export default function HomeView() {
   };
 
   return (
-    <div className="w-full flex-1 min-h-full space-y-4 font-sans text-slate-900 transition-colors duration-200 dark:text-slate-100">
-      <div className="mx-auto w-full max-w-[1440px] space-y-4">
-        {/* Section Header (No dark mode button, respecting sidebar) */}
-        <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="w-full flex-1 min-h-full space-y-2.5 font-sans text-slate-900 transition-colors duration-200 dark:text-slate-100 pb-2">
+      <div className="mx-auto w-full max-w-[1440px] space-y-2.5">
+        {/* Header: Title + Subtitle tight underneath */}
+        <header className="flex flex-wrap items-center justify-between gap-2">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold tracking-tight text-slate-900 text-balance dark:text-slate-50">
@@ -335,11 +338,8 @@ export default function HomeView() {
           </div>
         </header>
 
-        {/* Row 1: Resumen de Pedidos (5 KPI Cards with SmoothDropdown & theme background on Ingresos) */}
-        <section aria-label="Resumen de Pedidos">
-          <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-            Resumen de Pedidos
-          </h2>
+        {/* Row 1: 5 KPI Cards (Title 'Resumen de Pedidos' removed, higher placement) */}
+        <section aria-label="KPIs">
           <KpiCards
             metrics={kpiMetrics}
             currency={currency}
@@ -349,25 +349,25 @@ export default function HomeView() {
           />
         </section>
 
-        {/* Row 2: Gráficos y Métricas Operativas (45% / 30% / 25% en escritorio, responsivo en columna para celular) */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[45fr_30fr_25fr]">
+        {/* Row 2: SalesChart (46%), PopularMenuCard (28%), KitchenStatusChart (26%) */}
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[46fr_28fr_26fr]">
           <SalesChart data={WEEKLY_SALES_DATA} currency={currency} />
+          <PopularMenuCard popularMenu={dashboardData.popularMenu} />
           <KitchenStatusChart
             segments={kitchenSegments}
             isDark={typeof document !== 'undefined' && document.documentElement.classList.contains('dark')}
           />
-          <RatingsCard
-            onOpenReviewsModal={() => setIsReviewsModalOpen(true)}
-          />
         </div>
 
-        {/* Row 3: Operación y Carta (60% / 40% en escritorio, responsivo en columna para celular) */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[60fr_40fr]">
+        {/* Row 3: LatestOrdersTable (68%), RatingsCard (32%) */}
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[68fr_32fr]">
           <LatestOrdersTable
             orders={dashboardData.latestOrders}
             onSelectOrder={(order) => setSelectedOrder(order)}
           />
-          <PopularMenuCard popularMenu={dashboardData.popularMenu} />
+          <RatingsCard
+            onOpenReviewsModal={() => setIsReviewsModalOpen(true)}
+          />
         </div>
       </div>
 
@@ -399,7 +399,7 @@ export default function HomeView() {
       {toastMessage && (
         <div
           role="status"
-          className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-medium text-white shadow-lg dark:border dark:border-slate-700 dark:bg-[#1A2232]"
+          className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-medium text-white shadow-lg dark:border dark:border-slate-700 dark:bg-[#1A2232] animate-fade-in"
         >
           <Check className="h-4 w-4 text-[#22C55E]" />
           <span>{toastMessage}</span>

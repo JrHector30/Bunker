@@ -1,6 +1,13 @@
 import React, { useMemo, useState } from 'react';
+import {
+  ChevronFirst,
+  ChevronLeft,
+  ChevronRight,
+  ChevronLast,
+} from 'lucide-react';
 
 const FILTER_OPTIONS = ['Todos', 'Pendiente', 'En Proceso', 'Listo'];
+const ITEMS_PER_PAGE = 5;
 
 const STATUS_BADGE_MAP = {
   Listo: 'bg-[#DCFCE7] text-[#15803D] dark:bg-[#22C55E]/15 dark:text-[#4ADE80]',
@@ -10,134 +17,206 @@ const STATUS_BADGE_MAP = {
 
 export const LatestOrdersTable = ({ orders = [], onSelectOrder }) => {
   const [statusFilter, setStatusFilter] = useState('Todos');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredOrders = useMemo(() => {
     if (statusFilter === 'Todos') return orders;
     return orders.filter((order) => order.status === statusFilter);
   }, [orders, statusFilter]);
 
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE) || 1;
+
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredOrders.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredOrders, currentPage]);
+
+  const handleFilterChange = (option) => {
+    setStatusFilter(option);
+    setCurrentPage(1);
+  };
+
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+  };
+
   return (
     <section
       aria-label="Últimos Pedidos"
-      className="flex flex-col rounded-2xl border border-slate-100 bg-white p-4 shadow-xs sm:p-5 dark:border-slate-800/90 dark:bg-[#131A26]"
+      className="flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-3.5 shadow-xs sm:p-4 dark:border-slate-800/90 dark:bg-[#131A26]"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-          Últimos Pedidos
-        </h2>
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            Últimos Pedidos
+          </h2>
 
-        {/* Segmented status filter */}
-        <div
-          role="tablist"
-          aria-label="Filtrar pedidos por estado"
-          className="flex flex-wrap items-center gap-1 rounded-xl bg-[#F8F9FA] p-0.5 dark:bg-[#1A2232]"
-        >
-          {FILTER_OPTIONS.map((option) => {
-            const isActive = statusFilter === option;
-            return (
-              <button
-                key={option}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => setStatusFilter(option)}
-                className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26522]/40 cursor-pointer ${
-                  isActive
-                    ? 'bg-white text-slate-900 shadow-xs dark:bg-[#253045] dark:text-white'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                {option}
-              </button>
-            );
-          })}
+          {/* Segmented status filter buttons with high-end pill style */}
+          <div
+            role="tablist"
+            aria-label="Filtrar pedidos por estado"
+            className="flex items-center gap-1 rounded-xl bg-slate-100/90 p-1 border border-slate-200/70 dark:border-slate-700/60 dark:bg-[#1A2232] shadow-inner"
+          >
+            {FILTER_OPTIONS.map((option) => {
+              const isActive = statusFilter === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => handleFilterChange(option)}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all whitespace-nowrap cursor-pointer select-none ${
+                    isActive
+                      ? 'bg-[var(--primary)] text-white shadow-sm scale-[1.02]'
+                      : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/50'
+                  }`}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-2.5 overflow-x-auto">
+          <table className="w-full min-w-[540px] border-collapse text-left">
+            <thead>
+              <tr className="bg-[#F8F9FA] text-[11px] font-medium text-slate-500 dark:bg-[#1A2232] dark:text-slate-400">
+                <th className="rounded-l-lg px-3 py-1.5 font-medium whitespace-nowrap">
+                  ID Pedido
+                </th>
+                <th className="px-3 py-1.5 font-medium whitespace-nowrap">Mozo</th>
+                <th className="px-3 py-1.5 font-medium whitespace-nowrap">
+                  Fecha y Hora
+                </th>
+                <th className="px-3 py-1.5 font-medium whitespace-nowrap">
+                  Pedido
+                </th>
+                <th className="px-3 py-1.5 text-center font-medium whitespace-nowrap">
+                  Cant.
+                </th>
+                <th className="rounded-r-lg px-3 py-1.5 text-center font-medium whitespace-nowrap">
+                  Estado
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs dark:divide-slate-800/80">
+              {paginatedOrders.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="py-6 text-center text-xs text-slate-400 dark:text-slate-500"
+                  >
+                    No hay pedidos registrados con el estado &ldquo;{statusFilter}&rdquo;.
+                  </td>
+                </tr>
+              ) : (
+                paginatedOrders.map((order, idx) => {
+                  const isLeadOrder = idx === 0 && currentPage === 1;
+                  return (
+                    <tr
+                      key={order.id || idx}
+                      onClick={() => onSelectOrder?.(order)}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectOrder?.(order);
+                        }
+                      }}
+                      className="cursor-pointer transition-colors hover:bg-slate-50/90 focus-visible:bg-slate-50 focus-visible:outline-none dark:hover:bg-slate-800/45 dark:focus-visible:bg-slate-800/60"
+                    >
+                      <td
+                        className={`px-3 py-2 font-semibold tabular-nums whitespace-nowrap ${
+                          isLeadOrder
+                            ? 'text-[#F26522] dark:text-[#FF7A3D]'
+                            : 'text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {order.id}
+                      </td>
+                      <td className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap dark:text-slate-200">
+                        {order.waiter || 'Mozo'}
+                      </td>
+                      <td className="px-3 py-2 text-slate-500 tabular-nums whitespace-nowrap dark:text-slate-400">
+                        {order.dateTime}
+                      </td>
+                      <td className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap dark:text-slate-200">
+                        {order.dish}
+                      </td>
+                      <td className="px-3 py-2 text-center font-medium text-slate-700 tabular-nums dark:text-slate-300">
+                        {order.quantity}
+                      </td>
+                      <td className="px-3 py-2 text-center whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center justify-center rounded-md px-2.5 py-0.5 text-[11px] font-semibold ${
+                            STATUS_BADGE_MAP[order.status] || STATUS_BADGE_MAP.Pendiente
+                          }`}
+                        >
+                          {order.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[540px] border-collapse text-left">
-          <thead>
-            <tr className="bg-[#F8F9FA] text-[11px] font-medium text-slate-500 dark:bg-[#1A2232] dark:text-slate-400">
-              <th className="rounded-l-lg px-3 py-2 font-medium whitespace-nowrap">
-                ID Pedido
-              </th>
-              <th className="px-3 py-2 font-medium whitespace-nowrap">Mozo</th>
-              <th className="px-3 py-2 font-medium whitespace-nowrap">
-                Fecha y Hora
-              </th>
-              <th className="px-3 py-2 font-medium whitespace-nowrap">
-                Pedido
-              </th>
-              <th className="px-3 py-2 text-center font-medium whitespace-nowrap">
-                Cant.
-              </th>
-              <th className="rounded-r-lg px-3 py-2 text-center font-medium whitespace-nowrap">
-                Estado
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-xs dark:divide-slate-800/80">
-            {filteredOrders.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="py-8 text-center text-xs text-slate-400 dark:text-slate-500"
-                >
-                  No hay pedidos registrados con el estado &ldquo;{statusFilter}&rdquo;.
-                </td>
-              </tr>
-            ) : (
-              filteredOrders.map((order, idx) => {
-                const isLeadOrder = idx === 0;
-                return (
-                  <tr
-                    key={order.id || idx}
-                    onClick={() => onSelectOrder?.(order)}
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        onSelectOrder?.(order);
-                      }
-                    }}
-                    className="cursor-pointer transition-colors hover:bg-slate-50/90 focus-visible:bg-slate-50 focus-visible:outline-none dark:hover:bg-slate-800/45 dark:focus-visible:bg-slate-800/60"
-                  >
-                    <td
-                      className={`px-3 py-2.5 font-semibold tabular-nums whitespace-nowrap ${
-                        isLeadOrder
-                          ? 'text-[#F26522] dark:text-[#FF7A3D]'
-                          : 'text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {order.id}
-                    </td>
-                    <td className="px-3 py-2.5 font-medium text-slate-800 whitespace-nowrap dark:text-slate-200">
-                      {order.waiter || 'Mozo'}
-                    </td>
-                    <td className="px-3 py-2.5 text-slate-500 tabular-nums whitespace-nowrap dark:text-slate-400">
-                      {order.dateTime}
-                    </td>
-                    <td className="px-3 py-2.5 font-medium text-slate-800 whitespace-nowrap dark:text-slate-200">
-                      {order.dish}
-                    </td>
-                    <td className="px-3 py-2.5 text-center font-medium text-slate-700 tabular-nums dark:text-slate-300">
-                      {order.quantity}
-                    </td>
-                    <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center justify-center rounded-md px-2.5 py-0.5 text-[11px] font-semibold ${
-                          STATUS_BADGE_MAP[order.status] || STATUS_BADGE_MAP.Pendiente
-                        }`}
-                      >
-                        {order.status}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+      {/* Pagination JSX (aligned with Arqueo de Caja) */}
+      <div className="mt-2.5 pt-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 font-sans border-t border-slate-100 dark:border-slate-800">
+        <span className="font-medium text-[11px] text-slate-500 dark:text-slate-400 select-none">
+          Total de Pedidos: {filteredOrders.length}
+        </span>
+        <div className="flex items-center justify-center gap-1.5">
+          <button
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            title="Ir al inicio"
+            aria-label="Primera página"
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-surface)] text-[var(--text-main)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-sm"
+          >
+            <ChevronFirst className="w-3.5 h-3.5 text-[var(--text-main)]" />
+          </button>
+          <button
+            onClick={handlePrevPage}
+            disabled={currentPage === 1}
+            title="Página anterior"
+            aria-label="Página anterior"
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-surface)] text-[var(--text-main)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-sm"
+          >
+            <ChevronLeft className="w-3.5 h-3.5 text-[var(--text-main)]" />
+          </button>
+          <span className="font-semibold text-[var(--text-main)] px-2 select-none whitespace-nowrap text-xs">
+            Página {currentPage} de {totalPages}
+          </span>
+          <button
+            onClick={handleNextPage}
+            disabled={currentPage === totalPages}
+            title="Página siguiente"
+            aria-label="Página siguiente"
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-surface)] text-[var(--text-main)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-sm"
+          >
+            <ChevronRight className="w-3.5 h-3.5 text-[var(--text-main)]" />
+          </button>
+          <button
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            title="Ir al final"
+            aria-label="Última página"
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--glass-border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-surface)] text-[var(--text-main)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-sm"
+          >
+            <ChevronLast className="w-3.5 h-3.5 text-[var(--text-main)]" />
+          </button>
+        </div>
+        <div className="hidden sm:block sm:w-20" />
       </div>
     </section>
   );

@@ -13,21 +13,22 @@ const KitchenDonutTooltip = ({ active, payload }) => {
   const item = payload[0].payload;
 
   return (
-    <div className="rounded-xl border border-slate-100 bg-white px-3 py-2 text-xs shadow-lg dark:border-slate-700 dark:bg-[#1A2232]">
-      <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
+    <div className="rounded-lg border border-slate-200/80 bg-white/95 px-2.5 py-1.5 text-xs shadow-md backdrop-blur-sm dark:border-slate-700 dark:bg-[#1A2232]/95 pointer-events-none">
+      <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100">
         <span
-          className="h-2.5 w-2.5 rounded-xs"
+          className="h-2 w-2 rounded-full"
           style={{ backgroundColor: item.color }}
         />
-        <span>{item.label}</span>
-        <span className="tabular-nums text-slate-600 dark:text-slate-300">
-          {item.percentage}%
+        <span>{item.label}:</span>
+        <span className="text-[var(--primary)] font-bold tabular-nums">
+          {item.dishesCount} platos ({item.percentage}%)
         </span>
       </div>
-      <p className="mt-1 text-[11px] text-slate-500 tabular-nums dark:text-slate-400">
-        {item.dishesCount} de {KITCHEN_CAPACITY_TARGET} platos
-        {item.id !== 'restante' && item.avgPrepMinutes ? ` · ${item.avgPrepMinutes} min prom.` : ''}
-      </p>
+      {item.id !== 'restante' && item.avgPrepMinutes ? (
+        <p className="mt-0.5 text-[10px] text-slate-500 tabular-nums dark:text-slate-400">
+          Promedio: ~{item.avgPrepMinutes} min
+        </p>
+      ) : null}
     </div>
   );
 };
@@ -66,7 +67,8 @@ export const KitchenStatusChart = ({
         avgPrepMinutes: 0,
         color: isDark ? '#263144' : '#E5E7EB',
         softBg: isDark ? '#1E293B' : '#F1F5F9',
-        description: `Capacidad disponible para alcanzar los ${KITCHEN_CAPACITY_TARGET} platos.`,
+        shortInfo: 'Capacidad libre para pedidos',
+        description: 'Capacidad libre',
       },
     ];
   }, [segments, remainingDishes, remainingPercent, isDark]);
@@ -76,19 +78,19 @@ export const KitchenStatusChart = ({
   return (
     <section
       aria-label="Estado de Cocina"
-      className="flex min-w-0 flex-col justify-between rounded-2xl border border-slate-100 bg-white p-4 shadow-xs sm:p-5 dark:border-slate-800/90 dark:bg-[#131A26]"
+      className="flex min-w-0 flex-col justify-between rounded-2xl border border-slate-100 bg-white p-3.5 shadow-xs sm:p-4 dark:border-slate-800/90 dark:bg-[#131A26]"
     >
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
           Estado de Cocina
         </h2>
-        <span className="text-[11px] font-medium text-slate-400 tabular-nums dark:text-slate-500">
+        <span className="text-[11px] font-semibold text-[var(--primary)] tabular-nums">
           {totalActiveDishes}/{KITCHEN_CAPACITY_TARGET} platos
         </span>
       </div>
 
-      <div className="my-auto flex flex-col items-center justify-between gap-3 py-1 sm:flex-row">
-        <div className="relative h-[156px] w-[156px] shrink-0">
+      <div className="my-auto flex flex-col items-center justify-between gap-2 py-0.5 sm:flex-row">
+        <div className="relative h-[142px] w-[142px] shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -97,8 +99,8 @@ export const KitchenStatusChart = ({
                 nameKey="label"
                 cx="50%"
                 cy="50%"
-                innerRadius={45}
-                outerRadius={69}
+                innerRadius={42}
+                outerRadius={65}
                 startAngle={90}
                 endAngle={-270}
                 stroke={isDark ? '#131A26' : '#FFFFFF'}
@@ -143,7 +145,7 @@ export const KitchenStatusChart = ({
         </div>
 
         {/* Legend pills */}
-        <div className="flex w-full flex-col justify-center gap-1.5 sm:max-w-[150px]">
+        <div className="flex w-full flex-col justify-center gap-1 sm:max-w-[130px]">
           {segments.map((segment) => {
             const isHovered = activeId === segment.id;
             return (
@@ -157,7 +159,7 @@ export const KitchenStatusChart = ({
                     : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                 }`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <span
                     className="h-2 w-2 rounded-xs"
                     style={{ backgroundColor: segment.color }}
@@ -175,21 +177,17 @@ export const KitchenStatusChart = ({
         </div>
       </div>
 
-      <div className="rounded-xl bg-[#F8F9FA] px-3 py-2 text-[11px] leading-relaxed text-slate-500 dark:bg-[#1A2232] dark:text-slate-400">
+      <div className="rounded-xl bg-[#F8F9FA] px-2.5 py-1.5 text-[11px] text-slate-600 dark:bg-[#1A2232] dark:text-slate-300">
         {activeSegment ? (
-          <p>
-            <span className="font-semibold text-slate-800 dark:text-slate-200">
-              {activeSegment.label}:{' '}
-            </span>
-            {activeSegment.description}
+          <p className="truncate text-center">
+            <span className="font-bold text-slate-900 dark:text-slate-100">
+              {activeSegment.label}:
+            </span>{' '}
+            {activeSegment.shortInfo || activeSegment.description}
           </p>
         ) : (
-          <p>
-            Capacidad proyectada sobre base de{' '}
-            <strong className="text-slate-700 dark:text-slate-200">
-              {KITCHEN_CAPACITY_TARGET} comandas
-            </strong>{' '}
-            para estimar tiempos pico de despacho.
+          <p className="truncate text-center text-slate-500 dark:text-slate-400">
+            Capacidad: <strong>{totalActiveDishes} de {KITCHEN_CAPACITY_TARGET} platos</strong> ({totalActivePercent}%)
           </p>
         )}
       </div>

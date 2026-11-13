@@ -82,7 +82,7 @@ export const SalesChart = ({
   return (
     <section
       aria-label="Gráfico de Ventas"
-      className={`flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-4 shadow-xs sm:p-5 dark:border-slate-800/90 dark:bg-[#131A26] ${className}`}
+      className={`flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-3.5 shadow-xs sm:p-4 dark:border-slate-800/90 dark:bg-[#131A26] ${className}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">

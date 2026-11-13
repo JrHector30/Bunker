@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import CloseButton from '../ui/CloseButton';
 import { formatCurrencyAmount } from './dashboardData';
 
 export const KpiDetailModal = ({ metric, currency = 'PEN', onClose }) => {
@@ -7,7 +7,7 @@ export const KpiDetailModal = ({ metric, currency = 'PEN', onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[2px] dark:bg-black/65"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[2px] dark:bg-black/65 animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -27,14 +27,7 @@ export const KpiDetailModal = ({ metric, currency = 'PEN', onClose }) => {
                 : (metric.value || 0).toLocaleString('es-PE')}
             </p>
           </div>
-          <button
-            type="button"
-            aria-label="Cerrar desglose"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200 cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <CloseButton onClick={onClose} className="scale-90 shrink-0" />
         </div>
 
         <ul className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
