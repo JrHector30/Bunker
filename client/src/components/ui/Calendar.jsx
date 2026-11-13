@@ -81,7 +81,7 @@ export function Calendar({
           onClick={() => onMonthChange?.(subMonths(monthStart, 1))}
           className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 !bg-transparent !shadow-none text-slate-600 transition-colors hover:!bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:!bg-slate-800 cursor-pointer"
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <ChevronLeft className="h-5 w-5" strokeWidth={2.2} />
         </button>
 
         <span className="text-xs font-semibold capitalize text-slate-800 dark:text-slate-100">
@@ -94,7 +94,7 @@ export function Calendar({
           onClick={() => onMonthChange?.(addMonths(monthStart, 1))}
           className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 !bg-transparent !shadow-none text-slate-600 transition-colors hover:!bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:!bg-slate-800 cursor-pointer"
         >
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="h-5 w-5" strokeWidth={2.2} />
         </button>
       </div>
 
@@ -153,7 +153,7 @@ export function Calendar({
               "!bg-slate-200/80 font-medium !text-slate-900 hover:!bg-slate-200 dark:!bg-[#1E222D] dark:!text-slate-100 dark:hover:!bg-[#262B38]";
           } else if (isToday) {
             stateClass =
-              "!bg-transparent !border !border-slate-300 font-semibold text-slate-900 hover:!bg-slate-100 dark:!border-slate-700 dark:text-white dark:hover:!bg-slate-800";
+              "!bg-transparent font-bold text-slate-900 hover:!bg-slate-100 dark:text-white dark:hover:!bg-slate-800";
           } else if (!isCurrentMonth) {
             stateClass =
               "!bg-transparent text-slate-300 hover:!bg-slate-50 dark:text-slate-700 dark:hover:!bg-slate-800/40";
@@ -164,9 +164,16 @@ export function Calendar({
               key={day.toISOString()}
               type="button"
               onClick={() => handleDayClick(day)}
-              className={`flex h-8 w-9 items-center justify-center !border-0 !p-0 !shadow-none !outline-none text-xs tabular-nums transition-colors cursor-pointer ${radiusClass} ${stateClass}`}
+              className={`relative flex h-8 w-9 items-center justify-center !border-0 !p-0 !shadow-none !outline-none text-xs tabular-nums transition-colors cursor-pointer ${radiusClass} ${stateClass}`}
             >
-              {format(day, "d")}
+              <span>{format(day, "d")}</span>
+              {isToday && (
+                <span
+                  className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${
+                    isEndpoint ? "bg-emerald-400" : "bg-emerald-500 dark:bg-emerald-400"
+                  }`}
+                />
+              )}
             </button>
           );
         })}
