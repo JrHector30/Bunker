@@ -244,7 +244,7 @@ export default function LandingView() {
           </div>
           <div className="hidden md:flex items-center gap-4">
             <SaasButton variant="ghost" onClick={() => navigate('/acceso')}>Iniciar Sesión</SaasButton>
-            <SaasButton variant="default" onClick={() => navigate('/login')}>Acceder Demo</SaasButton>
+            <SaasButton variant="default" onClick={() => navigate('/acceso')}>Acceder Demo</SaasButton>
           </div>
           <button className="md:hidden text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -259,7 +259,7 @@ export default function LandingView() {
             <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 py-1">FAQ</a>
             <div className="h-px bg-gray-900 my-2" />
             <SaasButton className="w-full justify-start" variant="ghost" onClick={() => { setMobileMenuOpen(false); navigate('/acceso'); }}>Iniciar Sesión</SaasButton>
-            <SaasButton className="w-full justify-start" variant="default" onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}>Acceder Demo</SaasButton>
+            <SaasButton className="w-full justify-start" variant="default" onClick={() => { setMobileMenuOpen(false); navigate('/acceso'); }}>Acceder Demo</SaasButton>
           </div>
         )}
       </header>
@@ -291,7 +291,7 @@ export default function LandingView() {
 
         <RevealOnScroll variant="slide-up" delay={550}>
           <div className="flex items-center gap-4 relative z-10 mb-20">
-            <SaasButton className="h-12 px-8 rounded-xl text-base" variant="gradient" onClick={() => navigate('/login')}>
+            <SaasButton className="h-12 px-8 rounded-xl text-base" variant="gradient" onClick={() => navigate('/acceso')}>
               Comenzar Prueba Gratis <ArrowRight className="ml-1" size={16} />
             </SaasButton>
           </div>
@@ -426,7 +426,7 @@ export default function LandingView() {
                     ))}
                   </ul>
                 </div>
-                <SaasButton className="w-full justify-center" variant={p.popular ? 'gradient' : 'ghost'} onClick={() => navigate('/login')}>
+                <SaasButton className="w-full justify-center" variant={p.popular ? 'gradient' : 'ghost'} onClick={() => navigate('/acceso')}>
                   Comenzar Plan
                 </SaasButton>
               </div>
@@ -544,7 +544,7 @@ export default function LandingView() {
           <div className="relative z-10 max-w-3xl mx-auto">
             <h2 className="section-title text-3xl md:text-5xl font-bold tracking-tight mb-4">¿Listo para transformar tu restaurante?</h2>
             <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto mb-8">Únete a los restaurantes locales que ya operan sin parpadeos visuales ni descuadres de caja.</p>
-            <SaasButton className="h-12 px-8 rounded-xl text-base font-bold" variant="gradient" onClick={() => navigate('/login')}>
+            <SaasButton className="h-12 px-8 rounded-xl text-base font-bold" variant="gradient" onClick={() => navigate('/acceso')}>
               Ingresar al Sistema Ahora
             </SaasButton>
           </div>
