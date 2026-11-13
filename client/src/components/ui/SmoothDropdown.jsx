@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import useMeasure from "react-use-measure";
 import {
   MoreVertical,
+  MoreHorizontal,
   FileText,
   FolderOpen,
   Download,
@@ -16,13 +17,24 @@ const menuItems = [
 
 const easeOutQuint = [0.23, 1, 0.32, 1];
 
-export default function SmoothDropdown({ id, dropUp = false, onAction, items }) {
+export default function SmoothDropdown({
+  id,
+  dropUp = false,
+  onAction,
+  items,
+  compact = false,
+  triggerIcon: TriggerIcon = null,
+  isHighlighted = false,
+  align = "right",
+  openWidth = 220,
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
   const containerRef = useRef(null);
   const [contentRef, contentBounds] = useMeasure();
 
   const activeItems = items || menuItems;
+  const IconComponent = TriggerIcon || (compact ? MoreHorizontal : MoreVertical);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -40,21 +52,23 @@ export default function SmoothDropdown({ id, dropUp = false, onAction, items }) 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  const openHeight = Math.max(40, Math.ceil(contentBounds.height));
+  const closedSize = compact ? 26 : 40;
+  const targetOpenWidth = compact ? openWidth : 240;
+  const openHeight = Math.max(closedSize, Math.ceil(contentBounds.height));
 
   return (
     <div
       ref={containerRef}
-      className="relative h-10 w-10 not-prose select-none md:!bg-transparent"
-      style={{ zIndex: isOpen ? 50 : 1 }}
+      className={`relative not-prose select-none md:!bg-transparent ${compact ? "h-[26px] w-[26px]" : "h-10 w-10"}`}
+      style={{ zIndex: isOpen ? 60 : 1 }}
     >
       <motion.div
         layout
         initial={false}
         animate={{
-          width: isOpen ? 240 : 40,
-          height: isOpen ? openHeight : 40,
-          borderRadius: isOpen ? 14 : 12,
+          width: isOpen ? targetOpenWidth : closedSize,
+          height: isOpen ? openHeight : closedSize,
+          borderRadius: isOpen ? 14 : (compact ? 8 : 12),
         }}
         transition={{
           type: "spring",
@@ -62,14 +76,15 @@ export default function SmoothDropdown({ id, dropUp = false, onAction, items }) 
           stiffness: 380,
           mass: 0.8,
         }}
-        className={`smooth-dropdown-bg absolute right-0 overflow-hidden cursor-pointer border ${dropUp ? "bottom-0 origin-bottom-right" : "top-0 origin-top-right"
-          }`}
+        className={`smooth-dropdown-bg absolute ${align === "left" ? "left-0 origin-top-left" : "right-0 origin-top-right"} overflow-hidden cursor-pointer border ${
+          dropUp ? "bottom-0 origin-bottom-right" : "top-0"
+        } ${isHighlighted && !isOpen ? "!bg-white/20 !border-white/25 !text-white hover:!bg-white/30" : ""}`}
         style={{
-          color: "var(--text-main)",
+          color: isHighlighted && !isOpen ? "#ffffff" : "var(--text-main)",
         }}
         onClick={() => !isOpen && setIsOpen(true)}
       >
-        {/* Three dots button (MoreVertical) */}
+        {/* Three dots button */}
         <motion.div
           initial={false}
           animate={{
@@ -83,7 +98,10 @@ export default function SmoothDropdown({ id, dropUp = false, onAction, items }) 
             willChange: "transform",
           }}
         >
-          <MoreVertical className="w-5 h-5" style={{ color: "var(--text-muted)" }} />
+          <IconComponent
+            className={compact ? "w-3.5 h-3.5" : "w-5 h-5"}
+            style={{ color: isHighlighted ? "#ffffff" : "var(--text-muted)" }}
+          />
         </motion.div>
 
         {/* Menu Content - visible when open */}
@@ -98,15 +116,15 @@ export default function SmoothDropdown({ id, dropUp = false, onAction, items }) 
               duration: 0.6,
               delay: isOpen ? 0.08 : 0,
             }}
-            className="p-1.5"
+            className={compact ? "p-1" : "p-1.5"}
             style={{
               pointerEvents: isOpen ? "auto" : "none",
               willChange: "transform",
             }}
           >
-            <ul className="flex flex-col gap-1 m-0 p-0 list-none">
+            <ul className="flex flex-col gap-0.5 m-0 p-0 list-none">
               {activeItems.map((item, index) => {
-                const IconComponent = item.icon;
+                const ItemIcon = item.icon;
                 const isHovered = hoveredItem === item.id;
                 const itemDelay = isOpen ? 0.06 + index * 0.02 : 0;
 
@@ -132,7 +150,9 @@ export default function SmoothDropdown({ id, dropUp = false, onAction, items }) 
                     }}
                     onMouseEnter={() => setHoveredItem(item.id)}
                     onMouseLeave={() => setHoveredItem(null)}
-                    className="relative flex items-center gap-3 rounded-lg text-sm cursor-pointer transition-colors duration-200 ease-out m-0 pl-3 py-2"
+                    className={`relative flex items-center gap-2.5 rounded-lg cursor-pointer transition-colors duration-200 ease-out m-0 ${
+                      compact ? "text-xs pl-2.5 py-1.5" : "text-sm pl-3 py-2"
+                    }`}
                     style={{
                       color: isHovered ? "var(--text-main)" : "var(--text-muted)",
                       listStyleType: "none",
@@ -158,7 +178,9 @@ export default function SmoothDropdown({ id, dropUp = false, onAction, items }) 
                     {isHovered && (
                       <motion.div
                         layoutId={`leftBar-${id}`}
-                        className="absolute left-0 top-0 bottom-0 my-auto w-[3px] h-5 rounded-full"
+                        className={`absolute left-0 top-0 bottom-0 my-auto rounded-full ${
+                          compact ? "w-[2.5px] h-4" : "w-[3px] h-5"
+                        }`}
                         style={{
                           background: "var(--primary, #ffffff)",
                         }}
@@ -170,13 +192,17 @@ export default function SmoothDropdown({ id, dropUp = false, onAction, items }) 
                         }}
                       />
                     )}
-                    <IconComponent
-                      className="w-[18px] h-[18px] relative z-10"
-                      style={{
-                        color: isHovered ? "var(--text-main)" : "var(--text-muted)",
-                      }}
-                    />
-                    <span className="font-medium relative z-10 text-xs">
+                    {ItemIcon && (
+                      <ItemIcon
+                        className={`shrink-0 relative z-10 transition-colors duration-200 ${
+                          compact ? "w-3.5 h-3.5" : "w-4 h-4"
+                        }`}
+                        style={{
+                          color: isHovered ? "var(--primary, #ffffff)" : "var(--text-muted)",
+                        }}
+                      />
+                    )}
+                    <span className="relative z-10 font-medium whitespace-nowrap truncate">
                       {item.label}
                     </span>
                   </motion.li>

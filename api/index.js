@@ -4539,6 +4539,241 @@ app.get('/api/staff/stats', async (req, res) => {
     }
 });
 
+// ============================================
+// RESUMEN GENERAL DASHBOARD API ENDPOINT
+// Scoped to current restaurant tenant (getTenantId)
+// ============================================
+app.get('/api/dashboard/resumen-general', async (req, res) => {
+    try {
+        const tenantId = getTenantId(req);
+
+        const restaurante = await prisma.restaurante.findUnique({
+            where: { id: tenantId }
+        });
+
+        // 1. Fetch comandas of this restaurant (scoped strictly to tenantId)
+        const comandas = await prisma.comanda.findMany({
+            where: { restauranteId: tenantId },
+            include: {
+                usuario: { select: { id: true, nombre: true } },
+                mesa: true,
+                detalles: {
+                    include: {
+                        plato: {
+                            include: { categoria: true }
+                        },
+                        cocinero: { select: { id: true, nombre: true } }
+                    }
+                }
+            },
+            orderBy: { fecha: 'desc' }
+        });
+
+        // Date calculation for Peru UTC-5
+        const now = new Date();
+        const peruOffsetMs = -5 * 60 * 60 * 1000;
+        const peruNow = new Date(now.getTime() + peruOffsetMs);
+        const todayStr = peruNow.toISOString().slice(0, 10);
+
+        const isToday = (dateVal) => {
+            if (!dateVal) return false;
+            const d = new Date(new Date(dateVal).getTime() + peruOffsetMs);
+            return d.toISOString().slice(0, 10) === todayStr;
+        };
+
+        const todayComandas = comandas.filter(c => isToday(c.fecha));
+
+        // Total de pedidos comandados en este local
+        const totalOrders = comandas.filter(c => c.estado !== 'anulada').length;
+
+        // Pedidos en proceso en cocina hoy
+        const inProgressComandas = todayComandas.filter(c => {
+            if (c.estado === 'preparando') return true;
+            return c.detalles.some(d => d.estado === 'en_proceso' || d.estado === 'preparando');
+        });
+        const inProgressCount = inProgressComandas.length;
+
+        // Pedidos completados / listos hoy
+        const completedComandas = todayComandas.filter(c => {
+            if (c.estado === 'lista' || c.estado === 'cerrada') return true;
+            return c.detalles.length > 0 && c.detalles.every(d => d.estado === 'listo' || d.estado === 'entregado');
+        });
+        const completedCount = completedComandas.length;
+
+        // Platos vendidos hoy (completados sin anulaciones / mermas)
+        let dishesSold = 0;
+        for (const c of todayComandas) {
+            if (c.estado !== 'anulada') {
+                for (const d of c.detalles) {
+                    if (d.estado === 'listo' || d.estado === 'entregado' || c.estado === 'cerrada' || c.estado === 'lista') {
+                        if (d.estado !== 'anulado') {
+                            dishesSold += (d.cantidad || 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ingresos de hoy en Soles
+        let todayIncome = 0;
+        for (const c of todayComandas) {
+            if (c.estado !== 'anulada') {
+                for (const d of c.detalles) {
+                    if (d.estado !== 'anulado') {
+                        const price = d.plato?.precio || 0;
+                        todayIncome += price * (d.cantidad || 1);
+                    }
+                }
+            }
+        }
+
+        // Fallback a arqueo abierto si las comandas no registran montos hoy
+        if (todayIncome === 0) {
+            const arqueo = await prisma.arqueo.findFirst({
+                where: { restauranteId: tenantId, estado: 'abierto' }
+            });
+            if (arqueo) {
+                todayIncome = (arqueo.ingresos?.efectivo || 0) + 
+                              (arqueo.ingresos?.yape || 0) + 
+                              (arqueo.ingresos?.plin || 0) + 
+                              (arqueo.ingresos?.tarjeta || 0);
+            }
+        }
+
+        // Estado de cocina hoy (conteo de platos en items de comandas)
+        let kitchenListos = 0;
+        let kitchenEnProceso = 0;
+        let kitchenPendientes = 0;
+
+        for (const c of todayComandas) {
+            for (const d of c.detalles) {
+                if (d.estado === 'listo' || d.estado === 'entregado') {
+                    kitchenListos += d.cantidad || 1;
+                } else if (d.estado === 'en_proceso' || d.estado === 'preparando') {
+                    kitchenEnProceso += d.cantidad || 1;
+                } else if (d.estado !== 'anulado') {
+                    kitchenPendientes += d.cantidad || 1;
+                }
+            }
+        }
+
+        // Últimos pedidos del local actual (sincronizados con estado de cocina)
+        const latestOrders = comandas.slice(0, 20).map(c => {
+            const totalQty = c.detalles.reduce((acc, d) => acc + (d.cantidad || 1), 0);
+            const totalMonto = c.detalles.reduce((acc, d) => acc + ((d.plato?.precio || 0) * (d.cantidad || 1)), 0);
+
+            let dishSummary = 'Pedido General';
+            if (c.detalles.length > 0) {
+                const first = c.detalles[0].plato?.nombre || 'Plato';
+                dishSummary = c.detalles.length > 1 ? `${first} (+${c.detalles.length - 1})` : first;
+            }
+
+            // Mapeo sincronizado con Cocina: 'Pendiente', 'Listo', 'En Proceso'
+            let mappedStatus = 'Pendiente';
+            if (c.detalles.length > 0 && c.detalles.every(d => d.estado === 'listo' || d.estado === 'entregado')) {
+                mappedStatus = 'Listo';
+            } else if (c.detalles.some(d => d.estado === 'en_proceso' || d.estado === 'preparando')) {
+                mappedStatus = 'En Proceso';
+            } else if (c.estado === 'preparando') {
+                mappedStatus = 'En Proceso';
+            } else if (c.estado === 'lista' || c.estado === 'cerrada') {
+                mappedStatus = 'Listo';
+            }
+
+            const dt = new Date(c.fecha);
+            const timeStr = dt.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const dateStr = dt.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            return {
+                id: `CMD-${c.numeroComanda || c.id}`,
+                comandaId: c.id,
+                customer: c.razonSocial || c.documentoCliente || (c.mesa ? `Mesa ${c.mesa.numero}` : 'Cliente Salón'),
+                dateTime: `${timeStr} · ${dateStr}`,
+                dish: dishSummary,
+                quantity: totalQty,
+                status: mappedStatus,
+                tableOrChannel: c.mesa ? `Mesa ${c.mesa.numero}` : 'Salón',
+                waiter: c.usuario?.nombre || 'Mozo',
+                totalPen: totalMonto,
+                totalUsd: Number((totalMonto / 3.75).toFixed(2)),
+                notes: c.observacion || c.detalles.find(d => d.observacion)?.observacion || '',
+                items: c.detalles.map(d => ({
+                    id: d.id,
+                    nombre: d.plato?.nombre || 'Item',
+                    cantidad: d.cantidad || 1,
+                    precio: d.plato?.precio || 0,
+                    observacion: d.observacion || '',
+                    estado: d.estado
+                }))
+            };
+        });
+
+        // Menú popular por períodos (Hoy, Esta Semana, Este Mes)
+        const calculatePopular = (comandaList) => {
+            const map = {};
+            for (const c of comandaList) {
+                for (const d of c.detalles) {
+                    if (d.estado !== 'anulado' && d.plato) {
+                        const pid = d.plato.id;
+                        if (!map[pid]) {
+                            map[pid] = {
+                                id: String(pid),
+                                name: d.plato.nombre,
+                                category: d.plato.categoria?.nombre || 'Plato',
+                                imageUrl: d.plato.imagen || d.plato.imagenUrl || '',
+                                rating: '4,8',
+                                orders: 0,
+                                revenuePen: 0,
+                                revenueUsd: 0
+                            };
+                        }
+                        map[pid].orders += (d.cantidad || 1);
+                        const sub = (d.plato.precio || 0) * (d.cantidad || 1);
+                        map[pid].revenuePen += sub;
+                        map[pid].revenueUsd = Number((map[pid].revenuePen / 3.75).toFixed(2));
+                    }
+                }
+            }
+            return Object.values(map).sort((a, b) => b.orders - a.orders).slice(0, 5);
+        };
+
+        // Semana y Mes
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        const weekComandas = comandas.filter(c => new Date(c.fecha) >= oneWeekAgo);
+        const monthComandas = comandas.filter(c => new Date(c.fecha) >= oneMonthAgo);
+
+        const popularHoy = calculatePopular(todayComandas);
+        const popularSemana = calculatePopular(weekComandas);
+        const popularMes = calculatePopular(monthComandas);
+
+        res.json({
+            restauranteNombre: restaurante?.nombre || 'Búnker',
+            totalOrders,
+            inProgressCount,
+            completedCount,
+            dishesSold,
+            todayIncome,
+            kitchenStatus: {
+                listos: kitchenListos,
+                en_proceso: kitchenEnProceso,
+                pendientes: kitchenPendientes,
+                target: 50
+            },
+            latestOrders,
+            popularMenu: {
+                'Hoy': popularHoy,
+                'Esta Semana': popularSemana,
+                'Este Mes': popularMes
+            }
+        });
+    } catch (err) {
+        console.error('Error en /api/dashboard/resumen-general:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // New statistics endpoints for HomeView (Optimized read-only queries with index range filters)
 app.get('/api/stats/weekly-earnings', async (req, res) => {
     try {
