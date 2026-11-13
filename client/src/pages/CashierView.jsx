@@ -457,7 +457,9 @@ const CashierView = () => {
       return data;
     } catch (err) {
       if (err.name === 'AbortError') {
-        return { data: [], meta: { page: 1, totalPages: 1 } };
+        // No devolver objeto vacío si la petición fue abortada por una más reciente;
+        // relanzamos el error para que useCache mantenga los datos existentes sin vaciar la tabla.
+        throw err;
       }
       console.error('[CashierView] historyFetcher falló:', err);
       setConnectionError(true);
@@ -477,6 +479,12 @@ const CashierView = () => {
     historyFetcher,
     { data: [], meta: { page: 1, totalPages: 1 } }
   );
+
+  // Mantener referencia estable a los últimos datos válidos para evitar que la tabla parpadee o quede vacía durante refetches
+  const lastValidHistoryRef = useRef(history?.data?.length > 0 ? history.data : []);
+  if (history?.data?.length > 0) {
+    lastValidHistoryRef.current = history.data;
+  }
 
   // Sync selected arqueo ID cuando cambian los datos cargados o la clave
   useEffect(() => {
@@ -555,6 +563,14 @@ const CashierView = () => {
       }
     };
 
+    let cashRefreshTimeout = null;
+    const debouncedCashRefresh = () => {
+      if (cashRefreshTimeout) clearTimeout(cashRefreshTimeout);
+      cashRefreshTimeout = setTimeout(() => {
+        handleCashRefresh();
+      }, 120);
+    };
+
     fetchTables(); // immediate query
     fetchStatus();
 
@@ -565,7 +581,7 @@ const CashierView = () => {
       }
     }, 10000);
 
-    window.addEventListener('refreshCashCount', handleCashRefresh);
+    window.addEventListener('refreshCashCount', debouncedCashRefresh);
     window.addEventListener('refreshTables', handleTablesRefresh);
 
     let channel = null;
@@ -573,7 +589,7 @@ const CashierView = () => {
       channel = new BroadcastChannel('bunker');
       channel.onmessage = (event) => {
         if (event.data === 'refreshCashCount') {
-          handleCashRefresh();
+          debouncedCashRefresh();
         } else if (event.data === 'refreshTables') {
           handleTablesRefresh();
         }
@@ -584,7 +600,8 @@ const CashierView = () => {
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('refreshCashCount', handleCashRefresh);
+      if (cashRefreshTimeout) clearTimeout(cashRefreshTimeout);
+      window.removeEventListener('refreshCashCount', debouncedCashRefresh);
       window.removeEventListener('refreshTables', handleTablesRefresh);
       if (channel) {
         channel.close();
@@ -761,7 +778,7 @@ const CashierView = () => {
 
   // SEARCH AND FILTER HISTORY (Instant Client-side Search Across Complete Dataset)
   const filteredHistory = useMemo(() => {
-    const data = history?.data || [];
+    const data = (history?.data && history.data.length > 0) ? history.data : (lastValidHistoryRef.current || []);
     if (!searchQuery) return data;
     return data.filter(arq =>
       arq.id.toString().includes(searchQuery) ||
@@ -1488,13 +1505,13 @@ const CashierView = () => {
                         </div>
                       </td>
                     </tr>
-                  ) : historyLoading && (!history?.data || history.data.length === 0) ? (
+                  ) : historyLoading && (!history?.data || history.data.length === 0) && (!lastValidHistoryRef.current || lastValidHistoryRef.current.length === 0) ? (
                     <tr>
                       <td colSpan={9} className="py-10 text-center text-sm text-[var(--text-muted)] font-medium">
                         Cargando sesiones de caja... (Página {currentPage})
                       </td>
                     </tr>
-                  ) : !history?.data || history.data.length === 0 ? (
+                  ) : (!history?.data || history.data.length === 0) && (!lastValidHistoryRef.current || lastValidHistoryRef.current.length === 0) ? (
                     <tr>
                       <td colSpan={9} className="py-10 text-center text-sm text-[var(--text-muted)] font-medium">
                         No se encontraron registros de arqueo.
