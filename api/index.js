@@ -4980,17 +4980,19 @@ app.get('/api/insumos/alertas', async (req, res) => {
 });
 
 app.post('/api/insumos', async (req, res) => {
-    const { nombre, precioCompra, unidadMedida, stock, stockMinimo, notificarAlerta } = req.body;
+    const { nombre, precioCompra, unidadMedida, stock, stockMinimo, notificarAlerta, almacen } = req.body;
     try {
         const tenantId = getTenantId(req);
         const insumo = await prisma.insumo.create({
             data: {
                 nombre,
-                precioCompra: precioCompra,
+                precioCompra: precioCompra || 0,
                 unidadMedida,
                 stock: stock || 0,
                 stockMinimo: stockMinimo ? stockMinimo : null,
                 notificarAlerta: notificarAlerta || false,
+                almacen: almacen || 'Congelador',
+                fechaActualizacion: new Date(),
                 restauranteId: tenantId
             }
         });
@@ -5002,9 +5004,9 @@ app.post('/api/insumos', async (req, res) => {
 
 app.put('/api/insumos/:id', async (req, res) => {
     const { id } = req.params;
-    const { nombre, precioCompra, unidadMedida, stock, stockMinimo, notificarAlerta, activo } = req.body;
+    const { nombre, precioCompra, unidadMedida, stock, stockMinimo, notificarAlerta, activo, almacen } = req.body;
     try {
-        const updateData = {};
+        const updateData = { fechaActualizacion: new Date() };
         if (nombre) updateData.nombre = nombre;
         if (precioCompra !== undefined) updateData.precioCompra = precioCompra || 0;
         if (unidadMedida) updateData.unidadMedida = unidadMedida;
@@ -5012,6 +5014,7 @@ app.put('/api/insumos/:id', async (req, res) => {
         if (stockMinimo !== undefined) updateData.stockMinimo = stockMinimo ? stockMinimo : null;
         if (notificarAlerta !== undefined) updateData.notificarAlerta = notificarAlerta;
         if (activo !== undefined) updateData.activo = activo;
+        if (almacen) updateData.almacen = almacen;
 
         const insumo = await prisma.insumo.update({
             where: { id: parseInt(id) },
@@ -5020,6 +5023,23 @@ app.put('/api/insumos/:id', async (req, res) => {
         res.json(insumo);
     } catch (e) {
         res.status(400).json({ error: e.message });
+    }
+});
+
+app.post('/api/insumos/bulk-delete', async (req, res) => {
+    const { ids } = req.body;
+    try {
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: "No se proporcionaron IDs válidos" });
+        }
+        const numericIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+        await prisma.insumo.updateMany({
+            where: { id: { in: numericIds } },
+            data: { deleted: true, activo: false }
+        });
+        res.json({ message: `${numericIds.length} insumos eliminados con éxito.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 

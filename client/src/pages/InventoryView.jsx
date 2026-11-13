@@ -18,6 +18,7 @@ import { CustomCheckbox } from '../components/ui/CustomCheckbox';
 import { motion } from 'motion/react';
 import { safeRecordProductShadow } from '../offline';
 import RecetarioEscandallo from '../components/recetario/RecetarioEscandallo';
+import InsumosManagement from '../components/inventory/InsumosManagement';
 import { getActiveRestaurant } from '../utils/tenant';
 
 
@@ -1155,79 +1156,13 @@ const InventoryView = () => {
     };
 
     const renderInsumosTab = () => {
-        const filteredInsumos = insumos.filter(i => i.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
-        const sortedInsumos = [...filteredInsumos].sort((a, b) => {
-            if (!sortConfig.key) return 0;
-            let valA = a[sortConfig.key];
-            let valB = b[sortConfig.key];
-            if (typeof valA === 'string') valA = valA.toLowerCase();
-            if (typeof valB === 'string') valB = valB.toLowerCase();
-            if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-            if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-            return 0;
-        });
-
         return (
-            <>
-                <div className="glass-panel" style={{ marginBottom: 20, display: 'flex', gap: 15, padding: 15, alignItems: 'center' }}>
-                    <div className="search-container" style={{ flex: 1 }}>
-                        <Search size={22} className="text-muted" />
-                        <input
-                            type="text" placeholder="Buscar insumo..." className="search-input"
-                            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <button className="glass-button primary" onClick={() => handleOpenInsumoModal()}><Plus size={20} /> Nuevo Insumo</button>
-                </div>
-
-                <div className="glass-panel table-responsive" style={{ padding: 0, textAlign: 'center' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ background: 'var(--table-header-bg)', textAlign: 'center' }}>
-                                <SortHeader label="Nombre" sortKey="nombre" />
-                                <SortHeader label="Costo Unitario Bruto" sortKey="precioCompra" />
-                                <SortHeader label="Stock Actual" sortKey="stock" />
-                                <th style={{ padding: 15, textAlign: 'center' }}>Nivel de Stock</th>
-                                <th style={{ padding: 15, textAlign: 'center' }}>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedInsumos.map(insumo => {
-                                const stockPct = Math.min(100, Math.max(0, (insumo.stock / 100) * 100)); // Demo ratio against 100 units
-                                return (
-                                    <tr key={insumo.id}>
-                                        <td style={{ padding: 15, fontWeight: 'bold', verticalAlign: 'middle' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
-                                                {insumo.nombre}
-                                                {insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo && (
-                                                    <span style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center' }} title={`Stock crítico (Mínimo: ${insumo.stockMinimo})`}>
-                                                        <AlertTriangle size={16} />
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: 15 }}><span className="font-mono">S/. {Number(insumo.precioCompra).toFixed(2)}</span> / {insumo.unidadMedida}</td>
-                                        <td style={{ padding: 15, color: (insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo) ? 'var(--warning)' : 'inherit', fontWeight: (insumo.notificarAlerta && insumo.stock <= insumo.stockMinimo) ? 'bold' : 'normal' }}>
-                                            {Number(insumo.stock).toFixed(2)} {insumo.unidadMedida}
-                                        </td>
-                                        <td style={{ padding: 15 }}>
-                                            <div style={{ height: 10, width: 150, background: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
-                                                <div style={{ height: '100%', width: `${stockPct}%`, background: stockPct < 20 ? 'var(--danger)' : 'var(--primary)', transition: 'width 0.3s' }} />
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: 15 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
-                                                <EditButton onClick={() => handleOpenInsumoModal(insumo)} className="scale-75 -my-2 -mx-1" />
-                                                <DeleteButton onClick={() => handleDeleteInsumo(insumo.id)} className="scale-75 -my-2 -mx-1" />
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </>
+            <InsumosManagement
+                insumos={insumos}
+                onRefresh={fetchInsumos}
+                showToast={showToast}
+                showConfirmation={showConfirmation}
+            />
         );
     };
 
@@ -1586,27 +1521,30 @@ const InventoryView = () => {
     };
 
     const isRecetarioTab = activeTab === 'recetario' || activeTab === 'recetarios';
+    const isInsumosTab = activeTab === 'insumos';
 
     return (
-        <div className="fade-in flex flex-col h-full" style={{ padding: isRecetarioTab ? '6px 12px 6px 12px' : 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isRecetarioTab ? 6 : 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: isRecetarioTab ? 10 : 15 }}>
-                    <button className="glass-button" onClick={() => navigate('/')} style={{ padding: isRecetarioTab ? '5px 8px' : 10 }}><ArrowLeft size={isRecetarioTab ? 18 : 24} /></button>
-                    <h1 style={{ margin: 0, fontSize: isRecetarioTab ? '1.25rem' : '1.75rem', fontWeight: 'bold' }}>{getModuleTitle()}</h1>
+        <div className="fade-in flex flex-col h-full" style={{ padding: isRecetarioTab ? '6px 12px 6px 12px' : isInsumosTab ? '16px 20px' : 20 }}>
+            {!isInsumosTab && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isRecetarioTab ? 6 : 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isRecetarioTab ? 10 : 15 }}>
+                        <button className="glass-button" onClick={() => navigate('/')} style={{ padding: isRecetarioTab ? '5px 8px' : 10 }}><ArrowLeft size={isRecetarioTab ? 18 : 24} /></button>
+                        <h1 style={{ margin: 0, fontSize: isRecetarioTab ? '1.25rem' : '1.75rem', fontWeight: 'bold' }}>{getModuleTitle()}</h1>
+                    </div>
+                    {isRecetarioTab && (
+                        <button
+                            type="button"
+                            onClick={handleSaveRecipe}
+                            className="rounded-full px-4 py-1.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md border-0 active:scale-95 text-white"
+                            style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}
+                            title="Guardar escandallo y actualizar costos en Búnker"
+                        >
+                            <Save size={14} />
+                            <span>Guardar Escandallo</span>
+                        </button>
+                    )}
                 </div>
-                {isRecetarioTab && (
-                    <button
-                        type="button"
-                        onClick={handleSaveRecipe}
-                        className="rounded-full px-4 py-1.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md border-0 active:scale-95 text-white"
-                        style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}
-                        title="Guardar escandallo y actualizar costos en Búnker"
-                    >
-                        <Save size={14} />
-                        <span>Guardar Escandallo</span>
-                    </button>
-                )}
-            </div>
+            )}
 
             {activeTab === 'platos' && renderPlatosTab()}
             {activeTab === 'insumos' && renderInsumosTab()}

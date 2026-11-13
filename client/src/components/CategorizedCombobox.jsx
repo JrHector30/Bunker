@@ -311,57 +311,6 @@ export default function CategorizedCombobox({
                 </div>
               )}
             </div>
-
-            {/* Selection Guide Footer */}
-            <div 
-              className="px-4 py-2 border-t flex items-center justify-between"
-              style={{
-                backgroundColor: 'var(--bg-secondary)',
-                borderColor: 'var(--glass-border)',
-              }}
-            >
-              <div className="flex space-x-3">
-                <div 
-                  className="flex items-center text-[10px] select-none"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  <span 
-                    className="border rounded px-1.5 py-0.5 mr-1 font-semibold font-mono text-[9px]"
-                    style={{
-                      backgroundColor: 'var(--bg-surface)',
-                      borderColor: 'var(--glass-border)',
-                      color: 'var(--text-main)',
-                    }}
-                  >
-                    ↑↓
-                  </span> 
-                  Navegar
-                </div>
-                <div 
-                  className="flex items-center text-[10px] select-none"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  <span 
-                    className="border rounded px-1.5 py-0.5 mr-1 font-semibold font-mono text-[9px]"
-                    style={{
-                      backgroundColor: 'var(--bg-surface)',
-                      borderColor: 'var(--glass-border)',
-                      color: 'var(--text-main)',
-                    }}
-                  >
-                    Enter
-                  </span> 
-                  Seleccionar
-                </div>
-              </div>
-              <div 
-                className="text-[10px] font-semibold uppercase tracking-wider select-none"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                Selección Única
-              </div>
-            </div>
-
           </motion.div>
         )}
       </AnimatePresence>

@@ -213,6 +213,8 @@ model Insumo {
   notificarAlerta Boolean          @default(false)
   activo          Boolean          @default(true)
   deleted         Boolean          @default(false)
+  almacen         String?          @default("Congelador")
+  fechaActualizacion DateTime?     @default(now())
   recetas         RecetaInsumo[]
   movimientos     MovimientoInsumo[]
   restauranteId   Int?
