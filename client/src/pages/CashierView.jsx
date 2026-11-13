@@ -1437,7 +1437,7 @@ const CashierView = () => {
               </div>
 
               {/* Actions Ribbon */}
-              <div className="-translate-y-4 flex flex-wrap items-center gap-2">
+              <div className="-translate-y-4 flex flex-wrap items-center gap-2 relative z-50">
                 <button
                   onClick={() => {
                     if (shiftStatus !== 'abierto') {
@@ -1475,7 +1475,7 @@ const CashierView = () => {
               </div>
             </div>
             {/* Custom Responsive Table */}
-            <div className="-translate-y-10 overflow-x-auto">
+            <div className="-translate-y-10 overflow-x-auto relative z-10">
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
                   <tr className="text-xs font-bold uppercase tracking-widest" style={{ background: 'var(--primary)', color: '#ffffff', borderBottom: '1px solid var(--table-row-border)' }}>

@@ -802,7 +802,7 @@ const StaffStatsView = () => {
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', position: 'relative', zIndex: 40 }}>
                     {/* Badge informativo para un solo arqueo */}
                     {sessions.length === 1 && (() => {
                         const s = sessions[0];
@@ -1155,7 +1155,7 @@ const StaffStatsView = () => {
                                     activeData.cooks.map(c => {
                                         const isExpanded = !!expandedCooks[c.id];
                                         return (
-                                            <div key={c.id} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, overflow: 'hidden' }}>
+                                            <div key={c.id} style={{ border: '1px solid var(--glass-border)', borderRadius: 12, overflow: 'hidden' }}>
                                                 <button
                                                     onClick={() => setExpandedCooks(prev => ({ ...prev, [c.id]: !isExpanded }))}
                                                     style={{
@@ -1164,7 +1164,7 @@ const StaffStatsView = () => {
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'space-between',
-                                                        backgroundColor: 'rgba(255,255,255,0.02)',
+                                                        backgroundColor: 'var(--bg-secondary)',
                                                         border: 'none',
                                                         cursor: 'pointer',
                                                         color: 'var(--text-main)'
@@ -1181,33 +1181,35 @@ const StaffStatsView = () => {
                                                 </button>
 
                                                 {isExpanded && (
-                                                    <div style={{ padding: 12, backgroundColor: 'rgba(0,0,0,0.15)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                                                        <table style={{ width: '100%', fontSize: 11 }}>
-                                                            <thead>
-                                                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                                                                    <th style={{ textAlign: 'left', padding: '4px 0' }}>Plato</th>
-                                                                    <th style={{ textAlign: 'center' }}>Cant.</th>
-                                                                    <th style={{ textAlign: 'center' }}>Comanda</th>
-                                                                    <th style={{ textAlign: 'center' }}>Mesa</th>
-                                                                    <th style={{ textAlign: 'center' }}>Mozo</th>
-                                                                    <th style={{ textAlign: 'center' }}>Tiempo</th>
-                                                                    <th style={{ textAlign: 'right' }}>Hora Listo</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {c.platosList.map((p, idx) => (
-                                                                    <tr key={idx}>
-                                                                        <td style={{ padding: '6px 0' }}>{p.plato}</td>
-                                                                        <td style={{ textAlign: 'center' }}>{p.cantidad}</td>
-                                                                        <td style={{ textAlign: 'center' }}>#{p.numeroComanda || p.comandaId}</td>
-                                                                        <td style={{ textAlign: 'center' }}>Mesa {p.mesa}</td>
-                                                                        <td style={{ textAlign: 'center' }}>{p.mozo}</td>
-                                                                        <td style={{ textAlign: 'center' }}>{p.tiempoPrep > 0 ? `${p.tiempoPrep.toFixed(1)} min` : '-'}</td>
-                                                                        <td style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.fecha}</td>
+                                                    <div style={{ padding: 12, backgroundColor: 'var(--bg-surface)', borderTop: '1px solid var(--glass-border)' }}>
+                                                        <div className="overflow-x-auto">
+                                                            <table style={{ width: '100%', fontSize: 11, borderCollapse: 'separate', borderSpacing: 0 }}>
+                                                                <thead>
+                                                                    <tr style={{ background: 'var(--primary)', color: '#ffffff' }}>
+                                                                        <th style={{ textAlign: 'left', padding: '8px 12px', borderTopLeftRadius: 10, borderBottomLeftRadius: 10, fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Plato</th>
+                                                                        <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Cant.</th>
+                                                                        <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Comanda</th>
+                                                                        <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Mesa</th>
+                                                                        <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Mozo</th>
+                                                                        <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Tiempo</th>
+                                                                        <th style={{ textAlign: 'right', padding: '8px 12px', borderTopRightRadius: 10, borderBottomRightRadius: 10, fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Hora Listo</th>
                                                                     </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {c.platosList.map((p, idx) => (
+                                                                        <tr key={idx} style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                                                                            <td style={{ padding: '8px 12px', color: 'var(--text-main)', fontWeight: 500 }}>{p.plato}</td>
+                                                                            <td style={{ textAlign: 'center', padding: '8px 12px', color: 'var(--text-main)' }}>{p.cantidad}</td>
+                                                                            <td style={{ textAlign: 'center', padding: '8px 12px', color: 'var(--text-muted)' }}>#{p.numeroComanda || p.comandaId}</td>
+                                                                            <td style={{ textAlign: 'center', padding: '8px 12px', color: 'var(--text-main)' }}>Mesa {p.mesa}</td>
+                                                                            <td style={{ textAlign: 'center', padding: '8px 12px', color: 'var(--text-main)' }}>{p.mozo}</td>
+                                                                            <td style={{ textAlign: 'center', padding: '8px 12px', color: 'var(--text-main)' }}>{p.tiempoPrep > 0 ? `${p.tiempoPrep.toFixed(1)} min` : '-'}</td>
+                                                                            <td style={{ textAlign: 'right', padding: '8px 12px', color: 'var(--text-muted)' }}>{p.fecha}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
@@ -1248,7 +1250,7 @@ const StaffStatsView = () => {
                                 const mozoComandas = Object.values(comandasMap);
 
                                 return (
-                                    <div key={w.id} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, overflow: 'hidden' }}>
+                                    <div key={w.id} style={{ border: '1px solid var(--glass-border)', borderRadius: 12, overflow: 'hidden' }}>
                                         <button
                                             onClick={() => setExpandedWaiters(prev => ({ ...prev, [w.id]: !isExpanded }))}
                                             style={{
@@ -1257,7 +1259,7 @@ const StaffStatsView = () => {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                backgroundColor: 'rgba(255,255,255,0.02)',
+                                                backgroundColor: 'var(--bg-secondary)',
                                                 border: 'none',
                                                 cursor: 'pointer',
                                                 color: 'var(--text-main)',
@@ -1275,62 +1277,65 @@ const StaffStatsView = () => {
                                         </button>
 
                                         {isExpanded && (
-                                            <div style={{ padding: 15, backgroundColor: 'rgba(0,0,0,0.15)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                                            <div style={{ padding: 15, backgroundColor: 'var(--bg-surface)', borderTop: '1px solid var(--glass-border)' }}>
                                                 {mozoComandas.length === 0 ? (
                                                     <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Sin comandas registradas</div>
                                                 ) : (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                                         {mozoComandas.map(c => (
-                                                            <div key={c.id} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, border: '1px solid rgba(255,255,255,0.03)' }}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px dashed rgba(255,255,255,0.08)', paddingBottom: 6 }}>
-                                                                    <span style={{ fontSize: 12, fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 'bold' }}>Comanda #{c.numeroComanda || c.id} — Mesa {c.mesa} — {c.fecha} {c.hora}</span>
+                                                            <div key={c.id} style={{ backgroundColor: 'var(--bg-secondary)', padding: 12, borderRadius: 10, border: '1px solid var(--glass-border)' }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, borderBottom: '1px dashed var(--glass-border)', paddingBottom: 8 }}>
+                                                                    <span style={{ fontSize: 12, fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 'bold', color: 'var(--text-main)' }}>Comanda #{c.numeroComanda || c.id} — Mesa {c.mesa} — {c.fecha} {c.hora}</span>
                                                                     <span style={{ fontSize: 12, fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 'bold', color: 'var(--success)' }}>Total: S/. {c.total.toFixed(2)}</span>
                                                                 </div>
-                                                                <table style={{ width: '100%', fontSize: 11, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
-                                                                    <thead>
-                                                                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                                                                            <th style={{ textAlign: 'left', padding: '4px 0' }}>Cant. x Plato</th>
-                                                                            <th style={{ textAlign: 'center' }}>Precio</th>
-                                                                            <th style={{ textAlign: 'center' }}>Cocinero</th>
-                                                                            <th style={{ textAlign: 'center' }}>Kardex / Stock</th>
-                                                                            <th style={{ textAlign: 'right' }}>Subtotal</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {c.platos.map((p, idx) => (
-                                                                            <tr key={idx}>
-                                                                                <td style={{ padding: '6px 0', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{p.cantidad} × {p.plato}</td>
-                                                                                <td style={{ textAlign: 'center', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>S/. {p.precio.toFixed(2)}</td>
-                                                                                <td style={{ textAlign: 'center', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{p.cocinero}</td>
-                                                                                <td style={{ textAlign: 'center', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
-                                                                                    <span style={{
-                                                                                        fontSize: 9,
-                                                                                        padding: '2px 5px',
-                                                                                        borderRadius: 6,
-                                                                                        backgroundColor: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado') 
-                                                                                            ? 'rgba(34, 197, 94, 0.15)' 
-                                                                                            : p.kardexStatus === 'Pendiente de cobro'
-                                                                                            ? 'rgba(245, 158, 11, 0.15)'
-                                                                                            : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
-                                                                                            ? 'rgba(255, 255, 255, 0.05)' 
-                                                                                            : 'rgba(239, 68, 68, 0.15)',
-                                                                                        color: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado')
-                                                                                            ? '#22c55e'
-                                                                                            : p.kardexStatus === 'Pendiente de cobro'
-                                                                                            ? '#f59e0b'
-                                                                                            : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
-                                                                                            ? 'var(--text-muted)'
-                                                                                            : '#ef4444',
-                                                                                        fontFamily: '"Plus Jakarta Sans", sans-serif'
-                                                                                    }}>
-                                                                                        {p.kardexStatus}
-                                                                                    </span>
-                                                                                </td>
-                                                                                <td style={{ textAlign: 'right', fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'var(--success)', fontWeight: 'bold' }}>S/. {p.subtotal.toFixed(2)}</td>
+                                                                <div className="overflow-x-auto">
+                                                                    <table style={{ width: '100%', fontSize: 11, fontFamily: '"Plus Jakarta Sans", sans-serif', borderCollapse: 'separate', borderSpacing: 0 }}>
+                                                                        <thead>
+                                                                            <tr style={{ background: 'var(--primary)', color: '#ffffff' }}>
+                                                                                <th style={{ textAlign: 'left', padding: '8px 12px', borderTopLeftRadius: 10, borderBottomLeftRadius: 10, fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Cant. x Plato</th>
+                                                                                <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Precio</th>
+                                                                                <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Cocinero</th>
+                                                                                <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Kardex / Stock</th>
+                                                                                <th style={{ textAlign: 'right', padding: '8px 12px', borderTopRightRadius: 10, borderBottomRightRadius: 10, fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Subtotal</th>
                                                                             </tr>
-                                                                        ))}
-                                                                    </tbody>
-                                                                </table>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {c.platos.map((p, idx) => (
+                                                                                <tr key={idx} style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                                                                                    <td style={{ padding: '8px 12px', fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'var(--text-main)', fontWeight: 500 }}>{p.cantidad} × {p.plato}</td>
+                                                                                    <td style={{ textAlign: 'center', padding: '8px 12px', fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'var(--text-main)' }}>S/. {p.precio.toFixed(2)}</td>
+                                                                                    <td style={{ textAlign: 'center', padding: '8px 12px', fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'var(--text-muted)' }}>{p.cocinero}</td>
+                                                                                    <td style={{ textAlign: 'center', padding: '8px 12px', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+                                                                                        <span style={{
+                                                                                            fontSize: 9,
+                                                                                            padding: '2px 6px',
+                                                                                            borderRadius: 6,
+                                                                                            backgroundColor: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado') 
+                                                                                                ? 'rgba(34, 197, 94, 0.15)' 
+                                                                                                : p.kardexStatus === 'Pendiente de cobro'
+                                                                                                ? 'rgba(245, 158, 11, 0.15)'
+                                                                                                : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
+                                                                                                ? 'rgba(255, 255, 255, 0.05)' 
+                                                                                                : 'rgba(239, 68, 68, 0.15)',
+                                                                                            color: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado')
+                                                                                                ? '#22c55e'
+                                                                                                : p.kardexStatus === 'Pendiente de cobro'
+                                                                                                ? '#f59e0b'
+                                                                                                : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
+                                                                                                ? 'var(--text-muted)'
+                                                                                                : '#ef4444',
+                                                                                            fontFamily: '"Plus Jakarta Sans", sans-serif',
+                                                                                            fontWeight: 600
+                                                                                        }}>
+                                                                                            {p.kardexStatus}
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td style={{ textAlign: 'right', padding: '8px 12px', fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'var(--success)', fontWeight: 'bold' }}>S/. {p.subtotal.toFixed(2)}</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1356,7 +1361,7 @@ const StaffStatsView = () => {
                                 activeData.comandasPeriodo.map(c => {
                                     const isExpanded = !!expandedOrders[c.id];
                                     return (
-                                        <div key={c.id} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, overflow: 'hidden' }}>
+                                        <div key={c.id} style={{ border: '1px solid var(--glass-border)', borderRadius: 12, overflow: 'hidden' }}>
                                             <button
                                                 onClick={() => setExpandedOrders(prev => ({ ...prev, [c.id]: !isExpanded }))}
                                                 style={{
@@ -1365,7 +1370,7 @@ const StaffStatsView = () => {
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'space-between',
-                                                    backgroundColor: 'rgba(255,255,255,0.02)',
+                                                    backgroundColor: 'var(--bg-secondary)',
                                                     border: 'none',
                                                     cursor: 'pointer',
                                                     color: 'var(--text-main)',
@@ -1383,52 +1388,55 @@ const StaffStatsView = () => {
                                             </button>
 
                                             {isExpanded && (
-                                                <div style={{ padding: 15, backgroundColor: 'rgba(0,0,0,0.15)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                                                    <table style={{ width: '100%', fontSize: 11, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
-                                                        <thead>
-                                                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                                                                <th style={{ textAlign: 'left', padding: '4px 0' }}>Cant. x Plato</th>
-                                                                <th style={{ textAlign: 'center' }}>Cocinero</th>
-                                                                <th style={{ textAlign: 'center' }}>Kardex / Inventario</th>
-                                                                <th style={{ textAlign: 'center' }}>Estado</th>
-                                                                <th style={{ textAlign: 'right' }}>Subtotal</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {c.platos.map((p, idx) => (
-                                                                <tr key={idx}>
-                                                                    <td style={{ padding: '6px 0', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{p.cantidad} × {p.plato}</td>
-                                                                    <td style={{ textAlign: 'center', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{p.cocinero}</td>
-                                                                    <td style={{ textAlign: 'center', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
-                                                                        <span style={{
-                                                                            fontSize: 9,
-                                                                            padding: '2px 5px',
-                                                                            borderRadius: 6,
-                                                                            backgroundColor: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado') 
-                                                                                ? 'rgba(34, 197, 94, 0.15)' 
-                                                                                : p.kardexStatus === 'Pendiente de cobro'
-                                                                                ? 'rgba(245, 158, 11, 0.15)'
-                                                                                : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
-                                                                                ? 'rgba(255, 255, 255, 0.05)' 
-                                                                                : 'rgba(239, 68, 68, 0.15)',
-                                                                            color: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado')
-                                                                                ? '#22c55e'
-                                                                                : p.kardexStatus === 'Pendiente de cobro'
-                                                                                ? '#f59e0b'
-                                                                                : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
-                                                                                ? 'var(--text-muted)'
-                                                                                : '#ef4444',
-                                                                            fontFamily: '"Plus Jakarta Sans", sans-serif'
-                                                                        }}>
-                                                                            {p.kardexStatus}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td style={{ textAlign: 'center', color: p.estado === 'entregado' ? 'var(--success)' : 'var(--warning)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{p.estado}</td>
-                                                                    <td style={{ textAlign: 'right', fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'var(--success)', fontWeight: 'bold' }}>S/. {(p.precio * p.cantidad).toFixed(2)}</td>
+                                                <div style={{ padding: 15, backgroundColor: 'var(--bg-surface)', borderTop: '1px solid var(--glass-border)' }}>
+                                                    <div className="overflow-x-auto">
+                                                        <table style={{ width: '100%', fontSize: 11, fontFamily: '"Plus Jakarta Sans", sans-serif', borderCollapse: 'separate', borderSpacing: 0 }}>
+                                                            <thead>
+                                                                <tr style={{ background: 'var(--primary)', color: '#ffffff' }}>
+                                                                    <th style={{ textAlign: 'left', padding: '8px 12px', borderTopLeftRadius: 10, borderBottomLeftRadius: 10, fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Cant. x Plato</th>
+                                                                    <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Cocinero</th>
+                                                                    <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Kardex / Inventario</th>
+                                                                    <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Estado</th>
+                                                                    <th style={{ textAlign: 'right', padding: '8px 12px', borderTopRightRadius: 10, borderBottomRightRadius: 10, fontWeight: 700, fontSize: 11, color: '#ffffff' }}>Subtotal</th>
                                                                 </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
+                                                            </thead>
+                                                            <tbody>
+                                                                {c.platos.map((p, idx) => (
+                                                                    <tr key={idx} style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                                                                        <td style={{ padding: '8px 12px', fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'var(--text-main)', fontWeight: 500 }}>{p.cantidad} × {p.plato}</td>
+                                                                        <td style={{ textAlign: 'center', padding: '8px 12px', fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'var(--text-muted)' }}>{p.cocinero}</td>
+                                                                        <td style={{ textAlign: 'center', padding: '8px 12px', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+                                                                            <span style={{
+                                                                                fontSize: 9,
+                                                                                padding: '2px 6px',
+                                                                                borderRadius: 6,
+                                                                                backgroundColor: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado') 
+                                                                                    ? 'rgba(34, 197, 94, 0.15)' 
+                                                                                    : p.kardexStatus === 'Pendiente de cobro'
+                                                                                    ? 'rgba(245, 158, 11, 0.15)'
+                                                                                    : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
+                                                                                    ? 'rgba(255, 255, 255, 0.05)' 
+                                                                                    : 'rgba(239, 68, 68, 0.15)',
+                                                                                color: (p.kardexStatus === 'Stock descontado' || p.kardexStatus === 'Stock verificado')
+                                                                                    ? '#22c55e'
+                                                                                    : p.kardexStatus === 'Pendiente de cobro'
+                                                                                    ? '#f59e0b'
+                                                                                    : (p.kardexStatus === 'Sin receta configurada' || p.kardexStatus === 'No afecta inventario')
+                                                                                    ? 'var(--text-muted)'
+                                                                                    : '#ef4444',
+                                                                                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                                                                                fontWeight: 600
+                                                                            }}>
+                                                                                {p.kardexStatus}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td style={{ textAlign: 'center', padding: '8px 12px', color: p.estado === 'entregado' ? 'var(--success)' : 'var(--warning)', fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 600 }}>{p.estado}</td>
+                                                                        <td style={{ textAlign: 'right', padding: '8px 12px', fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'var(--success)', fontWeight: 'bold' }}>S/. {(p.precio * p.cantidad).toFixed(2)}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

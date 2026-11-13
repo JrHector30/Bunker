@@ -85,8 +85,11 @@ export function DropdownRangeDatePicker({
     : !tempSelected;
 
   return (
-    // Contenedor principal relativo de 280px que ahora sí abraza y cuadra a la perfección a la X
-    <div className={`relative inline-flex items-center w-[280px] ${triggerClassName}`}>
+    // Contenedor principal relativo de 280px con z-index elevado cuando se encuentra abierto
+    <div
+      className={`relative inline-flex items-center w-[280px] ${triggerClassName} ${open ? 'z-[9999]' : 'z-20'}`}
+      style={{ zIndex: open ? 9999 : undefined }}
+    >
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>

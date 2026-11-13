@@ -711,8 +711,8 @@ a[class*="bg-black"] * {
   /* Use the THEME's primary color */
 }
 
-/* Headers text on theme background */
-.mode-light th,
+/* Headers text on theme background (strictly exclude calendar and datepicker headers) */
+.mode-light table:not(.rdp-table):not([class*="rdp-"]) th:not(.rdp-weekday):not([class*="rdp-"]),
 .mode-light .table-responsive thead tr {
   color: #ffffff !important;
   background-color: var(--primary) !important;

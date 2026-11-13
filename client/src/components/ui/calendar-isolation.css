@@ -2,14 +2,24 @@
    BÚNKER DE AISLAMIENTO COMPLETO: FIX PARA VARIANTES DE SHADCN
    ============================================================ */
 
-/* 1. Neutralizar tablas globales */
+/* 1. Neutralizar tablas globales y proteger encabezados del calendario */
 .rdp-isolated table,
 .rdp-isolated th,
 .rdp-isolated td,
 .rdp-isolated tr,
 .rdp-isolated thead,
-.rdp-isolated tbody {
+.rdp-isolated tbody,
+.rdp-isolated .rdp-weekday,
+.rdp-isolated .rdp-weekdays,
+.mode-light .rdp-isolated th,
+.mode-light .rdp-isolated td,
+.mode-light .rdp-isolated thead,
+.mode-light .rdp-isolated thead tr,
+.mode-light .rdp-isolated thead th,
+.mode-light .rdp-isolated .rdp-weekday,
+.mode-light .rdp-isolated .rdp-weekdays {
   background: transparent !important;
+  background-color: transparent !important;
   border: none !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -17,6 +27,15 @@
   text-align: center !important;
   font-weight: normal !important;
   box-shadow: none !important;
+}
+
+.rdp-isolated th,
+.rdp-isolated .rdp-weekday,
+.mode-light .rdp-isolated th,
+.mode-light .rdp-isolated .rdp-weekday {
+  color: #6b7280 !important; /* text-gray-500 neutral */
+  font-size: 10px !important;
+  font-weight: 700 !important;
 }
 
 .rdp-isolated table {

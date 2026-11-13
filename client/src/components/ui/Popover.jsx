@@ -28,7 +28,7 @@ export function Popover({ open: controlledOpen, onOpenChange, children }) {
 
   return (
     <PopoverContext.Provider value={{ open, setOpen, containerRef }}>
-      <div ref={containerRef} className="inline-block">
+      <div ref={containerRef} className="inline-block relative" style={{ zIndex: open ? 9999 : undefined }}>
         {children}
       </div>
     </PopoverContext.Provider>
@@ -65,7 +65,8 @@ export function PopoverContent({ children, className = "", align = "start" }) {
 
   return (
     <div
-      className={`absolute ${alignClass} z-[9999] mt-2 rounded-xl border border-gray-800 bg-[#121214] p-4 shadow-2xl outline-none min-w-[280px] ${className}`}
+      className={`absolute ${alignClass} z-[99999] mt-2 rounded-xl border border-gray-800 bg-[#121214] p-4 shadow-2xl outline-none min-w-[280px] ${className}`}
+      style={{ zIndex: 99999 }}
     >
       {children}
     </div>
