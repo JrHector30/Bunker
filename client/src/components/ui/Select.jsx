@@ -55,12 +55,12 @@ export function SelectValue({ placeholder }) {
   return <span className="truncate">{items[value] !== undefined ? items[value] : placeholder}</span>;
 }
 
-export function SelectContent({ children }) {
+export function SelectContent({ className = "", children }) {
   const { open } = useContext(SelectContext);
   if (!open) return null;
 
   return (
-    <div className="absolute left-0 z-[10000] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-800 bg-[#121214] p-1 shadow-2xl focus:outline-none">
+    <div className={`absolute left-0 z-[10000] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-slate-200 bg-white p-1 shadow-2xl focus:outline-none dark:border-gray-800 dark:bg-[#121214] ${className}`}>
       {children}
     </div>
   );
@@ -80,7 +80,7 @@ export function SelectItem({ value, children }) {
         onValueChange(value);
         setOpen(false);
       }}
-      className={`relative flex w-full cursor-pointer select-none items-center rounded-md py-1.5 pl-3 pr-8 text-sm outline-none hover:bg-teal-600 hover:text-white transition-colors ${isSelected ? 'bg-teal-700 text-white font-medium' : 'text-gray-300'
+      className={`relative flex w-full cursor-pointer select-none items-center rounded-md py-1.5 pl-3 pr-8 text-sm outline-none hover:bg-teal-600 hover:text-white transition-colors ${isSelected ? 'bg-teal-700 text-white font-medium' : 'text-slate-700 dark:text-gray-300'
         }`}
     >
       <span className="truncate">{children}</span>

@@ -65,7 +65,7 @@ export function PopoverContent({ children, className = "", align = "start" }) {
 
   return (
     <div
-      className={`absolute ${alignClass} z-[99999] mt-2 rounded-xl border border-gray-800 bg-[#121214] p-4 shadow-2xl outline-none min-w-[280px] ${className}`}
+      className={`absolute ${alignClass} z-[99999] mt-2 rounded-xl border border-slate-200 bg-white p-4 shadow-2xl outline-none min-w-[280px] dark:border-gray-800 dark:bg-[#121214] ${className}`}
       style={{ zIndex: 99999 }}
     >
       {children}

@@ -4,7 +4,13 @@ import { es } from "date-fns/locale";
 import { Calendar } from "./ui/Calendar";
 import { Button } from "./ui/Button";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/Popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/Select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/Select";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { CloseButton } from "./ui/CloseButton";
 
@@ -17,17 +23,14 @@ export function DropdownRangeDatePicker({
 }) {
   const today = new Date();
 
-  // We keep a temporary selection locally until the user clicks "Apply"
   const [tempSelected, setTempSelected] = React.useState(value);
   const [month, setMonth] = React.useState(today.getMonth());
   const [year, setYear] = React.useState(today.getFullYear());
   const [open, setOpen] = React.useState(false);
 
-  // Sync internal state when prop value changes
   React.useEffect(() => {
     setTempSelected(value);
 
-    // Set display month/year based on value if provided
     if (mode === "range" && value?.from) {
       setMonth(value.from.getMonth());
       setYear(value.from.getFullYear());
@@ -37,9 +40,9 @@ export function DropdownRangeDatePicker({
       setYear(d.getFullYear());
     }
   }, [value, mode]);
+
   const displayMonth = new Date(year, month, 1);
 
-  // Formatting helper
   const formatDateValue = (val) => {
     if (!val) return null;
     return format(val, "dd-MM-yyyy", { locale: es });
@@ -71,50 +74,49 @@ export function DropdownRangeDatePicker({
   };
 
   const handleTriggerClear = (e) => {
-    e.stopPropagation(); // Prevent opening/closing the popover
+    e.stopPropagation();
     handleClear();
   };
 
-  // Helper to check if anything is selected
-  const hasValue = mode === "range"
-    ? (!!value?.from)
-    : (!!value);
-
-  const isApplyDisabled = mode === "range"
-    ? !tempSelected?.from
-    : !tempSelected;
+  const hasValue = mode === "range" ? !!value?.from : !!value;
+  const isApplyDisabled = mode === "range" ? !tempSelected?.from : !tempSelected;
 
   return (
-    // Contenedor principal relativo de 280px con z-index elevado cuando se encuentra abierto
     <div
       className={`relative inline-flex items-center w-[280px] ${triggerClassName} ${open ? 'z-[9999]' : 'z-20'}`}
       style={{ zIndex: open ? 9999 : undefined }}
     >
-
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            // Mantener el padding derecho pr-10 para que el texto de las fechas no se meta debajo de la X
-            className="w-full justify-start text-left font-normal pr-10 font-sans"
+            className="w-full justify-start text-left font-normal pr-10 font-sans bg-white border-slate-200 text-slate-800 hover:bg-slate-50 dark:bg-[#131A26] dark:border-slate-800 dark:text-slate-100 dark:hover:bg-[#1A2232] cursor-pointer"
           >
-            <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-teal-400" />
-            <span className="truncate overflow-hidden text-gray-200 font-sans">{formattedValue}</span>
+            <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+            <span
+              className={`truncate overflow-hidden font-sans tabular-nums ${
+                hasValue
+                  ? "text-slate-800 dark:text-gray-200"
+                  : "text-slate-500 dark:text-gray-400"
+              }`}
+            >
+              {formattedValue}
+            </span>
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent className="w-auto p-4" align="end">
+        <PopoverContent
+          className="w-auto p-4 bg-white border border-slate-200 text-slate-900 shadow-xl dark:bg-[#0D1117] dark:border-slate-800 dark:text-slate-100"
+          align="end"
+        >
           <div className="space-y-4">
-            {/* Dropdowns - Year on the Left, Month on the Right */}
+            {/* Dropdowns - Año a la izquierda, Mes a la derecha */}
             <div className="flex gap-2 mb-2">
-              <Select
-                value={year.toString()}
-                onValueChange={(val) => setYear(Number(val))}
-              >
-                <SelectTrigger className="font-sans w-[120px]">
+              <Select value={year.toString()} onValueChange={(val) => setYear(Number(val))}>
+                <SelectTrigger className="font-sans w-[120px] bg-white border-slate-200 text-slate-800 dark:bg-[#131A26] dark:border-slate-800 dark:text-slate-100 cursor-pointer">
                   <SelectValue placeholder="Año" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border-slate-200 text-slate-800 dark:bg-[#131A26] dark:border-slate-800 dark:text-slate-100">
                   {Array.from({ length: 40 }, (_, i) => today.getFullYear() - 20 + i).map(
                     (y) => (
                       <SelectItem key={y} value={y.toString()}>
@@ -125,14 +127,11 @@ export function DropdownRangeDatePicker({
                 </SelectContent>
               </Select>
 
-              <Select
-                value={month.toString()}
-                onValueChange={(val) => setMonth(Number(val))}
-              >
-                <SelectTrigger className="font-sans w-[140px]">
+              <Select value={month.toString()} onValueChange={(val) => setMonth(Number(val))}>
+                <SelectTrigger className="font-sans w-[140px] bg-white border-slate-200 text-slate-800 dark:bg-[#131A26] dark:border-slate-800 dark:text-slate-100 cursor-pointer">
                   <SelectValue placeholder="Mes" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border-slate-200 text-slate-800 dark:bg-[#131A26] dark:border-slate-800 dark:text-slate-100">
                   {Array.from({ length: 12 }, (_, i) => (
                     <SelectItem key={i} value={i.toString()}>
                       {format(new Date(2000, i, 1), "MMMM", { locale: es })}
@@ -158,7 +157,7 @@ export function DropdownRangeDatePicker({
                 setMonth(date.getMonth());
                 setYear(date.getFullYear());
               }}
-              className="font-sans rounded-lg border border-gray-800 bg-[#060609]"
+              className="font-sans rounded-lg border border-slate-200 bg-white text-slate-900 dark:border-gray-800 dark:bg-[#060609] dark:text-slate-100"
             />
 
             {/* Footer */}
@@ -167,8 +166,8 @@ export function DropdownRangeDatePicker({
                 size="sm"
                 variant="ghost"
                 onClick={handleClear}
-                disabled={mode === "range" ? !tempSelected?.from : !tempSelected}
-                className="font-sans !bg-transparent !border-none text-white hover:text-gray-500 font-medium transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none p-0 h-auto"
+                disabled={isApplyDisabled}
+                className="font-sans !bg-transparent !border-none text-slate-500 hover:text-slate-900 dark:text-white dark:hover:text-gray-400 font-medium transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none p-0 h-auto"
               >
                 Limpiar
               </Button>
@@ -177,7 +176,7 @@ export function DropdownRangeDatePicker({
                 size="sm"
                 onClick={handleApply}
                 disabled={isApplyDisabled}
-                className="font-sans !bg-white !text-black hover:!bg-neutral-200 font-semibold px-4 h-8 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:pointer-events-none border-none"
+                className="font-sans !bg-slate-900 !text-white hover:!bg-slate-800 dark:!bg-white dark:!text-black dark:hover:!bg-neutral-200 font-semibold px-4 h-8 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:pointer-events-none border-none"
               >
                 Aplicar
               </Button>
@@ -186,17 +185,14 @@ export function DropdownRangeDatePicker({
         </PopoverContent>
       </Popover>
 
-      {/* 🎯 LA JUGADA MAESTRA: El CloseButton se renderiza AQUÍ. */}
-      {/* Al estar fuera de las etiquetas de Popover, se amarra al div general y el clic es 100% interactivo */}
       {hasValue && (
         <CloseButton
           onClick={(e) => {
             e.preventDefault();
-            e.stopPropagation(); // Detiene el trigger para que Radix no abra el calendario al hacer clic en borrar
+            e.stopPropagation();
             handleTriggerClear(e);
           }}
-          // Se posiciona de forma absoluta milimétricamente flotando en la esquina derecha del input
-          className="absolute right-[33px] top-0.1px z-30"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 z-30 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800"
         />
       )}
     </div>

@@ -1,93 +1,173 @@
-import React from 'react';
-import { DayPicker } from 'react-day-picker';
-import { es } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import "./calendar-isolation.css"; // O la ruta relativa correcta donde guardaste el CSS
+import React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  addDays,
+  addMonths,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isAfter,
+  isBefore,
+  isSameDay,
+  isSameMonth,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+} from "date-fns";
+import { es } from "date-fns/locale";
+
+const WEEKDAYS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"];
+
 export function Calendar({
-  className,
-  classNames,
-  showOutsideDays = true,
-  components: userComponents,
-  mode = "single",
-  ...props
+  mode = "range",
+  selected,
+  onSelect,
+  month,
+  onMonthChange,
+  className = "",
 }) {
+  const monthStart = startOfMonth(month);
+  const monthEnd = endOfMonth(monthStart);
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
 
-  // Tamaño ideal y uniforme para celdas y botones sin deformaciones de herencia
-  const sizeClass = "h-8 w-8 flex items-center justify-center text-xs text-center p-0 m-0 box-border";
-  const buttonReset = "!bg-transparent !border-none !outline-none focus:!outline-none focus:!ring-0 !p-0 !m-0 w-full h-full text-center flex items-center justify-center !rounded-lg transition-all duration-150 cursor-pointer text-gray-300 hover:!bg-gray-800/60";
+  const days = [];
+  let cursor = gridStart;
+  while (cursor <= gridEnd) {
+    days.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
 
-  const defaultClassNames = {
-    root: "rdp-isolated bg-transparent",
+  const today = startOfDay(new Date());
+  const rangeVal = mode === "range" && selected && !(selected instanceof Date) ? selected : undefined;
+  const singleVal = mode === "single" && selected instanceof Date ? selected : undefined;
 
-    // 🛡️ ENCAPSULAMIENTO ESTRICTO: Geometría exacta de 260px x 275px con distribución elástica vertical.
-    months: "relative flex flex-col bg-[#060609] border border-gray-900 p-4 rounded-xl shadow-2xl w-[260px] h-[275px] box-border select-none mx-auto",
-    month: "w-full h-full flex flex-col justify-start space-y-3",
+  const hasRangeSpan = Boolean(
+    mode === "range" &&
+      rangeVal?.from &&
+      rangeVal?.to &&
+      !isSameDay(rangeVal.from, rangeVal.to)
+  );
 
-    // Encabezado del mes centrado
-    caption_label: "text-xs font-semibold text-gray-100 tracking-tight text-center block capitalize w-full mt-[6px]",
+  const handleDayClick = (day) => {
+    const cleanDay = startOfDay(day);
 
-    // Navegación de flechas flotantes puras sin bloques blancos gigantes
-    nav: "absolute inset-x-0 top-4 flex justify-between px-3 pointer-events-none z-10 w-full bg-transparent border-none",
-    button_previous: "h-7 w-7 flex items-center justify-center text-gray-500 hover:text-white rounded-lg hover:bg-gray-900 pointer-events-auto cursor-pointer transition-colors bg-transparent border-none p-0 m-0",
-    button_next: "h-7 w-7 flex items-center justify-center text-gray-500 hover:text-white rounded-lg hover:bg-gray-900 pointer-events-auto cursor-pointer transition-colors bg-transparent border-none p-0 mr-[30px]",
+    if (mode === "single") {
+      onSelect?.(cleanDay);
+      return;
+    }
 
-    // 🟢 EL FIX DEL ESPACIO: Estructura del cuerpo de la grilla que distribuye uniformemente las semanas
-    month_grid: "w-full flex flex-col space-y-2 flex-1 justify-center",
-    table: "w-full border-collapse",
+    if (!rangeVal?.from || (rangeVal.from && rangeVal.to)) {
+      onSelect?.({ from: cleanDay, to: undefined });
+      return;
+    }
 
-    // Cabecera de días (DO, LU, MA...) alineada simétricamente
-    weekdays: "grid grid-cols-7 gap-1 text-center w-full bg-transparent border-none p-0 m-0",
-    weekday: "h-8 w-8 flex items-center justify-center text-[10px] font-bold text-gray-500 uppercase tracking-wider p-0 m-0 bg-transparent border-none",
-
-    // 🛡️ REJILLA DE DÍAS: Distribución de 7 columnas con separación vertical orgánica (gap-y)
-    week: "grid grid-cols-7 gap-y-2 w-full bg-transparent border-none p-0 m-0",
-
-    // 🛡️ RECOLECCIÓN DE LUZ VERDE: Quitamos los "!" para que el CSS pueda pintar los fondos blancos y grises
-    day: "h-8 w-8 flex items-center justify-center p-0 m-0 bg-transparent border-none relative rdp-day",
-    day_button: "bg-transparent border-none shadow-none outline-none p-0 m-0 w-full h-full flex items-center justify-center cursor-pointer text-gray-300 transition-all duration-150 rdp-day_button",
-
-    // 🟢 CONTROL ESTRICTO DE ESTADOS DE RANGO V9 (Enlace directo con tu archivo calendar-isolation.css)
-    selected: "rdp-selected",
-    range_start: "rdp-range_start",
-    range_end: "rdp-range_end",
-    range_middle: "rdp-range_middle",
-
-
-    // El día de hoy con su indicador teal
-    today: "border border-teal-500/30 !text-teal-400 font-semibold relative after:absolute after:bottom-1 after:start-1/2 after:size-1 after:-translate-x-1/2 after:bg-teal-400 after:rounded-full rdp-today",
-    outside: "text-gray-700 opacity-20 hover:bg-transparent cursor-default rdp-outside",
-    hidden: "invisible",
-  };
-
-  const defaultComponents = {
-    Chevron: ({ className: iconClass, orientation, ...chevronProps }) => {
-      if (orientation === "left") {
-        return <ChevronLeft className="text-gray-500 hover:text-white transition-colors" size={14} strokeWidth={2.5} {...chevronProps} />;
-      }
-      if (orientation === "right") {
-        return <ChevronRight className="text-gray-500 hover:text-white transition-colors" size={14} strokeWidth={2.5} {...chevronProps} />;
-      }
-      return null;
-    },
+    if (isBefore(cleanDay, rangeVal.from)) {
+      onSelect?.({ from: cleanDay, to: rangeVal.from });
+    } else {
+      onSelect?.({ from: rangeVal.from, to: cleanDay });
+    }
   };
 
   return (
-    <DayPicker
-      mode={mode}
-      locale={es}
-      weekStartsOn={0}
-      showOutsideDays={showOutsideDays}
-      classNames={defaultClassNames}
-      components={defaultComponents}
-      formatters={{
-        formatMonthCaption: (date) => date.toLocaleString("es-ES", { month: "long", year: "numeric" }),
-        formatWeekdayName: (date) => date.toLocaleString("es-ES", { weekday: "short" }).slice(0, 2).toUpperCase(),
-      }}
-      className={`rdp-isolated ${className || ""}`}
-      style={{
-        "--glass-border": "transparent"
-      }}
-      {...props}
-    />
+    <div className={`p-3 select-none ${className}`}>
+      <div className="mb-3 flex items-center justify-between">
+        <button
+          type="button"
+          aria-label="Mes anterior"
+          onClick={() => onMonthChange?.(subMonths(monthStart, 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+
+        <span className="text-xs font-semibold capitalize text-slate-800 dark:text-slate-100">
+          {format(monthStart, "MMMM yyyy", { locale: es })}
+        </span>
+
+        <button
+          type="button"
+          aria-label="Mes siguiente"
+          onClick={() => onMonthChange?.(addMonths(monthStart, 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Sin espacio horizontal (gap-x-0) para unir la banda del rango */}
+      <div className="grid grid-cols-7 gap-x-0 gap-y-0.5 text-center">
+        {WEEKDAYS.map((wd) => (
+          <div
+            key={wd}
+            className="pb-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500"
+          >
+            {wd}
+          </div>
+        ))}
+
+        {days.map((day) => {
+          const isCurrentMonth = isSameMonth(day, monthStart);
+          const isToday = isSameDay(day, today);
+
+          const isRangeStart =
+            mode === "range" && Boolean(rangeVal?.from && isSameDay(day, rangeVal.from));
+          const isRangeEnd =
+            mode === "range" && Boolean(rangeVal?.to && isSameDay(day, rangeVal.to));
+          const isInRange =
+            mode === "range" &&
+            Boolean(
+              rangeVal?.from &&
+                rangeVal?.to &&
+                isAfter(day, rangeVal.from) &&
+                isBefore(day, rangeVal.to)
+            );
+          const isSingleSelected =
+            mode === "single" && Boolean(singleVal && isSameDay(day, singleVal));
+
+          const isSameEndpoint = isRangeStart && isRangeEnd;
+          const isEndpoint = isRangeStart || isRangeEnd || isSingleSelected;
+
+          let radiusClass = "rounded-lg";
+          if (hasRangeSpan) {
+            if (isRangeStart && !isSameEndpoint) {
+              radiusClass = "rounded-l-lg rounded-r-none";
+            } else if (isRangeEnd && !isSameEndpoint) {
+              radiusClass = "rounded-r-lg rounded-l-none";
+            } else if (isInRange) {
+              radiusClass = "rounded-none";
+            }
+          }
+
+          let stateClass =
+            "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800";
+          if (isEndpoint) {
+            stateClass =
+              "bg-slate-900 font-semibold text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200";
+          } else if (isInRange) {
+            stateClass =
+              "bg-slate-200/80 font-medium text-slate-900 hover:bg-slate-200 dark:bg-[#1E222D] dark:text-slate-100 dark:hover:bg-[#262B38]";
+          } else if (isToday) {
+            stateClass =
+              "border border-slate-300 font-semibold text-slate-900 hover:bg-slate-100 dark:border-slate-700 dark:text-white dark:hover:bg-slate-800";
+          } else if (!isCurrentMonth) {
+            stateClass =
+              "text-slate-300 hover:bg-slate-50 dark:text-slate-700 dark:hover:bg-slate-800/40";
+          }
+
+          return (
+            <button
+              key={day.toISOString()}
+              type="button"
+              onClick={() => handleDayClick(day)}
+              className={`flex h-8 w-9 items-center justify-center text-xs tabular-nums transition-colors cursor-pointer ${radiusClass} ${stateClass}`}
+            >
+              {format(day, "d")}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
