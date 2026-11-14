@@ -1,12 +1,25 @@
 ﻿# BunkerTray.ps1 - Bandeja de Sistema para Servidor de Impresion y Backend de Bunker
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+[System.Windows.Forms.Application]::EnableVisualStyles()
 
 # Control de Instancia Unica mediante Mutex Global
 $createdNew = $false
-$mutex = New-Object System.Threading.Mutex($true, "Global\BunkerPOSTrayMutex", [ref]$createdNew)
+try {
+    $mutex = New-Object System.Threading.Mutex($true, "Global\BunkerPOSTrayMutex", [ref]$createdNew)
+} catch [System.Threading.AbandonedMutexException] {
+    $createdNew = $true
+} catch {
+    $createdNew = $true
+}
+
 if (-not $createdNew) {
-    exit
+    # Si habia una instancia activa huérfana de BunkerTray, matarla y tomar el control
+    $myPid = $PID
+    Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.ProcessId -ne $myPid -and $_.CommandLine -like "*BunkerTray.ps1*" } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    Start-Sleep -Milliseconds 300
 }
 
 $scriptDir = $PSScriptRoot
@@ -20,7 +33,8 @@ if ([string]::IsNullOrEmpty($scriptDir)) {
 $pngCandidates = @(
     (Join-Path $scriptDir "iconCG-32x32.png"),
     (Join-Path $scriptDir "client\public\iconCG-32x32.png"),
-    (Join-Path $scriptDir "..\client\public\iconCG-32x32.png")
+    (Join-Path $scriptDir "..\client\public\iconCG-32x32.png"),
+    (Join-Path $scriptDir "..\public\iconCG-32x32.png")
 )
 $pngPath = $pngCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 
@@ -31,13 +45,16 @@ $vbsCandidates = @(
 $vbsPath = $vbsCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 
 # Crear el icono de la bandeja
-$notifyIcon = New-Object System.Windows.Forms.NotifyIcon
-$notifyIcon.Text = "Bunker POS & Impresión"
+$global:bunkerNotifyIcon = New-Object System.Windows.Forms.NotifyIcon
+$notifyIcon = $global:bunkerNotifyIcon
+$notifyIcon.Text = "Búnker POS - Impresión"
 
-# Cargar el icono desde el PNG si existe, si no usa un icono de sistema
+# Cargar el icono desde el PNG si existe, sin bloquear el archivo
 if ($pngPath -and (Test-Path $pngPath)) {
     try {
-        $bitmap = [System.Drawing.Bitmap]::FromFile($pngPath)
+        $fileBytes = [System.IO.File]::ReadAllBytes($pngPath)
+        $ms = New-Object System.IO.MemoryStream(,$fileBytes)
+        $bitmap = [System.Drawing.Bitmap]::FromStream($ms)
         $hIcon = $bitmap.GetHicon()
         $notifyIcon.Icon = [System.Drawing.Icon]::FromHandle($hIcon)
     } catch {
@@ -80,41 +97,39 @@ function Get-BunkerStatus {
     $backendActive = $false
     $printerActive = $false
     
-    # Comprobar backend local (puerto 3000)
-    if (Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue) {
-        $backendActive = $true
-    }
+    try {
+        if (Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue) {
+            $backendActive = $true
+        }
+    } catch {}
     
-    # Comprobar servidor de impresion:
-    # 1) Revisa puertos de bloqueo de estacion (19900..19999)
-    $lockConn = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -ge 19900 -and $_.LocalPort -le 19999 }
-    # 2) O proceso activo de node ejecutando server.js
-    $printerProc = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*printer-server*server.js*" }
-    
-    if ($lockConn -or $printerProc) {
-        $printerActive = $true
-    }
+    try {
+        $lockConn = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -ge 19900 -and $_.LocalPort -le 19999 }
+        $printerProc = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*server.js*" }
+        if ($lockConn -or $printerProc) {
+            $printerActive = $true
+        }
+    } catch {}
     
     $printerStatusText = if ($printerActive) { "ACTIVO (Listo para imprimir)" } else { "DETENIDO" }
     $backendStatusText = if ($backendActive) { "ACTIVO (http://localhost:3000)" } else { "DETENIDO (o en la nube)" }
     
-    if ($backendActive -and $printerActive) {
-        return "Bunker está corriendo al 100%.`n• Impresora (USB/Red): $printerStatusText`n• Backend Local: $backendStatusText"
-    } elseif ($printerActive) {
-        return "Bunker listo para imprimir.`n• Impresora (USB/Red): $printerStatusText`n• Backend Local: $backendStatusText"
-    } elseif ($backendActive) {
-        return "Bunker parcialmente activo.`n• Backend Local: $backendStatusText`n• Impresora (USB/Red): $printerStatusText"
-    } else {
-        return "Bunker está completamente DETENIDO.`n• Impresora (USB/Red): DETENIDO`n• Backend Local: DETENIDO"
-    }
+    return "Estado de Búnker POS:`n`n• Servidor de Impresión: $printerStatusText`n• Backend Local: $backendStatusText"
 }
 
 # Crear Menú Contextual
 $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
 $statusItem = New-Object System.Windows.Forms.ToolStripMenuItem("Ver Estado", $null, {
-    $status = Get-BunkerStatus
-    [System.Windows.Forms.MessageBox]::Show($status, "Estado de Bunker POS", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    try {
+        $status = Get-BunkerStatus
+        $topForm = New-Object System.Windows.Forms.Form
+        $topForm.TopMost = $true
+        [System.Windows.Forms.MessageBox]::Show($topForm, $status, "Estado de Búnker POS", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+        $topForm.Dispose()
+    } catch {
+        [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, "Búnker POS", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+    }
 })
 
 $startItem = New-Object System.Windows.Forms.ToolStripMenuItem("Iniciar Bunker POS", $null, {

@@ -59,10 +59,18 @@ $form.CancelButton = $btnCancel
 $form.Controls.Add($btnCancel)
 
 $res = $form.ShowDialog()
+$targetFile = Join-Path $env:TEMP "bunker_gui_res.txt"
 if ($res -eq [System.Windows.Forms.DialogResult]::OK) {
     $station = if ($combo.SelectedIndex -eq 1) { "Cocina" } else { "Caja" }
     $auto = if ($check.Checked) { "1" } else { "0" }
-    Write-Output ("OK:" + $station + ":" + $auto)
+    $resultStr = "OK:" + $station + ":" + $auto
+    try {
+        [System.IO.File]::WriteAllText($targetFile, $resultStr, [System.Text.Encoding]::ASCII)
+    } catch {}
+    Write-Output $resultStr
 } else {
+    try {
+        [System.IO.File]::WriteAllText($targetFile, "CANCEL", [System.Text.Encoding]::ASCII)
+    } catch {}
     Write-Output "CANCEL"
 }

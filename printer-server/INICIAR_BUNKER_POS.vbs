@@ -40,7 +40,7 @@ If Not isSilent Then
         On Error GoTo 0
     End If
 
-    psCmd = "powershell.exe -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command ""& '" & selectorScript & "' | Out-File -FilePath '" & tempFile & "' -Encoding utf8"""
+    psCmd = "powershell.exe -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File """ & selectorScript & """"
     WshShell.Run psCmd, 0, true
 
     guiOutput = ""
@@ -53,14 +53,15 @@ If Not isSilent Then
         On Error GoTo 0
     End If
 
-    If Left(guiOutput, 3) <> "OK:" Then
+    If InStr(guiOutput, "OK:") = 0 Then
         ' El usuario presionó Cancelar o cerró la ventana
         WScript.Quit
     End If
 
-    parts = Split(guiOutput, ":")
-    stationName = parts(1)
-    autoStart = parts(2)
+    cleanStr = Mid(guiOutput, InStr(guiOutput, "OK:"))
+    parts = Split(cleanStr, ":")
+    stationName = Trim(parts(1))
+    autoStart = Trim(parts(2))
 
     ' Configurar Inicio Automático con Windows (shell:startup)
     startupFolder = WshShell.SpecialFolders("Startup")
@@ -85,8 +86,11 @@ End If
 
 If stationName = "" Then stationName = "Caja"
 
-' 1. Detener instancias anteriores de server.js y de la bandeja para evitar bloqueos
-WshShell.Run "powershell.exe -NoProfile -Command ""Get-CimInstance Win32_Process -Filter 'Name = ''node.exe''' | Where-Object { $_.CommandLine -like '*server.js*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }; Get-CimInstance Win32_Process -Filter 'Name = ''powershell.exe''' | Where-Object { $_.CommandLine -like '*BunkerTray*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }""", 0, true
+' 1. Detener instancias anteriores de server.js y de la bandeja de forma limpia
+stopScript = serverDir & "\stop_services.ps1"
+If objFSO.FileExists(stopScript) Then
+    WshShell.Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -File """ & stopScript & """", 0, true
+End If
 
 ' 2. Iniciar servidor Node.js con la estación seleccionada (en segundo plano / oculto)
 WshShell.Run "cmd.exe /c cd /d """ & serverDir & """ && node server.js " & stationName, 0, false
