@@ -725,7 +725,18 @@ async function checkAndPrintQueue() {
         };
         console.log(`ℹ️ [Auto-Fallback] Usando impresora detectada en el equipo: "${physicalPrinter.name}" para la estación "${STATION_ID}".`);
       } else {
-        // Si no hay ninguna impresora disponible, salir silenciosamente
+        // Si no hay ninguna impresora conectada físicamente para esta estación:
+        // Descartar automáticamente los tickets pendientes para evitar que se acumulen
+        // y se impriman decenas de tickets viejos cuando se enchufe la impresora horas o días después
+        const discarded = await client.query(
+          `UPDATE tickets_pendientes 
+           SET impreso = true 
+           WHERE impreso = false AND (estacion = $1 OR (estacion IS NULL AND $1 = 'Caja')) RETURNING id`,
+          [STATION_ID]
+        );
+        if (discarded.rows.length > 0) {
+          console.log(`ℹ️ [Sin Impresora] ${discarded.rows.length} ticket(s) descartado(s) automáticamente para evitar acumulación.`);
+        }
         isProcessing = false;
         return;
       }
@@ -739,6 +750,14 @@ async function checkAndPrintQueue() {
     if ((paperSize === '58mm' || paperSize === '50mm') && !printerName.toLowerCase().includes('80mm')) {
       lineWidth = paperSize === '50mm' ? 28 : 32;
     }
+
+    // Purgar tickets caducados: si un ticket lleva más de 10 minutos sin imprimirse (ej. pruebas sin impresora),
+    // se descarta automáticamente para que nunca se impriman rollos de papel viejos al reconectar
+    await client.query(`
+      UPDATE tickets_pendientes 
+      SET impreso = true 
+      WHERE impreso = false AND creado_a < NOW() - INTERVAL '10 minutes'
+    `);
 
     // 2. Obtener tickets pendientes asignados a esta estación ordenados cronológicamente
     const queueRes = await client.query(

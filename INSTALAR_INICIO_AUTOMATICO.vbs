@@ -31,6 +31,9 @@ End If
 
 oShortcut.Save
 
+' Iniciar de inmediato en esta sesión para que empiece a funcionar ya mismo
+WshShell.Run "wscript.exe """ & targetVbs & """ Caja", 0, false
+
 MsgBox "¡Instalación exitosa!" & vbCrLf & vbCrLf & _
-       "El Servidor de Impresión de Búnker POS ahora se iniciará AUTOMÁTICAMENTE cada vez que enciendas esta PC o Laptop." & vbCrLf & vbCrLf & _
-       "Acceso directo creado en:" & vbCrLf & shortcutPath, 64, "Búnker POS - Inicio Automático Configurado"
+       "El Servidor de Impresión de Búnker POS se ha INICIADO ahora mismo y también arrancará AUTOMÁTICAMENTE cada vez que enciendas esta PC o Laptop." & vbCrLf & vbCrLf & _
+       "Acceso directo creado en la carpeta de Inicio de Windows:" & vbCrLf & shortcutPath, 64, "Búnker POS - Inicio Automático Configurado"
