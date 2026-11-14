@@ -18,24 +18,24 @@ if ([string]::IsNullOrEmpty($scriptDir)) {
 }
 
 $pngCandidates = @(
+    (Join-Path $scriptDir "iconCG-32x32.png"),
     (Join-Path $scriptDir "client\public\iconCG-32x32.png"),
-    (Join-Path $scriptDir "..\client\public\iconCG-32x32.png"),
-    (Join-Path $scriptDir "iconCG-32x32.png")
+    (Join-Path $scriptDir "..\client\public\iconCG-32x32.png")
 )
-$pngPath = $pngCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+$pngPath = $pngCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 
 $vbsCandidates = @(
     (Join-Path $scriptDir "INICIAR_BUNKER_POS.vbs"),
-    (Join-Path $scriptDir "printer-server\INICIAR_BUNKER_POS.vbs")
+    (Join-Path $scriptDir "..\printer-server\INICIAR_BUNKER_POS.vbs")
 )
-$vbsPath = $vbsCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+$vbsPath = $vbsCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 
 # Crear el icono de la bandeja
 $notifyIcon = New-Object System.Windows.Forms.NotifyIcon
 $notifyIcon.Text = "Bunker POS & Impresión"
 
 # Cargar el icono desde el PNG si existe, si no usa un icono de sistema
-if (Test-Path $pngPath) {
+if ($pngPath -and (Test-Path $pngPath)) {
     try {
         $bitmap = [System.Drawing.Bitmap]::FromFile($pngPath)
         $hIcon = $bitmap.GetHicon()

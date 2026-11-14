@@ -85,16 +85,16 @@ End If
 
 If stationName = "" Then stationName = "Caja"
 
-' 1. Detener instancias anteriores de server.js para evitar bloqueos
-WshShell.Run "powershell.exe -NoProfile -Command ""Get-CimInstance Win32_Process -Filter 'Name = ''node.exe''' | Where-Object { $_.CommandLine -like '*server.js*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }""", 0, true
+' 1. Detener instancias anteriores de server.js y de la bandeja para evitar bloqueos
+WshShell.Run "powershell.exe -NoProfile -Command ""Get-CimInstance Win32_Process -Filter 'Name = ''node.exe''' | Where-Object { $_.CommandLine -like '*server.js*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }; Get-CimInstance Win32_Process -Filter 'Name = ''powershell.exe''' | Where-Object { $_.CommandLine -like '*BunkerTray*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }""", 0, true
 
 ' 2. Iniciar servidor Node.js con la estación seleccionada (en segundo plano / oculto)
 WshShell.Run "cmd.exe /c cd /d """ & serverDir & """ && node server.js " & stationName, 0, false
 
 ' 3. Iniciar Bandeja del Sistema (icono B en la barra de tareas)
-bandejaBat = serverDir & "\Bunker_Bandeja.bat"
-If objFSO.FileExists(bandejaBat) Then
-    WshShell.Run "cmd.exe /c cd /d """ & serverDir & """ && Bunker_Bandeja.bat", 0, false
+trayPs1 = serverDir & "\BunkerTray.ps1"
+If objFSO.FileExists(trayPs1) Then
+    WshShell.Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File """ & trayPs1 & """", 0, false
 End If
 
 WScript.Sleep 1200
