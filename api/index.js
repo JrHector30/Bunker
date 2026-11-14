@@ -117,53 +117,30 @@ app.get('/api/impresoras', async (req, res) => {
             where: { clave: `impresoras_disponibles_${estacion}` }
         });
         const winPrinters = config ? JSON.parse(config.valor) : [];
-        const winPrintersMapped = winPrinters.map(p => ({
-            id: `usb_${p.name}`,
-            nombre: p.name,
-            estacion,
-            tipo: 'impresora',
-            transport: 'USB',
-            mac: null,
-            ultimaIp: null,
-            ultimoEstado: p.offline ? 'OFFLINE' : 'ONLINE',
-            ultimaRespuestaMs: 0
-        }));
+        
+        // FILTRADO ESTRICTO: Solo impresoras físicas que estén REALMENTE CONECTADAS / EN LÍNEA
+        // No mostrar dispositivos apagados/desconectados ni mantener historiales viejos
+        const winPrintersMapped = winPrinters
+            .filter(p => !p.offline) // Solo las que están conectadas físicamente ahora mismo
+            .filter(p => !p.name.match(/pdf|xps|onenote|fax|root|microsoft|nitro/i))
+            .map(p => ({
+                id: `usb_${p.name}`,
+                nombre: p.name,
+                estacion,
+                tipo: 'impresora',
+                transport: 'USB',
+                mac: null,
+                ultimaIp: null,
+                ultimoEstado: 'ONLINE',
+                ultimaRespuestaMs: 0
+            }));
 
-        // Fetch registered Ethernet/USB printers from DB for THIS restaurant
+        // Fetch registered Ethernet printers from DB for THIS restaurant (solo TCP9100)
         const netPrinters = await prisma.dispositivoRed.findMany({
-            where: { estacion, restauranteId: tenantId }
+            where: { estacion, restauranteId: tenantId, transport: 'TCP9100' }
         });
 
-        // Merge real-time offline status for USB printers registered in DB
-        // If the station has reported its local Windows printers (winPrinters.length > 0),
-        // only keep USB printers that actually exist on THIS station's machine
-        const combinedNet = netPrinters
-            .filter(dev => {
-                if (dev.transport === 'USB' && winPrinters.length > 0) {
-                    return winPrintersMapped.some(w => w.nombre.toLowerCase() === dev.nombre.toLowerCase());
-                }
-                return true;
-            })
-            .map(dev => {
-                if (dev.transport === 'USB') {
-                    const winMatch = winPrintersMapped.find(w => w.nombre.toLowerCase() === dev.nombre.toLowerCase());
-                    return {
-                        ...dev,
-                        ultimoEstado: winMatch ? winMatch.ultimoEstado : 'OFFLINE'
-                    };
-                }
-                return dev;
-            });
-
-        // Combine with discovered Windows printers that are not yet registered for this restaurant
-        // Exclude virtual system drivers (pdf, xps, onenote, fax, root, microsoft, nitro)
-        const netNames = new Set(netPrinters.map(n => n.nombre));
-        const newWin = winPrintersMapped.filter(w => 
-            !netNames.has(w.nombre) && 
-            !w.nombre.match(/pdf|xps|onenote|fax|root|microsoft|nitro/i)
-        );
-
-        const combined = [...combinedNet, ...newWin];
+        const combined = [...netPrinters, ...winPrintersMapped];
         res.json(combined);
     } catch (err) {
         res.status(500).json({ error: err.message });

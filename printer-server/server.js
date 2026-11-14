@@ -21,7 +21,7 @@ types.setTypeParser(1114, function(stringValue) {
 });
 
 const stationArg = process.argv.find(arg => arg && arg.startsWith('--station='))?.split('=')[1] || (process.argv[2] && !process.argv[2].startsWith('-') ? process.argv[2] : null);
-const STATION_ID = process.env.STATION_ID || stationArg || 'Caja';
+const STATION_ID = (process.env.STATION_ID || stationArg || 'Caja').trim();
 
 // Prevenir múltiples instancias de la misma estación en segundo plano utilizando un puerto de bloqueo dinámico
 const getLockPort = (station) => {
@@ -63,20 +63,25 @@ async function registerStation() {
   try {
     client = await pool.connect();
     const res = await client.query(`SELECT valor FROM "Configuracion" WHERE clave = 'estaciones_impresion'`);
-    let list = [];
+    let list = ["Caja", "Cocina"];
     if (res.rows.length > 0) {
-      list = JSON.parse(res.rows[0].valor);
+      try {
+        const parsed = JSON.parse(res.rows[0].valor);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Limpiar nombres de estaciones fantasma (como LaptopCaja)
+          list = Array.from(new Set([...list, ...parsed])).filter(s => s && s !== 'LaptopCaja' && s !== 'Laptop-Caja');
+        }
+      } catch {}
     }
-    if (!list.includes(STATION_ID)) {
+    if (STATION_ID && !list.includes(STATION_ID) && (STATION_ID === 'Caja' || STATION_ID === 'Cocina')) {
       list.push(STATION_ID);
-      const jsonList = JSON.stringify(list);
-      await client.query(`
-        INSERT INTO "Configuracion" (clave, valor)
-        VALUES ('estaciones_impresion', $1)
-        ON CONFLICT (clave) DO UPDATE SET valor = $1
-      `, [jsonList]);
-      console.log(`📡 Estación "${STATION_ID}" registrada automáticamente en la base de datos.`);
     }
+    const jsonList = JSON.stringify(list);
+    await client.query(`
+      INSERT INTO "Configuracion" (clave, valor)
+      VALUES ('estaciones_impresion', $1)
+      ON CONFLICT (clave) DO UPDATE SET valor = $1
+    `, [jsonList]);
   } catch (err) {
     console.error("❌ Error de conexión al auto-registrar la estación (verifique su conexión a internet):", err.message);
   } finally {
@@ -126,7 +131,31 @@ console.log("=================================================\n");
 // --- 1. Utilidad: Escanear Impresoras de Windows con PowerShell ---
 function getWindowsPrinters() {
   return new Promise((resolve) => {
-    const command = 'powershell -Command "Get-CimInstance -ClassName Win32_Printer | Select-Object Name, WorkOffline | ConvertTo-Json -Compress"';
+    // Detección estricta: verifica WorkOffline, estado de puerto serial (COM/BTH) y estado del spooler
+    const psCmd = `
+      $activePorts = [System.IO.Ports.SerialPort]::GetPortNames();
+      Get-CimInstance -ClassName Win32_Printer | ForEach-Object {
+        $pName = $_.Name;
+        $port = $_.PortName;
+        $offline = [bool]$_.WorkOffline;
+        if ($port -like 'COM*' -or $port -like 'BTH*') {
+          $clean = ($port -replace ':','').Trim();
+          if ($activePorts -notcontains $clean) {
+            $offline = $true;
+          }
+        };
+        if ($_.PrinterStatus -eq 2 -or $_.ExtendedPrinterStatus -eq 7) {
+          $offline = $true;
+        };
+        [PSCustomObject]@{
+          Name = $pName;
+          WorkOffline = $offline;
+          PortName = $port
+        }
+      } | ConvertTo-Json -Compress
+    `.replace(/\r?\n/g, ' ').trim();
+
+    const command = `powershell -NoProfile -Command "${psCmd}"`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error("❌ Error al escanear impresoras con PowerShell:", error);
@@ -144,7 +173,8 @@ function getWindowsPrinters() {
 
         const list = parsed.map(item => ({
           name: item.Name || '',
-          offline: item.WorkOffline === true
+          offline: item.WorkOffline === true,
+          port: item.PortName || ''
         }));
 
         resolve(list);
@@ -207,14 +237,11 @@ async function handlePrinterScanRequests() {
           ON CONFLICT (clave) DO UPDATE SET valor = $2
         `, [`impresoras_descubiertas_${STATION_ID}`, jsonEthernet]);
 
-        // Limpiar de la BD cualquier impresora USB vieja de esta estación que ya no exista físicamente en este equipo
-        const winNames = printersList.map(p => p.name);
-        if (winNames.length > 0) {
-          await client.query(`
-            DELETE FROM dispositivos_red 
-            WHERE estacion = $1 AND transport = 'USB' AND NOT (nombre = ANY($2::text[]))
-          `, [STATION_ID, winNames]);
-        }
+        // Asegurar que dispositivos_red no almacene USB (los USB son locales a cada equipo y se reportan en tiempo real)
+        await client.query(`
+          DELETE FROM dispositivos_red 
+          WHERE transport = 'USB'
+        `);
 
         // Actualizar dinámicamente el estado y la IP de impresoras vinculadas con los resultados del smart scan
         const dbDevsRes = await client.query(
@@ -686,9 +713,9 @@ async function checkAndPrintQueue() {
     }
 
     if (!activeDevice) {
-      // Fallback inteligente: si no se ha asignado aún en Ajustes, usar la primera impresora física de Windows (excluyendo PDF/Fax)
+      // Fallback inteligente: si no se ha asignado aún en Ajustes, usar la primera impresora física CONECTADA de Windows (excluyendo PDF/Fax)
       const winPrinters = await getWindowsPrinters();
-      const physicalPrinter = winPrinters.find(p => !p.name.match(/pdf|xps|onenote|fax|root|microsoft/i));
+      const physicalPrinter = winPrinters.find(p => !p.offline && !p.name.match(/pdf|xps|onenote|fax|root|microsoft|nitro/i));
       if (physicalPrinter) {
         activeDevice = {
           nombre: physicalPrinter.name,

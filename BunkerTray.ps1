@@ -114,7 +114,7 @@ $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
 $statusItem = New-Object System.Windows.Forms.ToolStripMenuItem("Ver Estado", $null, {
     $status = Get-BunkerStatus
-    $notifyIcon.ShowBalloonTip(4000, "Estado de Bunker", $status, [System.Windows.Forms.ToolTipIcon]::Info)
+    [System.Windows.Forms.MessageBox]::Show($status, "Estado de Bunker POS", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 })
 
 $startItem = New-Object System.Windows.Forms.ToolStripMenuItem("Iniciar Bunker POS", $null, {
