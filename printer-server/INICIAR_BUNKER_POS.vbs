@@ -33,11 +33,25 @@ If Not isSilent Then
         WScript.Quit
     End If
 
-    Set oExec = WshShell.Exec("powershell.exe -NoProfile -ExecutionPolicy Bypass -File """ & selectorScript & """")
-    Do While oExec.Status = 0
-        WScript.Sleep 100
-    Loop
-    guiOutput = Trim(oExec.StdOut.ReadAll())
+    tempFile = WshShell.ExpandEnvironmentStrings("%TEMP%\bunker_gui_res.txt")
+    If objFSO.FileExists(tempFile) Then
+        On Error Resume Next
+        objFSO.DeleteFile(tempFile)
+        On Error GoTo 0
+    End If
+
+    psCmd = "powershell.exe -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command ""& '" & selectorScript & "' | Out-File -FilePath '" & tempFile & "' -Encoding utf8"""
+    WshShell.Run psCmd, 0, true
+
+    guiOutput = ""
+    If objFSO.FileExists(tempFile) Then
+        On Error Resume Next
+        Set f = objFSO.OpenTextFile(tempFile, 1)
+        If Not f.AtEndOfStream Then guiOutput = Trim(f.ReadAll())
+        f.Close
+        objFSO.DeleteFile(tempFile)
+        On Error GoTo 0
+    End If
 
     If Left(guiOutput, 3) <> "OK:" Then
         ' El usuario presionó Cancelar o cerró la ventana

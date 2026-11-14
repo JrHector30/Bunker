@@ -1,6 +1,7 @@
 ﻿# selector.ps1 - Ventana interactiva de configuración para Búnker POS
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+[System.Windows.Forms.Application]::EnableVisualStyles()
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "Búnker POS - Estación de Impresión"
@@ -61,7 +62,7 @@ $res = $form.ShowDialog()
 if ($res -eq [System.Windows.Forms.DialogResult]::OK) {
     $station = if ($combo.SelectedIndex -eq 1) { "Cocina" } else { "Caja" }
     $auto = if ($check.Checked) { "1" } else { "0" }
-    Write-Output "OK:$station:$auto"
+    Write-Output ("OK:" + $station + ":" + $auto)
 } else {
     Write-Output "CANCEL"
 }
