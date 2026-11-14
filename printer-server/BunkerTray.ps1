@@ -25,8 +25,8 @@ $pngCandidates = @(
 $pngPath = $pngCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 $vbsCandidates = @(
-    (Join-Path $scriptDir "printer-server\Iniciar_Impresora.vbs"),
-    (Join-Path $scriptDir "Iniciar_Impresora.vbs")
+    (Join-Path $scriptDir "INICIAR_BUNKER_POS.vbs"),
+    (Join-Path $scriptDir "printer-server\INICIAR_BUNKER_POS.vbs")
 )
 $vbsPath = $vbsCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
