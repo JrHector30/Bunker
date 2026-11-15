@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Search, X, User, Save, Upload, Power, CheckCircle, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Users, Filter, ArrowUp, ArrowDown, ArrowUpDown, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, User, Save, Upload, Power, CheckCircle, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Users, Filter, ArrowUp, ArrowDown, ChevronsUpDown, Check } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 import CloseButton from '../components/ui/CloseButton';
 import SmoothDropdown from '../components/ui/SmoothDropdown';
@@ -503,46 +503,50 @@ const UsersView = () => {
                                 }}
                             >
                                 {/* 1. Columna Miembros */}
-                                <th className="py-3.5 px-5 text-left font-semibold first:rounded-tl-2xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleSort('nombre')}
-                                        className="inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity uppercase tracking-wider font-semibold cursor-pointer"
-                                        title="Ordenar por Miembro"
-                                    >
+                                <th 
+                                    className="py-2.5 px-5 text-left font-semibold first:rounded-tl-2xl cursor-pointer select-none"
+                                    onClick={() => handleSort('nombre')}
+                                    title="Ordenar por Miembro"
+                                >
+                                    <div className="inline-flex items-center gap-1.5 hover:opacity-90 transition-opacity uppercase tracking-wider font-semibold">
                                         <span>Miembros</span>
                                         {sortColumn === 'nombre' ? (
-                                            sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                                            sortDirection === 'asc' ? <ArrowUp size={13} className="text-white" /> : <ArrowDown size={13} className="text-white" />
                                         ) : (
-                                            <ArrowUpDown size={14} className="opacity-60" />
+                                            <ChevronsUpDown size={13} className="text-white opacity-40" />
                                         )}
-                                    </button>
+                                    </div>
                                 </th>
 
                                 {/* 2. Columna Estado */}
-                                <th className="py-3.5 px-4 !text-center font-semibold relative">
-                                    <div className="inline-flex items-center justify-center gap-1.5 header-filter-popover relative">
-                                        <button
-                                            type="button"
+                                <th className="py-2.5 px-4 !text-center font-semibold relative">
+                                    <div className="inline-flex items-center justify-center gap-2 header-filter-popover relative">
+                                        <div
                                             onClick={() => handleSort('estado')}
-                                            className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity uppercase tracking-wider font-semibold cursor-pointer"
+                                            className="inline-flex items-center gap-1 hover:opacity-90 transition-opacity uppercase tracking-wider font-semibold cursor-pointer select-none"
                                             title="Ordenar por Estado"
                                         >
                                             <span>Estado</span>
-                                            {sortColumn === 'estado' && (
-                                                sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                                            {sortColumn === 'estado' ? (
+                                                sortDirection === 'asc' ? <ArrowUp size={13} className="text-white" /> : <ArrowDown size={13} className="text-white" />
+                                            ) : (
+                                                <ChevronsUpDown size={13} className="text-white opacity-40" />
                                             )}
-                                        </button>
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setOpenHeaderFilter(openHeaderFilter === 'estado' ? null : 'estado');
                                             }}
-                                            className={`p-1 rounded-md transition-colors cursor-pointer ${statusFilter !== 'all' ? 'bg-white text-zinc-900 shadow-sm' : 'hover:bg-white/20 text-white'}`}
+                                            className={`p-1 rounded-md transition-all cursor-pointer border bg-transparent flex items-center justify-center outline-none ${
+                                                statusFilter !== 'all' 
+                                                    ? 'border-white bg-white/25 text-white shadow-xs' 
+                                                    : 'border-white/40 text-white hover:border-white hover:bg-white/10'
+                                            }`}
                                             title="Filtrar por Estado"
                                         >
-                                            <Filter size={13} />
+                                            <Filter size={12} />
                                         </button>
 
                                         {openHeaderFilter === 'estado' && (
@@ -581,29 +585,34 @@ const UsersView = () => {
                                 </th>
 
                                 {/* 3. Columna Rol */}
-                                <th className="py-3.5 px-4 !text-center font-semibold relative">
-                                    <div className="inline-flex items-center justify-center gap-1.5 header-filter-popover relative">
-                                        <button
-                                            type="button"
+                                <th className="py-2.5 px-4 !text-center font-semibold relative">
+                                    <div className="inline-flex items-center justify-center gap-2 header-filter-popover relative">
+                                        <div
                                             onClick={() => handleSort('rol')}
-                                            className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity uppercase tracking-wider font-semibold cursor-pointer"
+                                            className="inline-flex items-center gap-1 hover:opacity-90 transition-opacity uppercase tracking-wider font-semibold cursor-pointer select-none"
                                             title="Ordenar por Rol"
                                         >
                                             <span>Rol</span>
-                                            {sortColumn === 'rol' && (
-                                                sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                                            {sortColumn === 'rol' ? (
+                                                sortDirection === 'asc' ? <ArrowUp size={13} className="text-white" /> : <ArrowDown size={13} className="text-white" />
+                                            ) : (
+                                                <ChevronsUpDown size={13} className="text-white opacity-40" />
                                             )}
-                                        </button>
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setOpenHeaderFilter(openHeaderFilter === 'rol' ? null : 'rol');
                                             }}
-                                            className={`p-1 rounded-md transition-colors cursor-pointer ${roleFilter !== 'all' ? 'bg-white text-zinc-900 shadow-sm' : 'hover:bg-white/20 text-white'}`}
+                                            className={`p-1 rounded-md transition-all cursor-pointer border bg-transparent flex items-center justify-center outline-none ${
+                                                roleFilter !== 'all' 
+                                                    ? 'border-white bg-white/25 text-white shadow-xs' 
+                                                    : 'border-white/40 text-white hover:border-white hover:bg-white/10'
+                                            }`}
                                             title="Filtrar por Rol"
                                         >
-                                            <Filter size={13} />
+                                            <Filter size={12} />
                                         </button>
 
                                         {openHeaderFilter === 'rol' && (
@@ -635,7 +644,7 @@ const UsersView = () => {
                                 </th>
 
                                 {/* 4. Columna Acción */}
-                                <th className="py-3.5 px-5 !text-center font-semibold w-24 last:rounded-tr-2xl">
+                                <th className="py-2.5 px-5 !text-center font-semibold w-24 last:rounded-tr-2xl">
                                     Acción
                                 </th>
                             </tr>
@@ -659,24 +668,24 @@ const UsersView = () => {
                                             style={{ borderBottom: '1px solid var(--table-row-border)' }}
                                         >
                                             {/* 1. Columna Miembros */}
-                                            <td className="py-3 px-5">
-                                                <div className="flex items-center gap-3">
+                                            <td className="py-2 px-5">
+                                                <div className="flex items-center gap-2.5">
                                                     {user.foto ? (
                                                         <img
                                                             src={user.foto}
                                                             alt={user.nombre}
-                                                            className="w-9 h-9 rounded-full object-cover shrink-0 border border-white/10"
+                                                            className="w-7 h-7 rounded-full object-cover shrink-0 border border-white/10"
                                                         />
                                                     ) : (
-                                                        <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 bg-white/10 text-[var(--text-main)] border border-white/10">
+                                                        <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 bg-white/10 text-[var(--text-main)] border border-white/10">
                                                             {initial}
                                                         </div>
                                                     )}
                                                     <div className="min-w-0">
-                                                        <p className="font-semibold block truncate text-sm text-[var(--text-main)]">
+                                                        <p className="font-semibold block truncate text-xs text-[var(--text-main)] leading-tight">
                                                             {user.nombre}
                                                         </p>
-                                                        <p className="text-xs text-[var(--text-muted)] font-mono block truncate">
+                                                        <p className="text-[11px] text-[var(--text-muted)] font-mono block truncate leading-tight mt-0.5">
                                                             @{user.usuario}{user.correo ? ` • ${user.correo}` : ''}
                                                         </p>
                                                     </div>
@@ -684,14 +693,14 @@ const UsersView = () => {
                                             </td>
 
                                             {/* 2. Columna Estado */}
-                                            <td className="py-3 px-4 !text-center">
+                                            <td className="py-2 px-4 !text-center">
                                                 {isActive ? (
-                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                                                         Activo
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-zinc-500/15 text-zinc-400 border border-zinc-500/30">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-500/15 text-zinc-400 border border-zinc-500/30">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
                                                         Inactivo
                                                     </span>
@@ -699,9 +708,9 @@ const UsersView = () => {
                                             </td>
 
                                             {/* 3. Columna Rol */}
-                                            <td className="py-3 px-4 !text-center">
+                                            <td className="py-2 px-4 !text-center">
                                                 <span
-                                                    className="inline-block px-3 py-1 rounded-lg text-xs font-semibold capitalize"
+                                                    className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-semibold capitalize"
                                                     style={{
                                                         background: 'rgba(255, 255, 255, 0.05)',
                                                         color: user.rol === 'admin' ? 'var(--text-main)' : 'var(--text-muted)',
@@ -713,8 +722,8 @@ const UsersView = () => {
                                             </td>
 
                                             {/* 4. Columna Acción */}
-                                            <td className="py-3 px-5 !text-center relative" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex justify-center items-center h-10">
+                                            <td className="py-2 px-5 !text-center relative" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex justify-center items-center">
                                                     <SmoothDropdown
                                                         id={user.id}
                                                         dropUp={index >= Math.max(1, paginatedUsers.length - 2)}
