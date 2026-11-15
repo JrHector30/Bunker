@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Search, X, User, Save, Upload, Power, CheckCircle, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Users, Filter, ArrowUp, ArrowDown, ChevronsUpDown, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, User, Save, Upload, Power, CheckCircle, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Users, Filter, ArrowUp, ArrowDown, ChevronsUpDown, Check, Shield, ChevronDown } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 import CloseButton from '../components/ui/CloseButton';
 import SmoothDropdown from '../components/ui/SmoothDropdown';
@@ -386,9 +386,100 @@ const UsersView = () => {
     const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     return (
-        <div className="p-4 sm:p-6 max-w-6xl mx-auto w-full">
-            {/* Top Bar Header */}
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="p-3.5 sm:p-6 max-w-6xl mx-auto w-full">
+            {/* Header Mobile (md:hidden) */}
+            <header className="md:hidden space-y-3 mb-4">
+                <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0 mt-0.5 shadow-2xs">
+                        <Users className="w-4 h-4" />
+                    </div>
+                    <div>
+                        <h1 className="text-[22px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                            Gestión de Usuarios
+                        </h1>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
+                            {users.length} {users.length === 1 ? 'miembro registrado' : 'miembros registrados'} en este local
+                        </p>
+                    </div>
+                </div>
+
+                {/* Buscador largo y completo */}
+                <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        placeholder="Buscar usuarios..."
+                        className="w-full min-h-[42px] pl-10 pr-9 text-xs rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 shadow-2xs"
+                    />
+                    {searchTerm && (
+                        <button
+                            type="button"
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+                </div>
+
+                {/* Botón Nuevo Usuario debajo del buscador */}
+                <button
+                    type="button"
+                    onClick={() => handleOpenModal()}
+                    className="min-h-[42px] w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs sm:text-[13px] font-bold rounded-xl text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)] active:scale-95 transition-all cursor-pointer border-0"
+                    style={{ backgroundColor: 'var(--primary, #F26522)' }}
+                >
+                    <Plus className="w-4 h-4" />
+                    <span>Nuevo Usuario</span>
+                </button>
+
+                {/* Filtros debajo del botón de Nuevo Usuario */}
+                <div className="space-y-2 pt-0.5">
+                    <div className="relative">
+                        <Filter className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => {
+                                setStatusFilter(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full min-h-[42px] pl-10 pr-9 text-xs font-semibold rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 shadow-2xs cursor-pointer"
+                        >
+                            <option value="all">Todos los estados</option>
+                            <option value="active">Activo</option>
+                            <option value="inactive">Inactivo</option>
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+
+                    <div className="relative">
+                        <Shield className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <select
+                            value={roleFilter}
+                            onChange={(e) => {
+                                setRoleFilter(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full min-h-[42px] pl-10 pr-9 text-xs font-semibold rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 shadow-2xs cursor-pointer"
+                        >
+                            <option value="all">Todos los roles</option>
+                            <option value="admin">Administrador</option>
+                            <option value="caja">Caja</option>
+                            <option value="cocina">Cocina</option>
+                            <option value="mozo">Mozo</option>
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                </div>
+            </header>
+
+            {/* Top Bar Header Desktop (hidden md:flex) */}
+            <div className="hidden md:flex mb-6 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                     <div className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[var(--text-main)]">
                         <Users className="size-5" />
@@ -439,9 +530,9 @@ const UsersView = () => {
                 </div>
             </div>
 
-            {/* Active Filters Pill Bar (if any filter is on) */}
+            {/* Active Filters Pill Bar Desktop (hidden md:flex) */}
             {(statusFilter !== 'all' || roleFilter !== 'all' || searchTerm) && (
-                <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+                <div className="hidden md:flex mb-4 flex-wrap items-center gap-2 text-xs">
                     <span className="text-[var(--text-muted)] text-[11px] font-semibold uppercase tracking-wider">Filtros:</span>
                     {statusFilter !== 'all' && (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[var(--text-main)] font-medium">
@@ -489,8 +580,8 @@ const UsersView = () => {
                 </div>
             )}
 
-            {/* Table Card */}
-            <div className="glass-panel overflow-visible p-0 rounded-2xl border" style={{ borderColor: 'var(--glass-border)' }}>
+            {/* Table Card Desktop (hidden md:block) */}
+            <div className="hidden md:block glass-panel overflow-visible p-0 rounded-2xl border" style={{ borderColor: 'var(--glass-border)' }}>
                 <div className="overflow-x-auto rounded-2xl">
                     <table className="w-full border-collapse">
                         <thead className="relative select-none">
@@ -796,10 +887,137 @@ const UsersView = () => {
                 </div>
             </div>
 
+            {/* Lista de Tarjetas Mobile (md:hidden) */}
+            <section className="md:hidden space-y-2.5 mb-4">
+                {paginatedUsers.length === 0 ? (
+                    <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 py-10 text-center text-xs text-slate-400">
+                        {searchTerm ? 'No se encontraron usuarios coincidentes.' : 'No hay usuarios registrados con esos filtros.'}
+                    </div>
+                ) : (
+                    paginatedUsers.map((user, index) => {
+                        const isActive = user.activo !== false;
+                        const initial = user.nombre ? user.nombre.charAt(0).toUpperCase() : '?';
+
+                        return (
+                            <div
+                                key={user.id}
+                                className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-3.5 shadow-2xs space-y-3 relative"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        {user.foto ? (
+                                            <img
+                                                src={user.foto}
+                                                alt={user.nombre}
+                                                className="w-11 h-11 rounded-full object-cover shrink-0 border border-slate-200 dark:border-slate-700"
+                                            />
+                                        ) : (
+                                            <div className="w-11 h-11 rounded-full bg-slate-800 dark:bg-slate-800 text-white flex items-center justify-center font-bold text-sm shrink-0 border border-slate-700">
+                                                {initial}
+                                            </div>
+                                        )}
+                                        <div className="min-w-0">
+                                            <h2 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                                {user.nombre}
+                                            </h2>
+                                            <p className="text-[11.5px] text-slate-400 dark:text-slate-500 font-mono truncate mt-0.5">
+                                                @{user.usuario}{user.correo ? ` • ${user.correo}` : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                                        <SmoothDropdown
+                                            id={user.id}
+                                            dropUp={index >= Math.max(1, paginatedUsers.length - 2)}
+                                            items={getUserActions(user)}
+                                            onAction={(actionId) => handleUserAction(actionId, user)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                                    <span className={`text-xs ${user.rol === 'admin' ? 'font-bold text-slate-900 dark:text-white' : 'font-semibold text-slate-600 dark:text-slate-300'}`}>
+                                        Rol: {user.rol === 'admin' ? 'Administrador' : (user.rol ? user.rol.charAt(0).toUpperCase() + user.rol.slice(1) : '-')}
+                                    </span>
+
+                                    <span
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                                            isActive
+                                                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                                        }`}
+                                    >
+                                        <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                        {isActive ? 'Activo' : 'Inactivo'}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </section>
+
+            {/* Paginación Mobile (md:hidden) */}
+            {totalPages > 0 && (
+                <div
+                    className="md:hidden p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 shadow-2xs"
+                >
+                    <span className="font-medium text-slate-600 dark:text-slate-300 tabular-nums text-[11px]">
+                        Total: <strong className="text-slate-800 dark:text-slate-100 font-bold">{filteredUsers.length}</strong>
+                    </span>
+
+                    <div className="flex items-center justify-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            title="Ir al inicio"
+                            aria-label="Primera página"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs active:scale-95"
+                        >
+                            <ChevronFirst className="w-4 h-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            title="Página anterior"
+                            aria-label="Página anterior"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs active:scale-95"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200 px-1 select-none whitespace-nowrap text-xs tabular-nums">
+                            {currentPage}/{totalPages}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={currentPage >= totalPages}
+                            title="Página siguiente"
+                            aria-label="Página siguiente"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs active:scale-95"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage >= totalPages}
+                            title="Ir al final"
+                            aria-label="Última página"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs active:scale-95"
+                        >
+                            <ChevronLast className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: 500 }}>
+                    <div className="modal-content w-full max-w-lg mx-3 sm:mx-auto max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>{editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
                             <CloseButton onClick={() => setShowModal(false)} className="scale-90" />
@@ -821,7 +1039,7 @@ const UsersView = () => {
                                 </label>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                 <div>
                                     <label>Nombre Completo</label>
                                     <input type="text" className="glass-input" required value={formData.nombre} onChange={e => setFormData({ ...formData, nombre: e.target.value })} />
@@ -832,7 +1050,7 @@ const UsersView = () => {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                 <div>
                                     <label>Rol</label>
                                     <select 
@@ -902,7 +1120,7 @@ const UsersView = () => {
             {/* Modal Secundario de Asociación de Correo */}
             {showEmailModal && (
                 <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowEmailModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: 400 }}>
+                    <div className="modal-content w-full max-w-md mx-3 sm:mx-auto max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>Asociar Correo</h2>
                             <CloseButton onClick={() => setShowEmailModal(false)} className="scale-90" />
