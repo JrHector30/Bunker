@@ -137,6 +137,7 @@ const TablesView = () => {
     const [draggingTableId, setDraggingTableId] = useState(null);
     const [showGlobalMergeModal, setShowGlobalMergeModal] = useState(false);
     const [selectedMergeTableIds, setSelectedMergeTableIds] = useState([]);
+    const [statusFilter, setStatusFilter] = useState('Todas');
 
     // States for dynamically modifying comensales of occupied tables upon merge
     const [isUpdatingDiners, setIsUpdatingDiners] = useState(false);
@@ -758,8 +759,12 @@ const TablesView = () => {
         const freeTables = tables.filter(t => t.estado === 'libre');
 
         return (
-            <div className="modal-overlay" onClick={closeModal}>
-                <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/60 backdrop-blur-[2px]" onClick={closeModal}>
+                <div className="modal-content w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                    {/* Barra de arrastre solo móvil */}
+                    <div className="sm:hidden -mt-1 pb-2 flex justify-center">
+                        <div className="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-zinc-700" />
+                    </div>
                     <div className="modal-header">
                         <div>
                             <h2 style={{ color: 'var(--text-main)' }}>{modalType === 'pre-check' ? 'Pre-cuenta' : 'Pedido Activo'}</h2>
@@ -1260,8 +1265,12 @@ const TablesView = () => {
         };
 
         return (
-            <div className="modal-overlay" onClick={handleCancel}>
-                <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, width: '90%' }}>
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/60 backdrop-blur-[2px]" onClick={handleCancel}>
+                <div className="modal-content rounded-t-3xl sm:rounded-2xl max-h-[90vh] flex flex-col w-full sm:max-w-lg" onClick={e => e.stopPropagation()}>
+                    {/* Barra de arrastre solo móvil */}
+                    <div className="sm:hidden -mt-1 pb-2 flex justify-center">
+                        <div className="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-zinc-700" />
+                    </div>
                     <div className="modal-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '15px' }}>
                         <h2 style={{ color: 'var(--text-main)', margin: 0 }}>🔗 Selecciona las mesas a unir:</h2>
                         <CloseButton onClick={handleCancel} className="scale-90" />
@@ -1329,9 +1338,27 @@ const TablesView = () => {
         );
     }
 
+    const counts = {
+        total: tablesState.length,
+        ocupadas: tablesState.filter(t => t.estado === 'ocupada').length,
+    };
+
+    const filteredTablesMobile = tablesState.filter((table) => {
+        const debaBloquear = table.estado === 'libre' && !isCajaAbierta;
+        if (statusFilter === 'Todas') return true;
+        if (statusFilter === 'Cerradas') return debaBloquear;
+        if (statusFilter === 'Ocupadas') return table.estado === 'ocupada';
+        if (statusFilter === 'Cuenta') {
+            const comandaActiva = table.comandas?.find(c => c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase()));
+            return Boolean(comandaActiva);
+        }
+        return true;
+    });
+
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            {/* 1. CABECERA ESCRITORIO (>= md) INTACTA */}
+            <div className="hidden md:flex justify-between items-center mb-5">
                 <h1 className="high-end-title" style={{ margin: 0 }}>Salón Principal</h1>
                 {(user?.rol === 'admin' || user?.rol === 'mozo') && (
                     <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
@@ -1418,7 +1445,159 @@ const TablesView = () => {
                     </div>
                 )}
             </div>
-            <div className="salon-contenedor">
+
+            {/* 1. CABECERA MÓVIL (< md) CON BOTONES >= 44px Y FILTROS */}
+            <header className="md:hidden flex flex-col gap-3.5 mb-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-[22px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                            Salón Principal
+                        </h1>
+                        <p className="mt-0.5 text-xs font-medium text-slate-500 tabular-nums">
+                            {counts.total} mesas · {counts.ocupadas} ocupadas
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    {/* Unir Mesas */}
+                    <button
+                        onClick={() => {
+                            if (!isCajaAbierta) {
+                                showToast('Operación denegada. Se requiere la apertura de caja para unir mesas.', 'error');
+                                return;
+                            }
+                            setShowGlobalMergeModal(true);
+                            setSelectedMergeTableIds([]);
+                        }}
+                        disabled={!isCajaAbierta}
+                        className={`min-h-[44px] flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-full transition-all active:scale-95 cursor-pointer border shadow-sm ${
+                            !isCajaAbierta
+                                ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-zinc-800 text-slate-400 border-slate-200 dark:border-zinc-700'
+                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        }`}
+                    >
+                        🔗 Unir Mesas
+                    </button>
+
+                    {/* Toggle Bloqueado / Modo Edición */}
+                    <button
+                        onClick={() => handleToggleEditMode(!isEditMode)}
+                        className={`min-h-[44px] flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-full transition-all active:scale-95 cursor-pointer border shadow-sm ${
+                            isEditMode
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                : 'bg-rose-500/10 text-rose-500 border-rose-500/30'
+                        }`}
+                    >
+                        <span className={`w-2 h-2 rounded-full ${isEditMode ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                        <span>{isEditMode ? 'Modo Edición' : 'Bloqueado'}</span>
+                    </button>
+
+                    {/* Refresh */}
+                    <button
+                        onClick={fetchTables}
+                        title="Actualizar mesas"
+                        className="min-h-[44px] min-w-[44px] rounded-full bg-slate-200/80 hover:bg-slate-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 flex items-center justify-center shrink-0 transition-all active:scale-95 border-0 text-slate-700 dark:text-slate-300 cursor-pointer shadow-sm"
+                    >
+                        <RotateCcw className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {/* Filtros rápidos por estado */}
+                <div
+                    role="tablist"
+                    className="inline-flex items-center gap-1 p-1 rounded-full bg-slate-200/70 dark:bg-zinc-800/80 overflow-x-auto max-w-full"
+                >
+                    {['Todas', 'Cerradas', 'Ocupadas', 'Cuenta'].map((f) => {
+                        const isActive = statusFilter === f;
+                        return (
+                            <button
+                                key={f}
+                                type="button"
+                                role="tab"
+                                aria-selected={isActive}
+                                onClick={() => setStatusFilter(f)}
+                                className={`flex-1 px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap min-h-[36px] transition-all cursor-pointer border-0 active:scale-95 ${
+                                    isActive
+                                        ? 'bg-[#F26522] text-white shadow-md'
+                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                }`}
+                            >
+                                {f}
+                            </button>
+                        );
+                    })}
+                </div>
+            </header>
+
+            {/* 2. LIENZO Y GRILLA ADAPTATIVA PARA CELULAR (< md) */}
+            <section className="md:hidden rounded-2xl bg-[#EAEAE8] dark:bg-zinc-900 border border-slate-300/70 dark:border-zinc-800 p-4 min-h-[500px] mb-4">
+                {filteredTablesMobile.length === 0 ? (
+                    <div className="py-16 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        No hay mesas registradas con el filtro &ldquo;{statusFilter}&rdquo;.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 gap-y-7 gap-x-3.5 place-items-center py-2">
+                        {filteredTablesMobile.map((table) => {
+                            const debaBloquear = table.estado === 'libre' && !isCajaAbierta;
+                            const isDaughter = table.mesaPadreId !== null;
+                            const padreMesa = isDaughter ? tablesState.find(t => t.id === table.mesaPadreId) : null;
+                            const badgeText = padreMesa ? `→ M${padreMesa.numero}` : 'Unida';
+                            const comandaActiva = table.comandas?.find(c => c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase()));
+                            const totalComensales = table.estado === 'ocupada' && comandaActiva ? (comandaActiva.comensales || 2) : 0;
+
+                            return (
+                                <div key={table.id} className="relative flex items-center justify-center p-2.5">
+                                    {/* Sillas alrededor */}
+                                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-6 rounded-l-md bg-[#C4C6CA] dark:bg-zinc-700" />
+                                    <span className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-6 rounded-r-md bg-[#C4C6CA] dark:bg-zinc-700" />
+
+                                    {/* Botón de la mesa */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (isEditMode) return;
+                                            if (isDaughter) {
+                                                showToast(`Esta mesa está unida a la Mesa ${padreMesa ? padreMesa.numero : ''}. Realice el pedido en ella.`, "info");
+                                                return;
+                                            }
+                                            handleTableClick(table);
+                                        }}
+                                        className={`relative w-[114px] h-[114px] rounded-[22px] flex flex-col items-center justify-center border shadow-sm active:scale-[0.96] transition-all cursor-pointer ${
+                                            table.estado === 'ocupada'
+                                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-500 dark:bg-amber-500/20'
+                                                : debaBloquear
+                                                ? 'bg-[#F4F4F3] dark:bg-zinc-800 border-slate-300/80 dark:border-zinc-700 text-slate-400'
+                                                : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
+                                        }`}
+                                    >
+                                        <span className="text-[26px] font-black tabular-nums leading-none text-slate-800 dark:text-slate-100">
+                                            {getTableDisplayName(table)}
+                                        </span>
+                                        <span className={`mt-1.5 text-[10px] font-extrabold tracking-[0.08em] uppercase ${
+                                            table.estado === 'ocupada'
+                                                ? 'text-amber-500'
+                                                : debaBloquear
+                                                ? 'text-slate-400'
+                                                : 'text-emerald-600 dark:text-emerald-400'
+                                        }`}>
+                                            {isDaughter ? badgeText : (debaBloquear ? 'CERRADA' : (table.estado === 'ocupada' ? 'OCUPADA' : 'LIBRE'))}
+                                        </span>
+                                        {table.estado === 'ocupada' && totalComensales > 0 && (
+                                            <span className="mt-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                                                👥 {totalComensales} comensales
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </section>
+
+            {/* 3. LIENZO ESCRITORIO (>= md) ORIGINAL E INTACTO */}
+            <div className="hidden md:block salon-contenedor">
                 {tablesState.length === 0 && <p className="text-muted" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', padding: '2rem' }}>No hay datos registrados o cargando...</p>}
                 {tablesState.map(table => {
                     const debaBloquear = table.estado === 'libre' && !isCajaAbierta;
@@ -1637,57 +1816,55 @@ const TablesView = () => {
                 const isMaxDisabled = dinersCount >= maxLimit;
 
                 return (
-                    <div className="modal-overlay">
-                        <div className="modal-content" style={{ maxWidth: 400, textAlign: 'center' }}>
-                            <h2>Mesa {getTableDisplayName(selectedFreeTable || {})}</h2>
-                            <p className="text-muted" style={{ marginBottom: 5 }}>Ingrese cantidad de comensales</p>
-                            <div className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 15 }}>
+                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/60 backdrop-blur-[2px]">
+                        <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col p-5 text-center">
+                            {/* Barra de arrastre solo móvil */}
+                            <div className="sm:hidden -mt-2 pb-3 flex justify-center">
+                                <div className="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-zinc-700" />
+                            </div>
+                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Mesa {getTableDisplayName(selectedFreeTable || {})}</h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Ingrese cantidad de comensales</p>
+                            <div className="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-4">
                                 Rango permitido: {minLimit} - {maxLimit} comensales ({numMesas} {numMesas === 1 ? 'mesa' : 'mesas unidas'})
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, margin: '20px 0' }}>
+                            <div className="flex items-center justify-center gap-5 my-5">
                                 <button
-                                    className="glass-button"
+                                    className="w-14 h-14 rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
                                     onClick={() => !isMinDisabled && setDinersCount(dinersCount - 1)}
                                     disabled={isMinDisabled}
-                                    style={{
-                                        width: 55,
-                                        height: 55,
-                                        borderRadius: '50%',
-                                        opacity: isMinDisabled ? 0.35 : 1,
-                                        cursor: isMinDisabled ? 'not-allowed' : 'pointer',
-                                        transition: 'all 0.2s ease',
-                                        backgroundColor: isMinDisabled ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)'
-                                    }}
                                 >
-                                    <Minus />
+                                    <Minus className="w-5 h-5 text-slate-800 dark:text-slate-100" />
                                 </button>
-                                <span style={{ fontSize: '3.5rem', fontWeight: 'bold', minWidth: '80px', display: 'inline-block' }}>{dinersCount}</span>
+                                <span className="text-5xl font-black tabular-nums min-w-[80px] text-slate-900 dark:text-white select-none">
+                                    {dinersCount}
+                                </span>
                                 <button
-                                    className="glass-button"
+                                    className="w-14 h-14 rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
                                     onClick={() => !isMaxDisabled && setDinersCount(dinersCount + 1)}
                                     disabled={isMaxDisabled}
-                                    style={{
-                                        width: 55,
-                                        height: 55,
-                                        borderRadius: '50%',
-                                        opacity: isMaxDisabled ? 0.35 : 1,
-                                        cursor: isMaxDisabled ? 'not-allowed' : 'pointer',
-                                        transition: 'all 0.2s ease',
-                                        backgroundColor: isMaxDisabled ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)'
-                                    }}
                                 >
-                                    <Plus />
+                                    <Plus className="w-5 h-5 text-slate-800 dark:text-slate-100" />
                                 </button>
                             </div>
 
-                            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-                                <button className="glass-button" onClick={() => {
-                                    setShowDinersModal(false);
-                                    setIsUpdatingDiners(false);
-                                    setUpdatingComandaId(null);
-                                }} style={{ flex: 1 }}>Cancelar</button>
-                                <button className="glass-button primary" onClick={confirmDiners} style={{ flex: 1 }}>Continuar</button>
+                            <div className="flex items-center gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800">
+                                <button
+                                    className="min-h-[44px] flex-1 px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 shadow-sm bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 active:scale-95"
+                                    onClick={() => {
+                                        setShowDinersModal(false);
+                                        setIsUpdatingDiners(false);
+                                        setUpdatingComandaId(null);
+                                    }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    className="min-h-[44px] flex-1 px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 shadow-md bg-[#F26522] hover:bg-[#EA580C] text-white active:scale-95"
+                                    onClick={confirmDiners}
+                                >
+                                    Continuar
+                                </button>
                             </div>
                         </div>
                     </div>
