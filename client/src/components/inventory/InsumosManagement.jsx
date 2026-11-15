@@ -593,10 +593,10 @@ export default function InsumosManagement({
             )}
           </div>
 
-          {/* Controles: Buscador, Filtros y Nuevo Insumo */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5">
-            {/* Buscador limpio sin bordes oscuros */}
-            <div className="relative flex-1 sm:flex-initial sm:w-64">
+          {/* Controles: Buscador completo en móvil, Filtros y Nuevo Insumo debajo en fila */}
+          <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            {/* Buscador: ancho completo en móvil (w-full), ancho fijo en desktop (sm:w-64) */}
+            <div className="relative w-full sm:w-64">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
@@ -607,7 +607,7 @@ export default function InsumosManagement({
                 }}
                 placeholder="Buscar insumo o almacén..."
                 aria-label="Buscar insumo"
-                className="w-full pl-9 pr-8 py-2 text-[13px] rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all"
+                className="w-full pl-9 pr-8 py-2.5 sm:py-2 text-[13px] rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all"
               />
               {searchQuery && (
                 <button
@@ -624,125 +624,158 @@ export default function InsumosManagement({
               )}
             </div>
 
-            {/* Botón Filtros Desplegable */}
-            <div className="relative" ref={filterRef}>
+            {/* Fila debajo del buscador en móvil: Filtros y Nuevo Insumo ordenados */}
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              {/* Botón Filtros Desplegable */}
+              <div className="relative flex-1 sm:flex-initial" ref={filterRef}>
+                <button
+                  type="button"
+                  onClick={() => setFilterDropdownOpen((prev) => !prev)}
+                  aria-expanded={filterDropdownOpen}
+                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 text-[13px] font-semibold rounded-full border transition-all whitespace-nowrap cursor-pointer active:scale-95 shadow-sm ${
+                    activeFiltersCount > 0
+                      ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80'
+                  }`}
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>Filtros</span>
+                  {activeFiltersCount > 0 && (
+                    <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full bg-[var(--primary)] text-white tabular-nums">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform duration-150 ${
+                      filterDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Panel Desplegable de Filtros: Centrado en pantalla en móvil con Backdrop, Dropdown clásico en Desktop */}
+                {filterDropdownOpen && (
+                  <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:inset-auto sm:absolute sm:right-0 sm:mt-2 sm:w-72 animate-fade-in"
+                    onClick={() => setFilterDropdownOpen(false)}
+                  >
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full max-w-sm sm:max-w-none sm:w-72 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl p-4 space-y-4 text-left"
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                          Filtrar Inventario
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {activeFiltersCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStatusFilter('Todos');
+                                setAlmacenFilter('Todos');
+                                setCurrentPage(1);
+                              }}
+                              className="text-xs font-bold text-[var(--primary)] hover:underline cursor-pointer"
+                            >
+                              Limpiar
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setFilterDropdownOpen(false)}
+                            aria-label="Cerrar filtros"
+                            className="sm:hidden w-6 h-6 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Filtro por Estado */}
+                      <div>
+                        <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2">
+                          Estado
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ESTADOS_DISPONIBLES.map((st) => {
+                            const isSelected = statusFilter === st;
+                            return (
+                              <button
+                                key={st}
+                                type="button"
+                                onClick={() => {
+                                  setStatusFilter(st);
+                                  setCurrentPage(1);
+                                }}
+                                className={`px-3 py-1 text-xs font-semibold rounded-full border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
+                                    : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                }`}
+                              >
+                                {st}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Filtro por Almacén */}
+                      <div>
+                        <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2">
+                          Almacén
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {['Todos', ...ALMACENES_DISPONIBLES].map((alm) => {
+                            const isSelected = almacenFilter === alm;
+                            return (
+                              <button
+                                key={alm}
+                                type="button"
+                                onClick={() => {
+                                  setAlmacenFilter(alm);
+                                  setCurrentPage(1);
+                                }}
+                                className={`px-3 py-1 text-xs font-semibold rounded-full border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
+                                    : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                }`}
+                              >
+                                {alm}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Botón Aplicar en móvil */}
+                      <div className="sm:hidden pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setFilterDropdownOpen(false)}
+                          className="w-full py-2.5 rounded-full text-xs font-bold text-white shadow-sm cursor-pointer active:scale-95 transition-all text-center"
+                          style={{ backgroundColor: 'var(--primary)' }}
+                        >
+                          Aplicar Filtros
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Botón Nuevo Insumo - Estilo Pill Superadmin con color de tema */}
               <button
                 type="button"
-                onClick={() => setFilterDropdownOpen((prev) => !prev)}
-                aria-expanded={filterDropdownOpen}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold rounded-full border transition-all whitespace-nowrap shrink-0 cursor-pointer ${
-                  activeFiltersCount > 0
-                    ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)] shadow-sm'
-                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80'
-                }`}
+                onClick={handleOpenCreate}
+                className="flex-1 sm:flex-initial px-4 py-2.5 sm:py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md border-0 active:scale-95 text-white whitespace-nowrap"
+                style={{ backgroundColor: 'var(--primary)' }}
               >
-                <Filter className="w-3.5 h-3.5" />
-                <span>Filtros</span>
-                {activeFiltersCount > 0 && (
-                  <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full bg-[var(--primary)] text-white tabular-nums">
-                    {activeFiltersCount}
-                  </span>
-                )}
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform duration-150 ${
-                    filterDropdownOpen ? 'rotate-180' : ''
-                  }`}
-                />
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <span>Nuevo Insumo</span>
               </button>
-
-              {/* Panel Desplegable de Filtros */}
-              {filterDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl p-4 z-50 space-y-4 animate-fade-in text-left">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                      Filtrar Inventario
-                    </span>
-                    {activeFiltersCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStatusFilter('Todos');
-                          setAlmacenFilter('Todos');
-                          setCurrentPage(1);
-                        }}
-                        className="text-xs font-bold text-[var(--primary)] hover:underline cursor-pointer"
-                      >
-                        Limpiar filtros
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Filtro por Estado */}
-                  <div>
-                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2">
-                      Estado
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {ESTADOS_DISPONIBLES.map((st) => {
-                        const isSelected = statusFilter === st;
-                        return (
-                          <button
-                            key={st}
-                            type="button"
-                            onClick={() => {
-                              setStatusFilter(st);
-                              setCurrentPage(1);
-                            }}
-                            className={`px-3 py-1 text-xs font-semibold rounded-full border transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
-                                : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
-                            }`}
-                          >
-                            {st}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Filtro por Almacén */}
-                  <div>
-                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2">
-                      Almacén
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['Todos', ...ALMACENES_DISPONIBLES].map((alm) => {
-                        const isSelected = almacenFilter === alm;
-                        return (
-                          <button
-                            key={alm}
-                            type="button"
-                            onClick={() => {
-                              setAlmacenFilter(alm);
-                              setCurrentPage(1);
-                            }}
-                            className={`px-3 py-1 text-xs font-semibold rounded-full border transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
-                                : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
-                            }`}
-                          >
-                            {alm}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
-
-            {/* Botón Nuevo Insumo - Estilo Pill Superadmin con color de tema */}
-            <button
-              type="button"
-              onClick={handleOpenCreate}
-              className="px-4 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md border-0 active:scale-95 text-white"
-              style={{ backgroundColor: 'var(--primary)' }}
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>Nuevo Insumo</span>
-            </button>
           </div>
         </div>
 
