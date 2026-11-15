@@ -90,8 +90,13 @@ export default function KitchenHeader() {
 
   return (
     <div className="flex flex-col gap-3 select-none">
-      {/* 1. COLLAPSIBLE NEUMORPHIC HEADER */}
-      <header className={`flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 md:px-5 md:py-4 rounded-3xl border transition-all duration-300 ${isDarkMode
+      {/* 1. CABECERA KDS: solo título en celular (< md), consola completa en md+ */}
+      <h1 className="md:hidden text-[22px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight px-0.5">
+        Flujo de Cocina
+      </h1>
+
+      {/* Consola Tablet / Desktop (md+) */}
+      <header className={`hidden md:flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 md:px-5 md:py-4 rounded-3xl border transition-all duration-300 ${isDarkMode
         ? 'bg-[#161B22] border-[#30363D] shadow-2xl shadow-black/40'
         : 'bg-white border-slate-200 shadow-md shadow-slate-100/50'
         }`}>
@@ -125,7 +130,7 @@ export default function KitchenHeader() {
           <button
             onClick={onCollapseToggle}
             title={isHeaderExpanded ? "Contraer panel" : "Expandir para configurar temporizador y cronómetro"}
-            className={`font-sans flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-black transition-all duration-200 active:scale-95 cursor-pointer shadow-sm shrink-0 ${isHeaderExpanded
+            className={`font-sans flex items-center justify-center gap-2 px-4 py-2.5 rounded-full border text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer shadow-sm shrink-0 ${isHeaderExpanded
               ? isDarkMode
                 ? 'bg-[#1D2433] hover:bg-[#252E40] border-[#3A455C] text-slate-200'
                 : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-650'
@@ -150,7 +155,7 @@ export default function KitchenHeader() {
       </header>
 
       {/* 2. FILTER TOOLBAR */}
-      <section className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 py-1 mt-0 select-none">
+      <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1 mt-0 select-none">
         {/* Search bar */}
         <div className="relative flex-1 max-w-md w-full">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 dark:text-slate-500">
@@ -177,37 +182,37 @@ export default function KitchenHeader() {
         </div>
 
         {/* Dropdowns, Audios and Layouts */}
-        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
-          {/* Sound Toggle */}
+        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-start">
+          {/* Botón de Sonido: solo icono en celular (< md), con texto en md+ */}
           <button
+            type="button"
             onClick={toggleSound}
-            className={`font-sans h-10 px-3.5 rounded-xl font-bold text-[11px] flex items-center gap-2 border transition-all cursor-pointer ${isAudioEnabled
-              ? 'bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white border-transparent shadow-lg shadow-[var(--primary)]/15'
+            aria-label={isAudioEnabled ? 'Sonido Activado' : 'Sonido Silenciado'}
+            title={isAudioEnabled ? 'Sonido Activado' : 'Sonido Silenciado'}
+            className={`w-[42px] h-[42px] md:w-auto md:min-h-[42px] inline-flex items-center justify-center gap-2 md:px-4 md:py-2 text-xs font-bold rounded-full transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95 shadow-sm ${isAudioEnabled
+              ? 'bg-[#F26522] hover:bg-[#EA580C] text-white shadow-xs'
               : isDarkMode
-                ? 'bg-[#0D1117] border-[#30363D] text-slate-450 hover:bg-slate-900'
-                : 'bg-slate-50 border-gray-200 text-slate-450 hover:bg-slate-100 shadow-sm'
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                : 'bg-slate-200 hover:bg-slate-300 text-slate-700 border border-slate-300'
               }`}
           >
             {isAudioEnabled ? (
-              <>
-                <Volume2 className="w-3.5 h-3.5 text-white" />
-                <span>Sonido Activado</span>
-              </>
+              <Volume2 className="w-4 h-4" />
             ) : (
-              <>
-                <VolumeX className="w-3.5 h-3.5 text-slate-455 dark:text-slate-450" />
-                <span>Sonido Silenciado</span>
-              </>
+              <VolumeX className="w-4 h-4 text-slate-500 dark:text-slate-400" />
             )}
+            <span className="hidden md:inline">
+              {isAudioEnabled ? 'Sonido Activado' : 'Sonido Silenciado'}
+            </span>
           </button>
 
           {/* Table filter select */}
-          <div className="flex items-center gap-2 min-w-[220px]">
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider shrink-0">
+          <div className="flex-1 sm:flex-initial flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider shrink-0">
               <Filter className="w-3 h-3 text-[var(--primary)]" />
-              <span className="hidden sm:inline">Mesa:</span>
+              <span>Mesa:</span>
             </div>
-            <div className="w-[180px] sm:w-[220px]">
+            <div className="w-full sm:w-[220px]">
               <SimpleCombobox
                 items={comboboxItems}
                 selectedItem={selectedComboboxItem}
