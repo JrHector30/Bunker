@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bunker-v3';
+const CACHE_NAME = 'bunker-v4';
 
 // Instalar y activar inmediatamente sin esperar
 self.addEventListener('install', (event) => {
