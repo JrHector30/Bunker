@@ -212,28 +212,25 @@ export const RecetarioEscandallo = ({
   }, [insumos]);
 
   return (
-    <div className={`flex flex-col lg:flex-row gap-3 items-stretch flex-1 min-h-0 overflow-hidden font-sans ${isDark ? 'text-zinc-100' : 'text-zinc-900'}`}>
+    <div className="grid grid-cols-1 xl:grid-cols-[330px_1fr] gap-4 sm:gap-5 items-start font-sans">
       {/* =========================================================================
-          PANEL IZQUIERDO: FICHA DEL PLATO & MÉTRICAS DE RENTABILIDAD (~320px)
+          COLUMNA IZQUIERDA: FICHA DEL PLATO + MÉTRICAS DE RENTABILIDAD
          ========================================================================= */}
-      <aside className="w-full lg:w-[320px] xl:w-[340px] shrink-0 flex flex-col justify-between space-y-2.5 overflow-y-auto pr-1">
+      <div className="space-y-4 sm:space-y-5">
         {/* Card 1: Ficha del Plato */}
-        <div className={`rounded-xl border p-3 shadow-xs space-y-2.5 transition-colors ${isDark ? 'bg-[#0d0d12] border-zinc-800/80 text-zinc-100' : 'bg-white border-slate-200/90 text-zinc-900'
-          }`}>
-          <div className={`flex items-center justify-between border-b pb-1.5 ${isDark ? 'border-zinc-800/60 text-zinc-400' : 'border-slate-100 text-slate-500'
-            }`}>
-            <h2 className="text-[10px] font-bold uppercase tracking-wider">
-              Ficha del Plato
+        <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 space-y-4 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2">
+            <h2 className="text-[15px] font-bold tracking-wide uppercase text-slate-900 dark:text-white">
+              FICHA DEL PLATO
             </h2>
-            <span className="text-[10px] font-semibold">
+            <span className="text-xs font-medium text-slate-400 tabular-nums">
               {comboboxItems.length} platos
             </span>
           </div>
 
           {/* Selector de Plato */}
           <div>
-            <label className={`block text-[11px] font-semibold mb-1 ${isDark ? 'text-zinc-300' : 'text-zinc-700'
-              }`}>
+            <label className="block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-300">
               Seleccionar Plato del Menú
             </label>
             <CategorizedCombobox
@@ -248,439 +245,504 @@ export const RecetarioEscandallo = ({
           </div>
 
           {selectedPlatoObj && (
-            <div className={`grid grid-cols-2 gap-2 pt-1 border-t ${isDark ? 'border-zinc-800/50' : 'border-slate-100'
-              }`}>
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/60">
               <div>
-                <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isDark ? 'text-zinc-400' : 'text-slate-500'
-                  }`}>
+                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5 text-slate-500 dark:text-slate-400">
                   PVP (Soles)
                 </label>
-                <div className={`flex items-center border rounded-md px-2 py-1 shadow-2xs ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'
-                  }`}>
-                  <span className={`text-[11px] mr-1 font-mono ${isDark ? 'text-zinc-500' : 'text-slate-400'
-                    }`}>S/.</span>
+                <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 bg-slate-50/70 dark:bg-slate-800/80 shadow-2xs">
+                  <span className="text-xs mr-1 font-mono text-slate-400 dark:text-slate-500 font-bold">
+                    S/.
+                  </span>
                   <input
                     type="number"
                     step="0.5"
                     min="0"
                     value={customPvp !== '' ? customPvp : selectedPlatoObj.precio}
                     onChange={(e) => setCustomPvp(e.target.value)}
-                    className={`w-full bg-transparent font-mono text-xs font-bold focus:outline-none border-0 p-0 shadow-none ${isDark ? 'text-white' : 'text-zinc-900'
-                      }`}
+                    className="w-full bg-transparent font-mono text-xs font-bold focus:outline-none border-0 p-0 text-slate-900 dark:text-white"
                     placeholder="0.00"
                   />
                 </div>
               </div>
 
               <div>
-                <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isDark ? 'text-zinc-400' : 'text-slate-500'
-                  }`}>
+                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5 text-slate-500 dark:text-slate-400">
                   Raciones
                 </label>
-                <div className={`flex items-center border rounded-md px-2 py-1 shadow-2xs ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'
-                  }`}>
+                <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 bg-slate-50/70 dark:bg-slate-800/80 shadow-2xs">
                   <input
                     type="number"
                     min="1"
                     step="1"
                     value={portions}
                     onChange={(e) => setPortions(Math.max(1, parseInt(e.target.value) || 1))}
-                    className={`w-full bg-transparent font-mono text-xs font-bold focus:outline-none border-0 p-0 shadow-none ${isDark ? 'text-white' : 'text-zinc-900'
-                      }`}
+                    className="w-full bg-transparent font-mono text-xs font-bold focus:outline-none border-0 p-0 text-slate-900 dark:text-white"
                   />
-                  <span className={`text-[10px] ml-1 font-mono ${isDark ? 'text-zinc-500' : 'text-slate-400'
-                    }`}>porc.</span>
+                  <span className="text-[11px] ml-1 font-mono text-slate-400 dark:text-slate-500">
+                    porc.
+                  </span>
                 </div>
               </div>
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Card 2: Métricas de Rentabilidad (Compacto) */}
+        {/* Card 2: Métricas de Rentabilidad (1 col celular -> 2 cols tablet -> 1 col sidebar xl) */}
         {selectedPlatoObj && (
-          <div className={`rounded-xl border p-3 shadow-xs space-y-2 transition-colors ${isDark ? 'bg-[#0d0d12] border-zinc-800/80 text-zinc-100' : 'bg-white border-slate-200/90 text-zinc-900'
-            }`}>
-            <div className={`flex items-center justify-between border-b pb-1.5 ${isDark ? 'border-zinc-800/60 text-zinc-400' : 'border-slate-100 text-slate-500'
-              }`}>
-              <h2 className="text-[10px] font-bold uppercase tracking-wider">
-                Métricas de Rentabilidad
+          <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 space-y-3 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+            <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2">
+              <h2 className="text-[15px] font-bold tracking-wide uppercase text-slate-900 dark:text-white">
+                MÉTRICAS DE RENTABILIDAD
               </h2>
-              <span className="text-[9px] font-bold uppercase tracking-wider">
-                Tiempo Real
+              <span className="text-[10px] font-bold tracking-wider uppercase text-slate-400">
+                TIEMPO REAL
               </span>
             </div>
 
-            {/* KPI 1: Costo Total Producción */}
-            <div className={`p-2 rounded-lg border flex items-center justify-between ${isDark ? 'bg-zinc-900/40 border-zinc-800/60' : 'bg-slate-50 border-slate-200/60'
-              }`}>
-              <div>
-                <p className={`text-[11px] font-semibold ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>
-                  Costo Total Producción
-                </p>
-                <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-                  {currentRecipe.length} insumos
-                </p>
-              </div>
-              <div className="text-right">
-                <span className={`text-sm font-bold font-mono ${isDark ? 'text-white' : 'text-zinc-900'}`}>
-                  S/. {totalCost.toFixed(2)}
-                </span>
-                <p className={`text-[10px] font-mono ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
-                  Por ración: S/. {costPerPortion.toFixed(2)}
-                </p>
-              </div>
-            </div>
-
-            {/* KPI 2: Margen Bruto */}
-            <div className={`p-2 rounded-lg border flex items-center justify-between ${isDark ? 'bg-zinc-900/40 border-zinc-800/60' : 'bg-slate-50 border-slate-200/60'
-              }`}>
-              <div>
-                <p className={`text-[11px] font-semibold ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>
-                  Margen Bruto (Utilidad)
-                </p>
-                <span className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                  S/. {grossMargin.toFixed(2)}
-                </span>
-              </div>
-              <div className="text-right">
-                <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                  {marginPercent.toFixed(1)}%
-                </p>
-                <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-                  PVP − Costo
-                </p>
-              </div>
-            </div>
-
-            {/* KPI 3: Food Cost % con Gauge */}
-            <div className={`p-2 rounded-lg border space-y-1.5 ${isDark ? 'bg-zinc-900/40 border-zinc-800/60' : 'bg-slate-50 border-slate-200/60'
-              }`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-[11px] font-semibold ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>
-                  Food Cost % <span className={`text-[10px] font-normal ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>(Meta: 28%)</span>
-                </span>
-                <span
-                  className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${foodCostPercent <= 30
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800/50'
-                    : foodCostPercent <= 40
-                      ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-800/50'
-                      : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-800/50'
-                    }`}
-                >
-                  {foodCostPercent <= 30
-                    ? 'Margen Óptimo'
-                    : foodCostPercent <= 40
-                      ? 'Alerta Costo'
-                      : 'Costo Crítico'}
-                </span>
-              </div>
-
-              <div className="flex items-baseline justify-between">
-                <span className={`text-base font-bold font-mono ${isDark ? 'text-white' : 'text-zinc-900'}`}>
-                  {foodCostPercent.toFixed(1)}%
-                </span>
-                <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
-                  {(foodCostPercent - 28.0).toFixed(1)}% vs meta
-                </span>
-              </div>
-
-              {/* Barra de progreso */}
-              <div className={`h-1.5 w-full rounded-full overflow-hidden ${isDark ? 'bg-zinc-800' : 'bg-slate-200'}`}>
-                <div
-                  className={`h-full transition-all duration-300 rounded-full ${foodCostPercent <= 30
-                    ? 'bg-emerald-500'
-                    : foodCostPercent <= 40
-                      ? 'bg-amber-500'
-                      : 'bg-rose-500'
-                    }`}
-                  style={{ width: `${Math.min(100, Math.max(0, foodCostPercent * 2))}%` }}
-                />
-              </div>
-
-              <div className={`flex items-center justify-between text-[10px] pt-0.5 ${isDark ? 'text-zinc-400' : 'text-slate-500'
-                }`}>
-                <span>PVP sugerido al 28%:</span>
-                <strong className={`font-mono ${isDark ? 'text-zinc-200' : 'text-zinc-800'}`}>
-                  S/. {suggestedPvp28.toFixed(2)}
-                </strong>
-              </div>
-            </div>
-
-            {/* KPI 4: Insumo de Mayor Costo (Pareto) */}
-            <div className={`p-2 rounded-lg border ${isDark ? 'bg-zinc-900/40 border-zinc-800/60' : 'bg-slate-50 border-slate-200/60'
-              }`}>
-              <div className={`flex items-center justify-between text-[11px] font-semibold mb-0.5 ${isDark ? 'text-zinc-300' : 'text-slate-700'
-                }`}>
-                <span>Insumo de Mayor Costo</span>
-                {topIngredientInfo && (
-                  <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 font-mono">
-                    {topIngredientInfo.percent}% del plato
-                  </span>
-                )}
-              </div>
-              {topIngredientInfo ? (
-                <div className="flex items-baseline justify-between">
-                  <p className={`text-xs font-bold truncate max-w-[190px] ${isDark ? 'text-white' : 'text-zinc-900'
-                    }`}>
-                    {topIngredientInfo.nombre}
+            {/* 1 col celular -> 2 cols tablet -> 1 col sidebar xl */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-2.5">
+              {/* KPI 1: Costo Total Producción */}
+              <div className="p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Costo Total Producción
                   </p>
-                  <p className={`text-[11px] font-mono font-bold ${isDark ? 'text-zinc-300' : 'text-zinc-800'
-                    }`}>
-                    S/. {topIngredientInfo.subtotal.toFixed(2)}
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                    {currentRecipe.length} insumos
                   </p>
                 </div>
-              ) : (
-                <p className={`text-[11px] ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-                  Sin insumos registrados
-                </p>
-              )}
+                <div className="text-right">
+                  <span className="text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">
+                    S/. {totalCost.toFixed(2)}
+                  </span>
+                  <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 tabular-nums">
+                    Por ración: S/. {costPerPortion.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              {/* KPI 2: Margen Bruto */}
+              <div className="p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Margen Bruto (Utilidad)
+                  </p>
+                  <span className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    S/. {grossMargin.toFixed(2)}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
+                    {marginPercent.toFixed(1)}%
+                  </p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                    PVP − Costo
+                  </p>
+                </div>
+              </div>
+
+              {/* KPI 3: Food Cost % con Gauge */}
+              <div className="p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Food Cost % <span className="text-[11px] font-normal text-slate-400">(Meta: 28%)</span>
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      foodCostPercent <= 30
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800/50'
+                        : foodCostPercent <= 40
+                          ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-800/50'
+                          : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-800/50'
+                    }`}
+                  >
+                    {foodCostPercent <= 30
+                      ? 'Margen Óptimo'
+                      : foodCostPercent <= 40
+                        ? 'Alerta Costo'
+                        : 'Costo Crítico'}
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between">
+                  <span className="text-base font-bold font-mono text-slate-900 dark:text-white tabular-nums">
+                    {foodCostPercent.toFixed(1)}%
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 tabular-nums">
+                    {(foodCostPercent - 28.0).toFixed(1)}% vs meta
+                  </span>
+                </div>
+
+                {/* Barra de progreso */}
+                <div className="h-1.5 w-full rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700">
+                  <div
+                    className={`h-full transition-all duration-300 rounded-full ${
+                      foodCostPercent <= 30
+                        ? 'bg-emerald-500'
+                        : foodCostPercent <= 40
+                          ? 'bg-amber-500'
+                          : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(0, foodCostPercent * 2))}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] pt-0.5 text-slate-500 dark:text-slate-400">
+                  <span>PVP sugerido al 28%:</span>
+                  <strong className="font-mono text-slate-800 dark:text-slate-200 tabular-nums">
+                    S/. {suggestedPvp28.toFixed(2)}
+                  </strong>
+                </div>
+              </div>
+
+              {/* KPI 4: Insumo de Mayor Costo (Pareto) */}
+              <div className="p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50">
+                <div className="flex items-center justify-between text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                  <span>Insumo de Mayor Costo</span>
+                  {topIngredientInfo && (
+                    <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 font-mono tabular-nums">
+                      {topIngredientInfo.percent}% del plato
+                    </span>
+                  )}
+                </div>
+                {topIngredientInfo ? (
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-xs font-bold truncate max-w-[190px] text-slate-900 dark:text-white">
+                      {topIngredientInfo.nombre}
+                    </p>
+                    <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 tabular-nums">
+                      S/. {topIngredientInfo.subtotal.toFixed(2)}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    Sin insumos registrados
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          </section>
         )}
-      </aside>
+      </div>
 
       {/* =========================================================================
-          PANEL DERECHO: GRILLA DE ESCANDALLO / INSUMOS DE RECETA (~68%)
+          COLUMNA DERECHA: INSUMOS DE RECETA (Tabla Desktop + Tarjetas Móvil)
          ========================================================================= */}
-      <section className={`flex-1 min-w-0 flex flex-col rounded-xl border shadow-xs overflow-hidden transition-colors ${isDark ? 'bg-[#0d0d12] border-zinc-800/80 text-zinc-100' : 'bg-white border-slate-200/90 text-zinc-900'
-        }`}>
+      <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         {/* Header Toolbar */}
-        <div className={`h-10 px-3.5 border-b flex items-center justify-between gap-3 shrink-0 ${isDark ? 'bg-[#0d0d12] border-zinc-800/80' : 'bg-white border-slate-200/80'
-          }`}>
-          <div className="flex items-center gap-3">
+        <div className="p-3.5 sm:px-5 sm:py-3.5 border-b border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
+          <div className="flex items-center justify-between sm:justify-start gap-3">
             <div className="flex items-center gap-2">
-              <h2 className={`translate-y-2 text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-zinc-200' : 'text-slate-700'
-                }`}>
+              <h2 className="text-[14px] sm:text-[15px] font-bold uppercase tracking-wider text-slate-900 dark:text-white">
                 Insumos de Receta
               </h2>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border tabular-nums ${isDark ? 'bg-zinc-800 text-zinc-300 border-zinc-700/60' : 'bg-slate-100 text-slate-600 border-slate-200'
-                }`}>
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 tabular-nums">
                 {currentRecipe.length} items
               </span>
             </div>
+          </div>
 
-            {/* Buscador de ingredientes dentro de la receta */}
-            <div className="relative hidden md:block w-44">
-              <Search className={`size-3 absolute left-2 top-2 ${isDark ? 'text-zinc-500' : 'text-slate-400'}`} />
+          {/* Buscador + Acciones estilo SuperAdmin */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div className="relative flex-1 sm:w-48">
+              <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Filtrar ingredientes..."
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
-                className={`w-full h-6 pl-6 pr-2 border rounded-md text-[11px] focus:outline-none transition-colors ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-200 placeholder-zinc-500' : 'bg-slate-50 border-slate-200 text-zinc-900 placeholder-slate-400'
-                  }`}
+                className="w-full pl-8 pr-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-full text-xs bg-slate-50/70 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
               />
             </div>
-          </div>
 
-          {/* Botones de Acción Estilo Pill de /superadmin */}
-          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleAddQuickRow}
-              className={`px-3 py-1 rounded-full border text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-2xs active:scale-95 ${isDark ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border-zinc-800' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-                }`}
+              className="px-3.5 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
               title="Añadir fila vacía para seleccionar insumo rápidamente"
             >
-              <Plus size={12} />
+              <Plus size={13} />
               <span>Fila Rápida</span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsCatalogModalOpen(true)}
-              className="px-3.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95 border-0 text-white"
-              style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}
+              className="px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 border-0 text-white whitespace-nowrap"
+              style={{ backgroundColor: 'var(--primary)' }}
               title="Abrir catálogo completo de bodega"
             >
-              <PackagePlus size={13} />
+              <PackagePlus size={14} />
               <span>Agregar Insumo</span>
             </button>
           </div>
         </div>
 
-        {/* Tabla de Insumos */}
+        {/* Contenido: Vacío / Tabla Desktop / Tarjetas Móvil */}
         <div className="flex-1 overflow-y-auto">
           {!selectedPlatoId ? (
-            <div className={`py-16 text-center text-xs ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
+            <div className="py-16 text-center text-xs text-slate-400 dark:text-slate-500">
               Selecciona un plato en el panel izquierdo para cargar o editar su receta.
             </div>
           ) : filteredRecipe.length === 0 ? (
-            <div className={`py-16 text-center text-xs space-y-3 ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
+            <div className="py-16 text-center text-xs space-y-3 text-slate-400 dark:text-slate-500">
               <p>Este plato aún no tiene insumos asignados en el escandallo.</p>
               <button
                 type="button"
                 onClick={() => setIsCatalogModalOpen(true)}
-                className="px-4 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm border-0 text-white"
-                style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}
+                className="px-4 py-2 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm border-0 text-white active:scale-95"
+                style={{ backgroundColor: 'var(--primary)' }}
               >
                 <Plus size={13} />
                 <span>Añadir primer insumo desde bodega</span>
               </button>
             </div>
           ) : (
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="sticky top-0 z-10" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>
-                <tr className="border-b border-black/10 text-white text-[10px] uppercase font-bold tracking-wider" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>
-                  <th className="py-2 px-3 text-center w-8" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>#</th>
-                  <th className="py-2 px-3" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Insumo / Materia Prima</th>
-                  <th className="py-2 px-2 text-center w-16" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Unidad</th>
-                  <th className="py-2 px-3 text-right w-24" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Costo Base (S/.)</th>
-                  <th className="py-2 px-3 text-right w-32" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Cant. a Descontar</th>
-                  <th className="py-2 px-3 text-right w-24" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Subtotal (S/.)</th>
-                  <th className="py-2 px-3 text-center w-28" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>% Incidencia</th>
-                  <th className="py-2 px-2 text-center w-16" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${isDark ? 'divide-zinc-800/50' : 'divide-slate-100'}`}>
-                {filteredRecipe.map((item, index) => {
+            <>
+              {/* Tabla Desktop (hidden md:block) - 100% Inalterada */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 z-10" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>
+                    <tr className="border-b border-black/10 text-white text-[10px] uppercase font-bold tracking-wider" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>
+                      <th className="py-2.5 px-3 text-center w-8" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>#</th>
+                      <th className="py-2.5 px-3" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Insumo / Materia Prima</th>
+                      <th className="py-2.5 px-2 text-center w-16" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Unidad</th>
+                      <th className="py-2.5 px-3 text-right w-24" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Costo Base (S/.)</th>
+                      <th className="py-2.5 px-3 text-right w-32" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Cant. a Descontar</th>
+                      <th className="py-2.5 px-3 text-right w-24" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Subtotal (S/.)</th>
+                      <th className="py-2.5 px-3 text-center w-28" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>% Incidencia</th>
+                      <th className="py-2.5 px-2 text-center w-16" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {filteredRecipe.map((item, index) => {
+                      const insu = item.insumo || insumos.find((i) => i.id === parseInt(item.insumoId));
+                      const unitCost = insu ? parseFloat(insu.precioCompra || 0) : 0;
+                      const qty = parseFloat(item.cantidad) || 0;
+                      const subtotal = qty * unitCost;
+                      const incidence = totalCost > 0 ? (subtotal / totalCost) * 100 : 0;
+
+                      return (
+                        <tr
+                          key={index}
+                          className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
+                        >
+                          <td className="py-2 px-3 text-center font-mono text-[11px] text-slate-400">
+                            {index + 1}
+                          </td>
+                          <td className="py-2 px-3">
+                            {insu ? (
+                              <div>
+                                <div className="font-semibold text-xs text-slate-900 dark:text-white">
+                                  {insu.nombre}
+                                </div>
+                                <div className="text-[10px] text-slate-400 dark:text-slate-500">
+                                  {insu.categoria || 'Insumo'}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="w-52">
+                                <SimpleCombobox
+                                  items={insumoOptions}
+                                  selectedItem={insumoOptions.find((o) => o.id === item.insumoId?.toString()) || null}
+                                  onSelect={(opt) => handleUpdateIngredient(index, 'insumoId', opt ? opt.id : '')}
+                                  placeholder="Seleccionar insumo..."
+                                />
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2 px-2 text-center font-mono text-xs text-slate-500 dark:text-slate-400">
+                            {insu ? insu.unidadMedida || 'und' : '-'}
+                          </td>
+                          <td className="py-2 px-3 text-right font-mono text-xs text-slate-600 dark:text-slate-300">
+                            {insu ? `S/. ${unitCost.toFixed(2)}` : '-'}
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="inline-flex items-center gap-1 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-0.5 bg-white dark:bg-slate-900 shadow-2xs">
+                              <input
+                                type="number"
+                                step="0.005"
+                                min="0"
+                                value={Number.isNaN(item.cantidad) ? '' : item.cantidad}
+                                onChange={(e) =>
+                                  handleUpdateIngredient(index, 'cantidad', parseFloat(e.target.value))
+                                }
+                                className="w-14 text-right font-mono text-xs font-semibold bg-transparent focus:outline-none border-0 p-0 text-slate-900 dark:text-white"
+                              />
+                              <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                                {insu ? insu.unidadMedida : ''}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-3 text-right font-mono font-bold text-xs text-slate-900 dark:text-white">
+                            S/. {subtotal.toFixed(2)}
+                          </td>
+                          <td className="py-2 px-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700">
+                                <div
+                                  className="h-full rounded-full transition-all duration-200"
+                                  style={{
+                                    width: `${Math.min(100, Math.max(0, incidence))}%`,
+                                    backgroundColor: 'var(--primary)',
+                                  }}
+                                />
+                              </div>
+                              <span className="text-[10px] font-mono font-semibold w-8 text-right tabular-nums text-slate-500 dark:text-slate-400">
+                                {incidence.toFixed(1)}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleDuplicateIngredient(index)}
+                                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                                title="Duplicar ingrediente"
+                              >
+                                <Copy size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteIngredient(index)}
+                                className="p-1 text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 transition-colors cursor-pointer"
+                                title="Eliminar insumo de la receta"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Vista Tarjetas Celular (md:hidden) */}
+              <div className="md:hidden p-3.5 space-y-2.5">
+                {filteredRecipe.map((item, idx) => {
                   const insu = item.insumo || insumos.find((i) => i.id === parseInt(item.insumoId));
                   const unitCost = insu ? parseFloat(insu.precioCompra || 0) : 0;
                   const qty = parseFloat(item.cantidad) || 0;
                   const subtotal = qty * unitCost;
-                  const incidence = totalCost > 0 ? (subtotal / totalCost) * 100 : 0;
+                  const pct = totalCost > 0 ? (subtotal / totalCost) * 100 : 0;
 
                   return (
-                    <tr
-                      key={index}
-                      className={`transition-colors ${isDark ? 'hover:bg-zinc-900/30' : 'hover:bg-slate-50/80'
-                        }`}
+                    <div
+                      key={idx}
+                      className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 p-3.5 space-y-3 shadow-2xs"
                     >
-                      {/* 1. Indice */}
-                      <td className={`py-1.5 px-3 text-center font-mono text-[11px] ${isDark ? 'text-zinc-500' : 'text-slate-400'
-                        }`}>
-                        {index + 1}
-                      </td>
-
-                      {/* 2. Insumo Selector / Name */}
-                      <td className="py-1.5 px-3">
-                        {insu ? (
-                          <div>
-                            <div className={`font-semibold text-xs ${isDark ? 'text-zinc-100' : 'text-zinc-900'}`}>
-                              {insu.nombre}
-                            </div>
-                            <div className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-                              {insu.categoria || 'Insumo'}
-                            </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-bold text-slate-400 tabular-nums">#{idx + 1}</span>
+                            {insu ? (
+                              <h3 className="w-full text-sm font-bold text-slate-900 dark:text-white truncate">
+                                {insu.nombre}
+                              </h3>
+                            ) : (
+                              <div className="w-full">
+                                <SimpleCombobox
+                                  items={insumoOptions}
+                                  selectedItem={insumoOptions.find((o) => o.id === item.insumoId?.toString()) || null}
+                                  onSelect={(opt) => handleUpdateIngredient(idx, 'insumoId', opt ? opt.id : '')}
+                                  placeholder="Seleccionar insumo..."
+                                />
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <div className="w-52">
-                            <SimpleCombobox
-                              items={insumoOptions}
-                              selectedItem={insumoOptions.find((o) => o.id === item.insumoId?.toString()) || null}
-                              onSelect={(opt) => handleUpdateIngredient(index, 'insumoId', opt ? opt.id : '')}
-                              placeholder="Seleccionar insumo..."
-                            />
+                          <div className="mt-1 flex items-center gap-2">
+                            <div className="w-16 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                              <div
+                                style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+                                className="h-full rounded-full bg-[#F26522]"
+                              />
+                            </div>
+                            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
+                              {pct.toFixed(1)}% incidencia
+                            </span>
                           </div>
-                        )}
-                      </td>
+                        </div>
 
-                      {/* 3. Unidad */}
-                      <td className={`py-1.5 px-2 text-center font-mono text-xs ${isDark ? 'text-zinc-400' : 'text-slate-500'
-                        }`}>
-                        {insu ? insu.unidadMedida || 'und' : '-'}
-                      </td>
+                        <div className="text-right shrink-0">
+                          <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Subtotal</span>
+                          <span className="text-sm font-bold tabular-nums font-mono text-slate-900 dark:text-white">
+                            S/. {subtotal.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
 
-                      {/* 4. Costo Base */}
-                      <td className={`py-1.5 px-3 text-right font-mono text-xs ${isDark ? 'text-zinc-300' : 'text-slate-600'
-                        }`}>
-                        {insu ? `S/. ${unitCost.toFixed(2)}` : '-'}
-                      </td>
-
-                      {/* 5. Cantidad */}
-                      <td className="py-1.5 px-3 text-right">
-                        <div className={`inline-flex items-center gap-1 border rounded-md px-2 py-0.5 shadow-2xs ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'
-                          }`}>
+                      {/* Inputs de Cantidad y Costo Unitario */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-1 px-2.5 min-h-[38px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xs">
                           <input
                             type="number"
-                            step="0.005"
+                            step="0.001"
                             min="0"
                             value={Number.isNaN(item.cantidad) ? '' : item.cantidad}
                             onChange={(e) =>
-                              handleUpdateIngredient(index, 'cantidad', parseFloat(e.target.value))
+                              handleUpdateIngredient(idx, 'cantidad', parseFloat(e.target.value) || 0)
                             }
-                            className={`w-14 text-right font-mono text-xs font-semibold bg-transparent focus:outline-none border-0 p-0 shadow-none ${isDark ? 'text-white' : 'text-zinc-900'
-                              }`}
+                            className="w-full bg-transparent font-bold tabular-nums font-mono text-slate-900 dark:text-white focus:outline-none"
+                            placeholder="0.00"
                           />
-                          <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-500' : 'text-slate-400'
-                            }`}>
-                            {insu ? insu.unidadMedida : ''}
+                          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            {insu ? insu.unidadMedida : 'und'}
                           </span>
                         </div>
-                      </td>
 
-                      {/* 6. Subtotal */}
-                      <td className={`py-1.5 px-3 text-right font-mono font-bold text-xs ${isDark ? 'text-white' : 'text-zinc-900'
-                        }`}>
-                        S/. {subtotal.toFixed(2)}
-                      </td>
-
-                      {/* 7. Incidencia Bar */}
-                      <td className="py-1.5 px-3">
-                        <div className="flex items-center gap-2">
-                          <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-zinc-800' : 'bg-slate-200'
-                            }`}>
-                            <div
-                              className="h-full rounded-full transition-all duration-200"
-                              style={{
-                                width: `${Math.min(100, Math.max(0, incidence))}%`,
-                                backgroundColor: 'var(--primary)',
-                              }}
-                            />
-                          </div>
-                          <span className={`text-[10px] font-mono font-semibold w-8 text-right tabular-nums ${isDark ? 'text-zinc-400' : 'text-slate-500'
-                            }`}>
-                            {incidence.toFixed(1)}%
+                        <div className="flex items-center px-2.5 min-h-[38px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xs">
+                          <span className="text-slate-400 mr-1 text-xs font-mono">S/.</span>
+                          <span className="w-full bg-transparent font-bold tabular-nums font-mono text-slate-900 dark:text-white text-xs">
+                            {unitCost.toFixed(2)}
                           </span>
+                          <span className="text-[10px] text-slate-400 ml-1">/ {insu ? insu.unidadMedida : 'und'}</span>
                         </div>
-                      </td>
+                      </div>
 
-                      {/* 8. Acciones */}
-                      <td className="py-1.5 px-2 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleDuplicateIngredient(index)}
-                            className={`p-1 transition-colors cursor-pointer ${isDark ? 'text-zinc-500 hover:text-zinc-200' : 'text-slate-400 hover:text-slate-700'
-                              }`}
-                            title="Duplicar ingrediente"
-                          >
-                            <Copy size={12} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteIngredient(index)}
-                            className="p-1 text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 transition-colors cursor-pointer"
-                            title="Eliminar insumo de la receta"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                      {/* Botones de Acción Estilo SuperAdmin */}
+                      <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateIngredient(idx)}
+                          className="min-h-[36px] px-3.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200 active:scale-95 transition-all shadow-xs cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5" /> <span>Duplicar</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteIngredient(idx)}
+                          className="min-h-[36px] px-3.5 rounded-full border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-xs font-semibold text-rose-600 dark:text-rose-400 inline-flex items-center gap-1.5 active:scale-95 transition-all shadow-xs cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> <span>Quitar</span>
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </div>
 
         {/* Table Footer Resumen */}
         {filteredRecipe.length > 0 && (
-          <div className={`h-9 px-3.5 border-t flex items-center justify-between gap-3 text-xs shrink-0 ${isDark ? 'bg-zinc-900/30 border-zinc-800/80 text-zinc-400' : 'bg-slate-50/70 border-slate-200/80 text-slate-600'
-            }`}>
-            <div className="flex items-center gap-2 text-[11px]">
+          <div className="p-3 sm:px-4 sm:h-9 border-t border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs bg-slate-50/70 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 shrink-0">
+            <div className="flex items-center gap-2 text-[11px] flex-wrap">
               <span className="size-2 rounded-full bg-emerald-500 inline-block"></span>
-              <span className={`font-semibold ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>Escandallo Balanceado</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Escandallo Balanceado</span>
               <span>·</span>
               <span>
-                Total Insumos: <strong className={isDark ? 'text-zinc-200' : 'text-zinc-800'}>{currentRecipe.length}</strong>
+                Total Insumos: <strong className="text-slate-800 dark:text-slate-200 tabular-nums">{currentRecipe.length}</strong>
               </span>
               {totalKg > 0 && (
                 <>
                   <span>·</span>
                   <span>
-                    Sólidos: <strong className={`font-mono ${isDark ? 'text-zinc-200' : 'text-zinc-800'}`}>{(totalKg * 1000).toFixed(0)} g</strong>
+                    Sólidos: <strong className="font-mono text-slate-800 dark:text-slate-200 tabular-nums">{(totalKg * 1000).toFixed(0)} g</strong>
                   </span>
                 </>
               )}
@@ -688,18 +750,17 @@ export const RecetarioEscandallo = ({
                 <>
                   <span>·</span>
                   <span>
-                    Líquidos: <strong className={`font-mono ${isDark ? 'text-zinc-200' : 'text-zinc-800'}`}>{(totalLiters * 1000).toFixed(0)} ml</strong>
+                    Líquidos: <strong className="font-mono text-slate-800 dark:text-slate-200 tabular-nums">{(totalLiters * 1000).toFixed(0)} ml</strong>
                   </span>
                 </>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <span className={`font-bold uppercase tracking-wider text-[10px] ${isDark ? 'text-zinc-500' : 'text-slate-400'
-                }`}>
+            <div className="flex items-center gap-1.5 justify-between sm:justify-end">
+              <span className="font-bold uppercase tracking-wider text-[10px] text-slate-400">
                 Costo Total Insumos:
               </span>
-              <span className={`text-xs font-bold font-mono ${isDark ? 'text-white' : 'text-zinc-900'}`}>
+              <span className="text-xs font-bold font-mono text-slate-900 dark:text-white tabular-nums">
                 S/. {totalCost.toFixed(2)}
               </span>
             </div>
