@@ -1447,7 +1447,7 @@ const CashierView = () => {
               </div>
 
               {/* Actions Ribbon */}
-              <div className="flex flex-wrap items-center gap-2 relative z-50">
+              <div className="flex flex-wrap items-center gap-2 relative z-10">
                 <button
                   onClick={() => {
                     if (shiftStatus !== 'abierto') {

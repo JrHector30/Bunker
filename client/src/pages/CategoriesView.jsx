@@ -353,15 +353,24 @@ const CategoriesView = () => {
     };
 
     return (
-        <div style={{ padding: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <button className="glass-button" onClick={() => navigate('/')} style={{ padding: 8 }}>
-                        <ArrowLeft size={20} />
+        <div className="p-3 sm:p-5 max-w-7xl mx-auto w-full">
+            {/* Cabecera Responsiva */}
+            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => navigate('/')}
+                        aria-label="Volver al inicio"
+                        className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center shrink-0 shadow-xs active:scale-95 transition-all cursor-pointer text-slate-700 dark:text-slate-300"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
                     </button>
-                    <h1 className="high-end-title" style={{ margin: 0 }}>Gestión de Categorías</h1>
+                    <h1 className="text-[22px] sm:text-[24px] font-bold text-slate-900 dark:text-white tracking-tight">
+                        Gestión de Categorías
+                    </h1>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                     {selectedCategoryIds.length > 0 && (
                         <DeleteButton
                             onClick={handleBulkDelete}
@@ -369,13 +378,51 @@ const CategoriesView = () => {
                             className="scale-90"
                         />
                     )}
-                    <button className="glass-button primary" onClick={() => handleOpenModal()}>
-                        <Plus size={20} /> Nueva Categoría
+                    <button
+                        type="button"
+                        onClick={() => handleOpenModal()}
+                        className="min-h-[44px] flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs sm:text-[13px] font-bold rounded-2xl sm:rounded-full bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)] whitespace-nowrap active:scale-95 transition-all cursor-pointer border-0"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Nueva Categoría</span>
                     </button>
                 </div>
+            </header>
+
+            {/* Sub-toolbar móvil: selección masiva y orden A-Z */}
+            <div className="md:hidden flex items-center justify-between gap-2 px-1 py-2 mb-2 text-xs select-none">
+                <label className="flex items-center gap-2 font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <CustomCheckbox
+                        checked={sortedCategories.length > 0 && selectedCategoryIds.length === sortedCategories.length}
+                        onChange={(e) => {
+                            if (e.target.checked) {
+                                setSelectedCategoryIds(sortedCategories.map(c => c.id));
+                            } else {
+                                setSelectedCategoryIds([]);
+                            }
+                        }}
+                    />
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                        Seleccionar todas ({sortedCategories.length})
+                    </span>
+                </label>
+
+                <button
+                    type="button"
+                    onClick={() => handleSort('nombre')}
+                    className="px-3.5 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer"
+                >
+                    <span>Orden: A-Z</span>
+                    {sortConfig.key === 'nombre' && sortConfig.direction === 'desc' ? (
+                        <ArrowDown className="w-3.5 h-3.5 text-[var(--primary)]" />
+                    ) : (
+                        <ArrowUp className="w-3.5 h-3.5 text-[var(--primary)]" />
+                    )}
+                </button>
             </div>
 
-            <div className="glass-panel table-responsive" style={{ padding: 0 }}>
+            {/* 1. Desktop Table (md+ intacta) */}
+            <div className="hidden md:block glass-panel table-responsive" style={{ padding: 0 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left' }}>
@@ -452,10 +499,111 @@ const CategoriesView = () => {
                 </table>
             </div>
 
+            {/* 2. Celular Cards (< md) */}
+            <section className="md:hidden space-y-2.5 pb-6">
+                {sortedCategories.length === 0 ? (
+                    <div className="py-12 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        No hay categorías registradas.
+                    </div>
+                ) : (
+                    sortedCategories.map((cat) => {
+                        const isSelected = selectedCategoryIds.includes(cat.id);
+                        const categoryColor = cat.color || '#F26522';
+                        const countPlatos = cat._count?.platos || 0;
+
+                        return (
+                            <div
+                                key={cat.id}
+                                className={`rounded-2xl bg-white dark:bg-slate-900 border transition-all p-3.5 flex items-center justify-between gap-3 shadow-xs ${
+                                    isSelected
+                                        ? 'border-[var(--primary)] ring-1 ring-[var(--primary)]/30'
+                                        : 'border-slate-200/80 dark:border-slate-800'
+                                }`}
+                            >
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <CustomCheckbox
+                                        checked={isSelected}
+                                        onChange={() => {
+                                            if (isSelected) {
+                                                setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                                            } else {
+                                                setSelectedCategoryIds(prev => [...prev, cat.id]);
+                                            }
+                                        }}
+                                    />
+
+                                    {/* Icono con fondo y color representativo */}
+                                    <div
+                                        style={{ backgroundColor: `${categoryColor}22`, borderColor: `${categoryColor}55` }}
+                                        className="w-12 h-12 rounded-2xl border flex items-center justify-center text-2xl shrink-0 relative"
+                                    >
+                                        <span>{cat.icono || '🍽️'}</span>
+                                        <span
+                                            style={{ backgroundColor: categoryColor }}
+                                            className="w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 absolute -bottom-0.5 -right-0.5"
+                                        />
+                                    </div>
+
+                                    {/* Nombre, estado y detalles */}
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <h2 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                                {cat.nombre}
+                                            </h2>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                                cat.activo
+                                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/40'
+                                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border-rose-200/60 dark:border-rose-800/40'
+                                            }`}>
+                                                {cat.activo ? 'ACTIVO' : 'INACTIVO'}
+                                            </span>
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-1.5 text-[11.5px] text-slate-500 dark:text-slate-400 tabular-nums">
+                                            <span>{countPlatos} items</span>
+                                            <span>·</span>
+                                            {cat.enviarCocina !== false ? (
+                                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                                                    <ChefHat className="w-3.5 h-3.5" /> Cocina: SÍ
+                                                </span>
+                                            ) : (
+                                                <span className="text-slate-400">Cocina: NO</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Botones circulares Editar / Eliminar */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleOpenModal(cat)}
+                                        aria-label={`Editar ${cat.nombre}`}
+                                        className="w-10 h-10 rounded-full bg-[#4B5563] hover:bg-[#374151] text-white flex items-center justify-center shrink-0 shadow-sm active:scale-95 transition-all cursor-pointer border-0"
+                                    >
+                                        <Edit className="w-4 h-4 text-white" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDelete(cat.id)}
+                                        aria-label={`Eliminar ${cat.nombre}`}
+                                        className="w-10 h-10 rounded-full bg-[#EF4444] hover:bg-[#DC2626] text-white flex items-center justify-center shrink-0 shadow-sm active:scale-95 transition-all cursor-pointer border-0"
+                                    >
+                                        <Trash className="w-4 h-4 text-white" />
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </section>
+
             {/* Modal */}
             {isModalOpen && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/60 backdrop-blur-[2px]" onClick={() => setIsModalOpen(false)}>
+                    <div className="modal-content w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="sm:hidden -mt-1 pb-2 flex justify-center">
+                            <div className="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-zinc-700" />
+                        </div>
                         <div className="modal-header">
                             <h2>{editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}</h2>
                             <CloseButton onClick={() => setIsModalOpen(false)} className="scale-90" />
@@ -559,7 +707,7 @@ const CategoriesView = () => {
                                 </div>
                             </div>
 
-                            <button type="submit" className="glass-button primary font-sans" style={{ marginTop: 8 }}>
+                            <button type="submit" className="min-h-[44px] w-full rounded-full bg-[#F26522] hover:bg-[#DC5616] text-white font-bold text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer border-0 font-sans" style={{ marginTop: 8 }}>
                                 <Save size={18} /> Guardar
                             </button>
                         </form>

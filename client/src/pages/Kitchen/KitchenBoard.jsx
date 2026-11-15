@@ -71,47 +71,65 @@ export default function KitchenBoard() {
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      {/* 1. TABS SELECTOR (MÓVIL / PORTRAIT TABLET) */}
+      {/* 1. TABS SELECTOR (MÓVIL / PORTRAIT TABLET - DISEÑO PILL SUPERADMIN) */}
       {isTabbedMode && (
-        <div className="mb-4 grid grid-cols-3 gap-2 p-1.5 rounded-2xl bg-slate-200/50 dark:bg-slate-900/60 select-none">
+        <div className="mb-4 grid grid-cols-3 gap-1.5 sm:gap-2 p-1.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm select-none">
           <button
+            type="button"
             onClick={() => setActiveTabletTab('pendiente')}
-            className={`py-3 px-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${activeTabletTab === 'pendiente'
-              ? 'bg-white dark:bg-slate-950 text-[var(--primary)] shadow-sm'
-              : 'text-slate-500 dark:text-slate-455 hover:text-slate-700 dark:hover:text-white'
-              }`}
+            className={`min-h-[44px] py-2 px-1.5 sm:px-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+              activeTabletTab === 'pendiente'
+                ? 'bg-[#F26522] text-white shadow-md shadow-[#F26522]/25'
+                : 'bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60'
+            }`}
           >
-            <Clock size={16} />
-            <span>Pendientes</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-900 font-bold">
+            <Clock className={`w-3.5 h-3.5 shrink-0 ${activeTabletTab === 'pendiente' ? 'text-white' : 'text-slate-500'}`} />
+            <span className="truncate">Pendientes</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold tabular-nums shrink-0 ${
+              activeTabletTab === 'pendiente'
+                ? 'bg-white/25 text-white'
+                : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+            }`}>
               {pendingItems.length}
             </span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTabletTab('proceso')}
-            className={`py-3 px-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${activeTabletTab === 'proceso'
-              ? 'bg-white dark:bg-slate-950 text-[var(--primary)] shadow-sm'
-              : 'text-slate-500 dark:text-slate-455 hover:text-slate-700 dark:hover:text-white'
-              }`}
+            className={`min-h-[44px] py-2 px-1.5 sm:px-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+              activeTabletTab === 'proceso'
+                ? 'bg-[#F26522] text-white shadow-md shadow-[#F26522]/25'
+                : 'bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60'
+            }`}
           >
-            <Flame size={16} />
-            <span>En Proceso</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-900 font-bold">
+            <Flame className={`w-3.5 h-3.5 shrink-0 ${activeTabletTab === 'proceso' ? 'text-white' : 'text-slate-500'}`} />
+            <span className="truncate">En Proceso</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold tabular-nums shrink-0 ${
+              activeTabletTab === 'proceso'
+                ? 'bg-white/25 text-white'
+                : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+            }`}>
               {processingItems.length}
             </span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTabletTab('listo')}
-            className={`py-3 px-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${activeTabletTab === 'listo'
-              ? 'bg-white dark:bg-slate-950 text-emerald-500 shadow-sm'
-              : 'text-slate-500 dark:text-slate-455 hover:text-slate-700 dark:hover:text-white'
-              }`}
+            className={`min-h-[44px] py-2 px-1.5 sm:px-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+              activeTabletTab === 'listo'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
+                : 'bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60'
+            }`}
           >
-            <CheckCircle2 size={16} />
-            <span>Listos</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-900 font-bold">
+            <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${activeTabletTab === 'listo' ? 'text-white' : 'text-slate-500'}`} />
+            <span className="truncate">Listos</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold tabular-nums shrink-0 ${
+              activeTabletTab === 'listo'
+                ? 'bg-white/25 text-white'
+                : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+            }`}>
               {readyItems.length}
             </span>
           </button>

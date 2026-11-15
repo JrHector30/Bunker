@@ -673,7 +673,7 @@ const DashboardLayout = () => {
 
                 {/* 2. Mobile Drawer Overlay (< sm) EXCLUSIVAMENTE PARA CELULAR */}
                 {mobileMenuOpen && (
-                    <div className="fixed inset-0 z-50 sm:hidden flex">
+                    <div className="fixed inset-0 z-[100] sm:hidden flex">
                         <div
                             className="fixed inset-0 bg-slate-950/70 backdrop-blur-[2px]"
                             onClick={() => setMobileMenuOpen(false)}
