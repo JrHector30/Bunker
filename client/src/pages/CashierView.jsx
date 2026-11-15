@@ -6,7 +6,7 @@ import { getActiveRestaurantName } from '../utils/tenant';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import {
-  ArrowLeft, Plus, FileSpreadsheet, Eye, Printer, MoreVertical,
+  Plus, FileSpreadsheet, Eye, Printer, MoreVertical,
   Trash, Search, X, Receipt, CheckCircle, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast,
   TrendingUp, BarChart3, HelpCircle, FileText, Smartphone, CreditCard,
   SlidersHorizontal, Menu, CalendarDays, Download, AlertCircle,

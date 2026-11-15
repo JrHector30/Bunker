@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download, Upload, Check, Loader2, Calendar as CalendarIcon, ChevronFirst, ChevronLeft, ChevronRight, ChevronLast, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download, Upload, Check, Loader2, Calendar as CalendarIcon, ChevronFirst, ChevronLeft, ChevronRight, ChevronLast, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
 import * as XLSX from 'xlsx';
@@ -1145,7 +1145,6 @@ const InventoryView = () => {
             {!isInsumosTab && !isPlatosTab && !isKardexTab && !isAuditoriaTab && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isRecetarioTab ? 6 : 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: isRecetarioTab ? 10 : 15 }}>
-                        <button className="glass-button" onClick={() => navigate('/')} style={{ padding: isRecetarioTab ? '5px 8px' : 10 }}><ArrowLeft size={isRecetarioTab ? 18 : 24} /></button>
                         <h1 style={{ margin: 0, fontSize: isRecetarioTab ? '1.25rem' : '1.75rem', fontWeight: 'bold' }}>{getModuleTitle()}</h1>
                     </div>
                     {isRecetarioTab && (

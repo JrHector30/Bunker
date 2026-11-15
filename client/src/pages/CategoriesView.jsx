@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash, Save, X, ChefHat, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Smile, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Trash, Save, X, ChefHat, ArrowUp, ArrowDown, ChevronsUpDown, Smile, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 import { CustomCheckbox } from '../components/ui/CustomCheckbox';
 import { DeleteButton } from '../components/ui/DeleteButton';
@@ -357,14 +357,6 @@ const CategoriesView = () => {
             {/* Cabecera Responsiva */}
             <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                 <div className="flex items-center gap-3">
-                    <button
-                        type="button"
-                        onClick={() => navigate('/')}
-                        aria-label="Volver al inicio"
-                        className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center shrink-0 shadow-xs active:scale-95 transition-all cursor-pointer text-slate-700 dark:text-slate-300"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                    </button>
                     <h1 className="text-[22px] sm:text-[24px] font-bold text-slate-900 dark:text-white tracking-tight">
                         Gestión de Categorías
                     </h1>

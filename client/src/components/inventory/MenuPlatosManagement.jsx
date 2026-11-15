@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   Download,
   Upload,
   Plus,
@@ -614,16 +613,6 @@ export default function MenuPlatosManagement({
       {/* NIVEL 1: Encabezado Superior con Botones SuperAdminView */}
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3.5 min-w-0">
-          <button
-            type="button"
-            onClick={() => navigate('/home')}
-            aria-label="Volver"
-            title="Volver al Inicio"
-            className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-700 dark:text-zinc-200 transition-colors cursor-pointer shrink-0 border-0 shadow-sm active:scale-95"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-
           <div className="flex flex-wrap items-baseline gap-2.5 min-w-0">
             <h1 className="text-[20px] sm:text-[22px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
               Menú (Platos)

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Search, X, User, Save, Upload, ArrowLeft, Power, CheckCircle, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Users, Filter, ArrowUp, ArrowDown, ArrowUpDown, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, User, Save, Upload, Power, CheckCircle, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Users, Filter, ArrowUp, ArrowDown, ArrowUpDown, Check } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 import CloseButton from '../components/ui/CloseButton';
 import SmoothDropdown from '../components/ui/SmoothDropdown';
@@ -390,14 +390,6 @@ const UsersView = () => {
             {/* Top Bar Header */}
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
-                    <button 
-                        type="button"
-                        className="glass-button p-2.5 rounded-xl hover:bg-white/10 transition-colors" 
-                        onClick={() => navigate('/')} 
-                        title="Volver"
-                    >
-                        <ArrowLeft size={18} />
-                    </button>
                     <div className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[var(--text-main)]">
                         <Users className="size-5" />
                     </div>

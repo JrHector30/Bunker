@@ -18,7 +18,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronLast,
-  ArrowLeft,
   AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -421,15 +420,6 @@ export default function InsumosManagement({
     <div className="space-y-6 animate-fade-in font-sans">
       {/* 1. Header con Título y Fecha dinámica */}
       <header className="flex items-start gap-3.5">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          aria-label="Volver"
-          title="Volver"
-          className="mt-0.5 w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-colors cursor-pointer shrink-0"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
         <div>
           <h1 className="text-[22px] sm:text-[24px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight font-sans">
             Gestión de Inventario

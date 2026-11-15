@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import {
-  ArrowLeft,
   Download,
   Plus,
   ArrowDownLeft,
@@ -404,14 +403,6 @@ export default function KardexManagement({
       {/* ========================================================= */}
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            aria-label="Volver"
-            className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-colors cursor-pointer shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-[22px] sm:text-[24px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">

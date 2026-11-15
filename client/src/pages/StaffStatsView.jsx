@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
-import { ArrowLeft, User, ChefHat, FileText, CalendarDays, ChevronDown, ChevronUp, Database } from 'lucide-react';
+import { User, ChefHat, FileText, CalendarDays, ChevronDown, ChevronUp, Database } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -786,9 +786,6 @@ const StaffStatsView = () => {
             {/* Top Toolbar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 15 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <button className="glass-button" onClick={() => navigate('/')} style={{ padding: 8 }}>
-                        <ArrowLeft size={20} />
-                    </button>
                     <div>
                         <h1 style={{ margin: 0, fontSize: '24px' }}>Rendimiento y Reportes</h1>
                         {arqueoInfo && (

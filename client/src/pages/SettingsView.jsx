@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Moon, Sun, Zap, Palette, Bell, Save, X, Terminal, Shield, Printer, RefreshCw, Check, AlertTriangle, Wifi, WifiOff, Lock, EyeOff, Eye } from 'lucide-react';
+import { Moon, Sun, Zap, Palette, Bell, Save, X, Terminal, Shield, Printer, RefreshCw, Check, AlertTriangle, Wifi, WifiOff, Lock, EyeOff, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PermissionsConfig from '../components/PermissionsConfig';
 import { useNotification } from '../context/NotificationContext';
@@ -560,9 +560,6 @@ const SettingsView = () => {
     return (
         <div className="fade-in" style={{ padding: 20, maxWidth: 1000, margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 30 }}>
-                <button className="glass-button" onClick={() => navigate('/')} style={{ padding: 8 }}>
-                    <ArrowLeft size={20} />
-                </button>
                 <div>
                     <h1 style={{ margin: 0 }}>Ajustes</h1>
                     <p className="text-muted" style={{ margin: 0 }}>Personaliza tu experiencia en Bunker</p>

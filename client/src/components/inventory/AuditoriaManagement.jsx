@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft,
   ArrowUpDown,
   Check,
   CheckCircle2,
@@ -337,28 +336,18 @@ export default function AuditoriaManagement({
       {/* 1. HEADER (Web + Mobile)                                  */}
       {/* ========================================================= */}
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            aria-label="Volver"
-            className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-colors cursor-pointer shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-[22px] sm:text-[24px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
-                Auditoría de Insumos
-              </h1>
-              <span className="text-xs font-medium text-slate-400 tabular-nums">
-                {insumos.length} insumos
-              </span>
-            </div>
-            <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Conciliación de stock físico vs teórico para detectar mermas, faltantes o excedentes.
-            </p>
+        <div>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-[22px] sm:text-[24px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+              Auditoría de Insumos
+            </h1>
+            <span className="text-xs font-medium text-slate-400 tabular-nums">
+              {insumos.length} insumos
+            </span>
           </div>
+          <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Conciliación de stock físico vs teórico para detectar mermas, faltantes o excedentes.
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
