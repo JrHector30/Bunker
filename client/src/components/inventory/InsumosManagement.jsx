@@ -411,6 +411,12 @@ export default function InsumosManagement({
     }
   };
 
+  // Items de acción centralizados para SmoothDropdown (Desktop y Mobile)
+  const dropdownActions = [
+    { id: 'edit', label: 'Editar', icon: Pencil },
+    { id: 'delete', label: 'Borrar', icon: Trash2, isDestructive: true }
+  ];
+
   return (
     <div className="space-y-6 animate-fade-in font-sans">
       {/* 1. Header con Título y Fecha dinámica */}
