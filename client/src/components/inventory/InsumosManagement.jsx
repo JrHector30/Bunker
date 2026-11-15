@@ -24,6 +24,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import SmoothDropdown from '../ui/SmoothDropdown';
 import CloseButton from '../ui/CloseButton';
+import CustomCheckbox from '../ui/CustomCheckbox';
 import { getActiveRestaurant } from '../../utils/tenant';
 
 const ALMACENES_DISPONIBLES = ['Congelador', 'Congelador 2', 'Despensa', 'Refrigerador'];
@@ -433,115 +434,115 @@ export default function InsumosManagement({
         </div>
       </header>
 
-      {/* 2. KPIs Row con filtro interactivo al hacer clic */}
-      <section aria-label="Resumen de inventario" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
-        {/* KPI 1: Insumos Totales */}
+      {/* 2. KPIs Row: 2 cols móvil (2 filas de 2 cards) -> 4 cols desktop con tamaño notablemente reducido */}
+      <section aria-label="Resumen de inventario" className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        {/* KPI 1: Totales */}
         <button
           type="button"
           onClick={() => handleKpiClick('Todos')}
-          className={`text-left bg-white dark:bg-slate-900 rounded-2xl p-5 transition-all duration-150 cursor-pointer border flex flex-col justify-between min-h-[146px] ${
+          className={`text-left bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-5 transition-all duration-150 cursor-pointer border flex flex-col justify-between min-h-[88px] sm:min-h-[146px] active:scale-[0.98] ${
             statusFilter === 'Todos'
-              ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/20 shadow-sm'
+              ? 'border-[#10B981] ring-2 ring-[#10B981]/20 shadow-sm'
               : 'border-slate-100 dark:border-slate-800 shadow-[0_1px_3px_rgba(15,23,42,0.04)] hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-[0_4px_12px_rgba(15,23,42,0.05)]'
           }`}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#E6F4EA] dark:bg-emerald-950/60 flex items-center justify-center shrink-0">
-              <Package className="w-5 h-5 text-[#137333] dark:text-emerald-400" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#E6F4EA] dark:bg-emerald-950/60 flex items-center justify-center shrink-0">
+              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-[#137333] dark:text-emerald-400" />
             </div>
-            <h2 className="text-[15px] font-semibold text-slate-900 dark:text-slate-100 leading-snug">
-              Insumos Totales
+            <h2 className="text-xs sm:text-[15px] font-semibold text-slate-900 dark:text-slate-100 leading-snug truncate">
+              Totales
             </h2>
           </div>
-          <div className="mt-4">
-            <p className="text-[12.5px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+          <div className="mt-1.5 sm:mt-4">
+            <p className="hidden sm:block text-[12.5px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
               Total de insumos en stock
             </p>
-            <p className="mt-2 text-[26px] font-bold text-slate-900 dark:text-white tracking-tight tabular-nums leading-none font-mono">
+            <p className="mt-1 sm:mt-2 text-xl sm:text-[26px] font-bold text-slate-900 dark:text-white tracking-tight tabular-nums leading-none font-mono">
               {kpiData.total}
             </p>
           </div>
         </button>
 
-        {/* KPI 2: Insumos Bajo Stock */}
+        {/* KPI 2: Bajo Stock */}
         <button
           type="button"
           onClick={() => handleKpiClick('Bajo Stock')}
-          className={`text-left bg-white dark:bg-slate-900 rounded-2xl p-5 transition-all duration-150 cursor-pointer border flex flex-col justify-between min-h-[146px] ${
+          className={`text-left bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-5 transition-all duration-150 cursor-pointer border flex flex-col justify-between min-h-[88px] sm:min-h-[146px] active:scale-[0.98] ${
             statusFilter === 'Bajo Stock'
-              ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/20 shadow-sm'
+              ? 'border-[#10B981] ring-2 ring-[#10B981]/20 shadow-sm'
               : 'border-slate-100 dark:border-slate-800 shadow-[0_1px_3px_rgba(15,23,42,0.04)] hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-[0_4px_12px_rgba(15,23,42,0.05)]'
           }`}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#FEF3C7] dark:bg-amber-950/60 flex items-center justify-center shrink-0">
-              <Gauge className="w-5 h-5 text-[#D97706] dark:text-amber-400" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#FEF3C7] dark:bg-amber-950/60 flex items-center justify-center shrink-0">
+              <Gauge className="w-4 h-4 sm:w-5 sm:h-5 text-[#D97706] dark:text-amber-400" />
             </div>
-            <h2 className="text-[15px] font-semibold text-slate-900 dark:text-slate-100 leading-snug">
-              Insumos Bajo Stock
+            <h2 className="text-xs sm:text-[15px] font-semibold text-slate-900 dark:text-slate-100 leading-snug truncate">
+              Bajo Stock
             </h2>
           </div>
-          <div className="mt-4">
-            <p className="text-[12.5px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
-              Insumos que se están agotando (≤ 10)
+          <div className="mt-1.5 sm:mt-4">
+            <p className="hidden sm:block text-[12.5px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+              Insumos agotándose (≤ 10)
             </p>
-            <p className="mt-2 text-[26px] font-bold text-slate-900 dark:text-white tracking-tight tabular-nums leading-none font-mono">
+            <p className="mt-1 sm:mt-2 text-xl sm:text-[26px] font-bold text-slate-900 dark:text-white tracking-tight tabular-nums leading-none font-mono">
               {kpiData.bajoStock}
             </p>
           </div>
         </button>
 
-        {/* KPI 3: Insumos Vencidos */}
+        {/* KPI 3: Vencidos */}
         <button
           type="button"
           onClick={() => handleKpiClick('Vencido')}
-          className={`text-left bg-white dark:bg-slate-900 rounded-2xl p-5 transition-all duration-150 cursor-pointer border flex flex-col justify-between min-h-[146px] ${
+          className={`text-left bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-5 transition-all duration-150 cursor-pointer border flex flex-col justify-between min-h-[88px] sm:min-h-[146px] active:scale-[0.98] ${
             statusFilter === 'Vencido'
-              ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/20 shadow-sm'
+              ? 'border-[#10B981] ring-2 ring-[#10B981]/20 shadow-sm'
               : 'border-slate-100 dark:border-slate-800 shadow-[0_1px_3px_rgba(15,23,42,0.04)] hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-[0_4px_12px_rgba(15,23,42,0.05)]'
           }`}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#FEE2E2] dark:bg-rose-950/60 flex items-center justify-center shrink-0">
-              <ClockAlert className="w-5 h-5 text-[#DC2626] dark:text-rose-400" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#FEE2E2] dark:bg-rose-950/60 flex items-center justify-center shrink-0">
+              <ClockAlert className="w-4 h-4 sm:w-5 sm:h-5 text-[#DC2626] dark:text-rose-400" />
             </div>
-            <h2 className="text-[15px] font-semibold text-slate-900 dark:text-slate-100 leading-snug">
-              Insumos Vencidos
+            <h2 className="text-xs sm:text-[15px] font-semibold text-slate-900 dark:text-slate-100 leading-snug truncate">
+              Vencidos
             </h2>
           </div>
-          <div className="mt-4">
-            <p className="text-[12.5px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
-              Insumos que pasaron su fecha ({'>'} 3 meses)
+          <div className="mt-1.5 sm:mt-4">
+            <p className="hidden sm:block text-[12.5px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+              Insumos pasados ({'>'} 3 meses)
             </p>
-            <p className="mt-2 text-[26px] font-bold text-slate-900 dark:text-white tracking-tight tabular-nums leading-none font-mono">
+            <p className="mt-1 sm:mt-2 text-xl sm:text-[26px] font-bold text-slate-900 dark:text-white tracking-tight tabular-nums leading-none font-mono">
               {kpiData.vencidos}
             </p>
           </div>
         </button>
 
-        {/* KPI 4: Insumos Sin Stock */}
+        {/* KPI 4: Sin Stock */}
         <button
           type="button"
           onClick={() => handleKpiClick('Sin Stock')}
-          className={`text-left bg-white dark:bg-slate-900 rounded-2xl p-5 transition-all duration-150 cursor-pointer border flex flex-col justify-between min-h-[146px] ${
+          className={`text-left bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-5 transition-all duration-150 cursor-pointer border flex flex-col justify-between min-h-[88px] sm:min-h-[146px] active:scale-[0.98] ${
             statusFilter === 'Sin Stock'
-              ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/20 shadow-sm'
+              ? 'border-[#10B981] ring-2 ring-[#10B981]/20 shadow-sm'
               : 'border-slate-100 dark:border-slate-800 shadow-[0_1px_3px_rgba(15,23,42,0.04)] hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-[0_4px_12px_rgba(15,23,42,0.05)]'
           }`}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#F3F4F6] dark:bg-slate-800 flex items-center justify-center shrink-0">
-              <PackageX className="w-5 h-5 text-[#374151] dark:text-slate-300" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#F3F4F6] dark:bg-slate-800 flex items-center justify-center shrink-0">
+              <PackageX className="w-4 h-4 sm:w-5 sm:h-5 text-[#374151] dark:text-slate-300" />
             </div>
-            <h2 className="text-[15px] font-semibold text-slate-900 dark:text-slate-100 leading-snug">
-              Insumos Sin Stock
+            <h2 className="text-xs sm:text-[15px] font-semibold text-slate-900 dark:text-slate-100 leading-snug truncate">
+              Sin Stock
             </h2>
           </div>
-          <div className="mt-4">
-            <p className="text-[12.5px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
-              Cantidad de insumos actualmente sin stock (0)
+          <div className="mt-1.5 sm:mt-4">
+            <p className="hidden sm:block text-[12.5px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+              Insumos agotados (0)
             </p>
-            <p className="mt-2 text-[26px] font-bold text-slate-900 dark:text-white tracking-tight tabular-nums leading-none font-mono">
+            <p className="mt-1 sm:mt-2 text-xl sm:text-[26px] font-bold text-slate-900 dark:text-white tracking-tight tabular-nums leading-none font-mono">
               {kpiData.sinStock}
             </p>
           </div>
@@ -812,138 +813,236 @@ export default function InsumosManagement({
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[850px]">
-              <thead>
-                <tr
-                  className="text-xs font-bold uppercase tracking-wider text-white select-none"
-                  style={{ background: 'var(--primary)', color: '#ffffff' }}
-                >
-                  {/* Columna Checkbox */}
-                  <th className="py-3 pl-5 pr-2 w-12 text-center" style={{ borderTopLeftRadius: 10, borderBottomLeftRadius: 10 }}>
-                    <div className="flex items-center justify-center">
-                      <button
-                        type="button"
-                        onClick={handleToggleSelectAllPage}
-                        aria-label="Seleccionar todos los de esta página"
-                        className={`w-[18px] h-[18px] rounded-[5px] flex items-center justify-center transition-colors cursor-pointer shrink-0 border ${
-                          allPageSelected || somePageSelected
-                            ? 'bg-white text-[var(--primary)] border-white'
-                            : 'bg-white/20 border-white/50 hover:bg-white/30'
+          <>
+            {/* Vista Tabla Desktop (md+) - 100% Inalterada */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[850px]">
+                <thead>
+                  <tr
+                    className="text-xs font-bold uppercase tracking-wider text-white select-none"
+                    style={{ background: 'var(--primary)', color: '#ffffff' }}
+                  >
+                    {/* Columna Checkbox */}
+                    <th className="py-3 pl-5 pr-2 w-12 text-center" style={{ borderTopLeftRadius: 10, borderBottomLeftRadius: 10 }}>
+                      <div className="flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={handleToggleSelectAllPage}
+                          aria-label="Seleccionar todos los de esta página"
+                          className={`w-[18px] h-[18px] rounded-[5px] flex items-center justify-center transition-colors cursor-pointer shrink-0 border ${
+                            allPageSelected || somePageSelected
+                              ? 'bg-white text-[var(--primary)] border-white'
+                              : 'bg-white/20 border-white/50 hover:bg-white/30'
+                          }`}
+                        >
+                          {allPageSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          {somePageSelected && <Minus className="w-3 h-3 stroke-[3]" />}
+                        </button>
+                      </div>
+                    </th>
+                    <th className="py-3 px-4">Nombre</th>
+                    <th className="py-3 px-4">Cantidad</th>
+                    <th className="py-3 px-4">Almacén</th>
+                    <th className="py-3 px-4">Última Actualización</th>
+                    <th className="py-3 px-4">Estado</th>
+                    <th
+                      className="py-3 pr-6 pl-4 text-center w-20"
+                      style={{ borderTopRightRadius: 10, borderBottomRightRadius: 10 }}
+                    >
+                      Acción
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-[13px]">
+                  {paginatedItems.map((item, index) => {
+                    const isSelected = selectedIds.includes(item.id);
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className={`transition-colors duration-100 ${
+                          isSelected
+                            ? 'bg-emerald-50/50 dark:bg-emerald-950/20'
+                            : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
                         }`}
                       >
-                        {allPageSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                        {somePageSelected && <Minus className="w-3 h-3 stroke-[3]" />}
-                      </button>
-                    </div>
-                  </th>
-                  <th className="py-3 px-4">Nombre</th>
-                  <th className="py-3 px-4">Cantidad</th>
-                  <th className="py-3 px-4">Almacén</th>
-                  <th className="py-3 px-4">Última Actualización</th>
-                  <th className="py-3 px-4">Estado</th>
-                  <th
-                    className="py-3 pr-6 pl-4 text-center w-20"
-                    style={{ borderTopRightRadius: 10, borderBottomRightRadius: 10 }}
+                        {/* Checkbox individual */}
+                        <td className="py-3.5 pl-5 pr-2 text-center">
+                          <div className="flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSelectItem(item.id)}
+                              aria-label={`Seleccionar ${item.nombre}`}
+                              className={`w-[18px] h-[18px] rounded-[5px] flex items-center justify-center transition-colors cursor-pointer shrink-0 border ${
+                                isSelected
+                                  ? 'bg-[var(--primary)] border-[var(--primary)] text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-400'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Nombre */}
+                        <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-100">
+                          <div className="flex items-center gap-2">
+                            <span>{item.nombre}</span>
+                            {item.notificarAlerta && item.stock <= item.stockMinimo && (
+                              <span title={`Alerta de stock mínimo (${item.stockMinimo})`} className="text-amber-500">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Cantidad */}
+                        <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-semibold tabular-nums font-mono whitespace-nowrap">
+                          {Number(item.stock).toFixed(2)} {item.unidadMedida}
+                        </td>
+
+                        {/* Almacén */}
+                        <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 whitespace-nowrap font-medium">
+                          {item.almacen}
+                        </td>
+
+                        {/* Última Actualización */}
+                        <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap text-xs">
+                          {item.formattedFecha}
+                        </td>
+
+                        {/* Estado */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          {renderStatusBadge(item.estado)}
+                        </td>
+
+                        {/* Acción con SmoothDropdown */}
+                        <td className="py-3.5 pr-6 pl-4 text-center relative" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center h-9">
+                            <SmoothDropdown
+                              id={item.id}
+                              dropUp={index >= Math.max(1, paginatedItems.length - 3)}
+                              compact={true}
+                              items={dropdownActions}
+                              onAction={(actionId) => {
+                                if (actionId === 'edit') {
+                                  handleOpenEdit(item);
+                                } else if (actionId === 'delete') {
+                                  handleDeleteSingle(item);
+                                }
+                              }}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Sub-toolbar móvil para selección masiva */}
+            <div className="md:hidden px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <label className="flex items-center gap-2.5 cursor-pointer select-none text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <CustomCheckbox
+                  checked={allPageSelected}
+                  onChange={handleToggleSelectAllPage}
+                />
+                <span>Seleccionar página ({paginatedItems.length})</span>
+              </label>
+              {selectedIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setBulkDeleteModalOpen(true)}
+                  className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+                >
+                  Borrar ({selectedIds.length})
+                </button>
+              )}
+            </div>
+
+            {/* Vista Tarjetas Celular (< md) con SmoothDropdown y Botones Táctiles */}
+            <div className="md:hidden border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
+              {paginatedItems.map((item, index) => {
+                const isSelected = selectedIds.includes(item.id);
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-3.5 sm:p-4 transition-colors ${
+                      isSelected
+                        ? 'bg-emerald-50/40 dark:bg-emerald-950/20'
+                        : 'bg-white dark:bg-slate-900'
+                    }`}
                   >
-                    Acción
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-[13px]">
-                {paginatedItems.map((item, index) => {
-                  const isSelected = selectedIds.includes(item.id);
-
-                  // Items de acción para SmoothDropdown
-                  const dropdownActions = [
-                    { id: 'edit', label: 'Editar', icon: Pencil },
-                    { id: 'delete', label: 'Borrar', icon: Trash2, isDestructive: true }
-                  ];
-
-                  return (
-                    <tr
-                      key={item.id}
-                      className={`transition-colors duration-100 ${
-                        isSelected
-                          ? 'bg-emerald-50/50 dark:bg-emerald-950/20'
-                          : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
-                      }`}
-                    >
-                      {/* Checkbox individual */}
-                      <td className="py-3.5 pl-5 pr-2 text-center">
-                        <div className="flex items-center justify-center">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleSelectItem(item.id)}
-                            aria-label={`Seleccionar ${item.nombre}`}
-                            className={`w-[18px] h-[18px] rounded-[5px] flex items-center justify-center transition-colors cursor-pointer shrink-0 border ${
-                              isSelected
-                                ? 'bg-[var(--primary)] border-[var(--primary)] text-white'
-                                : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-400'
-                            }`}
-                          >
-                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                          </button>
-                        </div>
-                      </td>
-
-                      {/* Nombre */}
-                      <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-100">
-                        <div className="flex items-center gap-2">
-                          <span>{item.nombre}</span>
-                          {item.notificarAlerta && item.stock <= item.stockMinimo && (
-                            <span title={`Alerta de stock mínimo (${item.stockMinimo})`} className="text-amber-500">
-                              <AlertTriangle className="w-3.5 h-3.5" />
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Cantidad */}
-                      <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-semibold tabular-nums font-mono whitespace-nowrap">
-                        {Number(item.stock).toFixed(2)} {item.unidadMedida}
-                      </td>
-
-                      {/* Almacén */}
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 whitespace-nowrap font-medium">
-                        {item.almacen}
-                      </td>
-
-                      {/* Última Actualización */}
-                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap text-xs">
-                        {item.formattedFecha}
-                      </td>
-
-                      {/* Estado */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        {renderStatusBadge(item.estado)}
-                      </td>
-
-                      {/* Acción con SmoothDropdown */}
-                      <td className="py-3.5 pr-6 pl-4 text-center relative" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center h-9">
-                          <SmoothDropdown
-                            id={item.id}
-                            dropUp={index >= Math.max(1, paginatedItems.length - 3)}
-                            compact={true}
-                            items={dropdownActions}
-                            onAction={(actionId) => {
-                              if (actionId === 'edit') {
-                                handleOpenEdit(item);
-                              } else if (actionId === 'delete') {
-                                handleDeleteSingle(item);
-                              }
-                            }}
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                        <div className="pt-0.5 shrink-0">
+                          <CustomCheckbox
+                            checked={isSelected}
+                            onChange={() => handleToggleSelectItem(item.id)}
                           />
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h3 className="text-[14px] sm:text-[15px] font-bold text-slate-900 dark:text-white truncate">
+                              {item.nombre}
+                            </h3>
+                            {item.notificarAlerta && item.stock <= item.stockMinimo && (
+                              <span title={`Alerta de stock mínimo (${item.stockMinimo})`} className="text-amber-500 shrink-0">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1">
+                            {renderStatusBadge(item.estado)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Acción con SmoothDropdown */}
+                      <div className="shrink-0 relative" onClick={(e) => e.stopPropagation()}>
+                        <SmoothDropdown
+                          id={`mobile-${item.id}`}
+                          dropUp={index >= Math.max(1, paginatedItems.length - 2)}
+                          compact={false}
+                          items={dropdownActions}
+                          onAction={(actionId) => {
+                            if (actionId === 'edit') {
+                              handleOpenEdit(item);
+                            } else if (actionId === 'delete') {
+                              handleDeleteSingle(item);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 pl-8 grid grid-cols-2 gap-y-1.5 gap-x-3 text-xs">
+                      <div>
+                        <span className="text-slate-400 text-[11px] block">Cantidad</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums font-mono">
+                          {Number(item.stock).toFixed(2)} {item.unidadMedida}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[11px] block">Almacén</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300 truncate block">
+                          {item.almacen}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-slate-400 text-[11px] block">Última Actualización</span>
+                        <span className="text-slate-500 dark:text-slate-400 tabular-nums text-[11.5px]">
+                          {item.formattedFecha}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {/* 5. Paginación de Arqueo de Caja */}
@@ -1012,14 +1111,16 @@ export default function InsumosManagement({
       {/* MODAL: Nuevo Insumo / Editar Insumo con CloseButton */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in text-left"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm animate-fade-in text-left"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)' }}
           onClick={() => setIsModalOpen(false)}
         >
           <div
-            className="w-full max-w-lg bg-white dark:bg-[#0f1016] rounded-3xl p-6 shadow-2xl relative border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white"
+            className="w-full sm:max-w-lg bg-white dark:bg-[#0f1016] rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl relative border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Mobile drag handle */}
+            <div className="w-10 h-1 bg-slate-300 dark:bg-zinc-700 rounded-full mx-auto mb-3 sm:hidden" />
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800/80 mb-5">
               <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 {modalMode === 'create' ? 'Nuevo Insumo' : 'Editar Insumo'}
