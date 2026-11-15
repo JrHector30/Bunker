@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Search, X, User, Save, Upload, ArrowLeft, Power, CheckCircle, ChevronLeft, ChevronRight, Users, Filter, ArrowUp, ArrowDown, ArrowUpDown, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, User, Save, Upload, ArrowLeft, Power, CheckCircle, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Users, Filter, ArrowUp, ArrowDown, ArrowUpDown, Check } from 'lucide-react';
 import { useCache } from '../hooks/useCache';
 import CloseButton from '../components/ui/CloseButton';
 import SmoothDropdown from '../components/ui/SmoothDropdown';
@@ -739,35 +739,57 @@ const UsersView = () => {
                     </table>
                 </div>
 
-                {/* Footer Pagination */}
+                {/* Footer Pagination (Idéntica a Arqueo de Caja) */}
                 <div
-                    className="flex items-center justify-between gap-4 px-5 py-3 border-t text-xs text-[var(--text-muted)]"
-                    style={{ borderColor: 'var(--table-row-border)', background: 'rgba(0, 0, 0, 0.06)' }}
+                    className="p-3 bg-transparent relative flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-muted)] font-sans border-t"
+                    style={{ borderColor: 'var(--table-row-border)' }}
                 >
-                    <p>
-                        <span className="font-semibold text-[var(--text-main)]">{filteredUsers.length}</span> {filteredUsers.length === 1 ? 'Usuario' : 'Usuarios'}
-                    </p>
-                    <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-slate-600 dark:text-slate-300 tabular-nums">
+                        Total: <strong className="text-slate-800 dark:text-slate-100 font-bold">{filteredUsers.length}</strong> {filteredUsers.length === 1 ? 'Usuario' : 'Usuarios'}
+                    </span>
+                    <div className="sm:absolute sm:left-1/2 sm:-translate-x-1/2 flex items-center justify-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            title="Ir al inicio"
+                            aria-label="Primera página"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs"
+                        >
+                            <ChevronFirst className="w-4 h-4" />
+                        </button>
                         <button
                             type="button"
                             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                             disabled={currentPage === 1}
-                            className="glass-button p-1.5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Página anterior"
                             aria-label="Página anterior"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs"
                         >
-                            <ChevronLeft size={16} />
+                            <ChevronLeft className="w-4 h-4" />
                         </button>
-                        <span className="px-2 text-xs font-mono">
+                        <span className="font-semibold text-slate-700 dark:text-slate-200 px-2 select-none whitespace-nowrap text-xs tabular-nums">
                             Página {currentPage} de {totalPages}
                         </span>
                         <button
                             type="button"
                             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                             disabled={currentPage >= totalPages}
-                            className="glass-button p-1.5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Página siguiente"
                             aria-label="Página siguiente"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs"
                         >
-                            <ChevronRight size={16} />
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage >= totalPages}
+                            title="Ir al final"
+                            aria-label="Última página"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs"
+                        >
+                            <ChevronLast className="w-4 h-4" />
                         </button>
                     </div>
                 </div>

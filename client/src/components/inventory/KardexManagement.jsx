@@ -10,16 +10,14 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
-  Table as TableIcon,
-  GitFork,
+  ChevronFirst,
+  ChevronLast,
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   User,
   SlidersHorizontal,
-  Save,
-  X,
+  ListFilter,
+  Layers,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
@@ -59,7 +57,7 @@ export default function KardexManagement({
 }) {
   // Filters & UI State
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('Todos'); // 'Todos' | 'VENTA' | 'ENTRADA' | 'MERMA' | 'AJUSTE'
+  const [typeFilter, setTypeFilter] = useState('Todos'); // 'Todos' | 'VENTA' | 'ENTRADA' | 'MERMA'
   const [userFilter, setUserFilter] = useState('Todos');
   const [viewMode, setViewMode] = useState('detallado'); // 'detallado' | 'comanda'
   const [currentPage, setCurrentPage] = useState(1);
@@ -215,7 +213,7 @@ export default function KardexManagement({
     });
   }, [enrichedMovements, typeFilter, userFilter, searchTerm, dateRange]);
 
-  // 5. Grouped by Comanda / Operation
+  // 5. Grouped by Comanda / Operation (Vista Por Comanda idéntica a Google AI Studio)
   const groupedComandas = useMemo(() => {
     const groups = [];
     const groupMap = new Map();
@@ -271,13 +269,6 @@ export default function KardexManagement({
     return groups;
   }, [filteredMovements]);
 
-  // Default expand first group if not set
-  useMemo(() => {
-    if (groupedComandas.length > 0 && openGroups.size === 0) {
-      setOpenGroups(new Set([groupedComandas[0].key]));
-    }
-  }, [groupedComandas]);
-
   const toggleGroup = (key) => {
     setOpenGroups((prev) => {
       const next = new Set(prev);
@@ -290,7 +281,7 @@ export default function KardexManagement({
     });
   };
 
-  // 6. Pagination
+  // 6. Pagination (Arqueo de Caja logic)
   const PAGE_SIZE = 10;
   const totalItems = viewMode === 'comanda' ? groupedComandas.length : filteredMovements.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
@@ -598,7 +589,7 @@ export default function KardexManagement({
             />
           </div>
 
-          {/* Comboboxes + Segmented Toggle */}
+          {/* Comboboxes + Segmented Toggle idéntico a Menú (Platos) */}
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* Combobox Tipo */}
             <FilterCombobox
@@ -626,21 +617,26 @@ export default function KardexManagement({
               ariaLabel="Filtrar por usuario"
             />
 
-            {/* Segmented View Mode Toggle (Solo Desktop) */}
-            <div className="hidden md:inline-flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-200/70 dark:border-slate-700">
+            {/* Toggle de Vista: Detallado / Por Comanda (Estilo exacto de Menú Platos Tabla/Cuadrícula) */}
+            <div
+              role="group"
+              aria-label="Cambiar vista"
+              className="hidden md:inline-flex items-center p-1 rounded-full bg-zinc-100 dark:bg-zinc-800 border-0 shadow-xs"
+            >
               <button
                 type="button"
                 onClick={() => {
                   setViewMode('detallado');
                   setCurrentPage(1);
                 }}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                aria-pressed={viewMode === 'detallado'}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 whitespace-nowrap ${
                   viewMode === 'detallado'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
-                <TableIcon className="w-3.5 h-3.5" />
+                <ListFilter className="w-3.5 h-3.5" />
                 <span>Detallado</span>
               </button>
               <button
@@ -649,13 +645,14 @@ export default function KardexManagement({
                   setViewMode('comanda');
                   setCurrentPage(1);
                 }}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                aria-pressed={viewMode === 'comanda'}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 whitespace-nowrap ${
                   viewMode === 'comanda'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
-                <GitFork className="w-3.5 h-3.5" />
+                <Layers className="w-3.5 h-3.5" />
                 <span>Por Comanda</span>
               </button>
             </div>
@@ -663,20 +660,34 @@ export default function KardexManagement({
         </div>
 
         {/* ========================================================= */}
-        {/* 4. VISTA WEB DETALLADA (hidden md:block)                  */}
+        {/* 4. VISTA WEB DETALLADA (CABECERAS ALINEADAS CON CONTENIDO) */}
         {/* ========================================================= */}
         {viewMode === 'detallado' && (
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full border-collapse text-left">
+            <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-[#F26522] text-white text-[11px] font-bold tracking-wider uppercase">
-                  <th className="py-3.5 px-5">Fecha y Hora</th>
-                  <th className="py-3.5 px-4">Insumo</th>
-                  <th className="py-3.5 px-4">Tipo</th>
-                  <th className="py-3.5 px-4 text-right">Variación</th>
-                  <th className="py-3.5 px-4 text-right">Saldo Post-Mov.</th>
-                  <th className="py-3.5 px-4">Responsable</th>
-                  <th className="py-3.5 px-5">Motivo / Comanda</th>
+                  <th style={{ textAlign: 'left' }} className="py-3.5 px-5 text-left font-bold">
+                    Fecha y Hora
+                  </th>
+                  <th style={{ textAlign: 'left' }} className="py-3.5 px-4 text-left font-bold">
+                    Insumo
+                  </th>
+                  <th style={{ textAlign: 'left' }} className="py-3.5 px-4 text-left font-bold">
+                    Tipo
+                  </th>
+                  <th style={{ textAlign: 'right' }} className="py-3.5 px-4 text-right font-bold">
+                    Variación
+                  </th>
+                  <th style={{ textAlign: 'right' }} className="py-3.5 px-4 text-right font-bold">
+                    Saldo Post-Mov.
+                  </th>
+                  <th style={{ textAlign: 'left' }} className="py-3.5 px-4 text-left font-bold">
+                    Responsable
+                  </th>
+                  <th style={{ textAlign: 'left' }} className="py-3.5 px-5 text-left font-bold">
+                    Motivo / Comanda
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-[13px]">
@@ -715,16 +726,22 @@ export default function KardexManagement({
                         key={m.id}
                         className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                       >
-                        <td className="py-3 px-5 text-xs text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap">
+                        <td
+                          style={{ textAlign: 'left' }}
+                          className="py-3 px-5 text-xs text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap text-left"
+                        >
                           {new Date(m.fecha).toLocaleString('es-PE', {
                             dateStyle: 'short',
                             timeStyle: 'medium',
                           })}
                         </td>
-                        <td className="py-3 px-4 font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                        <td
+                          style={{ textAlign: 'left' }}
+                          className="py-3 px-4 font-bold text-slate-900 dark:text-white whitespace-nowrap text-left"
+                        >
                           {m.insumo?.nombre || '-'}
                         </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
+                        <td style={{ textAlign: 'left' }} className="py-3 px-4 whitespace-nowrap text-left">
                           <span
                             className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold border ${badgeClass}`}
                           >
@@ -733,23 +750,30 @@ export default function KardexManagement({
                           </span>
                         </td>
                         <td
+                          style={{ textAlign: 'right' }}
                           className={`py-3 px-4 text-right font-bold tabular-nums whitespace-nowrap ${
                             isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#F26522]'
                           }`}
                         >
                           {m.cantidad > 0 ? `+${m.cantidad}` : m.cantidad} {m.insumo?.unidadMedida || ''}
                         </td>
-                        <td className="py-3 px-4 text-right text-xs text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap">
+                        <td
+                          style={{ textAlign: 'right' }}
+                          className="py-3 px-4 text-right text-xs text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap"
+                        >
                           <span>{m.stockAnterior != null ? m.stockAnterior : '-'}</span>
                           <span className="mx-1 text-slate-300 dark:text-slate-600">→</span>
                           <strong className="text-slate-800 dark:text-slate-200">
                             {m.stockNuevo != null ? m.stockNuevo : '-'} {m.insumo?.unidadMedida || ''}
                           </strong>
                         </td>
-                        <td className="py-3 px-4 text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        <td
+                          style={{ textAlign: 'left' }}
+                          className="py-3 px-4 text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap text-left"
+                        >
                           {m.usuario?.nombre || 'General / Sistema'}
                         </td>
-                        <td className="py-3 px-5 text-xs">
+                        <td style={{ textAlign: 'left' }} className="py-3 px-5 text-xs text-left">
                           <p className="text-slate-600 dark:text-slate-300">{parsed.line1}</p>
                           {parsed.line2 && (
                             <p className="font-semibold text-slate-800 dark:text-slate-100 mt-0.5">
@@ -767,10 +791,10 @@ export default function KardexManagement({
         )}
 
         {/* ========================================================= */}
-        {/* 5. VISTA WEB AGRUPADA POR COMANDA (hidden md:block)       */}
+        {/* 5. VISTA WEB AGRUPADA POR COMANDA (IDÉNTICA A AI STUDIO)  */}
         {/* ========================================================= */}
         {viewMode === 'comanda' && (
-          <div className="hidden md:block p-4 space-y-3">
+          <div className="hidden md:block p-4 sm:p-5 space-y-3">
             {pageGroups.length === 0 ? (
               <div className="py-12 text-center text-xs text-slate-400">
                 No se encontraron operaciones con los filtros aplicados.
@@ -790,13 +814,13 @@ export default function KardexManagement({
                 return (
                   <div
                     key={group.key}
-                    className="rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 transition-all shadow-xs"
+                    className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 overflow-hidden bg-white dark:bg-slate-900 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-all"
                   >
-                    {/* Header Acordeón */}
+                    {/* Header Acordeón Fino */}
                     <button
                       type="button"
                       onClick={() => toggleGroup(group.key)}
-                      className="w-full p-3.5 sm:px-4 sm:py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                      className="w-full px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer select-none"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <span
@@ -814,19 +838,19 @@ export default function KardexManagement({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        <span>{group.items.length} Insumo(s)</span>
-                        {isOpen ? (
-                          <ChevronUp className="w-4 h-4 text-slate-400" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-slate-400" />
-                        )}
+                      <div className="flex items-center gap-1.5 shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <span>{group.items.length} insumo(s)</span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                            isOpen ? 'rotate-180' : ''
+                          }`}
+                        />
                       </div>
                     </button>
 
-                    {/* Contenido Acordeón (Insumos consumidos/ingresados) */}
+                    {/* Contenido Acordeón (Desglose limpio sin bordes pesados) */}
                     {isOpen && (
-                      <div className="divide-y divide-slate-100 dark:divide-slate-800/80 bg-slate-50/30 dark:bg-slate-950/20">
+                      <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800/60 bg-slate-50/40 dark:bg-slate-900/40">
                         {group.items.map((item) => {
                           const isItemPositive = ['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(
                             item.tipoMovimiento
@@ -834,7 +858,7 @@ export default function KardexManagement({
                           return (
                             <div
                               key={item.id}
-                              className="flex items-center justify-between py-2.5 px-4 text-xs transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40"
+                              className="flex items-center justify-between py-2.5 px-6 text-xs transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
                             >
                               <span className="font-semibold text-slate-800 dark:text-slate-200">
                                 {item.insumo?.nombre || '-'}
@@ -939,81 +963,73 @@ export default function KardexManagement({
         </div>
 
         {/* ========================================================= */}
-        {/* 7. PAGINACIÓN IDÉNTICA A ARQUEO DE CAJA                   */}
+        {/* 7. PAGINACIÓN IDÉNTICA A ARQUEO DE CAJA (AL MEDIO)        */}
         {/* ========================================================= */}
         {totalPages > 0 && (
-          <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 relative flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
-            <span className="font-semibold select-none text-[11px] sm:text-xs">
-              Mostrando {startItem}-{endItem} de {totalItems}{' '}
+          <div className="px-4 sm:px-6 py-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 font-sans relative">
+            {/* Lado izquierdo: "Mostrando 1-10 de # movimientos" */}
+            <span className="font-medium text-slate-600 dark:text-slate-300 tabular-nums">
+              Mostrando{' '}
+              <strong className="text-slate-800 dark:text-slate-100 font-bold">
+                {startItem}-{endItem}
+              </strong>{' '}
+              de{' '}
+              <strong className="text-slate-800 dark:text-slate-100 font-bold">
+                {totalItems}
+              </strong>{' '}
               {viewMode === 'comanda' ? 'operaciones' : 'movimientos'}
             </span>
 
-            <div className="sm:absolute sm:left-1/2 sm:-translate-x-1/2 flex items-center justify-center gap-1 sm:gap-2">
+            {/* Centro: Controles de Paginación */}
+            <div className="sm:absolute sm:left-1/2 sm:-translate-x-1/2 flex items-center justify-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setCurrentPage(1)}
-                disabled={safePage === 1}
-                className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-2xs"
-                title="Primera página"
+                disabled={safePage <= 1}
+                title="Ir al inicio"
+                aria-label="Primera página"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs"
               >
-                <ChevronsLeft className="w-4 h-4" />
+                <ChevronFirst className="w-4 h-4" />
               </button>
+
               <button
                 type="button"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={safePage === 1}
-                className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-2xs"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={safePage <= 1}
                 title="Página anterior"
+                aria-label="Página anterior"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
 
-              <div className="flex items-center gap-1 px-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
-                  .map((p, idx, arr) => {
-                    const prevP = arr[idx - 1];
-                    const showEllipsis = prevP && p - prevP > 1;
-                    return (
-                      <React.Fragment key={p}>
-                        {showEllipsis && <span className="text-slate-400 px-1">...</span>}
-                        <button
-                          type="button"
-                          onClick={() => setCurrentPage(p)}
-                          className={`w-8 h-8 rounded-full font-bold text-xs flex items-center justify-center transition-all cursor-pointer ${
-                            p === safePage
-                              ? 'bg-[#F26522] text-white shadow-xs'
-                              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50'
-                          }`}
-                        >
-                          {p}
-                        </button>
-                      </React.Fragment>
-                    );
-                  })}
-              </div>
+              <span className="font-semibold text-slate-700 dark:text-slate-200 px-2 select-none whitespace-nowrap text-xs tabular-nums">
+                Página {safePage} de {totalPages}
+              </span>
 
               <button
                 type="button"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={safePage === totalPages}
-                className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-2xs"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={safePage >= totalPages}
                 title="Página siguiente"
+                aria-label="Página siguiente"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
+
               <button
                 type="button"
                 onClick={() => setCurrentPage(totalPages)}
-                disabled={safePage === totalPages}
-                className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-2xs"
-                title="Última página"
+                disabled={safePage >= totalPages}
+                title="Ir al final"
+                aria-label="Última página"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-xs"
               >
-                <ChevronsRight className="w-4 h-4" />
+                <ChevronLast className="w-4 h-4" />
               </button>
             </div>
-
-            <div className="hidden sm:block w-24" />
           </div>
         )}
       </section>
