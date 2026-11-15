@@ -8,13 +8,30 @@ export default function SimpleCombobox({
   onSelect,
   placeholder = "Seleccione...",
   closeOnSelect = true,
+  dropUp = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [autoDropUp, setAutoDropUp] = useState(false);
 
   const containerRef = useRef(null);
   const listRef = useRef(null);
+
+  // Auto-detect if opening downwards would overflow window bottom
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 280 && rect.top > 240) {
+        setAutoDropUp(true);
+      } else {
+        setAutoDropUp(false);
+      }
+    }
+  }, [isOpen]);
+
+  const shouldDropUp = dropUp || autoDropUp;
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -123,11 +140,13 @@ export default function SimpleCombobox({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 8, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+            initial={{ opacity: 0, y: shouldDropUp ? -4 : 4, scale: 0.98 }}
+            animate={{ opacity: 1, y: shouldDropUp ? -8 : 8, scale: 1 }}
+            exit={{ opacity: 0, y: shouldDropUp ? -4 : 4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute left-0 right-0 z-[150] mt-1 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+            className={`absolute left-0 z-[150] rounded-xl shadow-2xl overflow-hidden flex flex-col w-[320px] max-w-[90vw] ${
+              shouldDropUp ? 'bottom-full mb-2 origin-bottom-left' : 'top-full mt-1 origin-top-left'
+            }`}
             style={{
               backgroundColor: 'var(--bg-surface)',
               borderColor: 'var(--glass-border)',
@@ -248,13 +267,13 @@ export default function SimpleCombobox({
 
             {/* Selection Guide Footer */}
             <div 
-              className="px-4 py-2 border-t flex items-center justify-between"
+              className="px-3.5 py-2 border-t flex items-center justify-between text-[10px]"
               style={{
                 backgroundColor: 'var(--bg-secondary)',
                 borderColor: 'var(--glass-border)',
               }}
             >
-              <div className="flex space-x-3">
+              <div className="flex space-x-2">
                 <div 
                   className="flex items-center text-[10px] select-none"
                   style={{ color: 'var(--text-muted)' }}
@@ -285,14 +304,14 @@ export default function SimpleCombobox({
                   >
                     Enter
                   </span> 
-                  Seleccionar
+                  Elegir
                 </div>
               </div>
               <div 
-                className="text-[10px] font-semibold uppercase tracking-wider select-none"
+                className="text-[10px] font-semibold uppercase tracking-wider select-none whitespace-nowrap"
                 style={{ color: 'var(--text-muted)' }}
               >
-                Selección Única
+                1 Selección
               </div>
             </div>
 

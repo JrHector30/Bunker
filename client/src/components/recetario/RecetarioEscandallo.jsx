@@ -11,6 +11,27 @@ import SimpleCombobox from '../SimpleCombobox';
 import AddIngredientModal from './AddIngredientModal';
 import { useTheme } from '../../context/ThemeContext';
 
+// Helpers de validación de unidad y entrada numérica limpia sin spinbuttons
+const isIntegerUnit = (unit) => {
+  if (!unit) return false;
+  const u = String(unit).toLowerCase().trim();
+  return u === 'und' || u === 'ud' || u === 'unidad' || u === 'unidades' || u === 'unid' || u === 'u';
+};
+
+const sanitizeNumberInput = (rawVal, isInteger = false) => {
+  if (rawVal === '' || rawVal === null || rawVal === undefined) return '';
+  const str = String(rawVal);
+  if (isInteger) {
+    return str.replace(/[^0-9]/g, '');
+  }
+  const cleaned = str.replace(/[^0-9.]/g, '');
+  const parts = cleaned.split('.');
+  if (parts.length > 2) {
+    return parts[0] + '.' + parts.slice(1).join('');
+  }
+  return cleaned;
+};
+
 export const RecetarioEscandallo = ({
   products = [],
   categories = [],
@@ -131,7 +152,7 @@ export const RecetarioEscandallo = ({
 
   // Manejo de Insumos en la Receta
   const handleAddQuickRow = () => {
-    setCurrentRecipe((prev) => [...prev, { insumoId: '', cantidad: 0.1, insumo: null }]);
+    setCurrentRecipe((prev) => [...prev, { insumoId: '', cantidad: 1, insumo: null }]);
   };
 
   const handleAddFromModal = (insumoItem, quantity) => {
@@ -165,10 +186,22 @@ export const RecetarioEscandallo = ({
   const handleUpdateIngredient = (index, field, value) => {
     setCurrentRecipe((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [field]: value };
       if (field === 'insumoId') {
-        next[index].insumo = insumos.find((i) => i.id === parseInt(value)) || null;
+        const found = insumos.find((i) => i.id === parseInt(value)) || null;
+        const isInt = found && isIntegerUnit(found.unidadMedida);
+        const currentQty = parseFloat(next[index].cantidad);
+        const nextQty = isInt ? Math.max(1, Math.round(currentQty || 1)) : (next[index].cantidad || 1);
+        next[index] = { ...next[index], insumoId: value, insumo: found, cantidad: nextQty };
+        return next;
       }
+      if (field === 'cantidad') {
+        const insu = next[index].insumo || insumos.find((i) => i.id === parseInt(next[index].insumoId));
+        const isInt = isIntegerUnit(insu?.unidadMedida);
+        const sanitized = sanitizeNumberInput(value, isInt);
+        next[index] = { ...next[index], cantidad: sanitized };
+        return next;
+      }
+      next[index] = { ...next[index], [field]: value };
       return next;
     });
   };
@@ -255,11 +288,10 @@ export const RecetarioEscandallo = ({
                     S/.
                   </span>
                   <input
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    value={customPvp !== '' ? customPvp : selectedPlatoObj.precio}
-                    onChange={(e) => setCustomPvp(e.target.value)}
+                    type="text"
+                    inputMode="decimal"
+                    value={customPvp !== '' ? customPvp : (selectedPlatoObj ? selectedPlatoObj.precio : '')}
+                    onChange={(e) => setCustomPvp(sanitizeNumberInput(e.target.value, false))}
                     className="w-full bg-transparent font-mono text-xs font-bold focus:outline-none border-0 p-0 text-slate-900 dark:text-white"
                     placeholder="0.00"
                   />
@@ -272,11 +304,13 @@ export const RecetarioEscandallo = ({
                 </label>
                 <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 bg-slate-50/70 dark:bg-slate-800/80 shadow-2xs">
                   <input
-                    type="number"
-                    min="1"
-                    step="1"
+                    type="text"
+                    inputMode="numeric"
                     value={portions}
-                    onChange={(e) => setPortions(Math.max(1, parseInt(e.target.value) || 1))}
+                    onChange={(e) => {
+                      const sanitized = sanitizeNumberInput(e.target.value, true);
+                      setPortions(sanitized === '' ? '' : Math.max(1, parseInt(sanitized, 10)));
+                    }}
                     className="w-full bg-transparent font-mono text-xs font-bold focus:outline-none border-0 p-0 text-slate-900 dark:text-white"
                   />
                   <span className="text-[11px] ml-1 font-mono text-slate-400 dark:text-slate-500">
@@ -506,7 +540,7 @@ export const RecetarioEscandallo = ({
                   <thead className="sticky top-0 z-10" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>
                     <tr className="border-b border-black/10 text-white text-[10px] uppercase font-bold tracking-wider" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>
                       <th className="py-2.5 px-3 text-center w-8" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>#</th>
-                      <th className="py-2.5 px-3" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Insumo / Materia Prima</th>
+                      <th className="py-2.5 px-3 min-w-[280px]" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Insumo / Materia Prima</th>
                       <th className="py-2.5 px-2 text-center w-16" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Unidad</th>
                       <th className="py-2.5 px-3 text-right w-24" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Costo Base (S/.)</th>
                       <th className="py-2.5 px-3 text-right w-32" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>Cant. a Descontar</th>
@@ -542,11 +576,12 @@ export const RecetarioEscandallo = ({
                                 </div>
                               </div>
                             ) : (
-                              <div className="w-52">
+                              <div className="w-72 max-w-full">
                                 <SimpleCombobox
                                   items={insumoOptions}
                                   selectedItem={insumoOptions.find((o) => o.id === item.insumoId?.toString()) || null}
                                   onSelect={(opt) => handleUpdateIngredient(index, 'insumoId', opt ? opt.id : '')}
+                                  dropUp={index >= Math.max(1, filteredRecipe.length - 2)}
                                   placeholder="Seleccionar insumo..."
                                 />
                               </div>
@@ -559,21 +594,24 @@ export const RecetarioEscandallo = ({
                             {insu ? `S/. ${unitCost.toFixed(2)}` : '-'}
                           </td>
                           <td className="py-2 px-3 text-right">
-                            <div className="inline-flex items-center gap-1 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-0.5 bg-white dark:bg-slate-900 shadow-2xs">
-                              <input
-                                type="number"
-                                step="0.005"
-                                min="0"
-                                value={Number.isNaN(item.cantidad) ? '' : item.cantidad}
-                                onChange={(e) =>
-                                  handleUpdateIngredient(index, 'cantidad', parseFloat(e.target.value))
-                                }
-                                className="w-14 text-right font-mono text-xs font-semibold bg-transparent focus:outline-none border-0 p-0 text-slate-900 dark:text-white"
-                              />
-                              <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                                {insu ? insu.unidadMedida : ''}
-                              </span>
-                            </div>
+                            {(() => {
+                              const isInt = isIntegerUnit(insu?.unidadMedida);
+                              return (
+                                <div className="inline-flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1 bg-white dark:bg-slate-900 shadow-2xs hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
+                                  <input
+                                    type="text"
+                                    inputMode={isInt ? "numeric" : "decimal"}
+                                    value={item.cantidad ?? ''}
+                                    onChange={(e) => handleUpdateIngredient(index, 'cantidad', e.target.value)}
+                                    className="w-16 text-right font-mono text-xs font-bold bg-transparent focus:outline-none border-0 p-0 text-slate-900 dark:text-white"
+                                    placeholder={isInt ? "1" : "0.00"}
+                                  />
+                                  <span className="text-[10px] font-mono font-semibold text-slate-500 dark:text-slate-400 select-none">
+                                    {insu ? insu.unidadMedida : ''}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="py-2 px-3 text-right font-mono font-bold text-xs text-slate-900 dark:text-white">
                             S/. {subtotal.toFixed(2)}
@@ -595,22 +633,22 @@ export const RecetarioEscandallo = ({
                             </div>
                           </td>
                           <td className="py-2 px-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
+                            <div className="flex items-center justify-center gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => handleDuplicateIngredient(index)}
-                                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                                className="w-7 h-7 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
                                 title="Duplicar ingrediente"
                               >
-                                <Copy size={13} />
+                                <Copy size={12} />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteIngredient(index)}
-                                className="p-1 text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 transition-colors cursor-pointer"
+                                className="w-7 h-7 rounded-full border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
                                 title="Eliminar insumo de la receta"
                               >
-                                <Trash2 size={13} />
+                                <Trash2 size={12} />
                               </button>
                             </div>
                           </td>
@@ -678,17 +716,19 @@ export const RecetarioEscandallo = ({
                       {/* Inputs de Cantidad y Costo Unitario */}
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div className="flex items-center gap-1 px-2.5 min-h-[38px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xs">
-                          <input
-                            type="number"
-                            step="0.001"
-                            min="0"
-                            value={Number.isNaN(item.cantidad) ? '' : item.cantidad}
-                            onChange={(e) =>
-                              handleUpdateIngredient(idx, 'cantidad', parseFloat(e.target.value) || 0)
-                            }
-                            className="w-full bg-transparent font-bold tabular-nums font-mono text-slate-900 dark:text-white focus:outline-none"
-                            placeholder="0.00"
-                          />
+                          {(() => {
+                            const isInt = isIntegerUnit(insu?.unidadMedida);
+                            return (
+                              <input
+                                type="text"
+                                inputMode={isInt ? "numeric" : "decimal"}
+                                value={item.cantidad ?? ''}
+                                onChange={(e) => handleUpdateIngredient(idx, 'cantidad', e.target.value)}
+                                className="w-full bg-transparent font-bold tabular-nums font-mono text-slate-900 dark:text-white focus:outline-none"
+                                placeholder={isInt ? "1" : "0.00"}
+                              />
+                            );
+                          })()}
                           <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                             {insu ? insu.unidadMedida : 'und'}
                           </span>

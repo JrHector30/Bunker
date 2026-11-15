@@ -1,6 +1,26 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X, Plus } from 'lucide-react';
 
+const isIntegerUnit = (unit) => {
+  if (!unit) return false;
+  const u = String(unit).toLowerCase().trim();
+  return u === 'und' || u === 'ud' || u === 'unidad' || u === 'unidades' || u === 'unid' || u === 'u';
+};
+
+const sanitizeNumberInput = (rawVal, isInteger = false) => {
+  if (rawVal === '' || rawVal === null || rawVal === undefined) return '';
+  const str = String(rawVal);
+  if (isInteger) {
+    return str.replace(/[^0-9]/g, '');
+  }
+  const cleaned = str.replace(/[^0-9.]/g, '');
+  const parts = cleaned.split('.');
+  if (parts.length > 2) {
+    return parts[0] + '.' + parts.slice(1).join('');
+  }
+  return cleaned;
+};
+
 export const AddIngredientModal = ({
   isOpen,
   onClose,
@@ -35,15 +55,19 @@ export const AddIngredientModal = ({
   }, [insumos, searchTerm, selectedCategory]);
 
   const handleAdd = (item) => {
-    const qty = quantities[item.id] || 0.1;
+    const isInt = isIntegerUnit(item.unidadMedida);
+    const defaultQty = isInt ? 1 : 0.1;
+    const rawQty = quantities[item.id] !== undefined ? quantities[item.id] : defaultQty;
+    const qty = isInt ? Math.max(1, parseInt(rawQty, 10) || 1) : Math.max(0.001, parseFloat(rawQty) || 0.1);
     onAddIngredient(item, qty);
   };
 
-  const handleQuantityChange = (id, val) => {
-    const num = parseFloat(val);
+  const handleQuantityChange = (id, val, unit) => {
+    const isInt = isIntegerUnit(unit);
+    const sanitized = sanitizeNumberInput(val, isInt);
     setQuantities((prev) => ({
       ...prev,
-      [id]: isNaN(num) ? '' : num,
+      [id]: sanitized,
     }));
   };
 
@@ -115,7 +139,9 @@ export const AddIngredientModal = ({
           ) : (
             filteredItems.map((item) => {
               const isAlreadyAdded = existingInsumoIds.includes(item.id);
-              const qty = quantities[item.id] !== undefined ? quantities[item.id] : 0.1;
+              const isInt = isIntegerUnit(item.unidadMedida);
+              const defaultQty = isInt ? 1 : 0.1;
+              const qty = quantities[item.id] !== undefined ? quantities[item.id] : defaultQty;
 
               return (
                 <div
@@ -149,13 +175,12 @@ export const AddIngredientModal = ({
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-zinc-900/80 border border-slate-200 dark:border-zinc-800 rounded-lg px-2 py-1">
+                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-zinc-900/80 border border-slate-200 dark:border-zinc-800 rounded-xl px-2.5 py-1">
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0.001"
+                        type="text"
+                        inputMode={isInt ? "numeric" : "decimal"}
                         value={qty}
-                        onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                        onChange={(e) => handleQuantityChange(item.id, e.target.value, item.unidadMedida)}
                         className="w-16 bg-transparent text-right font-mono text-xs text-zinc-900 dark:text-white focus:outline-none"
                       />
                       <span className="text-[11px] text-slate-400 dark:text-zinc-500">
