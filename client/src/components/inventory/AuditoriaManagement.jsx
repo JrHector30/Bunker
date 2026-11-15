@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowUpDown,
+  ArrowDown,
+  ArrowUp,
+  ChevronsUpDown,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -579,25 +581,41 @@ export default function AuditoriaManagement({
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-[#F26522] text-white text-[11px] font-bold tracking-wider uppercase">
-                <th style={{ textAlign: 'left' }} className="py-3.5 px-5 text-left font-bold">
-                  <button
-                    type="button"
-                    onClick={() => handleSortToggle('nombre')}
-                    className="inline-flex items-center gap-1.5 hover:opacity-85 cursor-pointer uppercase text-left"
-                  >
+                <th
+                  style={{ textAlign: 'left' }}
+                  className="py-3.5 px-5 text-left font-bold cursor-pointer select-none"
+                  onClick={() => handleSortToggle('nombre')}
+                >
+                  <div className="inline-flex items-center gap-1.5 hover:opacity-90 transition-opacity">
                     <span>Insumo / Almacén</span>
-                    <ArrowUpDown className="w-3 h-3 opacity-80" />
-                  </button>
+                    {sortBy === 'nombre' ? (
+                      sortDir === 'asc' ? (
+                        <ArrowUp className="w-3.5 h-3.5 text-white" />
+                      ) : (
+                        <ArrowDown className="w-3.5 h-3.5 text-white" />
+                      )
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-white opacity-40" />
+                    )}
+                  </div>
                 </th>
-                <th style={{ textAlign: 'right' }} className="py-3.5 px-4 text-right font-bold">
-                  <button
-                    type="button"
-                    onClick={() => handleSortToggle('cantidad')}
-                    className="inline-flex items-center gap-1.5 hover:opacity-85 cursor-pointer uppercase ml-auto text-right"
-                  >
+                <th
+                  style={{ textAlign: 'right' }}
+                  className="py-3.5 px-4 text-right font-bold cursor-pointer select-none"
+                  onClick={() => handleSortToggle('cantidad')}
+                >
+                  <div className="inline-flex items-center justify-end gap-1.5 ml-auto hover:opacity-90 transition-opacity">
                     <span>Stock Teórico</span>
-                    <ArrowUpDown className="w-3 h-3 opacity-80" />
-                  </button>
+                    {sortBy === 'cantidad' ? (
+                      sortDir === 'asc' ? (
+                        <ArrowUp className="w-3.5 h-3.5 text-white" />
+                      ) : (
+                        <ArrowDown className="w-3.5 h-3.5 text-white" />
+                      )
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-white opacity-40" />
+                    )}
+                  </div>
                 </th>
                 <th style={{ textAlign: 'center' }} className="py-3.5 px-4 text-center font-bold">
                   Stock Físico (Real)
