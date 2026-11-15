@@ -679,7 +679,7 @@ const DashboardLayout = () => {
                             onClick={() => setMobileMenuOpen(false)}
                             aria-hidden="true"
                         />
-                        <aside className="relative z-10 w-[270px] max-w-[85vw] h-full shadow-2xl bg-[#0B0F19] text-slate-300 flex flex-col justify-between py-4 border-r border-white/10 select-none">
+                        <aside className="bunker-drawer-dark relative z-10 w-[270px] max-w-[85vw] h-full shadow-2xl bg-[#0B0F19] text-slate-300 flex flex-col justify-between py-4 border-r border-white/10 select-none">
                             {/* Top Brand Header con CloseButton */}
                             <div>
                                 <div className="flex items-center justify-between px-4 pb-4 border-b border-white/[0.08]">

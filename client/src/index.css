@@ -538,6 +538,25 @@ a[class*="bg-black"] * {
   background-color: #18181b !important;
 }
 
+/* En el drawer o contenedor oscuro del sidebar, CloseButton siempre debe tener aspas blancas */
+.bunker-drawer-dark .close-button-container .X,
+.bunker-drawer-dark .close-button-container .Y,
+.mode-light .bunker-drawer-dark .close-button-container .X,
+.mode-light .bunker-drawer-dark .close-button-container .Y {
+  background-color: #ffffff !important;
+}
+
+.bunker-drawer-dark .close-button-container .button,
+.mode-light .bunker-drawer-dark .close-button-container .button {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-radius: 9999px !important;
+}
+
+.bunker-drawer-dark .close-button-container .button:hover,
+.mode-light .bunker-drawer-dark .close-button-container .button:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
 /* Active Item: White Bg, Black Text, No Border */
 .theme-black aside .glass-button.active {
   background: #ffffff !important;
