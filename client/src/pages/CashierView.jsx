@@ -9,7 +9,8 @@ import {
   ArrowLeft, Plus, FileSpreadsheet, Eye, Printer, MoreVertical,
   Trash, Search, X, Receipt, CheckCircle, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast,
   TrendingUp, BarChart3, HelpCircle, FileText, Smartphone, CreditCard,
-  SlidersHorizontal, Menu, CalendarDays, Download, AlertCircle
+  SlidersHorizontal, Menu, CalendarDays, Download, AlertCircle,
+  Wallet, ClipboardList, ListChecks
 } from 'lucide-react';
 
 import { useNotification } from '../context/NotificationContext';
@@ -86,6 +87,16 @@ const CashierView = () => {
   // Layout sidebar states
   const [isSidebarDocked, setIsSidebarDocked] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [openMenuNumero, setOpenMenuNumero] = useState(null);
+
+  // Close card action menu on outside click
+  useEffect(() => {
+    const handleCloseMenu = () => setOpenMenuNumero(null);
+    if (openMenuNumero !== null) {
+      window.addEventListener('click', handleCloseMenu);
+      return () => window.removeEventListener('click', handleCloseMenu);
+    }
+  }, [openMenuNumero]);
 
   // Selected row for charts (fallback to active or first arqueo)
   const [selectedArqueoId, setSelectedArqueoId] = useState(null);
@@ -758,17 +769,19 @@ const CashierView = () => {
   };
 
   // Row actions mapper
-  const handleRowAction = (actionId, targetId) => {
+  const handleRowAction = (actionId, target) => {
     setActiveDropdownId(null);
+    setOpenMenuNumero(null);
+    const targetId = (typeof target === 'object' && target !== null) ? target.id : target;
     if (actionId === 'paloteo') {
       setSelectedPaloteoArqueoId(targetId);
       setIsPaloteoModalOpen(true);
-    } else if (actionId === 'resumen') {
+    } else if (actionId === 'resumen' || actionId === 'ticket') {
       setSelectedSummaryArqueoId(targetId);
       setIsSummaryModalOpen(true);
     } else if (actionId === 'pdf') {
       generatePDF(targetId);
-    } else if (actionId === 'detail') {
+    } else if (actionId === 'detail' || actionId === 'auditar') {
       setSelectedDetailArqueoId(targetId);
       setIsDetailModalOpen(true);
     }
@@ -1361,83 +1374,80 @@ const CashierView = () => {
       )}
 
       {/* Top Main Toolbar */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col xl:flex-row gap-5 items-start overflow-hidden w-full">
 
         {/* Core Workspace Panel */}
-        <div className="-translate-y-8 flex-grow overflow-y-auto px-1 py-3 md:px-3 w-full space-y-3 bg-[var(--bg-primary)]">
+        <div className="flex-1 min-w-0 w-full overflow-y-auto px-1 py-1 md:px-3 space-y-4 bg-[var(--bg-primary)]">
 
           {/* Header toolbar */}
-          <div className="flex flex-row items-center justify-between gap-3 pb-2" style={{ borderBottom: '1px solid var(--glass-border)' }}>
-            <div className="flex items-center gap-3">
-              <h1 className="translate-y-6 text-xl font-black tracking-tight text-[var(--text-main)] font-sans">Arqueo de Caja</h1>
+          <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-[var(--glass-border)]">
+            <div>
+              <h1 className="text-[22px] sm:text-[24px] font-bold text-slate-900 dark:text-white tracking-tight">
+                Arqueo de Caja
+              </h1>
+              {/* Sesión Activa */}
+              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                <span className="text-xs font-semibold text-[var(--text-muted)]">Sesión Activa:</span>
+                {shiftStatus === 'abierto' ? (
+                  <button
+                    onClick={handleToggleShift}
+                    title="Presione para cerrar caja"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 transition-all cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    ABIERTO
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleToggleShift}
+                    title="Presione para abrir caja"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800 transition-all cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    CERRADO
+                  </button>
+                )}
+
+                {shiftStatus === 'abierto' && hasPricingError && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-rose-500 bg-rose-50 dark:bg-rose-950/20 px-2.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-900/30 font-bold animate-pulse">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>Precios no disp.</span>
+                  </span>
+                )}
+
+                {shiftStatus === 'abierto' && currentStatus && (
+                  <span className="text-xs text-[var(--text-muted)] flex items-center gap-1 ml-1">
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    <span>Iniciado: {formatDate(currentStatus.fechaInicio)}</span>
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Sidebar toggle button (Mobile) */}
+            {/* Botón compacto solo móvil/tablet (< xl) que abre Bottom Sheet */}
             <button
+              type="button"
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden relative inline-flex items-center justify-center p-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--glass-border)] text-[var(--text-main)] shadow-xs cursor-pointer h-8 w-8"
+              className="xl:hidden min-h-[42px] w-full sm:w-auto px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 shadow-sm active:scale-95 cursor-pointer transition-all"
             >
-              <Menu className="w-4 h-4" />
-              {openTables.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white font-mono text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-black">
-                  {openTables.length}
-                </span>
-              )}
+              <span className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <Wallet className="w-4 h-4 text-emerald-600" />
+                <span>Cuentas Abiertas ({openTables.length})</span>
+              </span>
+              <span className="text-xs font-bold tabular-nums text-emerald-600">S/. {totalSaloonPending.toFixed(2)}</span>
             </button>
-          </div>
-
-          {/* Active Shift Banner Button */}
-          <div className="glass-panel py-2 px-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-[var(--text-muted)]">Sesión Activa:</span>
-
-
-              {shiftStatus === 'abierto' ? (
-                <button
-                  onClick={handleToggleShift}
-                  title="Presione para cerrar caja"
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-bold font-sans text-xl bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all cursor-pointer shadow-xs"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  ABIERTO
-                </button>
-              ) : (
-                <button
-                  onClick={handleToggleShift}
-                  title="Presione para abrir caja"
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-bold font-sans text-xl bg-rose-50 text-rose-700 border border-rose-200 transition-all cursor-pointer shadow-xs"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                  CERRADO
-                </button>
-              )}
-            </div>
-
-            {shiftStatus === 'abierto' && hasPricingError && (
-              <div className="flex items-center gap-1.5 text-xs text-rose-500 bg-rose-50 dark:bg-rose-950/10 px-2.5 py-1 rounded-lg border border-rose-200 dark:border-rose-900/20 font-bold font-sans animate-pulse">
-                <AlertCircle className="w-3.5 h-3.5" />
-                <span>Precios no disponibles (Cierre bloqueado)</span>
-              </div>
-            )}
-
-            {shiftStatus === 'abierto' && currentStatus && (
-              <div className="flex items-center gap-1 text-[13px] text-[var(--text-muted)] font-sans">
-                <CalendarDays className="w-3.5 h-3.5" />
-                <span>Iniciado: {formatDate(currentStatus.fechaInicio)}</span>
-              </div>
-            )}
-          </div>
+          </header>
 
           {/* Arqueos sessions table list */}
           <div className="glass-panel overflow-hidden" style={{ boxShadow: 'var(--panel-shadow, 0 8px 32px 0 rgba(0, 0, 0, 0.37)), -6px 0 25px -5px rgba(0, 0, 0, 0.3)' }}>
             <div className="px-4 py-3.5 bg-transparent flex flex-col md:flex-row justify-between items-start md:items-center gap-4" style={{ borderBottom: '1px solid var(--glass-border)' }}>
-              <div className="pt-1.5">
-                <h2 className="-translate-y-4 text-base font-bold text-[var(--text-main)] font-sans">Historial de Sesiones de Arqueo</h2>
-                <p className="-translate-y-6 text-[12px] text-[var(--text-muted)] mt-1 font-sans">Auditoría completa de movimientos de caja registrados en el sistema.</p>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-main)] font-sans">Historial de Sesiones de Arqueo</h2>
+                <p className="text-[12px] text-[var(--text-muted)] mt-0.5 font-sans">Auditoría completa de movimientos de caja registrados en el sistema.</p>
               </div>
 
               {/* Actions Ribbon */}
-              <div className="-translate-y-4 flex flex-wrap items-center gap-2 relative z-50">
+              <div className="flex flex-wrap items-center gap-2 relative z-50">
                 <button
                   onClick={() => {
                     if (shiftStatus !== 'abierto') {
@@ -1447,16 +1457,16 @@ const CashierView = () => {
                     setIsMovModalOpen(true);
                   }}
                   disabled={shiftStatus !== 'abierto'}
-                  className="glass-button primary flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group font-sans h-8"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-[#F26522] hover:bg-[#EA580C] text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group shadow-sm active:scale-95 transition-all font-sans"
                 >
-                  <Plus className="w-3.5 h-3.5 text-emerald-450 group-hover:rotate-90 transition-transform" />
+                  <Plus className="w-3.5 h-3.5 text-white group-hover:rotate-90 transition-transform" />
                   <span>Movimiento</span>
                 </button>
 
                 <button
                   onClick={handleExportExcel}
                   title="Descargar historial de caja en formato Excel"
-                  className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans h-8"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 cursor-pointer shadow-sm active:scale-95 transition-all font-sans"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span className="hidden sm:inline">Exportar Excel</span>
@@ -1470,12 +1480,12 @@ const CashierView = () => {
                     setCurrentPage(1);
                   }}
                   placeholder="Filtrar por Fecha"
-                  triggerClassName="!w-[170px] [&_button]:h-8 [&_button]:text-xs [&_button]:px-2.5 [&_svg]:h-3.5 [&_svg]:w-3.5"
+                  triggerClassName="!w-[170px] [&_button]:h-9 [&_button]:rounded-full [&_button]:text-xs [&_button]:px-3 [&_svg]:h-3.5 [&_svg]:w-3.5"
                 />
               </div>
             </div>
-            {/* Custom Responsive Table */}
-            <div className="-translate-y-10 overflow-x-auto relative z-10">
+            {/* Custom Responsive Table - Desktop (hidden lg:block) */}
+            <div className="hidden lg:block -translate-y-10 overflow-x-auto relative z-10">
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
                   <tr className="text-xs font-bold uppercase tracking-widest" style={{ background: 'var(--primary)', color: '#ffffff', borderBottom: '1px solid var(--table-row-border)' }}>
@@ -1498,7 +1508,7 @@ const CashierView = () => {
                           <span className="text-rose-500 font-semibold font-sans">Error al conectar con el servidor para la página {currentPage}.</span>
                           <button
                             onClick={() => { setConnectionError(false); fetchHistory(); }}
-                            className="px-3.5 py-1.5 rounded-lg bg-[var(--primary)] text-white text-xs font-semibold cursor-pointer hover:opacity-90 transition-opacity font-sans"
+                            className="px-4 py-2 rounded-full bg-[var(--primary)] text-white text-xs font-bold cursor-pointer hover:opacity-90 transition-all font-sans shadow-sm active:scale-95"
                           >
                             Reintentar carga
                           </button>
@@ -1671,6 +1681,171 @@ const CashierView = () => {
               </table>
             </div>
 
+            {/* Celular / Tablet Cards (lg:hidden) */}
+            <div className="lg:hidden px-3 pb-4 space-y-3">
+              {connectionError ? (
+                <div className="py-8 text-center">
+                  <span className="text-rose-500 font-semibold text-xs block mb-2 font-sans">Error al conectar con el servidor.</span>
+                  <button
+                    onClick={() => { setConnectionError(false); fetchHistory(); }}
+                    className="px-4 py-2 rounded-full bg-[var(--primary)] text-white text-xs font-bold shadow-sm active:scale-95 transition-all font-sans cursor-pointer"
+                  >
+                    Reintentar carga
+                  </button>
+                </div>
+              ) : historyLoading && (!history?.data || history.data.length === 0) && (!lastValidHistoryRef.current || lastValidHistoryRef.current.length === 0) ? (
+                <div className="py-8 text-center text-xs text-[var(--text-muted)] font-medium font-sans">
+                  Cargando sesiones de caja... (Página {currentPage})
+                </div>
+              ) : (!history?.data || history.data.length === 0) && (!lastValidHistoryRef.current || lastValidHistoryRef.current.length === 0) ? (
+                <div className="py-8 text-center text-xs text-[var(--text-muted)] font-medium font-sans">
+                  No se encontraron registros de arqueo.
+                </div>
+              ) : (
+                paginatedHistory.map((s) => {
+                  const digitalSum = (s.ingresos?.yape || 0) + (s.ingresos?.plin || 0);
+                  const cardSum = (s.ingresos?.tarjeta || 0) + (s.ingresos?.izipay || 0) + (s.ingresos?.niubiz || 0);
+                  const sNumero = s.numeroSesion || s.id;
+                  const sResponsable = s.usuario?.nombre || 'Hector';
+                  const sFechaInicio = formatDate(s.fechaInicio);
+                  const sFechaFin = s.fechaFin ? formatDate(s.fechaFin) : null;
+                  const sTotalBruto = s.totalBruto || 0;
+                  const sInicio = s.montoInicial || s.inicio || 0;
+                  const sEgresos = s.egresos || 0;
+                  const sTotalCaja = s.totalCaja || 0;
+                  const sEfectivo = s.ingresos?.efectivo || 0;
+                  const sPropinas = s.totalPropinas || s.propinas || 0;
+                  const isSelected = s.id === selectedArqueoId;
+
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => setSelectedArqueoId(s.id)}
+                      className={`rounded-2xl border transition-all p-3.5 space-y-3 cursor-pointer ${
+                        isSelected
+                          ? 'bg-[var(--item-hover)] border-[var(--primary)] shadow-md'
+                          : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white text-xs font-bold tabular-nums">
+                            Arqueo #{sNumero}
+                          </span>
+                          <span className="ml-2 text-xs font-semibold text-slate-800 dark:text-slate-200">{sResponsable}</span>
+                          <p className="mt-1 text-[11px] text-slate-500 tabular-nums">
+                            {sFechaInicio} → {sFechaFin ?? 'En curso'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <p className="text-[10px] font-bold uppercase text-slate-400">Bruto</p>
+                            <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">S/. {sTotalBruto.toFixed(2)}</p>
+                          </div>
+                          {/* Botón de Acción (⋮) + Menú desplegable de 4 opciones */}
+                          <div className="relative" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuNumero((prev) => (prev === s.id ? null : s.id));
+                              }}
+                              aria-label={`Acciones de Arqueo ${sNumero}`}
+                              className="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer active:scale-95 transition-all shadow-xs"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+
+                            {openMenuNumero === s.id && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute right-0 top-10 z-30 w-48 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700 shadow-[0_12px_30px_-6px_rgba(15,23,42,0.18)] p-1.5 text-left animate-in fade-in zoom-in-95 duration-100"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenMenuNumero(null);
+                                    handleRowAction('detail', s.id);
+                                  }}
+                                  className="w-full px-3 py-2 text-xs font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
+                                >
+                                  <ClipboardList className="w-3.5 h-3.5 text-slate-500" />
+                                  <span>Auditar Detalles</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenMenuNumero(null);
+                                    handleRowAction('resumen', s.id);
+                                  }}
+                                  className="w-full px-3 py-2 text-xs font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
+                                >
+                                  <Receipt className="w-3.5 h-3.5 text-[#F26522]" />
+                                  <span>Ver Ticket Resumen</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenMenuNumero(null);
+                                    handleRowAction('paloteo', s.id);
+                                  }}
+                                  className="w-full px-3 py-2 text-xs font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
+                                >
+                                  <ListChecks className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Ver Paloteo</span>
+                                </button>
+
+                                <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenMenuNumero(null);
+                                    handleRowAction('pdf', s.id);
+                                  }}
+                                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 flex items-center gap-2 cursor-pointer transition-colors"
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  <span>Exportar PDF</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200/70 dark:border-slate-800 text-[11px] tabular-nums">
+                        <div><span className="text-slate-400 block">Inicio</span><strong className="text-slate-700 dark:text-slate-200">S/. {sInicio.toFixed(2)}</strong></div>
+                        <div><span className="text-slate-400 block">Egresos</span><strong className="text-rose-600">S/. {sEgresos.toFixed(2)}</strong></div>
+                        <div className="text-right"><span className="text-slate-400 block">Total Caja</span><strong className="text-slate-800 dark:text-slate-100">S/. {sTotalCaja.toFixed(2)}</strong></div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5 text-[11px] tabular-nums">
+                        <div className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex justify-between">
+                          <span className="text-slate-500 dark:text-slate-400">Efectivo:</span>
+                          <strong className="text-slate-800 dark:text-slate-100">{sEfectivo.toFixed(2)}</strong>
+                        </div>
+                        <div className="px-2.5 py-1.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-900/30 flex justify-between">
+                          <span className="text-blue-600 dark:text-blue-400">Digital:</span>
+                          <strong className="text-blue-700 dark:text-blue-300">{digitalSum.toFixed(2)}</strong>
+                        </div>
+                        <div className="px-2.5 py-1.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/30 flex justify-between">
+                          <span className="text-amber-600 dark:text-amber-400">Tarjeta:</span>
+                          <strong className="text-amber-700 dark:text-amber-300">{cardSum.toFixed(2)}</strong>
+                        </div>
+                        <div className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex justify-between">
+                          <span className="text-slate-500 dark:text-slate-400">Propinas:</span>
+                          <strong className="text-amber-600 dark:text-amber-400">{sPropinas.toFixed(2)}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
             {/* Pagination controls */}
             {totalPages > 1 && (
               <div className="p-3 bg-transparent relative flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-muted)] font-sans animate-fade-in" style={{ borderTop: '1px solid var(--table-row-border)' }}>
@@ -1796,44 +1971,43 @@ const CashierView = () => {
           )}
         </div>
 
-        {/* --- DOCKED SIDEBAR DRAWERS (Cuentas Abiertas) --- */}
+        {/* --- DOCKED SIDEBAR DRAWERS (Cuentas Abiertas - Desktop xl+) --- */}
         {isSidebarDocked && (
-          <aside className="hidden lg:flex flex-col w-80 p-3 shrink-0 select-none font-sans" style={{ borderLeft: '1px solid var(--glass-border)', background: 'var(--bg-secondary)' }}>
+          <aside className="hidden xl:flex flex-col w-[290px] shrink-0 select-none font-sans sticky top-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 shadow-sm">
             <div className="space-y-3 flex-1 flex flex-col min-h-0">
 
               {/* Header */}
-              <div className="flex justify-between items-center pb-2" style={{ borderBottom: '1px solid var(--glass-border)' }}>
+              <div className="flex justify-between items-center pb-2 border-b border-slate-200/80 dark:border-slate-800">
                 <div>
-                  <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-widest flex items-center gap-1.5 font-sans">
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5 font-sans">
                     <Receipt className="w-4 h-4 text-emerald-500 animate-bounce" />
                     Cuentas Abiertas
                   </h3>
-                  <p className="text-[10px] text-[var(--text-muted)] mt-0.5 font-sans">Control de mesas en salón activo</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-sans">Control de mesas en salón activo</p>
                 </div>
-                <span className="dark:bg-black dark:text-emerald-400 font-sans text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/30">
+                <span className="font-sans text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
                   {openTables.length} activa(s)
                 </span>
               </div>
 
-              {/* Total floating pending (MOVED TO TOP) */}
-              {/* Total floating pending (MOVED TO TOP) */}
-              <div className="glass-panel p-4 mt-0">
-                <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
+              {/* Total floating pending */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800">
+                <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400 mb-1">
                   <span className="font-semibold">Por cobrar en salón:</span>
-                  <span className="font-sans font-bold text-sm text-[var(--text-main)]">
+                  <span className="font-bold text-sm text-slate-900 dark:text-white tabular-nums">
                     S/. {totalSaloonPending.toFixed(2)}
                   </span>
                 </div>
-                <div className="text-[10px] text-[var(--text-muted)] leading-normal font-sans">
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal font-sans">
                   Capital flotante pendiente de facturar en salón.
                 </div>
               </div>
 
               {/* Table list container (scrollable) */}
               {openTables.length === 0 ? (
-                <div className="text-center py-12 text-xs text-[var(--text-muted)] border border-dashed border-[var(--glass-border)] rounded-xl bg-[var(--bg-secondary)]/50 space-y-2 font-sans">
-                  <CheckCircle className="w-8 h-8 text-[var(--text-muted)] opacity-60 mx-auto" />
-                  <p className="font-semibold text-[var(--text-main)]">¡Todo facturado!</p>
+                <div className="text-center py-12 text-xs text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 space-y-2 font-sans">
+                  <CheckCircle className="w-8 h-8 text-slate-400 opacity-60 mx-auto" />
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">¡Todo facturado!</p>
                   <p className="text-[10px] px-4 font-sans">No hay cuentas pendientes en salón en este momento.</p>
                 </div>
               ) : (
@@ -1853,28 +2027,28 @@ const CashierView = () => {
                     return (
                       <div
                         key={cuenta.id}
-                        className="glass-panel p-4 flex flex-col justify-between group hover:border-[var(--primary)] transition-all duration-300 shadow-xs"
+                        className="p-3.5 rounded-xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between group hover:border-[var(--primary)] transition-all duration-300 shadow-xs"
                       >
                         <div className="flex justify-between items-start">
-                          <span className="text-sm font-bold text-[var(--text-main)] font-sans">
+                          <span className="text-sm font-bold text-slate-900 dark:text-white font-sans">
                             Mesa {cuenta.mesa?.numero || ''}
                           </span>
-                          <span className="font-sans text-sm font-bold text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/10 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/20">
+                          <span className="font-sans text-sm font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-900/30 tabular-nums">
                             {comandaHasError ? 'Precio no disponible' : `S/. ${comandaTotal.toFixed(2)}`}
                           </span>
                         </div>
 
-                        <div className="mt-3 space-y-1.5 pt-2.5 font-sans" style={{ borderTop: '1px solid var(--table-row-border)' }}>
+                        <div className="mt-3 space-y-1.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 font-sans">
                           {cuenta.detalles?.map((prod, pIdx) => {
                             const price = resolveItemPrice(prod);
                             return (
-                              <div key={pIdx} className="flex justify-between text-[12.5px] font-medium text-[var(--text-muted)]">
-                                <span className="truncate max-w-[170px]">
-                                  <span className="font-mono font-semibold text-[var(--text-muted)] mr-1">{prod.cantidad}x</span>
+                              <div key={pIdx} className="flex justify-between text-[12px] font-medium text-slate-600 dark:text-slate-400">
+                                <span className="truncate max-w-[150px]">
+                                  <span className="font-bold text-slate-800 dark:text-slate-200 mr-1">{prod.cantidad}x</span>
                                   {prod.plato?.nombre || 'Plato sin datos'}
                                 </span>
-                                <span className="font-sans">
-                                  {price !== null ? `S/. ${(prod.cantidad * price).toFixed(2)}` : 'Precio no disponible'}
+                                <span className="tabular-nums font-semibold text-slate-800 dark:text-slate-200">
+                                  {price !== null ? `S/. ${(prod.cantidad * price).toFixed(2)}` : 'N/D'}
                                 </span>
                               </div>
                             );
@@ -1913,9 +2087,9 @@ const CashierView = () => {
                           />
                           <button
                             onClick={() => handleOpenCheckout(cuenta)}
-                            className="glass-button primary flex-1 py-2 px-3 text-[13px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                            className="flex-1 min-h-[38px] py-2 px-3 text-xs font-bold rounded-full bg-[#F26522] hover:bg-[#EA580C] text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all"
                           >
-                            <Receipt className="w-3.5 h-3.5 text-emerald-450" />
+                            <Receipt className="w-3.5 h-3.5" />
                             <span>Cerrar e Imprimir</span>
                           </button>
                         </div>
@@ -1929,159 +2103,168 @@ const CashierView = () => {
         )}
       </div>
 
-      {/* --- Mobile floating toggle-overlay Sidebar --- */}
+      {/* --- Mobile Bottom Sheet for Cuentas Abiertas (< xl) --- */}
       {
         isSidebarOpen && (
-          <div className="fixed inset-0 z-40 lg:hidden no-print">
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setIsSidebarOpen(false)} />
-            <aside className="fixed right-0 top-0 bottom-0 w-80 p-6 flex flex-col justify-between shadow-2xl z-50" style={{ background: 'var(--bg-secondary)', borderLeft: '1px solid var(--glass-border)' }}>
-              <div className="space-y-4 flex-1 flex flex-col min-h-0">
+          <div className="fixed inset-0 z-50 xl:hidden flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/60 backdrop-blur-[2px] no-print" onClick={() => setIsSidebarOpen(false)}>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl max-h-[85vh] flex flex-col p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden font-sans animate-in slide-in-from-bottom duration-200"
+            >
+              {/* Barra de arrastre solo móvil */}
+              <div className="sm:hidden -mt-1 pb-2 flex justify-center">
+                <div className="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-zinc-700" />
+              </div>
 
-                {/* Header */}
-                <div className="flex justify-between items-center pb-3" style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                  <div>
-                    <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-widest flex items-center gap-1.5 font-sans">
-                      <Receipt className="w-4 h-4 text-emerald-500 animate-bounce" />
-                      Cuentas Abiertas
-                    </h3>
-                    <p className="text-[10px] text-[var(--text-muted)] font-sans">Control de mesas en salón activo</p>
-                  </div>
+              {/* Header */}
+              <div className="flex justify-between items-center pb-3 border-b border-slate-200/80 dark:border-slate-800">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Wallet className="w-4 h-4 text-emerald-500" />
+                    Cuentas Abiertas
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Control de mesas activas en salón</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+                    {openTables.length} activas
+                  </span>
                   <CloseButton onClick={() => setIsSidebarOpen(false)} className="scale-90" />
                 </div>
-
-                {/* Total floating pending (MOVED TO TOP) */}
-                <div className="glass-panel p-3">
-                  <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
-                    <span className="font-semibold">Por cobrar en salón:</span>
-                    <span className="font-mono font-bold text-sm text-[var(--text-main)]">
-                      S/. {totalSaloonPending.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-[var(--text-muted)] leading-normal font-sans">
-                    Mesas activas pendientes de facturación.
-                  </div>
-                </div>
-
-                {/* Table List container */}
-                {openTables.length === 0 ? (
-                  <div className="text-center py-12 text-xs text-[var(--text-muted)] border border-dashed border-[var(--glass-border)] rounded-xl bg-[var(--bg-secondary)]/50 space-y-2 font-sans">
-                    <CheckCircle className="w-8 h-8 text-[var(--text-muted)] opacity-60 mx-auto" />
-                    <p className="font-semibold text-[var(--text-main)]">¡Todo facturado!</p>
-                    <p className="text-[10px] px-4 font-sans">No hay cuentas pendientes en salón.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 flex-1 overflow-y-auto pr-1 font-sans">
-                    {openTables.map((cuenta) => {
-                      let comandaHasError = false;
-                      const comandaTotal = cuenta.detalles?.reduce((sum, d) => {
-                        const price = resolveItemPrice(d);
-                        if (price === null) {
-                          comandaHasError = true;
-                          console.error(`[INTEGRITY ERROR] Precio no disponible para el detalle id ${d.id}`);
-                          return sum;
-                        }
-                        return sum + (d.cantidad * price);
-                      }, 0) || 0;
-
-                      return (
-                        <div
-                          key={cuenta.id}
-                          className="glass-panel p-4 flex flex-col justify-between group hover:border-[var(--primary)] transition-all duration-300 shadow-xs"
-                        >
-                          <div className="flex justify-between items-start">
-                            <span className="text-sm font-bold text-[var(--text-main)] font-sans">
-                              Mesa {cuenta.mesa?.numero || ''}
-                            </span>
-                            <span className="font-mono text-sm font-bold text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/10 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/20">
-                              {comandaHasError ? 'Precio no disponible' : `S/. ${comandaTotal.toFixed(2)}`}
-                            </span>
-                          </div>
-
-                          <div className="mt-3 space-y-1.5 pt-2.5 font-sans" style={{ borderTop: '1px solid var(--table-row-border)' }}>
-                            {cuenta.detalles?.map((prod, pIdx) => {
-                              const price = resolveItemPrice(prod);
-                              return (
-                                <div key={pIdx} className="flex justify-between text-[12.5px] font-medium text-[var(--text-muted)]">
-                                  <span className="truncate max-w-[170px]">
-                                    <span className="font-mono font-semibold text-[var(--text-muted)] mr-1">{prod.cantidad}x</span>
-                                    {prod.plato?.nombre || 'Plato sin datos'}
-                                  </span>
-                                  <span className="font-mono">
-                                    {price !== null ? `S/. ${(prod.cantidad * price).toFixed(2)}` : 'Precio no disponible'}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          <div className="flex items-center gap-2 mt-4 font-sans">
-                            <DeleteButton
-                              onClick={async () => {
-                                const motivo = await showConfirmation("Motivo de Anulación", {
-                                  message: "Por favor, detalle la razón por la cual se está cancelando la comanda total:",
-                                  inputType: "text",
-                                  type: "danger"
-                                });
-                                if (motivo === null || motivo.trim() === '') return;
-
-                                try {
-                                  const res = await fetch(`/api/orders/${cuenta.id}/cancel`, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ motivo, usuarioResponsable: "Caja/Admin", usuarioId: user.id })
-                                  });
-                                  if (res.ok) {
-                                    showToast("Pedido anulado y mesa liberada.", 'success');
-                                    fetchTables();
-                                    setIsSidebarOpen(false);
-                                  } else {
-                                    const err = await res.json();
-                                    showToast("Error: " + err.error, 'error');
-                                  }
-                                } catch (e) {
-                                  console.error(e);
-                                }
-                              }}
-                              title="Anular Pedido Total"
-                              className="scale-75 -my-2 -mx-1"
-                            />
-                            <button
-                              onClick={() => {
-                                handleOpenCheckout(cuenta);
-                                setIsSidebarOpen(false);
-                              }}
-                              className="glass-button primary flex-1 py-2 px-3 text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
-                            >
-                              <Receipt className="w-3.5 h-3.5 text-emerald-450" />
-                              <span>Cerrar e Imprimir</span>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
-            </aside>
+
+              {/* Total floating pending */}
+              <div className="p-3 my-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800">
+                <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400 mb-1">
+                  <span className="font-semibold">Por cobrar en salón:</span>
+                  <span className="font-bold text-sm text-slate-900 dark:text-white tabular-nums">
+                    S/. {totalSaloonPending.toFixed(2)}
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Mesas activas pendientes de facturación.
+                </div>
+              </div>
+
+              {/* Table List container */}
+              {openTables.length === 0 ? (
+                <div className="text-center py-10 text-xs text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/20 space-y-2">
+                  <CheckCircle className="w-8 h-8 text-slate-400 opacity-60 mx-auto" />
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">¡Todo facturado!</p>
+                  <p className="text-[10px] px-4">No hay cuentas pendientes en salón.</p>
+                </div>
+              ) : (
+                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                  {openTables.map((cuenta) => {
+                    let comandaHasError = false;
+                    const comandaTotal = cuenta.detalles?.reduce((sum, d) => {
+                      const price = resolveItemPrice(d);
+                      if (price === null) {
+                        comandaHasError = true;
+                        console.error(`[INTEGRITY ERROR] Precio no disponible para el detalle id ${d.id}`);
+                        return sum;
+                      }
+                      return sum + (d.cantidad * price);
+                    }, 0) || 0;
+
+                    return (
+                      <div
+                        key={cuenta.id}
+                        className="p-3.5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between shadow-xs hover:border-[var(--primary)] transition-all"
+                      >
+                        <div className="flex justify-between items-start">
+                          <span className="text-sm font-bold text-slate-900 dark:text-white">
+                            Mesa {cuenta.mesa?.numero || ''}
+                          </span>
+                          <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-950/20 px-2.5 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-900/30 tabular-nums">
+                            {comandaHasError ? 'Precio no disponible' : `S/. ${comandaTotal.toFixed(2)}`}
+                          </span>
+                        </div>
+
+                        <div className="mt-2.5 space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-[12px]">
+                          {cuenta.detalles?.map((prod, pIdx) => {
+                            const price = resolveItemPrice(prod);
+                            return (
+                              <div key={pIdx} className="flex justify-between text-slate-600 dark:text-slate-400">
+                                <span className="truncate max-w-[200px]">
+                                  <span className="font-semibold text-slate-800 dark:text-slate-200 mr-1.5">{prod.cantidad}x</span>
+                                  {prod.plato?.nombre || 'Plato sin datos'}
+                                </span>
+                                <span className="tabular-nums font-medium text-slate-700 dark:text-slate-300">
+                                  {price !== null ? `S/. ${(prod.cantidad * price).toFixed(2)}` : 'N/D'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="flex items-center gap-2 mt-3 pt-2">
+                          <DeleteButton
+                            onClick={async () => {
+                              const motivo = await showConfirmation("Motivo de Anulación", {
+                                message: "Por favor, detalle la razón por la cual se está cancelando la comanda total:",
+                                inputType: "text",
+                                type: "danger"
+                              });
+                              if (motivo === null || motivo.trim() === '') return;
+
+                              try {
+                                const res = await fetch(`/api/orders/${cuenta.id}/cancel`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ motivo, usuarioResponsable: "Caja/Admin", usuarioId: user.id })
+                                });
+                                if (res.ok) {
+                                  showToast("Pedido anulado y mesa liberada.", 'success');
+                                  fetchTables();
+                                  setIsSidebarOpen(false);
+                                } else {
+                                  const err = await res.json();
+                                  showToast("Error: " + err.error, 'error');
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }}
+                            title="Anular Pedido Total"
+                            className="scale-75 -my-2 -mx-1"
+                          />
+                          <button
+                            onClick={() => {
+                              handleOpenCheckout(cuenta);
+                              setIsSidebarOpen(false);
+                            }}
+                            className="flex-1 min-h-[40px] py-2 px-4 text-xs font-bold rounded-full bg-[#F26522] hover:bg-[#EA580C] text-white flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 transition-all"
+                          >
+                            <Receipt className="w-3.5 h-3.5" />
+                            <span>Cerrar e Imprimir</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )
       }
 
-      {/* Floating Toggle trigger for open accounts on screens without the sidebar docked */}
-      {
-        !isSidebarDocked && (
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="glass-button primary fixed bottom-6 right-6 z-30 p-4 rounded-full shadow-2xl transition-all cursor-pointer flex items-center gap-2 no-print"
-          >
-            <Receipt className="w-5 h-5 text-emerald-450" />
-            <span className="text-xs font-bold font-sans">Cuentas Abiertas</span>
-            <span className="bg-emerald-500 text-white font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-              {openTables.length}
-            </span>
-          </button>
-        )
-      }
+      {/* Botón Flotante Cuentas Abiertas (< xl) */}
+      <button
+        type="button"
+        onClick={() => setIsSidebarOpen(true)}
+        aria-label="Abrir Cuentas Abiertas para cobrar mesas"
+        className="xl:hidden fixed bottom-5 right-5 z-40 min-h-[48px] px-4 py-2.5 rounded-full bg-[#F26522] hover:bg-[#DC5616] active:scale-[0.97] text-white shadow-[0_12px_28px_-4px_rgba(242,101,34,0.55)] flex items-center gap-2 transition-all cursor-pointer no-print"
+      >
+        <Wallet className="w-4 h-4 shrink-0" />
+        <span className="text-xs font-bold tracking-wide whitespace-nowrap">
+          Cuentas Abiertas
+        </span>
+        <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-white/20 text-white text-[11px] font-bold inline-flex items-center justify-center tabular-nums">
+          {openTables.length}
+        </span>
+      </button>
       {/* --- INLINE MODALS --- */}
 
       {/* Modal de Apertura de Caja */}
