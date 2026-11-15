@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer, ChefHat, RotateCcw, Unlink } from 'lucide-react';
+import { Plus, Eye, Calculator, X, Minus, Trash2, ArrowRightLeft, Printer, ChefHat, RotateCcw, Unlink, Lock, Unlock, Link2 } from 'lucide-react';
 import { numberToLetters } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
@@ -1462,6 +1462,7 @@ const TablesView = () => {
                 <div className="flex items-center gap-2">
                     {/* Unir Mesas */}
                     <button
+                        type="button"
                         onClick={() => {
                             if (!isCajaAbierta) {
                                 showToast('Operación denegada. Se requiere la apertura de caja para unir mesas.', 'error');
@@ -1471,33 +1472,41 @@ const TablesView = () => {
                             setSelectedMergeTableIds([]);
                         }}
                         disabled={!isCajaAbierta}
-                        className={`min-h-[44px] flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-full transition-all active:scale-95 cursor-pointer border shadow-sm ${
+                        className={`min-h-[44px] flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-bold rounded-2xl transition-all active:scale-95 cursor-pointer border shadow-sm ${
                             !isCajaAbierta
                                 ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-zinc-800 text-slate-400 border-slate-200 dark:border-zinc-700'
-                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                : 'border-[#6EE7B7] bg-white dark:bg-zinc-900 text-[#059669] dark:text-[#34D399] hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20'
                         }`}
                     >
-                        🔗 Unir Mesas
+                        <Link2 className="w-4 h-4 text-[#059669] dark:text-[#34D399]" />
+                        <span>Unir Mesas</span>
                     </button>
 
-                    {/* Toggle Bloqueado / Modo Edición */}
+                    {/* Toggle Bloqueado / Modo Edición (Diseño exacto Google AI Studio) */}
                     <button
+                        type="button"
                         onClick={() => handleToggleEditMode(!isEditMode)}
-                        className={`min-h-[44px] flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-full transition-all active:scale-95 cursor-pointer border shadow-sm ${
-                            isEditMode
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                                : 'bg-rose-500/10 text-rose-500 border-rose-500/30'
-                        }`}
+                        className="min-h-[44px] flex-1 sm:flex-initial inline-flex items-center justify-center gap-2.5 px-3.5 py-2 text-[13px] font-bold rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-700 text-slate-700 dark:text-slate-200 whitespace-nowrap shadow-sm active:scale-95 cursor-pointer transition-all"
                     >
-                        <span className={`w-2 h-2 rounded-full ${isEditMode ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                        <span>{isEditMode ? 'Modo Edición' : 'Bloqueado'}</span>
+                        {/* Switch capsule */}
+                        <div className={`w-11 h-6 rounded-full p-0.5 flex items-center transition-colors ${!isEditMode ? 'bg-[#F43F5E] justify-end' : 'bg-emerald-500 justify-start'}`}>
+                            <div className="w-5 h-5 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                {!isEditMode ? (
+                                    <Lock className="w-3 h-3 text-slate-700" />
+                                ) : (
+                                    <Unlock className="w-3 h-3 text-slate-700" />
+                                )}
+                            </div>
+                        </div>
+                        <span>{!isEditMode ? 'Bloqueado' : 'Modo Edición'}</span>
                     </button>
 
                     {/* Refresh */}
                     <button
+                        type="button"
                         onClick={fetchTables}
                         title="Actualizar mesas"
-                        className="min-h-[44px] min-w-[44px] rounded-full bg-slate-200/80 hover:bg-slate-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 flex items-center justify-center shrink-0 transition-all active:scale-95 border-0 text-slate-700 dark:text-slate-300 cursor-pointer shadow-sm"
+                        className="min-h-[44px] min-w-[44px] rounded-2xl bg-slate-200/80 hover:bg-slate-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 flex items-center justify-center shrink-0 transition-all active:scale-95 border-0 text-slate-700 dark:text-slate-300 cursor-pointer shadow-sm"
                     >
                         <RotateCcw className="w-4 h-4" />
                     </button>
