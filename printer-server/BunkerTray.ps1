@@ -1,4 +1,4 @@
-﻿# BunkerTray.ps1 - Bandeja de Sistema para Servidor de Impresion y Backend de Bunker
+# BunkerTray.ps1 - Bandeja de Sistema para Servidor de Impresion y Backend de Bunker
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
@@ -14,7 +14,7 @@ try {
 }
 
 if (-not $createdNew) {
-    # Si habia una instancia activa huérfana de BunkerTray, matarla y tomar el control
+    # Si habia una instancia activa huerfana de BunkerTray, matarla y tomar el control
     $myPid = $PID
     Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
         Where-Object { $_.ProcessId -ne $myPid -and $_.CommandLine -like "*BunkerTray.ps1*" } |
@@ -47,7 +47,7 @@ $vbsPath = $vbsCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Obj
 # Crear el icono de la bandeja
 $global:bunkerNotifyIcon = New-Object System.Windows.Forms.NotifyIcon
 $notifyIcon = $global:bunkerNotifyIcon
-$notifyIcon.Text = "Búnker POS - Impresión"
+$notifyIcon.Text = "Bunker POS - Impresion"
 
 # Cargar el icono desde el PNG si existe, sin bloquear el archivo
 if ($pngPath -and (Test-Path $pngPath)) {
@@ -114,10 +114,10 @@ function Get-BunkerStatus {
     $printerStatusText = if ($printerActive) { "ACTIVO (Listo para imprimir)" } else { "DETENIDO" }
     $backendStatusText = if ($backendActive) { "ACTIVO (http://localhost:3000)" } else { "DETENIDO (o en la nube)" }
     
-    return "Estado de Búnker POS:`n`n• Servidor de Impresión: $printerStatusText`n• Backend Local: $backendStatusText"
+    return "Estado de Bunker POS:`n`n- Servidor de Impresion: $printerStatusText`n- Backend Local: $backendStatusText"
 }
 
-# Crear Menú Contextual
+# Crear Menu Contextual
 $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
 $statusItem = New-Object System.Windows.Forms.ToolStripMenuItem("Ver Estado", $null, {
@@ -125,10 +125,10 @@ $statusItem = New-Object System.Windows.Forms.ToolStripMenuItem("Ver Estado", $n
         $status = Get-BunkerStatus
         $topForm = New-Object System.Windows.Forms.Form
         $topForm.TopMost = $true
-        [System.Windows.Forms.MessageBox]::Show($topForm, $status, "Estado de Búnker POS", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+        [System.Windows.Forms.MessageBox]::Show($topForm, $status, "Estado de Bunker POS", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         $topForm.Dispose()
     } catch {
-        [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, "Búnker POS", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+        [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, "Bunker POS", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
     }
 })
 

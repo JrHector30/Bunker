@@ -92,8 +92,8 @@ export function FilterCombobox({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -4 }}
             transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
-            style={{ transformOrigin: 'top left' }}
-            className="absolute left-0 top-full mt-1.5 z-50 min-w-[210px] max-h-72 overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-700 py-1.5 focus:outline-none"
+            style={{ transformOrigin: 'top left', margin: 0, padding: '6px', listStyle: 'none' }}
+            className="absolute left-0 top-full mt-1.5 z-50 min-w-[210px] max-h-72 overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-700 m-0 p-1.5 list-none focus:outline-none"
           >
             {options.map((opt) => {
               const isSelected = String(opt.value) === String(value);
@@ -106,7 +106,7 @@ export function FilterCombobox({
                     onChange(opt.value);
                     setOpen(false);
                   }}
-                  className={`px-3 py-2 text-[13px] font-medium flex items-center justify-between gap-2.5 cursor-pointer transition-colors ${
+                  className={`px-3 py-2 text-[13px] font-medium rounded-xl flex items-center justify-between gap-2.5 cursor-pointer transition-colors ${
                     isSelected
                       ? 'bg-orange-50/80 dark:bg-orange-950/40 text-[#C2410C] dark:text-orange-300 font-semibold'
                       : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'

@@ -1,6 +1,6 @@
 ' =====================================================================
-' BÚNKER POS - INICIADOR Y CONFIGURADOR MAESTRO (TODO EN UNO)
-' Ubicación: printer-server\INICIAR_BUNKER_POS.vbs
+' BUNKER POS - INICIADOR Y CONFIGURADOR MAESTRO (TODO EN UNO)
+' Ubicacion: printer-server\INICIAR_BUNKER_POS.vbs
 ' =====================================================================
 Set WshShell = CreateObject("WScript.Shell")
 Set objFSO = CreateObject("Scripting.FileSystemObject")
@@ -17,7 +17,7 @@ stationName = "Caja"
 isSilent = false
 autoStart = "0"
 
-' Detectar argumentos si viene desde el Inicio Automático de Windows
+' Detectar argumentos si viene desde el Inicio Automatico de Windows
 If WScript.Arguments.Count > 0 Then
     stationName = Trim(WScript.Arguments(0))
 End If
@@ -29,7 +29,7 @@ End If
 If Not isSilent Then
     selectorScript = serverDir & "\selector.ps1"
     If Not objFSO.FileExists(selectorScript) Then
-        MsgBox "No se encontró selector.ps1 en: " & serverDir, 16, "Búnker POS"
+        MsgBox "No se encontro selector.ps1 en: " & serverDir, 16, "Bunker POS"
         WScript.Quit
     End If
 
@@ -54,7 +54,7 @@ If Not isSilent Then
     End If
 
     If InStr(guiOutput, "OK:") = 0 Then
-        ' El usuario presionó Cancelar o cerró la ventana
+        ' El usuario presiono Cancelar o cerro la ventana
         WScript.Quit
     End If
 
@@ -63,7 +63,7 @@ If Not isSilent Then
     stationName = Trim(parts(1))
     autoStart = Trim(parts(2))
 
-    ' Configurar Inicio Automático con Windows (shell:startup)
+    ' Configurar Inicio Automatico con Windows (shell:startup)
     startupFolder = WshShell.SpecialFolders("Startup")
     shortcutPath = startupFolder & "\BunkerPOS.lnk"
 
@@ -73,7 +73,7 @@ If Not isSilent Then
         oShortcut.Arguments = """" & strPath & """ " & stationName & " silent"
         oShortcut.WorkingDirectory = serverDir
         oShortcut.WindowStyle = 7 ' Minimized
-        oShortcut.Description = "Servidor de Impresión Búnker POS"
+        oShortcut.Description = "Servidor de Impresion Bunker POS"
         oShortcut.Save
     Else
         If objFSO.FileExists(shortcutPath) Then
@@ -92,7 +92,7 @@ If objFSO.FileExists(stopScript) Then
     WshShell.Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -File """ & stopScript & """", 0, true
 End If
 
-' 2. Iniciar servidor Node.js con la estación seleccionada (en segundo plano / oculto)
+' 2. Iniciar servidor Node.js con la estacion seleccionada (en segundo plano / oculto)
 WshShell.Run "cmd.exe /c cd /d """ & serverDir & """ && node server.js " & stationName, 0, false
 
 ' 3. Iniciar Bandeja del Sistema (icono B en la barra de tareas)
@@ -103,13 +103,13 @@ End If
 
 WScript.Sleep 1200
 
-' Notificación de confirmación en inicio manual
+' Notificacion de confirmacion en inicio manual
 If Not isSilent Then
     autoText = "Desactivado"
     If autoStart = "1" Then autoText = "Activado (Inicia solo con Windows)"
-    MsgBox "Servidor de Impresión Búnker POS iniciado correctamente." & vbCrLf & vbCrLf & _
-           "• Estación asignada: """ & stationName & """" & vbCrLf & _
-           "• Icono en bandeja: Activo (letra B)" & vbCrLf & _
-           "• Inicio con Windows: " & autoText & vbCrLf & vbCrLf & _
-           "Listo para recibir órdenes de cobro y comandas.", 64, "Búnker POS - Estación " & stationName
+    MsgBox "Servidor de Impresion Bunker POS iniciado correctamente." & vbCrLf & vbCrLf & _
+           "- Estacion asignada: """ & stationName & """" & vbCrLf & _
+           "- Icono en bandeja: Activo (letra B)" & vbCrLf & _
+           "- Inicio con Windows: " & autoText & vbCrLf & vbCrLf & _
+           "Listo para recibir ordenes de cobro y comandas.", 64, "Bunker POS - Estacion " & stationName
 End If

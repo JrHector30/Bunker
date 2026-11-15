@@ -15,8 +15,6 @@ import {
   EyeOff,
   Eye,
   Trash2,
-  Check,
-  Minus,
   Utensils,
   Tag,
   CircleDot,
@@ -32,6 +30,7 @@ import { FilterCombobox } from './FilterCombobox';
 import { DishModal } from './DishModal';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import SmoothDropdown from '../ui/SmoothDropdown';
+import CustomCheckbox from '../ui/CustomCheckbox';
 import { getActiveRestaurant } from '../../utils/tenant';
 
 // Imágenes de platos de alta definición
@@ -62,9 +61,18 @@ const CATEGORY_BADGES = {
 };
 
 const STATUS_BADGES = {
-  Activo: 'bg-[#DCFCE7] text-[#15803D] dark:bg-emerald-950/60 dark:text-emerald-300',
-  'Agotado hoy': 'bg-[#FEF3C7] text-[#B45309] dark:bg-amber-950/60 dark:text-amber-300',
-  Inactivo: 'bg-[#F1F5F9] text-[#475569] dark:bg-slate-800 dark:text-slate-400',
+  Activo: {
+    dot: 'bg-emerald-500',
+    className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20',
+  },
+  'Agotado hoy': {
+    dot: 'bg-amber-500',
+    className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20',
+  },
+  Inactivo: {
+    dot: 'bg-zinc-400',
+    className: 'bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-500/20',
+  },
 };
 
 function getDishImage(dish) {
@@ -100,7 +108,7 @@ function DishThumbnail({ src, alt, className }) {
         className={`${className} bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400`}
         aria-label={alt}
       >
-        <Utensils className="w-4 h-4" />
+        <Utensils className="w-3.5 h-3.5" />
       </div>
     );
   }
@@ -113,29 +121,6 @@ function DishThumbnail({ src, alt, className }) {
       onError={() => setFailed(true)}
       className={className}
     />
-  );
-}
-
-function CheckboxButton({ checked, indeterminate = false, onChange, ariaLabel }) {
-  return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={indeterminate ? 'mixed' : checked}
-      aria-label={ariaLabel}
-      onClick={(e) => {
-        e.stopPropagation();
-        onChange();
-      }}
-      className={`w-[18px] h-[18px] rounded-[5px] flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
-        checked || indeterminate
-          ? 'bg-[#F26522] border border-[#F26522] text-white'
-          : 'bg-slate-100 dark:bg-slate-800 border border-slate-300/80 dark:border-slate-600 hover:border-slate-400'
-      }`}
-    >
-      {checked && <Check className="w-3 h-3 stroke-[3]" />}
-      {!checked && indeterminate && <Minus className="w-3 h-3 stroke-[3]" />}
-    </button>
   );
 }
 
@@ -185,10 +170,9 @@ export default function MenuPlatosManagement({
     } catch {}
   };
 
-  // Normalización de platos con datos calculados
+  // Normalización de platos con datos calculados y ORDENAMIENTO ALFABÉTICO ESTRICTO
   const normalizedDishes = useMemo(() => {
-    return products.map((p) => {
-      // Insumos count y costo
+    const list = products.map((p) => {
       let insumosCount = 0;
       let costoCalculado = 0;
 
@@ -212,7 +196,6 @@ export default function MenuPlatosManagement({
         estado = 'Inactivo';
       }
 
-      // Categoría
       const catObj = p.categoria || categories.find((c) => c.id === p.categoriaId);
       const categoriaNombre = catObj?.nombre || 'Plato Principal';
 
@@ -229,6 +212,9 @@ export default function MenuPlatosManagement({
         imagen: getDishImage({ ...p, categoria: catObj }),
       };
     });
+
+    // Ordenamiento alfabético garantizado
+    return list.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }));
   }, [products, categories, statusMap]);
 
   // KPIs de Rentabilidad con persistencia en localStorage por local
@@ -248,7 +234,6 @@ export default function MenuPlatosManagement({
     const calculatedCosto = total > 0 ? sumCostPct / total : 0;
     const calculatedMargen = Math.max(0, 100 - calculatedCosto);
 
-    // Recuperar / Guardar en localStorage para estabilidad entre módulos
     const MARGEN_KEY = `bunker_menu_kpi_margen_${restaurantId}`;
     const COSTO_KEY = `bunker_menu_kpi_costo_${restaurantId}`;
 
@@ -277,7 +262,7 @@ export default function MenuPlatosManagement({
     };
   }, [normalizedDishes, restaurantId]);
 
-  // Filtrado de platos
+  // Filtrado de platos (manteniendo orden alfabético)
   const filteredDishes = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return normalizedDishes.filter((d) => {
@@ -312,7 +297,6 @@ export default function MenuPlatosManagement({
   const pageIds = pageDishes.map((d) => d.id);
   const selectedOnPage = pageIds.filter((id) => selectedIds.includes(id)).length;
   const allPageSelected = pageDishes.length > 0 && selectedOnPage === pageDishes.length;
-  const somePageSelected = selectedOnPage > 0 && selectedOnPage < pageDishes.length;
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) =>
@@ -626,8 +610,8 @@ export default function MenuPlatosManagement({
   const endItem = Math.min(safePage * pageSize, filteredDishes.length);
 
   return (
-    <div className="space-y-5 animate-fade-in text-left">
-      {/* NIVEL 1: Encabezado Superior */}
+    <div className="space-y-4 animate-fade-in text-left">
+      {/* NIVEL 1: Encabezado Superior con Botones SuperAdminView */}
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3.5 min-w-0">
           <button
@@ -635,29 +619,29 @@ export default function MenuPlatosManagement({
             onClick={() => navigate('/home')}
             aria-label="Volver"
             title="Volver al Inicio"
-            className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-colors cursor-pointer shrink-0"
+            className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-700 dark:text-zinc-200 transition-colors cursor-pointer shrink-0 border-0 shadow-sm active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
 
           <div className="flex flex-wrap items-baseline gap-2.5 min-w-0">
-            <h1 className="text-[22px] sm:text-[24px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+            <h1 className="text-[20px] sm:text-[22px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
               Menú (Platos)
             </h1>
-            <span className="text-sm font-medium text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap">
+            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 tabular-nums whitespace-nowrap">
               {normalizedDishes.length} platos
             </span>
           </div>
         </div>
 
-        {/* Botones de Acción Primaria */}
+        {/* Botones de Acción Primaria con estilo SuperAdminView */}
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
             type="button"
             onClick={handleDownloadTemplate}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="px-4 py-2 rounded-full border-0 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 whitespace-nowrap shrink-0"
           >
-            <Download className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+            <Download className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
             <span>Descargar Plantilla</span>
           </button>
 
@@ -671,9 +655,9 @@ export default function MenuPlatosManagement({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="px-4 py-2 rounded-full border-0 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 whitespace-nowrap shrink-0"
           >
-            <Upload className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+            <Upload className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
             <span>Importar Excel</span>
           </button>
 
@@ -684,7 +668,7 @@ export default function MenuPlatosManagement({
               setEditingDish(null);
               setDishModalOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-xl bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_4px_14px_-3px_rgba(242,101,34,0.45)] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="px-4 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md border-0 active:scale-95 bg-[#F26522] hover:bg-[#DC5616] text-white whitespace-nowrap shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Nuevo Plato</span>
@@ -692,7 +676,7 @@ export default function MenuPlatosManagement({
         </div>
       </header>
 
-      {/* NIVEL 2: Fila de KPIs rápidos de Rentabilidad */}
+      {/* NIVEL 2: Fila de KPIs rápidos de Rentabilidad (Cards más compactos) */}
       <MenuKpiRow
         totalPlatos={kpis.total}
         activosCount={kpis.activos}
@@ -712,7 +696,7 @@ export default function MenuPlatosManagement({
         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden"
       >
         {/* Toolbar Integrada */}
-        <div className="p-4 sm:px-6 sm:py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="p-3 sm:px-5 sm:py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           {/* Buscador + Selectores */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 flex-1">
             <div className="relative flex-1 max-w-md">
@@ -726,7 +710,7 @@ export default function MenuPlatosManagement({
                 }}
                 placeholder="Buscar plato por nombre..."
                 aria-label="Buscar plato por nombre"
-                className="w-full pl-9 pr-8 py-2 text-[13px] rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F26522]/20 focus:border-[#F26522] transition-colors"
+                className="w-full pl-9 pr-8 py-2 text-xs font-medium rounded-full border-0 shadow-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors"
               />
               {searchQuery && (
                 <button
@@ -743,7 +727,7 @@ export default function MenuPlatosManagement({
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
               {/* Listener de Categorías */}
               <FilterCombobox
                 value={categoryFilter}
@@ -789,7 +773,7 @@ export default function MenuPlatosManagement({
             </div>
           </div>
 
-          {/* Toggle de Vista: Tabla / Cuadrícula */}
+          {/* Toggle de Vista: Tabla / Cuadrícula (Botones SuperAdminView Pill) */}
           <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
             {(searchQuery ||
               categoryFilter !== 'Todas' ||
@@ -798,7 +782,7 @@ export default function MenuPlatosManagement({
               <button
                 type="button"
                 onClick={resetAllFilters}
-                className="text-xs font-semibold text-[#F26522] hover:underline whitespace-nowrap cursor-pointer"
+                className="px-3.5 py-1.5 rounded-full text-xs font-bold text-[#F26522] hover:bg-orange-50 dark:hover:bg-orange-950/40 border-0 transition-all cursor-pointer whitespace-nowrap"
               >
                 Limpiar filtros
               </button>
@@ -807,7 +791,7 @@ export default function MenuPlatosManagement({
             <div
               role="group"
               aria-label="Cambiar vista"
-              className="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700"
+              className="inline-flex items-center p-1 rounded-full bg-zinc-100 dark:bg-zinc-800 border-0 shadow-xs"
             >
               <button
                 type="button"
@@ -816,10 +800,10 @@ export default function MenuPlatosManagement({
                   setCurrentPage(1);
                 }}
                 aria-pressed={viewMode === 'table'}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 whitespace-nowrap ${
                   viewMode === 'table'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
                 <Table2 className="w-3.5 h-3.5" />
@@ -832,10 +816,10 @@ export default function MenuPlatosManagement({
                   setCurrentPage(1);
                 }}
                 aria-pressed={viewMode === 'grid'}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 whitespace-nowrap ${
                   viewMode === 'grid'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -845,9 +829,9 @@ export default function MenuPlatosManagement({
           </div>
         </div>
 
-        {/* Barra de Acciones Masivas (Bulk Actions) */}
+        {/* Barra de Acciones Masivas (Bulk Actions) con botones Pill */}
         {selectedIds.length > 0 && (
-          <div className="mx-4 sm:mx-6 mb-4 px-4 py-2.5 rounded-xl bg-orange-50/90 dark:bg-orange-950/30 border border-orange-200/80 dark:border-orange-900/70 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+          <div className="mx-4 sm:mx-6 mb-3 px-4 py-2 rounded-2xl bg-orange-50/90 dark:bg-orange-950/30 border border-orange-200/80 dark:border-orange-900/70 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
             <div className="flex items-center gap-2.5 text-xs">
               <span className="font-bold text-[#C2410C] dark:text-orange-300 tabular-nums">
                 {selectedIds.length}{' '}
@@ -856,7 +840,7 @@ export default function MenuPlatosManagement({
               <button
                 type="button"
                 onClick={() => setSelectedIds([])}
-                className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline cursor-pointer"
+                className="text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 underline cursor-pointer"
               >
                 Deseleccionar
               </button>
@@ -866,7 +850,7 @@ export default function MenuPlatosManagement({
               <button
                 type="button"
                 onClick={() => handleBulkStatus('Activo')}
-                className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors whitespace-nowrap cursor-pointer"
+                className="px-3.5 py-1.5 rounded-full text-xs font-bold border-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
               >
                 Activar seleccionados
               </button>
@@ -874,7 +858,7 @@ export default function MenuPlatosManagement({
               <button
                 type="button"
                 onClick={() => handleBulkStatus('Inactivo')}
-                className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer"
+                className="px-3.5 py-1.5 rounded-full text-xs font-bold border-0 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
               >
                 Desactivar
               </button>
@@ -882,7 +866,7 @@ export default function MenuPlatosManagement({
               <button
                 type="button"
                 onClick={handleExportSelected}
-                className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer"
+                className="px-3.5 py-1.5 rounded-full text-xs font-bold border-0 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
               >
                 Exportar selección
               </button>
@@ -895,7 +879,7 @@ export default function MenuPlatosManagement({
                     label: `${selectedIds.length} platos`,
                   })
                 }
-                className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors whitespace-nowrap cursor-pointer"
+                className="px-3.5 py-1.5 rounded-full text-xs font-bold border-0 bg-red-600 hover:bg-red-700 text-white transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
               >
                 Eliminar
               </button>
@@ -905,11 +889,11 @@ export default function MenuPlatosManagement({
 
         {/* Empty State */}
         {pageDishes.length === 0 ? (
-          <div className="px-6 py-16 text-center border-t border-slate-100 dark:border-slate-800">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
-              <Utensils className="w-6 h-6" />
+          <div className="px-6 py-14 text-center border-t border-slate-100 dark:border-slate-800">
+            <div className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+              <Utensils className="w-5 h-5" />
             </div>
-            <h3 className="mt-4 text-sm font-semibold text-slate-900 dark:text-white">
+            <h3 className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">
               No se encontraron platos
             </h3>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
@@ -918,20 +902,21 @@ export default function MenuPlatosManagement({
             <button
               type="button"
               onClick={resetAllFilters}
-              className="mt-4 px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              className="mt-3 px-4 py-1.5 text-xs font-bold rounded-full border-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer shadow-xs active:scale-95"
             >
               Restablecer filtros
             </button>
           </div>
         ) : viewMode === 'grid' ? (
           /* ========================================================= */
-          /* VISTA CUADRÍCULA (GRID VIEW: 3 FILAS DE 4 PLATOS = 12)    */
+          /* VISTA CUADRÍCULA (12 PLATOS: 3 FILAS DE 4 PLATOS)         */
           /* ========================================================= */
-          <div className="p-4 sm:p-6 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {pageDishes.map((dish) => {
               const costPct = dish.precioVenta > 0 ? (dish.costoProd / dish.precioVenta) * 100 : 0;
               const isSelected = selectedIds.includes(dish.id);
               const catBadge = CATEGORY_BADGES[dish.categoriaNombre] || CATEGORY_BADGES.Default;
+              const statusCfg = STATUS_BADGES[dish.estado] || STATUS_BADGES.Activo;
               const dropdownActions = getDropdownActions(dish);
 
               return (
@@ -944,23 +929,23 @@ export default function MenuPlatosManagement({
                   }`}
                 >
                   <div>
-                    {/* Imagen de Cabecera */}
+                    {/* Imagen de Cabecera con CustomCheckbox */}
                     <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-2xl bg-slate-100 dark:bg-slate-800">
                       <DishThumbnail
                         src={dish.imagen}
                         alt={dish.nombre}
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute top-3 left-3">
-                        <CheckboxButton
+                      <div className="absolute top-2.5 left-2.5 z-10 bg-white/80 dark:bg-black/60 backdrop-blur-sm p-1 rounded-lg">
+                        <CustomCheckbox
                           checked={isSelected}
                           onChange={() => toggleSelect(dish.id)}
-                          ariaLabel={`Seleccionar ${dish.nombre}`}
+                          aria-label={`Seleccionar ${dish.nombre}`}
                         />
                       </div>
-                      <div className="absolute top-3 right-3">
+                      <div className="absolute top-2.5 right-2.5">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold shadow-xs ${catBadge.className}`}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold shadow-xs ${catBadge.className}`}
                         >
                           <span>{catBadge.emoji}</span>
                           <span>{dish.categoriaNombre}</span>
@@ -969,10 +954,10 @@ export default function MenuPlatosManagement({
                     </div>
 
                     {/* Cuerpo de la Tarjeta */}
-                    <div className="p-4">
+                    <div className="p-3.5">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <h3 className="text-[15px] font-bold text-slate-900 dark:text-white truncate" title={dish.nombre}>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-[14px] font-bold text-slate-900 dark:text-white truncate" title={dish.nombre}>
                             {dish.nombre}
                           </h3>
                           <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 tabular-nums">
@@ -980,11 +965,10 @@ export default function MenuPlatosManagement({
                           </p>
                         </div>
 
-                        {/* Botón de Acción SmoothDropdown */}
+                        {/* Botón de Acción SmoothDropdown Centrado */}
                         <div className="shrink-0 relative">
                           <SmoothDropdown
                             id={`grid-${dish.id}`}
-                            compact={true}
                             items={dropdownActions.map((a) => ({
                               id: a.id,
                               label: a.label,
@@ -999,21 +983,21 @@ export default function MenuPlatosManagement({
                         </div>
                       </div>
 
-                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2 items-end">
+                      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2 items-end">
                         <div>
-                          <span className="text-[11px] text-slate-400 block">
+                          <span className="text-[11px] text-slate-400 block font-medium">
                             Precio Venta
                           </span>
-                          <span className="text-base font-bold text-slate-900 dark:text-white tabular-nums">
+                          <span className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">
                             S/. {dish.precioVenta.toFixed(2)}
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[11px] text-slate-400 block">
+                          <span className="text-[11px] text-slate-400 block font-medium">
                             Costo ({costPct.toFixed(1)}%)
                           </span>
                           <span
-                            className={`text-sm font-semibold tabular-nums ${
+                            className={`text-xs font-bold tabular-nums ${
                               costPct > 40
                                 ? 'text-red-600 dark:text-red-400'
                                 : costPct >= 30
@@ -1028,21 +1012,22 @@ export default function MenuPlatosManagement({
                     </div>
                   </div>
 
-                  {/* Pie de Tarjeta */}
-                  <div className="px-4 pb-3.5 flex items-center justify-between">
+                  {/* Pie de Tarjeta con Botón Pill de Estado */}
+                  <div className="px-3.5 pb-3 flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => handleCycleStatus(dish)}
                       title="Clic para cambiar estado"
-                      className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80 ${
-                        STATUS_BADGES[dish.estado] || STATUS_BADGES.Activo
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border-0 transition-all cursor-pointer shadow-xs active:scale-95 ${
+                        statusCfg.className
                       }`}
                     >
-                      {dish.estado}
+                      <span className={`w-2 h-2 rounded-full ${statusCfg.dot}`} />
+                      <span>{dish.estado}</span>
                     </button>
 
                     {costPct > 40 && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400 tabular-nums">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 dark:text-red-400 tabular-nums">
                         <AlertTriangle className="w-3.5 h-3.5" />
                         Costo alto
                       </span>
@@ -1054,35 +1039,35 @@ export default function MenuPlatosManagement({
           </div>
         ) : (
           /* ========================================================= */
-          /* VISTA TABLA (10 PLATOS POR PÁGINA)                        */
+          /* VISTA TABLA (FILAS COMPACTAS, SIN ESPACIOS EXCESIVOS)     */
           /* ========================================================= */
           <div className="overflow-x-auto border-t border-slate-100 dark:border-slate-800">
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold text-xs uppercase tracking-wider">
-                  <th className="w-12 py-3.5 pl-6 pr-3">
-                    <CheckboxButton
+                  <th className="w-10 py-2.5 pl-4 pr-2 text-center">
+                    <CustomCheckbox
                       checked={allPageSelected}
-                      indeterminate={somePageSelected}
                       onChange={toggleSelectPage}
-                      ariaLabel="Seleccionar todos los platos de esta página"
+                      aria-label="Seleccionar todos los platos de esta página"
                     />
                   </th>
-                  <th className="py-3.5 px-4">Plato</th>
-                  <th className="py-3.5 px-4">Categoría</th>
-                  <th className="py-3.5 px-4 text-right">Precio Venta</th>
-                  <th className="py-3.5 px-4 text-right">Costo Prod.</th>
-                  <th className="py-3.5 px-4 w-36">Costo %</th>
-                  <th className="py-3.5 px-4">Estado</th>
-                  <th className="py-3.5 pl-4 pr-6 text-right">Acciones</th>
+                  <th className="py-2.5 px-3">Plato</th>
+                  <th className="py-2.5 px-3">Categoría</th>
+                  <th className="py-2.5 px-3 text-right">Precio Venta</th>
+                  <th className="py-2.5 px-3 text-right">Costo Prod.</th>
+                  <th className="py-2.5 px-3 w-32">Costo %</th>
+                  <th className="py-2.5 px-3 text-center">Estado</th>
+                  <th className="py-2.5 px-3 text-center w-20">Acciones</th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-[13.5px]">
-                {pageDishes.map((dish, index) => {
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-[13px]">
+                {pageDishes.map((dish) => {
                   const isSelected = selectedIds.includes(dish.id);
                   const costPct = dish.precioVenta > 0 ? (dish.costoProd / dish.precioVenta) * 100 : 0;
                   const catBadge = CATEGORY_BADGES[dish.categoriaNombre] || CATEGORY_BADGES.Default;
+                  const statusCfg = STATUS_BADGES[dish.estado] || STATUS_BADGES.Activo;
                   const isHighAlert = costPct > 40;
                   const isMediumWarn = costPct >= 30 && costPct <= 40;
                   const barWidth = Math.min(100, Math.max(4, costPct));
@@ -1097,28 +1082,28 @@ export default function MenuPlatosManagement({
                           : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
                       }`}
                     >
-                      {/* Checkbox */}
-                      <td className="py-3.5 pl-6 pr-3">
-                        <CheckboxButton
+                      {/* Checkbox con CustomCheckbox */}
+                      <td className="py-2 pl-4 pr-2 text-center">
+                        <CustomCheckbox
                           checked={isSelected}
                           onChange={() => toggleSelect(dish.id)}
-                          ariaLabel={`Seleccionar ${dish.nombre}`}
+                          aria-label={`Seleccionar ${dish.nombre}`}
                         />
                       </td>
 
-                      {/* Plato: Imagen + Nombre + # Insumos (NO SKU) */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-3.5 min-w-0">
+                      {/* Plato: Imagen compacta + Nombre + # Insumos (NO SKU) */}
+                      <td className="py-2 px-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <DishThumbnail
                             src={dish.imagen}
                             alt={dish.nombre}
-                            className="w-11 h-11 rounded-xl object-cover border border-slate-100 dark:border-slate-700 shrink-0 bg-slate-50"
+                            className="w-9 h-9 rounded-lg object-cover border border-slate-100 dark:border-slate-700 shrink-0 bg-slate-50"
                           />
                           <div className="min-w-0">
-                            <p className="font-bold text-slate-800 dark:text-slate-100 truncate">
+                            <p className="font-bold text-slate-800 dark:text-slate-100 truncate text-[13px]">
                               {dish.nombre}
                             </p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
+                            <p className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
                               {dish.insumosCount} {dish.insumosCount === 1 ? 'insumo' : 'insumos'}
                             </p>
                           </div>
@@ -1126,9 +1111,9 @@ export default function MenuPlatosManagement({
                       </td>
 
                       {/* Categoría */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-2 px-3 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${catBadge.className}`}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${catBadge.className}`}
                         >
                           <span aria-hidden="true">{catBadge.emoji}</span>
                           <span>{dish.categoriaNombre}</span>
@@ -1136,13 +1121,13 @@ export default function MenuPlatosManagement({
                       </td>
 
                       {/* Precio Venta */}
-                      <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-white tabular-nums whitespace-nowrap">
+                      <td className="py-2 px-3 text-right font-bold text-slate-900 dark:text-white tabular-nums whitespace-nowrap">
                         S/. {dish.precioVenta.toFixed(2)}
                       </td>
 
                       {/* Costo Prod. */}
                       <td
-                        className={`py-3.5 px-4 text-right font-semibold tabular-nums whitespace-nowrap ${
+                        className={`py-2 px-3 text-right font-semibold tabular-nums whitespace-nowrap ${
                           isHighAlert
                             ? 'text-[#DC2626] dark:text-red-400'
                             : isMediumWarn
@@ -1153,12 +1138,12 @@ export default function MenuPlatosManagement({
                         S/. {dish.costoProd.toFixed(2)}
                       </td>
 
-                      {/* Costo % + barra de progreso */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-1.5 w-28">
+                      {/* Costo % + barra de progreso compacta */}
+                      <td className="py-2 px-3 whitespace-nowrap">
+                        <div className="flex flex-col gap-1 w-24">
                           {isHighAlert ? (
-                            <span className="inline-flex items-center gap-1 self-start px-2 py-0.5 rounded-md text-xs font-bold bg-[#FEE2E2] text-[#B91C1C] dark:bg-red-950/70 dark:text-red-300 tabular-nums">
-                              <AlertTriangle className="w-3 h-3 shrink-0" />
+                            <span className="inline-flex items-center gap-1 self-start px-1.5 py-0.2 rounded-md text-[11px] font-bold bg-[#FEE2E2] text-[#B91C1C] dark:bg-red-950/70 dark:text-red-300 tabular-nums">
+                              <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
                               {costPct.toFixed(1)}%
                             </span>
                           ) : (
@@ -1172,7 +1157,7 @@ export default function MenuPlatosManagement({
                               {costPct.toFixed(1)}%
                             </span>
                           )}
-                          <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                          <div className="h-1 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                             <div
                               className={`h-full rounded-full ${
                                 isHighAlert
@@ -1187,27 +1172,27 @@ export default function MenuPlatosManagement({
                         </div>
                       </td>
 
-                      {/* Estado */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      {/* Estado con Botón Pill SuperAdminView */}
+                      <td className="py-2 px-3 whitespace-nowrap text-center">
                         <button
                           type="button"
                           onClick={() => handleCycleStatus(dish)}
                           title="Clic para alternar estado"
-                          className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold transition-opacity hover:opacity-85 cursor-pointer ${
-                            STATUS_BADGES[dish.estado] || STATUS_BADGES.Activo
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border-0 transition-all cursor-pointer shadow-xs active:scale-95 ${
+                            statusCfg.className
                           }`}
                         >
-                          {dish.estado}
+                          <span className={`w-2 h-2 rounded-full ${statusCfg.dot}`} />
+                          <span>{dish.estado}</span>
                         </button>
                       </td>
 
-                      {/* Acciones: SmoothDropdown */}
-                      <td className="py-3.5 pl-4 pr-6 text-right relative" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end">
+                      {/* Acciones: SmoothDropdown al Centro de la columna */}
+                      <td className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-center items-center h-8 mx-auto">
                           <SmoothDropdown
                             id={`table-${dish.id}`}
-                            dropUp={index >= Math.max(1, pageDishes.length - 3)}
-                            compact={true}
+                            dropUp={pageDishes.indexOf(dish) >= Math.max(0, pageDishes.length - 3)}
                             items={dropdownActions.map((a) => ({
                               id: a.id,
                               label: a.label,
@@ -1229,10 +1214,8 @@ export default function MenuPlatosManagement({
           </div>
         )}
 
-        {/* ========================================================= */}
-        /* PIE DE TABLA Y PAGINACIÓN IDÉNTICA A ARQUEO DE CAJA       */
-        /* ========================================================= */
-        <div className="px-5 sm:px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 font-sans relative">
+        {/* PIE DE TABLA Y PAGINACIÓN IDÉNTICA A ARQUEO DE CAJA */}
+        <div className="px-4 sm:px-6 py-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 font-sans relative">
           {/* Lado izquierdo: "Mostrando 1-10 de # platos" */}
           <span className="font-medium text-slate-600 dark:text-slate-300 tabular-nums">
             Mostrando{' '}

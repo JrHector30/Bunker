@@ -1441,6 +1441,7 @@ app.get('/api/products', async (req, res) => {
 
         const products = await prisma.plato.findMany({
             where,
+            orderBy: { nombre: 'asc' },
             include: {
                 categoria: true,
                 receta: {
