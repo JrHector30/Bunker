@@ -21,6 +21,7 @@ import RecetarioEscandallo from '../components/recetario/RecetarioEscandallo';
 import InsumosManagement from '../components/inventory/InsumosManagement';
 import MenuPlatosManagement from '../components/inventory/MenuPlatosManagement';
 import KardexManagement from '../components/inventory/KardexManagement';
+import AuditoriaManagement from '../components/inventory/AuditoriaManagement';
 import { getActiveRestaurant } from '../utils/tenant';
 
 
@@ -1102,134 +1103,16 @@ const InventoryView = () => {
     };
 
     // --- TAB 5: AUDITORÍA ---
-    const [auditData, setAuditData] = useState({}); // { insumoId: realStockValue }
-
-    const handleAuditChange = (insumoId, value) => {
-        setAuditData(prev => ({ ...prev, [insumoId]: value }));
-    };
-
-    const handleApplyAudit = async () => {
-        // Validar que el usuario esté autenticado
-        if (!user || !user.id) {
-            showToast("❌ Error: Usuario no autenticado", 'error');
-            return;
-        }
-
-        if (!await showConfirmation("¿Desea aplicar estos ajustes de conciliación? Se generarán movimientos de AJUSTE en el Kardex y el stock se actualizará.", { type: 'warning' })) return;
-
-        try {
-            const promises = Object.entries(auditData).map(async ([insumoId, stockReal]) => {
-                const id = parseInt(insumoId);
-                const real = parseFloat(stockReal);
-                const insumo = insumos.find(i => i.id === id);
-                if (!insumo || isNaN(real)) return null;
-
-                const diferencia = real - insumo.stock;
-                if (Math.abs(diferencia) < 0.0001) return null; // No change
-
-                const tipoMovimiento = diferencia > 0 ? 'AJUSTE_POSITIVO' : 'AJUSTE_NEGATIVO';
-                const motivo = `Conciliación Física. Stock anterior: ${insumo.stock}, Nuevo: ${real}`;
-
-                return fetch('/api/kardex', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        insumoId: id,
-                        tipoMovimiento,
-                        cantidad: Math.abs(diferencia),
-                        motivo,
-                        usuarioId: user.id
-                    })
-                });
-            });
-
-            await Promise.all(promises.filter(p => p !== null));
-            showToast("✅ Conciliación aplicada exitosamente.", 'success');
-            setAuditData({});
-            fetchInsumos();
-        } catch (e) { showToast("❌ Error al conciliar.", 'error'); }
-    };
-
     const renderAuditoriaTab = () => {
-        let hasChanges = Object.keys(auditData).some(id => {
-            const real = parseFloat(auditData[id]);
-            const insumo = insumos.find(i => i.id === parseInt(id));
-            return insumo && !isNaN(real) && Math.abs(real - insumo.stock) >= 0.0001;
-        });
-
-        // Add sorting logic for Auditoria
-        const sortedAuditInsumos = [...insumos].sort((a, b) => {
-            if (!sortConfig.key) return 0;
-            let valA = a[sortConfig.key];
-            let valB = b[sortConfig.key];
-            if (typeof valA === 'string') valA = valA.toLowerCase();
-            if (typeof valB === 'string') valB = valB.toLowerCase();
-            if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-            if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-            return 0;
-        });
-
         return (
-            <div className="fade-in">
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-                    <div>
-                        <h2>Conciliación de Inventario</h2>
-                        <p className="text-muted">Ingrese el stock físico real para calcular mermas o excedentes.</p>
-                    </div>
-                    <button className="glass-button primary" onClick={handleApplyAudit} disabled={!hasChanges}>
-                        <ClipboardCheck size={18} /> Aplicar Ajustes
-                    </button>
-                </div>
-
-                <div className="glass-panel table-responsive" style={{ padding: 0 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left' }}>
-                                <SortHeader label="Insumo" sortKey="nombre" />
-                                <SortHeader label="Stock Teórico (Actual)" sortKey="stock" />
-                                <th style={{ padding: 15 }}>Stock Físico (Real)</th>
-                                <th style={{ padding: 15 }}>Diferencia</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedAuditInsumos.map(insumo => {
-                                const realInput = auditData[insumo.id] !== undefined ? auditData[insumo.id] : '';
-                                const realValue = parseFloat(realInput);
-                                const dif = !isNaN(realValue) ? realValue - insumo.stock : 0;
-                                const isDiscrepancy = Math.abs(dif) >= 0.0001;
-                                const difColor = dif < 0 ? 'var(--danger)' : (dif > 0 ? 'var(--warning)' : 'var(--success)');
-
-                                return (
-                                    <tr key={insumo.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <td style={{ padding: 15, fontWeight: 'bold' }}>{insumo.nombre}</td>
-                                        <td style={{ padding: 15 }}>{insumo.stock.toFixed(2)} {insumo.unidadMedida}</td>
-                                        <td style={{ padding: 15 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <input
-                                                    type="number" step="0.01" className="glass-input" style={{ width: 120, borderColor: isDiscrepancy ? difColor : 'var(--glass-border)' }}
-                                                    placeholder={insumo.stock.toFixed(2)}
-                                                    value={realInput}
-                                                    onChange={(e) => handleAuditChange(insumo.id, e.target.value)}
-                                                />
-                                                <span className="text-muted">{insumo.unidadMedida}</span>
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: 15 }}>
-                                            {isDiscrepancy ? (
-                                                <span style={{ color: difColor, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 5 }}>
-                                                    {dif > 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-                                                    {Math.abs(dif).toFixed(2)} {insumo.unidadMedida}
-                                                </span>
-                                            ) : (
-                                                <span className="text-muted">-</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <AuditoriaManagement
+                insumos={insumos}
+                user={user}
+                fetchInsumos={fetchInsumos}
+                fetchKardex={fetchKardex}
+                onBack={() => navigate('/')}
+                showToast={showToast}
+            />
         );
     };
 
@@ -1255,10 +1138,11 @@ const InventoryView = () => {
     const isInsumosTab = activeTab === 'insumos';
     const isPlatosTab = activeTab === 'platos';
     const isKardexTab = activeTab === 'kardex';
+    const isAuditoriaTab = activeTab === 'auditoria';
 
     return (
-        <div className="fade-in flex flex-col h-full" style={{ padding: isRecetarioTab ? '6px 12px 6px 12px' : (isInsumosTab || isPlatosTab || isKardexTab) ? '16px 20px' : 20 }}>
-            {!isInsumosTab && !isPlatosTab && !isKardexTab && (
+        <div className="fade-in flex flex-col h-full" style={{ padding: isRecetarioTab ? '6px 12px 6px 12px' : (isInsumosTab || isPlatosTab || isKardexTab || isAuditoriaTab) ? '16px 20px' : 20 }}>
+            {!isInsumosTab && !isPlatosTab && !isKardexTab && !isAuditoriaTab && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isRecetarioTab ? 6 : 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: isRecetarioTab ? 10 : 15 }}>
                         <button className="glass-button" onClick={() => navigate('/')} style={{ padding: isRecetarioTab ? '5px 8px' : 10 }}><ArrowLeft size={isRecetarioTab ? 18 : 24} /></button>
