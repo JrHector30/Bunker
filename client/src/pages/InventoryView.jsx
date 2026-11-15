@@ -19,6 +19,7 @@ import { motion } from 'motion/react';
 import { safeRecordProductShadow } from '../offline';
 import RecetarioEscandallo from '../components/recetario/RecetarioEscandallo';
 import InsumosManagement from '../components/inventory/InsumosManagement';
+import MenuPlatosManagement from '../components/inventory/MenuPlatosManagement';
 import { getActiveRestaurant } from '../utils/tenant';
 
 
@@ -995,163 +996,19 @@ const InventoryView = () => {
 
     // --- RENDER HELPERS ---
     const renderPlatosTab = () => {
-        const filteredProducts = sortedProducts.filter(p => {
-            const matchesCategory = filterCategory ? p.categoriaId === parseInt(filterCategory) : true;
-            const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-            return matchesCategory && matchesSearch;
-        });
-
-        const categoryOptions = [
-            { id: '', name: 'Todas las categorías' },
-            ...categories.map(c => ({
-                id: c.id.toString(),
-                name: `${c.icono || ''} ${c.nombre}`.trim()
-            }))
-        ];
-        const selectedCategoryOption = categoryOptions.find(opt => opt.id === filterCategory?.toString()) || categoryOptions[0];
-
         return (
-            <>
-                <div className="glass-panel" style={{ position: 'relative', zIndex: 10, marginBottom: 20, display: 'flex', gap: 15, padding: 15, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div className="search-container" style={{ flex: '1 1 300px', maxWidth: '600px' }}>
-                        <Search size={22} className="text-muted" />
-                        <input
-                            type="text" placeholder="Buscar plato..." className="search-input"
-                            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <div style={{ width: 200, textAlign: 'left' }}>
-                        <SimpleCombobox
-                            items={categoryOptions}
-                            selectedItem={selectedCategoryOption}
-                            onSelect={(opt) => setFilterCategory(opt ? opt.id : '')}
-                            placeholder="Todas las categorías"
-                        />
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, marginLeft: 'auto', flexWrap: 'wrap', alignItems: 'center' }}>
-                        {selectedProductIds.length > 0 && (
-                            <div style={{ display: 'flex', gap: 8, marginRight: 10 }}>
-                                <button className="glass-button flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-green-400 cursor-pointer h-9" style={{ borderColor: 'rgba(74, 222, 128, 0.3)' }} onClick={() => handleBulkToggleStatus(true)}>
-                                    Activar ({selectedProductIds.length})
-                                </button>
-                                <button className="glass-button flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-red-400 cursor-pointer h-9" style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }} onClick={() => handleBulkToggleStatus(false)}>
-                                    Desactivar ({selectedProductIds.length})
-                                </button>
-                                <DeleteButton
-                                    onClick={handleBulkDeleteProducts}
-                                    title={`Eliminar seleccionados (${selectedProductIds.length})`}
-                                    className="scale-90"
-                                />
-                            </div>
-                        )}
-                        <button className="glass-button flex items-center gap-1.5 px-3 py-2 text-xs font-semibold cursor-pointer h-9" onClick={handleDownloadTemplate}>
-                            <Download size={16} /> Descargar Plantilla
-                        </button>
-                        <button className="glass-button flex items-center gap-1.5 px-3 py-2 text-xs font-semibold cursor-pointer h-9" onClick={() => fileInputRef.current.click()}>
-                            <Upload size={16} /> Importar Excel
-                        </button>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            style={{ display: 'none' }}
-                            accept=".xlsx, .xls"
-                        />
-                        <button className="glass-button primary h-9 flex items-center gap-1.5 px-3 py-2 text-xs font-semibold" onClick={() => handleOpenModal()}>
-                            <Plus size={16} /> Nuevo Plato
-                        </button>
-                    </div>
-                </div>
-
-                <div className="glass-panel table-responsive" style={{ padding: 0 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ background: 'var(--table-header-bg)', textAlign: 'left' }}>
-                                <th style={{ padding: 15, width: 50, textAlign: 'center' }}>
-                                    <CustomCheckbox
-                                        checked={filteredProducts.length > 0 && selectedProductIds.length === filteredProducts.length}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setSelectedProductIds(filteredProducts.map(p => p.id));
-                                            } else {
-                                                setSelectedProductIds([]);
-                                            }
-                                        }}
-                                    />
-                                </th>
-                                <th style={{ padding: 15 }}>Imagen</th>
-                                <SortHeader label="Nombre" sortKey="nombre" />
-                                <SortHeader label="Categoría" sortKey="categoria" />
-                                <SortHeader label="Precio Venta" sortKey="precio" />
-                                <th style={{ padding: 15, textAlign: 'center' }}>Costo Prod.</th>
-                                <th style={{ padding: 15, textAlign: 'center' }}>Costo %</th>
-                                <th style={{ padding: 15, textAlign: 'center' }}>Estado</th>
-                                <th style={{ padding: 15 }}>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredProducts.map(prod => {
-                                const costo = prod.costoProduccion || 0;
-                                const margenPct = prod.precio > 0 ? (costo / prod.precio) * 100 : 0;
-                                const isWarning = margenPct > 40;
-
-                                return (
-                                    <tr key={prod.id} style={{ borderBottom: '1px solid var(--table-row-border)', textAlign: 'center' }}>
-                                        <td style={{ padding: 15, width: 50, textAlign: 'center' }}>
-                                            <CustomCheckbox
-                                                checked={selectedProductIds.includes(prod.id)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                        setSelectedProductIds(prev => [...prev, prod.id]);
-                                                    } else {
-                                                        setSelectedProductIds(prev => prev.filter(id => id !== prod.id));
-                                                    }
-                                                }}
-                                            />
-                                        </td>
-                                        <td style={{ padding: 15 }}>
-                                            {prod.imagen ? <img src={prod.imagen} alt={prod.nombre} style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 8 }} />
-                                                : <div style={{ width: 50, height: 50, background: 'var(--item-hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={20} className="text-muted" /></div>}
-                                        </td>
-                                        <td style={{ padding: 15, fontWeight: 'bold' }}>{prod.nombre}</td>
-                                        <td style={{ padding: 15 }}><span style={{ padding: '4px 8px', borderRadius: 4, background: prod.categoria?.color + '40', color: prod.categoria?.color }}>{prod.categoria?.icono} {prod.categoria?.nombre}</span></td>
-                                        <td style={{ padding: 15 }} className="font-mono">S/. {prod.precio.toFixed(2)}</td>
-                                        <td style={{ padding: 15, color: isWarning ? 'var(--danger)' : 'var(--success)' }} className="font-mono">S/. {costo.toFixed(2)}</td>
-                                        <td style={{ padding: 15 }}>
-                                            {isWarning ? (
-                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: 4, fontSize: '0.8rem', fontWeight: 'bold' }}>
-                                                    <AlertTriangle size={14} /> {margenPct.toFixed(1)}%
-                                                </div>
-                                            ) : (
-                                                <span style={{ fontSize: '0.9rem' }}>{margenPct.toFixed(1)}%</span>
-                                            )}
-                                        </td>
-                                        <td style={{ padding: 15 }}>
-                                            <span style={{
-                                                padding: '4px 8px',
-                                                borderRadius: 6,
-                                                fontSize: '0.75rem',
-                                                fontWeight: 'bold',
-                                                background: prod.activo ? 'rgba(74, 222, 128, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                                color: prod.activo ? 'rgb(74, 222, 128)' : 'rgb(239, 68, 68)'
-                                            }}>
-                                                {prod.activo ? 'Activo' : 'Inactivo'}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: 15 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
-                                                <EditButton onClick={() => handleOpenModal(prod)} className="scale-75 -my-2 -mx-1" />
-                                                <DeleteButton onClick={() => handleDeleteProduct(prod)} className="scale-75 -my-2 -mx-1" />
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-
-                        </tbody>
-                    </table>
-                </div>
-            </>
+            <MenuPlatosManagement
+                products={products}
+                categories={categories}
+                onRefresh={fetchData}
+                showToast={showToast}
+                showConfirmation={showConfirmation}
+                onNavigateToRecetarios={(platoId) => {
+                    setSelectedPlatoId(String(platoId));
+                    handleTabChange('recetarios');
+                    setSearchParams({ tab: 'recetarios', platoId: String(platoId) });
+                }}
+            />
         );
     };
 
@@ -1522,10 +1379,11 @@ const InventoryView = () => {
 
     const isRecetarioTab = activeTab === 'recetario' || activeTab === 'recetarios';
     const isInsumosTab = activeTab === 'insumos';
+    const isPlatosTab = activeTab === 'platos';
 
     return (
-        <div className="fade-in flex flex-col h-full" style={{ padding: isRecetarioTab ? '6px 12px 6px 12px' : isInsumosTab ? '16px 20px' : 20 }}>
-            {!isInsumosTab && (
+        <div className="fade-in flex flex-col h-full" style={{ padding: isRecetarioTab ? '6px 12px 6px 12px' : (isInsumosTab || isPlatosTab) ? '16px 20px' : 20 }}>
+            {!isInsumosTab && !isPlatosTab && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isRecetarioTab ? 6 : 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: isRecetarioTab ? 10 : 15 }}>
                         <button className="glass-button" onClick={() => navigate('/')} style={{ padding: isRecetarioTab ? '5px 8px' : 10 }}><ArrowLeft size={isRecetarioTab ? 18 : 24} /></button>

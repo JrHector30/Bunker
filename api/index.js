@@ -1441,7 +1441,12 @@ app.get('/api/products', async (req, res) => {
 
         const products = await prisma.plato.findMany({
             where,
-            include: { categoria: true }
+            include: {
+                categoria: true,
+                receta: {
+                    include: { insumo: true }
+                }
+            }
         });
         res.json(products);
     } catch (e) {
@@ -1614,7 +1619,7 @@ app.post('/api/sync/operations', async (req, res) => {
 });
 
 app.post('/api/products', async (req, res) => {
-    const { nombre, precio, categoriaId, descripcion, imagen } = req.body;
+    const { nombre, precio, categoriaId, descripcion, imagen, costoProduccion } = req.body;
     try {
         const tenantId = getTenantId(req);
         const product = await prisma.plato.create({
@@ -1624,6 +1629,7 @@ app.post('/api/products', async (req, res) => {
                 categoriaId: categoriaId,
                 descripcion,
                 imagen,
+                costoProduccion: costoProduccion !== undefined ? (parseFloat(costoProduccion) || 0) : 0,
                 restauranteId: tenantId
             }
         });
@@ -1721,8 +1727,9 @@ app.put('/api/products/:id', async (req, res) => {
         if (data.descripcion !== undefined) updateData.descripcion = data.descripcion; // Allow clearing?
         if (data.precio !== undefined) updateData.precio = data.precio;
         if (data.categoriaId !== undefined) updateData.categoriaId = data.categoriaId;
-        if (data.imagen) updateData.imagen = data.imagen; // Allow new image
+        if (data.imagen !== undefined) updateData.imagen = data.imagen; // Allow new image
         if (data.activo !== undefined) updateData.activo = data.activo;
+        if (data.costoProduccion !== undefined) updateData.costoProduccion = parseFloat(data.costoProduccion) || 0;
 
         const product = await prisma.plato.update({
             where: { id: parseInt(id) },
