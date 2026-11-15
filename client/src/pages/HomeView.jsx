@@ -349,26 +349,36 @@ export default function HomeView() {
           />
         </section>
 
-        {/* Row 2: SalesChart (46%), PopularMenuCard (28%), KitchenStatusChart (26%) */}
-        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[46fr_28fr_26fr]">
-          <SalesChart data={WEEKLY_SALES_DATA} currency={currency} />
-          <PopularMenuCard popularMenu={dashboardData.popularMenu} />
-          <KitchenStatusChart
-            segments={kitchenSegments}
-            isDark={typeof document !== 'undefined' && document.documentElement.classList.contains('dark')}
-          />
-        </div>
+        {/* Row 2: SalesChart (5 cols), PopularMenuCard (4 cols), KitchenStatusChart (3 cols) */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
+          <div className="lg:col-span-5 flex flex-col">
+            <SalesChart data={WEEKLY_SALES_DATA} currency={currency} />
+          </div>
+          <div className="lg:col-span-4 flex flex-col">
+            <PopularMenuCard popularMenu={dashboardData.popularMenu} />
+          </div>
+          <div className="lg:col-span-3 flex flex-col">
+            <KitchenStatusChart
+              segments={kitchenSegments}
+              isDark={typeof document !== 'undefined' && document.documentElement.classList.contains('dark')}
+            />
+          </div>
+        </section>
 
-        {/* Row 3: LatestOrdersTable (68%), RatingsCard (32%) */}
-        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[68fr_32fr]">
-          <LatestOrdersTable
-            orders={dashboardData.latestOrders}
-            onSelectOrder={(order) => setSelectedOrder(order)}
-          />
-          <RatingsCard
-            onOpenReviewsModal={() => setIsReviewsModalOpen(true)}
-          />
-        </div>
+        {/* Row 3: LatestOrdersTable (8 cols), RatingsCard (4 cols) */}
+        <section className="grid grid-cols-1 xl:grid-cols-12 gap-4 lg:gap-5">
+          <div className="xl:col-span-8 flex flex-col">
+            <LatestOrdersTable
+              orders={dashboardData.latestOrders}
+              onSelectOrder={(order) => setSelectedOrder(order)}
+            />
+          </div>
+          <div className="xl:col-span-4 flex flex-col">
+            <RatingsCard
+              onOpenReviewsModal={() => setIsReviewsModalOpen(true)}
+            />
+          </div>
+        </section>
       </div>
 
       {/* Modal: Detalle de Reseñas */}

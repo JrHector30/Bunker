@@ -100,7 +100,7 @@ export const RatingsCard = ({ onOpenReviewsModal }) => {
       <button
         type="button"
         onClick={onOpenReviewsModal}
-        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26522]/40 whitespace-nowrap dark:border-slate-700 dark:bg-[#1A2232] dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800 cursor-pointer"
+        className="w-full min-h-[44px] py-2.5 px-4 rounded-full border border-slate-200 dark:border-zinc-700 bg-white hover:bg-slate-50 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-xs font-bold text-slate-800 dark:text-zinc-100 transition-all cursor-pointer shadow-sm active:scale-95"
       >
         Ver Detalle de Reseñas
       </button>

@@ -83,7 +83,8 @@ export const LatestOrdersTable = ({ orders = [], onSelectOrder }) => {
           </div>
         </div>
 
-        <div className="mt-2.5 overflow-x-auto">
+        {/* Tabla Escritorio (>= md) */}
+        <div className="hidden md:block mt-2.5 overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800">
           <table className="w-full min-w-[540px] border-collapse text-left">
             <thead>
               <tr className="bg-[#F8F9FA] text-[11px] font-medium text-slate-500 dark:bg-[#1A2232] dark:text-slate-400">
@@ -167,6 +168,52 @@ export const LatestOrdersTable = ({ orders = [], onSelectOrder }) => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Tarjetas Móvil (< md) */}
+        <div className="md:hidden mt-3 space-y-2.5">
+          {paginatedOrders.length === 0 ? (
+            <div className="py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+              No hay pedidos registrados con el estado &ldquo;{statusFilter}&rdquo;.
+            </div>
+          ) : (
+            paginatedOrders.map((order, idx) => {
+              const isLeadOrder = idx === 0 && currentPage === 1;
+              return (
+                <div
+                  key={order.id || idx}
+                  onClick={() => onSelectOrder?.(order)}
+                  className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1.5 cursor-pointer active:scale-[0.99] transition-transform"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`text-xs font-bold tabular-nums ${
+                      isLeadOrder ? 'text-[#F26522] dark:text-[#FF7A3D]' : 'text-slate-900 dark:text-slate-100'
+                    }`}>
+                      {order.id}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                        STATUS_BADGE_MAP[order.status] || STATUS_BADGE_MAP.Pendiente
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-200 truncate">
+                      {order.dish}
+                    </p>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 tabular-nums shrink-0">
+                      ×{order.quantity}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+                    {order.waiter || 'Mozo'} · {order.dateTime}
+                  </p>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

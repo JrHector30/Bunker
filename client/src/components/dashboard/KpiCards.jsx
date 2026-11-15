@@ -51,7 +51,7 @@ export const KpiCards = ({
   onExportSummary,
 }) => {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
       {metrics.map((metric) => {
         const style = KPI_STYLE_MAP[metric.id] || KPI_STYLE_MAP.total_orders;
         const Icon = style.icon;
@@ -90,19 +90,11 @@ export const KpiCards = ({
         return (
           <div
             key={metric.id}
-            className={`relative rounded-xl px-4 py-3.5 transition-all duration-200 border ${
+            className={`relative rounded-2xl p-4 sm:p-5 transition-all duration-200 border flex flex-col justify-between min-h-[132px] ${
               isHighlighted
-                ? 'border-transparent text-white shadow-md'
-                : 'border-slate-100 bg-white text-slate-900 shadow-xs hover:shadow-md dark:border-slate-800/90 dark:bg-[#131A26] dark:text-slate-100'
+                ? 'col-span-2 sm:col-span-1 border-transparent text-white bg-gradient-to-br from-[#F26522] to-[#EA580C] shadow-[0_8px_22px_-6px_rgba(242,101,34,0.45)]'
+                : 'border-slate-200/80 bg-white text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:border-slate-800/90 dark:bg-[#131A26] dark:text-slate-100'
             }`}
-            style={
-              isHighlighted
-                ? {
-                    background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-hover, var(--primary)) 100%)',
-                    boxShadow: '0 4px 14px var(--color-brand-glow, rgba(0, 0, 0, 0.2))'
-                  }
-                : {}
-            }
           >
             <div className="flex items-center justify-between gap-1.5">
               <div className="flex min-w-0 items-center gap-2">
@@ -116,7 +108,7 @@ export const KpiCards = ({
                   <Icon className="h-3.5 w-3.5" />
                 </div>
                 <span
-                  className={`truncate text-xs font-semibold ${
+                  className={`truncate text-[12.5px] sm:text-[13px] font-semibold ${
                     isHighlighted
                       ? 'text-white'
                       : 'text-slate-700 dark:text-slate-200'
@@ -140,45 +132,30 @@ export const KpiCards = ({
               </div>
             </div>
 
-            <div className="mt-2.5">
-              <p
-                className={`text-xl xl:text-[22px] font-bold tracking-tight tabular-nums leading-none ${
-                  isHighlighted
-                    ? 'text-white'
-                    : 'text-slate-900 dark:text-slate-50'
-                }`}
-              >
-                {displayValue}
-              </p>
-            </div>
+            <p
+              className={`mt-3 font-bold tracking-tight tabular-nums leading-none ${
+                isHighlighted
+                  ? 'text-[28px] text-white'
+                  : 'text-[26px] sm:text-[28px] text-slate-900 dark:text-slate-50'
+              }`}
+            >
+              {displayValue}
+            </p>
 
-            <div className="mt-2 flex items-center gap-1 text-[11px]">
-              <span
-                className={`inline-flex items-center gap-0.5 font-semibold tabular-nums ${
-                  isHighlighted
-                    ? 'text-white'
-                    : isUp
-                      ? 'text-[#22C55E] dark:text-[#4ADE80]'
-                      : 'text-[#EF4444] dark:text-[#F87171]'
-                }`}
-              >
-                {isUp ? (
-                  <ArrowUp className="h-2.5 w-2.5 stroke-[2.5]" />
-                ) : (
-                  <ArrowDown className="h-2.5 w-2.5 stroke-[2.5]" />
-                )}
-                {metric.trendPercent}%
-              </span>
-              <span
-                className={`truncate ${
-                  isHighlighted
-                    ? 'text-white/85'
-                    : 'text-slate-400 dark:text-slate-500'
-                }`}
-              >
+            <p
+              className={`mt-3 text-[11.5px] tabular-nums font-semibold flex items-center gap-1 ${
+                isHighlighted
+                  ? 'text-white/90'
+                  : isUp
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-red-500 dark:text-red-400'
+              }`}
+            >
+              <span>{isUp ? '↑' : '↓'} {metric.trendPercent}%</span>
+              <span className={isHighlighted ? 'text-white/75 font-normal' : 'text-slate-500 font-normal dark:text-slate-400'}>
                 {metric.comparisonLabel}
               </span>
-            </div>
+            </p>
           </div>
         );
       })}
