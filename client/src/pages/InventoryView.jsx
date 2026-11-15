@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download, Upload, Check, Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Edit, Trash, Save, X, Search, Image as ImageIcon, Sparkles, ArrowUp, ArrowDown, ChevronsUpDown, ArrowLeft, Package, Beaker, BookOpen, AlertTriangle, History, ClipboardCheck, Download, Upload, Check, Loader2, Calendar as CalendarIcon, ChevronFirst, ChevronLeft, ChevronRight, ChevronLast, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
 import * as XLSX from 'xlsx';
@@ -1086,7 +1086,7 @@ const InventoryView = () => {
 
     const renderKardexTab = () => {
         // --- Pagination & Filtering Logic ---
-        const ITEMS_PER_PAGE = 50;
+        const PAGE_SIZE = 10;
 
         // Filter by Date
         const filteredKardex = kardex.filter(mov => {
@@ -1107,14 +1107,15 @@ const InventoryView = () => {
         });
 
         // Pagination
-        const totalPages = Math.ceil(filteredKardex.length / ITEMS_PER_PAGE) || 1;
+        const totalPages = Math.max(1, Math.ceil(filteredKardex.length / PAGE_SIZE));
+        const safePage = Math.min(kardexCurrentPage, totalPages);
         const currentData = filteredKardex.slice(
-            (kardexCurrentPage - 1) * ITEMS_PER_PAGE,
-            kardexCurrentPage * ITEMS_PER_PAGE
+            (safePage - 1) * PAGE_SIZE,
+            safePage * PAGE_SIZE
         );
 
-        const handlePrevPage = () => setKardexCurrentPage(p => Math.max(1, p - 1));
-        const handleNextPage = () => setKardexCurrentPage(p => Math.min(totalPages, p + 1));
+        const startItem = filteredKardex.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+        const endItem = Math.min(safePage * PAGE_SIZE, filteredKardex.length);
 
         const handleExportExcel = () => {
             if (filteredKardex.length === 0) {
@@ -1148,81 +1149,251 @@ const InventoryView = () => {
         };
 
         return (
-            <div className="fade-in">
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-                        <h2 style={{ margin: 0 }}>Historial de Movimientos</h2>
-                        <DropdownRangeDatePicker
-                            mode="range"
-                            value={kardexDateFilterRange}
-                            onChange={(range) => {
-                                setKardexDateFilterRange(range);
-                                setKardexCurrentPage(1);
-                            }}
-                            placeholder="Filtrar por Fecha"
-                        />
-                        <button className="glass-button" onClick={handleExportExcel} style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', padding: '6px 15px', color: 'var(--success)' }}>
-                            <Download size={18} /> Exportar Excel
-                        </button>
+            <div className="fade-in space-y-4">
+                {/* Cabecera con botón de retroceso y título (Igual a imagen de referencia) */}
+                <header className="flex items-center gap-3.5 mb-2">
+                    <button
+                        type="button"
+                        onClick={() => navigate('/')}
+                        aria-label="Volver"
+                        className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-colors cursor-pointer shrink-0"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                    </button>
+                    <h1 className="text-[22px] sm:text-[24px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                        Kardex de Inventario
+                    </h1>
+                </header>
+
+                {/* 1. Toolbar responsiva */}
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">
+                        <h2 className="text-[17px] sm:text-[18px] font-bold text-slate-900 dark:text-white tracking-tight">
+                            Historial de Movimientos
+                        </h2>
+
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <DropdownRangeDatePicker
+                                mode="range"
+                                value={kardexDateFilterRange}
+                                onChange={(range) => {
+                                    setKardexDateFilterRange(range);
+                                    setKardexCurrentPage(1);
+                                }}
+                                placeholder="Filtrar por Fecha"
+                                triggerClassName="!w-auto min-h-[38px] text-xs font-semibold"
+                            />
+
+                            <button
+                                type="button"
+                                onClick={handleExportExcel}
+                                className="min-h-[38px] inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-800 active:scale-95 transition-all cursor-pointer shadow-2xs"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>Exportar Excel</span>
+                            </button>
+                        </div>
                     </div>
-                    <button className="glass-button secondary" onClick={() => setIsKardexModalOpen(true)}>
-                        <Plus size={18} /> Nuevo Movimiento Manual
+
+                    <button
+                        type="button"
+                        onClick={() => setIsKardexModalOpen(true)}
+                        className="min-h-[40px] w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 whitespace-nowrap active:scale-95 transition-all cursor-pointer shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Nuevo Movimiento Manual</span>
                     </button>
                 </div>
 
-                <div className="glass-panel table-responsive" style={{ padding: 0 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center' }}>
-                        <thead>
-                            <tr style={{ background: 'var(--table-header-bg)', textAlign: 'center' }}>
-                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Fecha y Hora</th>
-                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Insumo</th>
-                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Tipo</th>
-                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Cantidad</th>
-                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Usuario</th>
-                                <th style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>Motivo / Info</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {currentData.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>
-                                        {kardexDateFilterRange?.from ? 'No se registraron movimientos en este periodo.' : 'No hay movimientos registrados.'}
-                                    </td>
+                {/* 2. Tabla Desktop (hidden md:block) */}
+                <section className="hidden md:block rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-2xs">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                            <thead style={{ backgroundColor: '#F26522', color: '#ffffff' }}>
+                                <tr className="text-white text-[10px] uppercase font-bold tracking-wider" style={{ backgroundColor: '#F26522', color: '#ffffff' }}>
+                                    <th className="py-2.5 px-3 text-center" style={{ backgroundColor: '#F26522', color: '#ffffff' }}>Fecha y Hora</th>
+                                    <th className="py-2.5 px-3" style={{ backgroundColor: '#F26522', color: '#ffffff' }}>Insumo</th>
+                                    <th className="py-2.5 px-3 text-center" style={{ backgroundColor: '#F26522', color: '#ffffff' }}>Tipo</th>
+                                    <th className="py-2.5 px-3 text-center" style={{ backgroundColor: '#F26522', color: '#ffffff' }}>Cantidad</th>
+                                    <th className="py-2.5 px-3 text-center" style={{ backgroundColor: '#F26522', color: '#ffffff' }}>Usuario</th>
+                                    <th className="py-2.5 px-3 text-center" style={{ backgroundColor: '#F26522', color: '#ffffff' }}>Motivo / Info</th>
                                 </tr>
-                            ) : currentData.map(mov => {
-                                const isPositive = ['COMPRA', 'AJUSTE_POSITIVO'].includes(mov.tipoMovimiento);
-                                const color = isPositive ? 'var(--success)' : (mov.tipoMovimiento === 'VENTA' ? 'var(--primary)' : 'var(--danger)');
-                                return (
-                                    <tr key={mov.id} style={{ borderBottom: '1px solid var(--table-row-border)', color: 'var(--text-main)', textAlign: 'center' }}>
-                                        <td style={{ padding: 15, color: 'var(--text-main)', textAlign: 'center', verticalAlign: 'middle' }}>{new Date(mov.fecha).toLocaleString()}</td>
-                                        <td style={{ padding: 15, fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center', verticalAlign: 'middle' }}>{mov.insumo?.nombre}</td>
-                                        <td style={{ padding: 15, textAlign: 'center', verticalAlign: 'middle' }}>
-                                            <span style={{ padding: '4px 8px', borderRadius: 4, background: `${color}40`, color: color, fontSize: '0.8rem', fontWeight: 'bold' }}>
-                                                {mov.tipoMovimiento}
-                                            </span>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                                {currentData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" className="py-12 text-center text-xs text-slate-400">
+                                            {kardexDateFilterRange?.from ? 'No se registraron movimientos en este periodo.' : 'No hay movimientos registrados.'}
                                         </td>
-                                        <td style={{ padding: 15, color: color, fontWeight: 'bold', textAlign: 'center', verticalAlign: 'middle' }}>
-                                            {isPositive ? '+' : '-'}{Math.abs(mov.cantidad)} {mov.insumo?.unidadMedida}
-                                        </td>
-                                        <td style={{ padding: 15, color: 'var(--text-main)', textAlign: 'center', verticalAlign: 'middle' }}>
-                                            {mov.usuario?.nombre || 'General / Sistema'}
-                                        </td>
-                                        <td style={{ padding: 15, fontSize: '0.9rem', color: 'var(--text-muted)', textAlign: 'center', verticalAlign: 'middle' }}>{mov.motivo || '-'}</td>
                                     </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                ) : (
+                                    currentData.map(mov => {
+                                        const isPositive = ['COMPRA', 'AJUSTE_POSITIVO'].includes(mov.tipoMovimiento);
+                                        const colorClass = isPositive ? 'text-emerald-600 dark:text-emerald-400' : (mov.tipoMovimiento === 'VENTA' ? 'text-[#F26522]' : 'text-rose-600 dark:text-rose-400');
+                                        const bgBadgeClass = isPositive ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : (mov.tipoMovimiento === 'VENTA' ? 'bg-orange-50 text-[#F26522] dark:bg-orange-950/50' : 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400');
+                                        return (
+                                            <tr key={mov.id} className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40 text-center">
+                                                <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300 font-mono text-[11px] whitespace-nowrap">
+                                                    {new Date(mov.fecha).toLocaleString()}
+                                                </td>
+                                                <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white text-left">
+                                                    {mov.insumo?.nombre || '-'}
+                                                </td>
+                                                <td className="py-2.5 px-3">
+                                                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase ${bgBadgeClass}`}>
+                                                        {mov.tipoMovimiento}
+                                                    </span>
+                                                </td>
+                                                <td className={`py-2.5 px-3 font-bold font-mono ${colorClass}`}>
+                                                    {isPositive ? '+' : '-'}{Math.abs(mov.cantidad)} {mov.insumo?.unidadMedida}
+                                                </td>
+                                                <td className="py-2.5 px-3 text-slate-700 dark:text-slate-200">
+                                                    {mov.usuario?.nombre || 'General / Sistema'}
+                                                </td>
+                                                <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400 text-xs text-left max-w-xs truncate" title={mov.motivo}>
+                                                    {mov.motivo || '-'}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
 
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                        <div style={{ padding: 15, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 15, borderTop: '1px solid var(--table-row-border)' }}>
-                            <button className="glass-button" disabled={kardexCurrentPage === 1} onClick={handlePrevPage}>Anterior</button>
-                            <span style={{ fontSize: '0.9rem' }}>Página {kardexCurrentPage} de {totalPages}</span>
-                            <button className="glass-button" disabled={kardexCurrentPage === totalPages} onClick={handleNextPage}>Siguiente</button>
+                {/* 3. Tarjetas Móvil (md:hidden) */}
+                <section className="md:hidden space-y-3">
+                    {currentData.length === 0 ? (
+                        <div className="py-12 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6">
+                            {kardexDateFilterRange?.from ? 'No se registraron movimientos en este periodo.' : 'No hay movimientos registrados.'}
                         </div>
+                    ) : (
+                        currentData.map(m => {
+                            const isPositive = ['COMPRA', 'AJUSTE_POSITIVO'].includes(m.tipoMovimiento);
+                            const isVenta = m.tipoMovimiento === 'VENTA';
+                            const colorTypeClass = isPositive ? 'text-emerald-600 dark:text-emerald-400' : (isVenta ? 'text-[#F26522]' : 'text-rose-600 dark:text-rose-400');
+                            const qtyColorClass = isPositive ? 'text-emerald-600' : 'text-[#F26522]';
+                            const sign = isPositive ? '+' : '-';
+
+                            return (
+                                <div
+                                    key={m.id}
+                                    className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 space-y-2 shadow-2xs"
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                                {m.insumo?.nombre || '-'}
+                                            </h3>
+                                            <span className={`text-[10.5px] font-bold tracking-wider uppercase ${colorTypeClass}`}>
+                                                {m.tipoMovimiento}
+                                            </span>
+                                        </div>
+                                        <span className={`text-sm font-bold tabular-nums shrink-0 ${qtyColorClass}`}>
+                                            {sign}{Math.abs(m.cantidad)} {m.insumo?.unidadMedida || ''}
+                                        </span>
+                                    </div>
+
+                                    {/* Motivo en 2 líneas ordenadas (Tarjeta Móvil) */}
+                                    {(() => {
+                                        if (!m.motivo) {
+                                            return (
+                                                <p className="text-xs text-slate-400 italic">
+                                                    Sin motivo especificado
+                                                </p>
+                                            );
+                                        }
+                                        const splitIdx = m.motivo.indexOf(' - Plato:');
+                                        if (splitIdx !== -1) {
+                                            const primary = m.motivo.slice(0, splitIdx);
+                                            const platoPart = m.motivo.slice(splitIdx + 3);
+                                            return (
+                                                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-0.5">
+                                                    <span className="block">{primary}</span>
+                                                    <span className="block font-semibold text-slate-800 dark:text-slate-100">
+                                                        {platoPart}
+                                                    </span>
+                                                </p>
+                                            );
+                                        }
+                                        return (
+                                            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                                                {m.motivo}
+                                            </p>
+                                        );
+                                    })()}
+
+                                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 text-[11px] text-slate-400 tabular-nums">
+                                        <span>{new Date(m.fecha).toLocaleString()}</span>
+                                        <span className="font-medium text-slate-500 truncate">{m.usuario?.nombre || 'General / Sistema'}</span>
+                                    </div>
+                                </div>
+                            );
+                        })
                     )}
-                </div>
+                </section>
+
+                {/* 4. Paginación de Arqueo de Caja */}
+                {totalPages > 0 && (
+                    <div
+                        className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 relative flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 shadow-2xs"
+                    >
+                        <span className="font-semibold select-none text-[11px] sm:text-xs">
+                            Mostrando {startItem}-{endItem} de {filteredKardex.length} movimientos
+                        </span>
+
+                        <div className="sm:absolute sm:left-1/2 sm:-translate-x-1/2 flex items-center justify-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setKardexCurrentPage(1)}
+                                disabled={safePage === 1}
+                                title="Primera página"
+                                aria-label="Primera página"
+                                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-2xs active:scale-95"
+                            >
+                                <ChevronFirst className="w-4 h-4" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setKardexCurrentPage((p) => Math.max(1, p - 1))}
+                                disabled={safePage === 1}
+                                title="Página anterior"
+                                aria-label="Página anterior"
+                                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-2xs active:scale-95"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+
+                            <span className="font-bold text-slate-800 dark:text-slate-100 px-2 select-none whitespace-nowrap text-xs">
+                                Página {safePage} de {totalPages}
+                            </span>
+
+                            <button
+                                type="button"
+                                onClick={() => setKardexCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={safePage === totalPages}
+                                title="Página siguiente"
+                                aria-label="Página siguiente"
+                                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-2xs active:scale-95"
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setKardexCurrentPage(totalPages)}
+                                disabled={safePage === totalPages}
+                                title="Última página"
+                                aria-label="Última página"
+                                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 shadow-2xs active:scale-95"
+                            >
+                                <ChevronLast className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="hidden sm:block sm:w-28" />
+                    </div>
+                )}
             </div>
         );
     };
@@ -1380,10 +1551,11 @@ const InventoryView = () => {
     const isRecetarioTab = activeTab === 'recetario' || activeTab === 'recetarios';
     const isInsumosTab = activeTab === 'insumos';
     const isPlatosTab = activeTab === 'platos';
+    const isKardexTab = activeTab === 'kardex';
 
     return (
-        <div className="fade-in flex flex-col h-full" style={{ padding: isRecetarioTab ? '6px 12px 6px 12px' : (isInsumosTab || isPlatosTab) ? '16px 20px' : 20 }}>
-            {!isInsumosTab && !isPlatosTab && (
+        <div className="fade-in flex flex-col h-full" style={{ padding: isRecetarioTab ? '6px 12px 6px 12px' : (isInsumosTab || isPlatosTab || isKardexTab) ? '16px 20px' : 20 }}>
+            {!isInsumosTab && !isPlatosTab && !isKardexTab && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isRecetarioTab ? 6 : 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: isRecetarioTab ? 10 : 15 }}>
                         <button className="glass-button" onClick={() => navigate('/')} style={{ padding: isRecetarioTab ? '5px 8px' : 10 }}><ArrowLeft size={isRecetarioTab ? 18 : 24} /></button>
