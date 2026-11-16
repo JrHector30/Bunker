@@ -785,11 +785,11 @@ export default function InsumosManagement({
 
             {/* Pill de Selección Masiva */}
             {selectedIds.length > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-900 text-xs font-medium text-emerald-800 dark:text-emerald-300 animate-fade-in flex-wrap">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-900 text-xs font-medium text-emerald-800 dark:text-emerald-300 animate-fade-in flex-wrap">
                 <span className="tabular-nums font-semibold">
                   {selectedIds.length} {selectedIds.length === 1 ? 'seleccionado' : 'seleccionados'}
                 </span>
-                <span aria-hidden="true">·</span>
+                <span aria-hidden="true" className="text-emerald-300 dark:text-emerald-700">·</span>
                 <button
                   type="button"
                   onClick={() =>
@@ -798,24 +798,25 @@ export default function InsumosManagement({
                       label: `${selectedIds.length} insumos`,
                     })
                   }
-                  className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-900 border border-emerald-200/80 dark:border-emerald-800 hover:bg-emerald-100/60 dark:hover:bg-emerald-950/60 transition-all cursor-pointer shadow-xs active:scale-95"
                 >
-                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  <ArrowRightLeft className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>Mover a almacén</span>
                 </button>
-                <span aria-hidden="true">·</span>
+                <span aria-hidden="true" className="text-emerald-300 dark:text-emerald-700">·</span>
                 <button
                   type="button"
                   onClick={() => setBulkDeleteModalOpen(true)}
-                  className="font-bold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 bg-white dark:bg-slate-900 border border-rose-200/80 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-all cursor-pointer shadow-xs active:scale-95"
                 >
-                  Borrar seleccionados
+                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Borrar seleccionados</span>
                 </button>
-                <span aria-hidden="true">·</span>
+                <span aria-hidden="true" className="text-emerald-300 dark:text-emerald-700">·</span>
                 <button
                   type="button"
                   onClick={() => setSelectedIds([])}
-                  className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
+                  className="px-2.5 py-1 rounded-full text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 bg-transparent hover:bg-emerald-100/50 dark:hover:bg-emerald-950/50 border-0 transition-all cursor-pointer active:scale-95"
                 >
                   Limpiar
                 </button>
@@ -1258,7 +1259,7 @@ export default function InsumosManagement({
                 <span>Seleccionar página ({paginatedItems.length})</span>
               </label>
               {selectedIds.length > 0 && (
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() =>
@@ -1267,18 +1268,19 @@ export default function InsumosManagement({
                         label: `${selectedIds.length} insumos`,
                       })
                     }
-                    className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline cursor-pointer flex items-center gap-1"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-900 border border-emerald-200/80 dark:border-emerald-800 hover:bg-emerald-100/60 cursor-pointer shadow-xs active:scale-95"
                   >
-                    <ArrowRightLeft className="w-3 h-3" />
+                    <ArrowRightLeft className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                     <span>Mover</span>
                   </button>
                   <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
                   <button
                     type="button"
                     onClick={() => setBulkDeleteModalOpen(true)}
-                    className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 bg-white dark:bg-slate-900 border border-rose-200/80 dark:border-rose-900/60 hover:bg-rose-50 cursor-pointer shadow-xs active:scale-95"
                   >
-                    Borrar ({selectedIds.length})
+                    <Trash2 className="w-3 h-3 text-rose-500" />
+                    <span>Borrar ({selectedIds.length})</span>
                   </button>
                 </div>
               )}

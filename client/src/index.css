@@ -15,6 +15,27 @@
 }
 
 /* ============================================
+   GLOBAL BUTTON RESET (Compensates for preflight: false)
+   Removes user-agent buttonface background, 3D borders,
+   and unwanted default browser padding across the app.
+   ============================================ */
+button,
+[type='button'],
+[type='reset'],
+[type='submit'] {
+  background-color: transparent;
+  border-width: 0;
+  border-style: solid;
+  border-color: transparent;
+  font-family: inherit;
+  font-size: 100%;
+  line-height: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+/* ============================================
    BUNKER FONT DEFINITIONS
    Plus Jakarta Sans for all text, numbers and symbols
    ============================================ */
