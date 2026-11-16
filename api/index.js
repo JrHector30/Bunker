@@ -5690,6 +5690,143 @@ app.post('/api/auth/recover-password/reset', async (req, res) => {
     }
 });
 
+// ==========================================
+// --- BUNKER INTELLIGENT VOICE AI (GROQ + ELEVENLABS) ---
+// ==========================================
+
+app.post('/api/voice/chat', async (req, res) => {
+    try {
+        const { message, history = [], attempt = 1, station = 'Caja' } = req.body;
+        const tenantId = typeof getTenantId === 'function' ? getTenantId(req) : 1;
+        const GROQ_KEY = process.env.GROQ_API_KEY;
+
+        if (!GROQ_KEY) {
+            return res.status(500).json({ error: "GROQ_API_KEY no configurada en el servidor." });
+        }
+
+        const lower = (message || '').toLowerCase();
+        let actionTriggered = null;
+
+        // Auto Recovery trigger if user asks to repair/fix hardware
+        if (lower.includes("repara") || lower.includes("arregla") || lower.includes("recupera")) {
+            try {
+                const targetEstacion = lower.includes("cocina") || lower.includes("horno") ? 'Cocina' : station;
+                const devices = await prisma.dispositivoRed.findMany({
+                    where: { estacion: targetEstacion, restauranteId: tenantId }
+                });
+                const printer = devices.find(d => d.tipo === 'impresora') || devices[0];
+                if (printer) {
+                    await prisma.dispositivoRed.update({
+                        where: { id: printer.id },
+                        data: { ultimoEstado: 'RECOVERING' }
+                    });
+                    await prisma.configuracion.upsert({
+                        where: { clave: 'solicitar_recovery_estacion' },
+                        update: { valor: JSON.stringify({ estacion: targetEstacion, accion: 'reparar', deviceId: printer.id }) },
+                        create: { clave: 'solicitar_recovery_estacion', valor: JSON.stringify({ estacion: targetEstacion, accion: 'reparar', deviceId: printer.id }) }
+                    });
+                    actionTriggered = 'printer_recovery';
+                }
+            } catch (recoveryErr) {
+                console.warn("[VoiceAI] Error al disparar Auto Recovery:", recoveryErr.message);
+            }
+        }
+
+        const isLastAttempt = attempt >= 3;
+        const systemPrompt = `Eres la Asistente de Soporte Técnico de Búnker POS (ComandaGo).
+Tu objetivo es dar soporte oral ágil, empático y profesional al personal del restaurante (mozos, cajeros y administradores).
+
+Reglas estrictas de respuesta:
+1. Longitud: Máximo 2 a 3 oraciones cortas (menos de 45 palabras en total). Debe sonar fluido al leerse en voz alta con ElevenLabs.
+2. Tono: Conciso, amable y resolutivo. No uses viñetas ni asteriscos de markdown, habla con naturalidad.
+3. Conocimiento técnico de Búnker POS:
+   - Impresoras térmicas / VBS / BunkerTray: Si no imprimen tickets, indica verificar si el servidor local de impresión (el script VBS o BunkerTray.ps1) está activo en la bandeja del sistema de Windows con el ícono verde, o verificar la IP en la red local. Si se ejecutó Auto Recovery, confirma que se está buscando la MAC y refrescando la IP.
+   - Descuadre de caja / Arqueo: Aconseja abrir el módulo de Caja, revisar ventas en efectivo versus transferencias (Yape, Plin), verificar si hubo comandas anuladas en el turno o contrastar contra el fondo de apertura.
+   - Comanderas y Tablets: Sugiere revisar la conexión WiFi del salón y asegurar que estén en la misma red local del servidor.
+   - Si el usuario dice que todo está bien o agradece: Despídete cordialmente deseándole un excelente turno.
+4. Intento actual: ${attempt} de 3.
+${isLastAttempt ? 'CRÍTICO: Este es el intento número 3 y el límite fue alcanzado sin solución. Debes indicar calmadamente que para no retrasar la operación del restaurante, estás transfiriendo de inmediato la llamada con nuestro asesor de soporte técnico humano en WhatsApp.' : 'Si el usuario parece frustrado o la falla persiste, ofrece una comprobación rápida.'}`;
+
+        const messages = [
+            { role: 'system', content: systemPrompt },
+            ...history.slice(-4),
+            { role: 'user', content: message }
+        ];
+
+        const groqRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+            model: 'qwen/qwen3.8-27b',
+            messages,
+            max_tokens: 120,
+            temperature: 0.6
+        }, {
+            headers: {
+                'Authorization': `Bearer ${GROQ_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 8000
+        });
+
+        const reply = groqRes.data.choices[0].message.content.trim();
+        const shouldEscalate = isLastAttempt || lower.includes("humano") || lower.includes("asesor") || lower.includes("persona");
+
+        res.json({
+            reply,
+            shouldEscalate,
+            actionTriggered,
+            attempt
+        });
+    } catch (err) {
+        console.error("Error en /api/voice/chat:", err.response ? err.response.data : err.message);
+        res.status(500).json({
+            error: "Error procesando con Groq",
+            reply: "He tenido un microcorte de comunicación con el servidor central de Búnker. Por favor, repíteme tu consulta.",
+            shouldEscalate: false
+        });
+    }
+});
+
+app.post('/api/voice/speak', async (req, res) => {
+    try {
+        const { text, voiceId } = req.body;
+        const ELEVEN_KEY = process.env.ELEVENLABS_API_KEY;
+        const TARGET_VOICE = voiceId || process.env.ELEVENLABS_VOICE_ID || 'EXAVITQu4vr4xnSDxMaL';
+
+        if (!ELEVEN_KEY || !text) {
+            return res.status(400).json({ fallback: true, error: "Datos insuficientes o API key no configurada." });
+        }
+
+        const elevenRes = await axios.post(
+            `https://api.elevenlabs.io/v1/text-to-speech/${TARGET_VOICE}`,
+            {
+                text: text,
+                model_id: "eleven_multilingual_v2",
+                voice_settings: {
+                    stability: 0.5,
+                    similarity_boost: 0.8
+                }
+            },
+            {
+                headers: {
+                    'xi-api-key': ELEVEN_KEY,
+                    'Content-Type': 'application/json'
+                },
+                responseType: 'arraybuffer',
+                timeout: 10000
+            }
+        );
+
+        res.set({
+            'Content-Type': 'audio/mpeg',
+            'Content-Length': elevenRes.data.length
+        });
+        res.send(Buffer.from(elevenRes.data));
+    } catch (err) {
+        console.warn("[VoiceAI] ElevenLabs TTS falló o excedió cuota, activando fallback nativo:", err.response ? err.response.data : err.message);
+        res.status(200).json({ fallback: true });
+    }
+});
+
+
 // --- SERVER START & BOOT CLEANUP ---
 const runBootCleanup = async () => {
     try {
