@@ -59,7 +59,7 @@ export const ImportReportModal = ({
             type="button"
             onClick={onClose}
             aria-label="Cerrar ventana"
-            className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0"
+            className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 border-0 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -172,7 +172,7 @@ export const ImportReportModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 text-xs font-bold rounded-full bg-[#F26522] hover:bg-[#DC5616] text-white shadow-md transition-colors cursor-pointer"
+            className="px-6 py-2 text-xs font-bold rounded-full bg-[#F26522] hover:bg-[#DC5616] border-0 text-white shadow-md transition-colors cursor-pointer"
           >
             Entendido
           </button>
