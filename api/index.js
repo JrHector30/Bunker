@@ -5778,6 +5778,44 @@ app.post('/api/voice/chat', async (req, res) => {
             }
         }
 
+        
+        // 3. GENERACIÓN REAL DE TICKET DE PRUEBA FÍSICO
+        const isPrintTest = lower.includes("ticket") || lower.includes("prueba") || lower.includes("imprime") || lower.includes("repara");
+        if (isPrintTest) {
+            try {
+                const formattedDate = new Date().toLocaleString('es-PE');
+                const testTicketText = 
+`================================
+     BUNKER AUTO RECOVERY
+   TICKET DE PRUEBA FISICA
+================================
+Estacion: ${targetEstacion}
+Fecha: ${formattedDate}
+Diagnostico: HARDWARE OPERACIONAL
+Estado: Enlace de Red Verificado
+Accion: Impresion de Prueba Exitosa
+================================
+  Bunker POS - Soporte Activo
+================================\n\n\n`;
+
+                await prisma.ticketPendiente.create({
+                    data: {
+                        mesa_id: 'PRUEBA',
+                        mozo: 'Búnker Voice AI',
+                        contenido: testTicketText,
+                        impreso: false,
+                        estacion: 'Caja', // Enviar a Caja donde está la impresora USB activa
+                        restauranteId: tenantId
+                    }
+                });
+                actionTriggered = 'print_test_sent';
+                realDiagnosticContext += `\n[ACCIÓN FÍSICA EJECUTADA]: Acabas de enviar un ticket de prueba físico a la impresora térmica de comandas. Dile al cliente con entusiasmo que el ticket de prueba ya fue emitido y enviado a la impresora para que lo revise físicamente.`;
+                console.log("✅ [VoiceAI] Ticket de prueba físico insertado en TicketPendiente para impresión real!");
+            } catch (ticketErr) {
+                console.warn("[VoiceAI] Error al crear ticket físico:", ticketErr.message);
+            }
+        }
+
         const isLastAttempt = attempt >= 3;
         const systemPrompt = `Eres el Agente Inteligente de Autodiagnóstico y Autoreparación de Búnker POS.
 Tu función principal es DIAGNOSTICAR y REPARAR los problemas del restaurante por ti mismo en tiempo real, para que los clientes no tengan que depender de un asesor físico.

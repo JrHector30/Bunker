@@ -54,6 +54,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
   const [isMuted, setIsMuted] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isWaitingForAi, setIsWaitingForAi] = useState(false);
   const [aiText, setAiText] = useState('');
   const [userTranscript, setUserTranscript] = useState('');
   const [attempts, setAttempts] = useState(0);
@@ -82,6 +83,16 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
   const recognitionRef = useRef(null);
   const isCallActiveRef = useRef(false);
   const currentAudioRef = useRef(null);
+  const isAiSpeakingRef = useRef(false);
+  const isWaitingForAiRef = useRef(false);
+
+  useEffect(() => {
+    isAiSpeakingRef.current = isAiSpeaking;
+  }, [isAiSpeaking]);
+
+  useEffect(() => {
+    isWaitingForAiRef.current = isWaitingForAi;
+  }, [isWaitingForAi]);
 
   useEffect(() => {
     localStorage.setItem('bunker_ai_quota', quota.toString());
@@ -260,17 +271,24 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
       rec.onerror = (event) => {
         console.warn("STT error:", event.error);
         setIsListening(false);
-        if (event.error === 'no-speech' && isCallActiveRef.current && !isMuted) {
+        if (isCallActiveRef.current && !isMuted && !isAiSpeakingRef.current && !isWaitingForAiRef.current) {
           setTimeout(() => {
-            if (isCallActiveRef.current && !isMuted) {
+            if (isCallActiveRef.current && !isMuted && !isAiSpeakingRef.current && !isWaitingForAiRef.current) {
               listen();
             }
-          }, 400);
+          }, 350);
         }
       };
 
       rec.onend = () => {
         setIsListening(false);
+        if (isCallActiveRef.current && !isMuted && !isAiSpeakingRef.current && !isWaitingForAiRef.current) {
+          setTimeout(() => {
+            if (isCallActiveRef.current && !isMuted && !isAiSpeakingRef.current && !isWaitingForAiRef.current) {
+              listen();
+            }
+          }, 250);
+        }
       };
 
       recognitionRef.current = rec;
@@ -344,6 +362,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
     const updatedHistory = [...conversationHistory, { role: 'user', content: text }];
     setConversationHistory(updatedHistory);
     setAiText("Ejecutando autodiagnóstico en el servidor de Búnker...");
+    setIsWaitingForAi(true);
 
     try {
       const res = await fetch('/api/voice/chat', {
@@ -367,12 +386,19 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
         throw new Error("El servidor no devolvió respuesta de diagnóstico válida.");
       }
       const reply = data.reply;
+      setIsWaitingForAi(false);
       setAiText(reply);
 
       setConversationHistory(prev => [...prev, { role: 'assistant', content: reply }]);
 
       // Real Feedback Alerts based on System Action
-      if (data.actionTriggered === 'station_offline') {
+      if (data.actionTriggered === 'print_test_sent') {
+        setDiagnosticAlert({
+          type: 'success',
+          title: 'Ticket Físico Emitido',
+          message: 'Se envió la orden de impresión de prueba a tu impresora térmica.'
+        });
+      } else if (data.actionTriggered === 'station_offline') {
         setDiagnosticAlert({
           type: 'warning',
           title: 'Servidor Cocina Apagado',
@@ -427,6 +453,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
       });
     } catch (err) {
       console.error("Error al procesar diagnóstico:", err);
+      setIsWaitingForAi(false);
       const fallbackMsg = "El servidor local no está respondiendo. Por favor, asegúrate de reiniciar 'node api/index.js' en la terminal.";
       setAiText(fallbackMsg);
       if (onShowNotification) onShowNotification("Error de conexión: reinicia 'node api/index.js' en la terminal", "error");
@@ -659,7 +686,13 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
                 <span className={`text-[10px] font-semibold tracking-wide transition-colors ${
                   isAiSpeaking ? 'text-purple-300 font-bold' : isListening ? 'text-emerald-400 font-bold' : 'text-zinc-400'
                 }`}>
-                  {isAiSpeaking ? `${AVAILABLE_VOICES.find(v => v.id === selectedVoiceIdRef.current)?.name} hablando...` : isListening ? 'Escuchando tu voz...' : 'Diagnosticando con Groq...'}
+                  {isAiSpeaking 
+                  ? `${AVAILABLE_VOICES.find(v => v.id === selectedVoiceIdRef.current)?.name || 'Búnker'} hablando...` 
+                  : isWaitingForAi
+                    ? 'Diagnosticando con Groq...'
+                    : isListening 
+                      ? '🎤 Te escucho, habla ahora...' 
+                      : '🎤 Te escucho, habla ahora...'}
                 </span>
               </div>
             </div>

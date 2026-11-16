@@ -4,8 +4,6 @@ import { Renderer, Program, Mesh, Triangle, Vec3 } from "ogl";
 export const VoicePoweredOrb = ({
   className = "",
   hue = 0,
-  enableVoiceControl = true,
-  voiceSensitivity = 1.5,
   maxRotationSpeed = 1.2,
   maxHoverIntensity = 0.8,
   isAiSpeaking = false,
@@ -13,11 +11,6 @@ export const VoicePoweredOrb = ({
   onVoiceDetected,
 }) => {
   const ctnDom = useRef(null);
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const microphoneRef = useRef(null);
-  const dataArrayRef = useRef(null);
-  const mediaStreamRef = useRef(null);
 
   const vert = /* glsl */ `
     precision highp float;
@@ -178,85 +171,6 @@ export const VoicePoweredOrb = ({
     }
   `;
 
-  // Voice analysis function
-  const analyzeAudio = () => {
-    if (!analyserRef.current || !dataArrayRef.current) return 0;
-    try {
-      analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-      let sum = 0;
-      for (let i = 0; i < dataArrayRef.current.length; i++) {
-        const value = dataArrayRef.current[i] / 255;
-        sum += value * value;
-      }
-      const rms = Math.sqrt(sum / dataArrayRef.current.length);
-      return Math.min(rms * voiceSensitivity * 3.0, 1);
-    } catch {
-      return 0;
-    }
-  };
-
-  const stopMicrophone = () => {
-    try {
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-        mediaStreamRef.current = null;
-      }
-      if (microphoneRef.current) {
-        microphoneRef.current.disconnect();
-        microphoneRef.current = null;
-      }
-      if (analyserRef.current) {
-        analyserRef.current.disconnect();
-        analyserRef.current = null;
-      }
-      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-      dataArrayRef.current = null;
-    } catch (error) {
-      console.warn("Error stopping microphone:", error);
-    }
-  };
-
-  const initMicrophone = async () => {
-    try {
-      stopMicrophone();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-          sampleRate: 44100,
-        },
-      });
-
-      mediaStreamRef.current = stream;
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return false;
-      audioContextRef.current = new AudioCtx();
-
-      if (audioContextRef.current.state === "suspended") {
-        await audioContextRef.current.resume();
-      }
-
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      microphoneRef.current = audioContextRef.current.createMediaStreamSource(stream);
-
-      analyserRef.current.fftSize = 512;
-      analyserRef.current.smoothingTimeConstant = 0.3;
-      analyserRef.current.minDecibels = -90;
-      analyserRef.current.maxDecibels = -10;
-
-      microphoneRef.current.connect(analyserRef.current);
-      dataArrayRef.current = new Uint8Array(analyserRef.current.frequencyBinCount);
-      return true;
-    } catch (error) {
-      console.warn("Microphone access not available for Orb:", error);
-      return false;
-    }
-  };
-
   useEffect(() => {
     const container = ctnDom.current;
     if (!container) return;
@@ -331,16 +245,6 @@ export const VoicePoweredOrb = ({
       let lastTime = 0;
       let currentRot = 0;
       const baseRotationSpeed = 0.3;
-      let isMicrophoneInitialized = false;
-
-      if (enableVoiceControl) {
-        initMicrophone().then((success) => {
-          isMicrophoneInitialized = success;
-        });
-      } else {
-        stopMicrophone();
-        isMicrophoneInitialized = false;
-      }
 
       const update = (t) => {
         rafId = requestAnimationFrame(update);
@@ -359,10 +263,11 @@ export const VoicePoweredOrb = ({
           const w2 = Math.sin(t * 0.017 + 1.2) * 0.5 + 0.5;
           const w3 = Math.sin(t * 0.027 + 2.5) * 0.5 + 0.5;
           const cadence = w1 * 0.45 + w2 * 0.35 + w3 * 0.2;
-          level = 0.35 + cadence * 0.65; // High responsiveness (0.35 - 1.0)
-        } else if (enableVoiceControl && isMicrophoneInitialized && isListening) {
-          // 2. User speaking into mic
-          level = analyzeAudio();
+          level = 0.4 + cadence * 0.6; // High responsiveness (0.4 - 1.0)
+        } else if (isListening) {
+          // 2. Active listening pulse (so user sees orb active while listening)
+          const l1 = Math.sin(t * 0.006) * 0.5 + 0.5;
+          level = 0.25 + l1 * 0.35;
         } else {
           // 3. Gentle idle breathing
           level = 0.08 + (Math.sin(t * 0.002) * 0.5 + 0.5) * 0.07;
@@ -402,7 +307,6 @@ export const VoicePoweredOrb = ({
             console.warn("Canvas cleanup:", e);
           }
         }
-        stopMicrophone();
         if (glContext) {
           glContext.getExtension("WEBGL_lose_context")?.loseContext();
         }
@@ -415,8 +319,6 @@ export const VoicePoweredOrb = ({
     }
   }, [
     hue,
-    enableVoiceControl,
-    voiceSensitivity,
     maxRotationSpeed,
     maxHoverIntensity,
     isAiSpeaking,
