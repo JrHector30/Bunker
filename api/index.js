@@ -118,10 +118,8 @@ app.get('/api/impresoras', async (req, res) => {
         });
         const winPrinters = config ? JSON.parse(config.valor) : [];
         
-        // FILTRADO ESTRICTO: Solo impresoras físicas que estén REALMENTE CONECTADAS / EN LÍNEA
-        // No mostrar dispositivos apagados/desconectados ni mantener historiales viejos
+        // Mapear impresoras físicas de Windows con su estado real de conexión (ONLINE / OFFLINE)
         const winPrintersMapped = winPrinters
-            .filter(p => !p.offline) // Solo las que están conectadas físicamente ahora mismo
             .filter(p => !p.name.match(/pdf|xps|onenote|fax|root|microsoft|nitro/i))
             .map(p => ({
                 id: `usb_${p.name}`,
@@ -131,7 +129,9 @@ app.get('/api/impresoras', async (req, res) => {
                 transport: 'USB',
                 mac: null,
                 ultimaIp: null,
-                ultimoEstado: 'ONLINE',
+                ultimoEstado: p.offline ? 'OFFLINE' : 'ONLINE',
+                offline: !!p.offline,
+                port: p.port,
                 ultimaRespuestaMs: 0
             }));
 

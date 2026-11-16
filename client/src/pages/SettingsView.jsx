@@ -432,9 +432,21 @@ export default function SettingsView() {
         body: JSON.stringify({ estacion: station, restauranteId: tenantId }),
       }).catch(() => null);
 
+      // Esperar activamente a que el servidor local de impresión procese el escaneo (máx 6s)
+      for (let i = 0; i < 6; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const stRes = await fetch(`/api/impresoras/estado-solicitud?estacion=${station}`, {
+          headers: { 'x-restaurante-id': String(tenantId) }
+        }).catch(() => null);
+        if (stRes && stRes.ok) {
+          const stData = await stRes.json();
+          if (!stData.solicitando) break;
+        }
+      }
+
       await loadHardwareData(station);
       setEthRepairing(false);
-      showToast(`Estación ${station}: escaneo completado. Dispositivos listos.`, 'success');
+      showToast(`Estación ${station}: escaneo completado en tiempo real.`, 'success');
     } catch (err) {
       showToast(`Error al actualizar impresoras: ${err.message}`, 'error');
     } finally {
@@ -895,69 +907,88 @@ export default function SettingsView() {
                   <Usb className="w-3.5 h-3.5 text-slate-500" />
                   Impresoras USB
                 </span>
-                <span className="text-[11px] text-slate-400">1 disp.</span>
+                <span className="text-[11px] text-slate-400">
+                  {printers.filter(p => p.transport === 'USB').length} disp.
+                </span>
               </div>
 
-              <div className="rounded-xl bg-white dark:bg-slate-900 border border-emerald-400/80 dark:border-emerald-500/80 p-3 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                      80mm Series Printer
-                    </p>
-                    <p className="text-[10px] font-semibold uppercase text-slate-400">
-                      USB Windows
-                    </p>
-                  </div>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                    CONECTADA
-                  </span>
-                </div>
+              {printers.filter(p => p.transport === 'USB').length > 0 ? (
+                printers.filter(p => p.transport === 'USB').map(usbP => {
+                  const isOnline = usbP.ultimoEstado === 'ONLINE' && !usbP.offline;
+                  return (
+                    <div key={usbP.id} className={`rounded-xl bg-white dark:bg-slate-900 border p-3 space-y-3 transition-colors ${
+                      isOnline ? 'border-emerald-400/80 dark:border-emerald-500/80' : 'border-rose-300 dark:border-rose-900/60'
+                    }`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            {usbP.nombre}
+                          </p>
+                          <p className="text-[10px] font-semibold uppercase text-slate-400">
+                            USB Windows {usbP.port ? `(${usbP.port})` : ''}
+                          </p>
+                        </div>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-white text-[10px] font-bold shrink-0 ${
+                          isOnline ? 'bg-emerald-500' : 'bg-rose-500'
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                          {isOnline ? 'CONECTADA' : 'DESCONECTADA'}
+                        </span>
+                      </div>
 
-                <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <div>
-                    <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
-                      Ancho de impresión:
-                    </span>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {['80mm', '58mm', '50mm'].map((w) => (
-                        <button
-                          key={w}
-                          type="button"
-                          onClick={() => handleSaveUsbWidth(w)}
-                          className={`min-h-[34px] rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${usbWidth === w
-                            ? 'bg-[#F26522] border-[#F26522] text-white'
-                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                            }`}
-                        >
-                          {w}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                      <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <div>
+                          <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+                            Ancho de impresión:
+                          </span>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {['80mm', '58mm', '50mm'].map((w) => (
+                              <button
+                                key={w}
+                                type="button"
+                                onClick={() => handleSaveUsbWidth(w)}
+                                className={`min-h-[34px] rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${usbWidth === w
+                                  ? 'bg-[#F26522] border-[#F26522] text-white'
+                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                                  }`}
+                              >
+                                {w}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
 
-                  <div>
-                    <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
-                      Perfil de Hardware:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['Genérico', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((hw) => (
-                        <button
-                          key={hw}
-                          type="button"
-                          onClick={() => handleSaveUsbProfile(hw)}
-                          className={`min-h-[32px] px-2.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${usbHardware === hw
-                            ? 'bg-[#F26522] border-[#F26522] text-white'
-                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                            }`}
-                        >
-                          {hw}
-                        </button>
-                      ))}
+                        <div>
+                          <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+                            Perfil de Hardware:
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['Genérico', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((hw) => (
+                              <button
+                                key={hw}
+                                type="button"
+                                onClick={() => handleSaveUsbProfile(hw)}
+                                className={`min-h-[32px] px-2.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${usbHardware === hw
+                                  ? 'bg-[#F26522] border-[#F26522] text-white'
+                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                                  }`}
+                              >
+                                {hw}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  );
+                })
+              ) : (
+                <div className="rounded-xl bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-700 p-4 text-center">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    No se detectaron impresoras USB conectadas a esta estación.
+                  </p>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="rounded-xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700 p-3 space-y-2.5">
@@ -1510,71 +1541,88 @@ export default function SettingsView() {
                   Impresoras USB (Windows)
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  {printers.length > 0 ? `${printers.length} dispositivo(s)` : '1 dispositivo(s)'}
+                  {printers.filter(p => p.transport === 'USB').length} dispositivo(s)
                 </span>
               </div>
 
-              <div className="rounded-xl bg-white dark:bg-slate-900 border border-emerald-400/80 dark:border-emerald-500/60 p-3.5 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Printer className="w-4 h-4 text-[#F26522]" />
-                    <span className="text-xs font-bold text-slate-900 dark:text-white">
-                      {printers[0]?.nombre || '80mm Series Printer'}
-                    </span>
-                    <span className="text-[10px] font-semibold uppercase text-slate-400">
-                      USB
-                    </span>
-                  </div>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10.5px] font-bold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                    CONECTADA
-                  </span>
-                </div>
+              {printers.filter(p => p.transport === 'USB').length > 0 ? (
+                printers.filter(p => p.transport === 'USB').map(usbP => {
+                  const isOnline = usbP.ultimoEstado === 'ONLINE' && !usbP.offline;
+                  return (
+                    <div key={usbP.id} className={`rounded-xl bg-white dark:bg-slate-900 border p-3.5 space-y-3 transition-colors ${
+                      isOnline ? 'border-emerald-400/80 dark:border-emerald-500/60' : 'border-rose-300 dark:border-rose-900/60'
+                    }`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Printer className={`w-4 h-4 ${isOnline ? 'text-[#F26522]' : 'text-slate-400'}`} />
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">
+                            {usbP.nombre}
+                          </span>
+                          <span className="text-[10px] font-semibold uppercase text-slate-400">
+                            USB {usbP.port ? `(${usbP.port})` : ''}
+                          </span>
+                        </div>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-white text-[10.5px] font-bold ${
+                          isOnline ? 'bg-emerald-500' : 'bg-rose-500'
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                          {isOnline ? 'CONECTADA' : 'DESCONECTADA'}
+                        </span>
+                      </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <div>
-                    <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
-                      Ancho de impresión:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['80mm', '58mm', '50mm'].map((w) => (
-                        <button
-                          key={w}
-                          type="button"
-                          onClick={() => handleSaveUsbWidth(w)}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-bold border cursor-pointer transition-colors ${usbWidth === w
-                            ? 'bg-[#F26522] border-[#F26522] text-white'
-                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                            }`}
-                        >
-                          {w}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <div>
+                          <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+                            Ancho de impresión:
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['80mm', '58mm', '50mm'].map((w) => (
+                              <button
+                                key={w}
+                                type="button"
+                                onClick={() => handleSaveUsbWidth(w)}
+                                className={`px-2.5 py-1 rounded-md text-[11px] font-bold border cursor-pointer transition-colors ${usbWidth === w
+                                  ? 'bg-[#F26522] border-[#F26522] text-white'
+                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                  }`}
+                              >
+                                {w}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
 
-                  <div>
-                    <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
-                      Perfil de Hardware:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['Genérico', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((hw) => (
-                        <button
-                          key={hw}
-                          type="button"
-                          onClick={() => handleSaveUsbProfile(hw)}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-bold border cursor-pointer transition-colors ${usbHardware === hw
-                            ? 'bg-[#F26522] border-[#F26522] text-white'
-                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                            }`}
-                        >
-                          {hw}
-                        </button>
-                      ))}
+                        <div>
+                          <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+                            Perfil de Hardware:
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['Genérico', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((hw) => (
+                              <button
+                                key={hw}
+                                type="button"
+                                onClick={() => handleSaveUsbProfile(hw)}
+                                className={`px-2.5 py-1 rounded-md text-[11px] font-bold border cursor-pointer transition-colors ${usbHardware === hw
+                                  ? 'bg-[#F26522] border-[#F26522] text-white'
+                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                  }`}
+                              >
+                                {hw}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  );
+                })
+              ) : (
+                <div className="rounded-xl bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-700 p-4 text-center">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    No se detectaron impresoras USB conectadas a esta estación.
+                  </p>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Impresoras Ethernet */}
