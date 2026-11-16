@@ -140,7 +140,8 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
         currentAudioRef.current = audio;
-        setVoiceEngine('ElevenLabs HD');
+        const vName = AVAILABLE_VOICES.find(v => v.id === selectedVoiceId)?.name || 'ElevenLabs';
+        setVoiceEngine(`ElevenLabs HD (${vName})`);
 
         audio.onended = () => {
           setIsAiSpeaking(false);
@@ -342,8 +343,16 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
         })
       });
 
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `Error HTTP ${res.status} del servidor`);
+      }
+
       const data = await res.json();
-      const reply = data.reply || "He procesado tu consulta.";
+      if (!data || !data.reply) {
+        throw new Error("El servidor no devolvió respuesta de diagnóstico válida.");
+      }
+      const reply = data.reply;
       setAiText(reply);
 
       setConversationHistory(prev => [...prev, { role: 'assistant', content: reply }]);
@@ -403,12 +412,12 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
         }
       });
     } catch (err) {
-      console.error("Error al procesar con Groq:", err);
-      const fallbackMsg = "Ocurrió una intermitencia con el servidor. ¿Podrías repetirme el problema?";
+      console.error("Error al procesar diagnóstico:", err);
+      const fallbackMsg = "El servidor local no está respondiendo. Por favor, asegúrate de reiniciar 'node api/index.js' en la terminal.";
       setAiText(fallbackMsg);
-      speak(fallbackMsg, () => {
-        if (isCallActiveRef.current) listen();
-      });
+      if (onShowNotification) onShowNotification("Error de conexión: reinicia 'node api/index.js' en la terminal", "error");
+      setIsListening(false);
+      setIsAiSpeaking(false);
     }
   };
 
