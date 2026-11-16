@@ -5722,7 +5722,7 @@ app.post('/api/voice/chat', async (req, res) => {
                     realDiagnosticContext += `\n[DIAGNÓSTICO EN TIEMPO REAL DEL SISTEMA]:
 - Estación diagnosticada: ${targetEstacion}.
 - Estado del servidor: APAGADO / DESCONECTADO (sin señal de latido).
-- Solución exacta para el cliente: Debe ir a la computadora de ${targetEstacion} y abrir el acceso directo del escritorio llamado "INICIAR_BUNKER_POS" (o el archivo con ese nombre).
+- Solución exacta para el cliente: Debe ir a la computadora de ${targetEstacion} y abrir el acceso directo del escritorio llamado el acceso directo "INICIAR_BUNKER_POS" (sin mencionar extensiones como .vbs ni .bat).
 - Regla: NUNCA menciones términos como "vbs", "bunkertray", "scripts" ni "código". Habla como un soporte de servicio al cliente muy amable, indicándole directamente el nombre del archivo "INICIAR_BUNKER_POS" que debe abrir.`;
                 } else {
                     // El servidor sí está encendido -> Disparar Auto Recovery en caliente

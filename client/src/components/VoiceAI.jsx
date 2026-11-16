@@ -40,8 +40,14 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
 
   // Voice selection
   const [selectedVoiceId, setSelectedVoiceId] = useState(() => {
-    return localStorage.getItem('bunker_ai_voice_id') || 'hpp4J3VqNfWAUOO0d1Us'; // Default to Bella!
+    return localStorage.getItem('bunker_ai_voice_id') || 'hpp4J3VqNfWAUOO0d1Us';
   });
+
+  const selectedVoiceIdRef = useRef(selectedVoiceId);
+  useEffect(() => {
+    selectedVoiceIdRef.current = selectedVoiceId;
+    localStorage.setItem('bunker_ai_voice_id', selectedVoiceId);
+  }, [selectedVoiceId]);
 
   // Call status states
   const [isCallActive, setIsCallActive] = useState(false);
@@ -131,7 +137,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
       const res = await fetch('/api/voice/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voiceId: selectedVoiceId })
+        body: JSON.stringify({ text, voiceId: selectedVoiceIdRef.current })
       });
 
       const contentType = res.headers.get('content-type') || '';
@@ -140,7 +146,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
         currentAudioRef.current = audio;
-        const vName = AVAILABLE_VOICES.find(v => v.id === selectedVoiceId)?.name || 'ElevenLabs';
+        const vName = AVAILABLE_VOICES.find(v => v.id === selectedVoiceIdRef.current)?.name || 'ElevenLabs';
         setVoiceEngine(`ElevenLabs HD (${vName})`);
 
         audio.onended = () => {
@@ -204,64 +210,74 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
     window.speechSynthesis.speak(utterance);
   };
 
-  // Speech-To-Text (STT) Recognition
-  const initSpeechRecognition = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return null;
-
-    const rec = new SpeechRecognition();
-    rec.lang = 'es-PE';
-    rec.interimResults = false;
-    rec.maxAlternatives = 1;
-    rec.continuous = false;
-
-    rec.onstart = () => {
-      setIsListening(true);
-    };
-
-    rec.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setUserTranscript(transcript);
-      processVoiceCommand(transcript);
-    };
-
-    rec.onerror = (event) => {
-      console.warn("STT error:", event.error);
-      setIsListening(false);
-      if (event.error === 'no-speech' && isCallActiveRef.current && !isMuted) {
-        setTimeout(() => listen(), 1000);
+  // Speech-To-Text (STT) Recognition with fresh instance each cycle
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.abort();
+      } catch (e) {
+        // ignore
       }
-    };
-
-    rec.onend = () => {
-      setIsListening(false);
-    };
-
-    return rec;
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
   };
 
   const listen = () => {
     if (!isCallActiveRef.current || isMuted) return;
 
-    if (!recognitionRef.current) {
-      recognitionRef.current = initSpeechRecognition();
+    stopListening();
+
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      if (onShowNotification) onShowNotification("Reconocimiento de voz no disponible en este navegador.");
+      return;
     }
 
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-        setTimeout(() => {
-          if (isCallActiveRef.current && !isMuted) {
-            recognitionRef.current.start();
-          }
-        }, 200);
-      } catch (e) {
-        console.warn("Recognition start error:", e);
-      }
-    } else {
-      if (onShowNotification) {
-        onShowNotification("El reconocimiento de voz no está disponible en este navegador. Use los botones de prueba.");
-      }
+    try {
+      const rec = new SpeechRec();
+      rec.lang = 'es-PE';
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      rec.continuous = false;
+
+      rec.onstart = () => {
+        setIsListening(true);
+      };
+
+      rec.onresult = (event) => {
+        const transcript = event.results?.[0]?.[0]?.transcript;
+        if (transcript) {
+          setUserTranscript(transcript);
+          stopListening();
+          processVoiceCommand(transcript);
+        }
+      };
+
+      rec.onerror = (event) => {
+        console.warn("STT error:", event.error);
+        setIsListening(false);
+        if (event.error === 'no-speech' && isCallActiveRef.current && !isMuted) {
+          setTimeout(() => {
+            if (isCallActiveRef.current && !isMuted) {
+              listen();
+            }
+          }, 400);
+        }
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+    } catch (err) {
+      console.warn("Error starting fresh recognition:", err);
+      setIsListening(false);
     }
   };
 
@@ -313,9 +329,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
-    if (recognitionRef.current) {
-      recognitionRef.current.abort();
-    }
+    stopListening();
     if (onShowNotification) onShowNotification("Llamada finalizada.");
   };
 
@@ -471,7 +485,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
                 Voz de Asistente IA
               </span>
               <span className="text-[9px] text-[var(--primary)] font-semibold">
-                {AVAILABLE_VOICES.find(v => v.id === selectedVoiceId)?.desc}
+                {AVAILABLE_VOICES.find(v => v.id === selectedVoiceIdRef.current)?.desc}
               </span>
             </div>
             <div className="grid grid-cols-4 gap-1.5">
@@ -645,7 +659,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
                 <span className={`text-[10px] font-semibold tracking-wide transition-colors ${
                   isAiSpeaking ? 'text-purple-300 font-bold' : isListening ? 'text-emerald-400 font-bold' : 'text-zinc-400'
                 }`}>
-                  {isAiSpeaking ? `${AVAILABLE_VOICES.find(v => v.id === selectedVoiceId)?.name} hablando...` : isListening ? 'Escuchando tu voz...' : 'Diagnosticando con Groq...'}
+                  {isAiSpeaking ? `${AVAILABLE_VOICES.find(v => v.id === selectedVoiceIdRef.current)?.name} hablando...` : isListening ? 'Escuchando tu voz...' : 'Diagnosticando con Groq...'}
                 </span>
               </div>
             </div>
