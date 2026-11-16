@@ -36,6 +36,8 @@ import { InsumoDetailsModal } from './InsumoDetailsModal';
 import { ImportReportModal } from './ImportReportModal';
 import { AlmacenesModal } from './AlmacenesModal';
 import { MoveAlmacenModal } from './MoveAlmacenModal';
+import { ImportInventoryTraceModal } from './ImportInventoryTraceModal';
+import { analyzeInventoryExcelFile } from '../../utils/inventoryExcel';
 import { areNamesMatching } from '../../utils/textMatching';
 import { getActiveRestaurant } from '../../utils/tenant';
 
@@ -163,6 +165,7 @@ export default function InsumosManagement({
   const [editingInsumo, setEditingInsumo] = useState(null);
   const [detailsInsumo, setDetailsInsumo] = useState(null);
   const [importReport, setImportReport] = useState(null);
+  const [importAnalysis, setImportAnalysis] = useState(null);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [insumoToDelete, setInsumoToDelete] = useState(null);
   const importInputRef = useRef(null);
@@ -456,205 +459,101 @@ export default function InsumosManagement({
     if (showToast) showToast('Plantilla Excel descargada.', 'success');
   };
 
-  // Importar Excel con validación estricta y descarte de duplicados
-  const handleImportExcel = (e) => {
+  // Importar Excel con análisis previo y modal de trazabilidad
+  const handleImportExcel = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const bstr = evt.target.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const rows = XLSX.utils.sheet_to_json(ws);
+    try {
+      const analysis = await analyzeInventoryExcelFile(file, almacenes, enrichedInsumos);
+      setImportAnalysis(analysis);
+    } catch (err) {
+      console.error('Error al analizar archivo Excel:', err);
+      showToast?.('Error al leer el archivo Excel seleccionado.', 'error');
+    }
+  };
 
-        if (!rows || rows.length === 0) {
-          if (showToast) showToast('El archivo Excel no contiene filas válidas.', 'error');
-          return;
+  // Confirmar e importar filas válidas con persistencia a base de datos
+  const handleConfirmInventoryImport = async (validRows) => {
+    if (!validRows || validRows.length === 0) return;
+
+    // Registra automáticamente almacenes nuevos detectados en las filas válidas
+    setAlmacenes((prev) => {
+      const existingLower = new Set(prev.map((a) => a.trim().toLowerCase()));
+      const additions = [];
+      for (const row of validRows) {
+        const clean = (row.almacen || '').trim();
+        if (clean && !existingLower.has(clean.toLowerCase())) {
+          existingLower.add(clean.toLowerCase());
+          additions.push(clean);
         }
-
-        const tenantId = getActiveRestaurant()?.id || 1;
-        const agregados = [];
-        const duplicados = [];
-        const incompletos = [];
-        const processedNames = [...insumos.map((i) => i.nombre)];
-
-        for (let idx = 0; idx < rows.length; idx++) {
-          const row = rows[idx];
-          const rowNum = idx + 2; // Fila Excel considerando cabecera en fila 1
-
-          const rawNombre = row['Nombre'] || row['nombre'] || row['NOMBRE'];
-          const rawCantidad = row['Cantidad'] !== undefined ? row['Cantidad'] : (row['cantidad'] !== undefined ? row['cantidad'] : row['CANTIDAD']);
-
-          // 1. Validar campos obligatorios: Nombre y Cantidad (la cantidad puede ser 0 pero no vacía o inválida)
-          if (!rawNombre || String(rawNombre).trim() === '') {
-            incompletos.push({
-              fila: rowNum,
-              motivo: 'El campo "Nombre" es obligatorio y está vacío.'
-            });
-            continue;
-          }
-
-          if (rawCantidad === undefined || rawCantidad === null || String(rawCantidad).trim() === '') {
-            incompletos.push({
-              fila: rowNum,
-              motivo: `El campo "Cantidad" es obligatorio para "${String(rawNombre).trim()}".`
-            });
-            continue;
-          }
-
-          const parsedStock = Number(rawCantidad);
-          if (Number.isNaN(parsedStock) || parsedStock < 0) {
-            incompletos.push({
-              fila: rowNum,
-              motivo: `La "Cantidad" (${rawCantidad}) debe ser un número mayor o igual a 0.`
-            });
-            continue;
-          }
-
-          const trimmedNombre = String(rawNombre).trim();
-
-          // 2. Comprobar si ya existe en el sistema o en el lote actual palabra por palabra
-          const matchedExisting = processedNames.find((existingName) =>
-            areNamesMatching(trimmedNombre, existingName)
-          );
-
-          if (matchedExisting) {
-            duplicados.push({
-              fila: rowNum,
-              nombre: trimmedNombre,
-              coincideCon: matchedExisting
-            });
-            continue; // OMITIR duplicado de acuerdo al requerimiento
-          }
-
-          // 3. Validar Almacén existente en el sistema
-          const rawAlmacen = row['Almacén'] || row['Almacen'] || row['almacen'];
-          const trimmedAlmacen = rawAlmacen !== undefined && rawAlmacen !== null ? String(rawAlmacen).trim() : '';
-
-          let finalAlmacen = almacenes[0] || 'Congelador';
-          if (trimmedAlmacen) {
-            const matchedAlmacen = almacenes.find(
-              (a) => a.toLowerCase() === trimmedAlmacen.toLowerCase()
-            );
-            if (!matchedAlmacen) {
-              incompletos.push({
-                fila: rowNum,
-                motivo: `El almacén "${trimmedAlmacen}" no está creado y no existe en nuestro sistema por eso no se ha añadido. Debes crearlo previamente en Gestionar Almacenes.`
-              });
-              continue;
-            }
-            finalAlmacen = matchedAlmacen;
-          }
-
-          // 4. Validar Unidad de Medida
-          const rawUnidad = row['Unidad de Medida'] || row['Unidad'] || row['unidad'];
-          const trimmedUnidad = rawUnidad !== undefined && rawUnidad !== null ? String(rawUnidad).trim() : '';
-          const validUnits = ['kg', 'L', 'und', 'g'];
-          let finalUnidad = 'kg';
-          if (trimmedUnidad) {
-            if (!validUnits.includes(trimmedUnidad)) {
-              incompletos.push({
-                fila: rowNum,
-                motivo: `La unidad de medida "${trimmedUnidad}" no es reconocida por el sistema (debe ser kg, L, und o g).`
-              });
-              continue;
-            }
-            finalUnidad = trimmedUnidad;
-          }
-
-          const rawCosto = row['Costo Unitario'] || row['Costo'] || row['costo'] || row['Precio Compra'] || 0;
-          const precioCompra = Number(Number(rawCosto || 0).toFixed(2)) || 0;
-
-          const rawStockCritico = row['Stock Crítico'] !== undefined ? row['Stock Crítico'] : (row['Stock Critico'] !== undefined ? row['Stock Critico'] : row['stockCritico']);
-          let notificarAlerta = false;
-          let stockMinimo = 0;
-
-          if (
-            rawStockCritico !== undefined &&
-            rawStockCritico !== null &&
-            String(rawStockCritico).trim() !== '' &&
-            !Number.isNaN(Number(rawStockCritico)) &&
-            Number(rawStockCritico) >= 0
-          ) {
-            notificarAlerta = true;
-            stockMinimo = Number(Number(rawStockCritico).toFixed(2));
-          }
-
-          // 5. Registrar en base de datos
-          try {
-            const res = await fetch('/api/insumos', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-restaurante-id': String(tenantId)
-              },
-              body: JSON.stringify({
-                nombre: trimmedNombre,
-                stock: parsedStock,
-                unidadMedida: finalUnidad,
-                almacen: finalAlmacen,
-                precioCompra,
-                notificarAlerta,
-                stockMinimo
-              })
-            });
-
-            if (res.ok) {
-              agregados.push({
-                fila: rowNum,
-                nombre: trimmedNombre,
-                stock: parsedStock,
-                unidadMedida: finalUnidad
-              });
-              processedNames.push(trimmedNombre);
-            } else {
-              const errData = await res.json().catch(() => ({}));
-              let userFriendlyReason = errData.error || 'No se pudo guardar el insumo en el sistema.';
-              if (
-                userFriendlyReason.includes('prisma') ||
-                userFriendlyReason.includes('invocation') ||
-                userFriendlyReason.includes('Invocation') ||
-                userFriendlyReason.includes('Argument')
-              ) {
-                userFriendlyReason = 'Los datos del insumo contienen valores no reconocidos por el sistema.';
-              }
-              incompletos.push({
-                fila: rowNum,
-                motivo: userFriendlyReason
-              });
-            }
-          } catch (apiErr) {
-            incompletos.push({
-              fila: rowNum,
-              motivo: 'Fallo de red al conectar con el servidor'
-            });
-          }
-        }
-
-        setImportReport({
-          total: rows.length,
-          agregados,
-          duplicados,
-          incompletos
-        });
-
-        if (agregados.length > 0) {
-          showToast?.(`${agregados.length} insumos importados correctamente.`, 'success');
-          onRefresh?.();
-        } else if (duplicados.length > 0 || incompletos.length > 0) {
-          showToast?.('Se procesó el archivo con observaciones. Revisa el informe.', 'warning');
-        }
-      } catch (err) {
-        console.error('Error al importar Excel:', err);
-        showToast?.('Error al procesar el archivo Excel.', 'error');
-      } finally {
-        e.target.value = '';
       }
-    };
-    reader.readAsBinaryString(file);
+      if (additions.length > 0) {
+        const updated = [...prev, ...additions];
+        try {
+          localStorage.setItem('bunker_almacenes_list', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      }
+      return prev;
+    });
+
+    // Guardar en la base de datos backend
+    const tenantId = getActiveRestaurant()?.id || 1;
+    let savedCount = 0;
+    for (const row of validRows) {
+      try {
+        await fetch('/api/insumos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-restaurante-id': String(tenantId)
+          },
+          body: JSON.stringify({
+            nombre: row.nombre,
+            stock: row.cantidad,
+            unidadMedida: row.unidad,
+            almacen: row.almacen,
+            precioCompra: row.costoUnitario,
+            notificarAlerta: Boolean(row.alertaStockCritico),
+            stockMinimo: row.stockCriticoMin || 0
+          })
+        });
+        savedCount++;
+      } catch (err) {
+        console.error('Error al persistir fila importada:', row.nombre, err);
+      }
+    }
+
+    onRefresh?.();
+    showToast?.(
+      `${savedCount} ${savedCount === 1 ? 'insumo importado' : 'insumos importados'} correctamente.`,
+      'success'
+    );
+  };
+
+  // Cerrar modal de trazabilidad y pasar suavemente al reporte de observaciones si hubo errores
+  const handleCloseTraceModal = () => {
+    if (importAnalysis) {
+      const { duplicateErrors = [], missingFieldErrors = [], validRows = [], totalRows = 0 } = importAnalysis;
+      if (duplicateErrors.length > 0 || missingFieldErrors.length > 0) {
+        setImportReport({
+          total: totalRows,
+          agregados: validRows,
+          duplicados: duplicateErrors.map((d) => ({
+            fila: d.rowNumber,
+            nombre: d.nombre,
+            coincideCon: d.problem
+          })),
+          incompletos: missingFieldErrors.map((m) => ({
+            fila: m.rowNumber,
+            motivo: `${m.field}: ${m.problem}`
+          }))
+        });
+      }
+    }
+    setImportAnalysis(null);
   };
 
   // Borrar individual
@@ -1607,6 +1506,14 @@ export default function InsumosManagement({
         isOpen={Boolean(importReport)}
         report={importReport}
         onClose={() => setImportReport(null)}
+      />
+
+      {/* MODAL: Trazabilidad y Progreso de Importación Excel */}
+      <ImportInventoryTraceModal
+        isOpen={importAnalysis !== null}
+        analysis={importAnalysis}
+        onClose={handleCloseTraceModal}
+        onConfirmImport={handleConfirmInventoryImport}
       />
 
       {/* MODAL: Confirmación de Borrado Individual */}
