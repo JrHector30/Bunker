@@ -33,7 +33,6 @@ import CustomCheckbox from '../ui/CustomCheckbox';
 import ToggleSwitch from '../ui/ToggleSwitch';
 import { InsumoModal } from './InsumoModal';
 import { InsumoDetailsModal } from './InsumoDetailsModal';
-import { ImportReportModal } from './ImportReportModal';
 import { AlmacenesModal } from './AlmacenesModal';
 import { MoveAlmacenModal } from './MoveAlmacenModal';
 import { ImportInventoryTraceModal } from './ImportInventoryTraceModal';
@@ -164,7 +163,6 @@ export default function InsumosManagement({
   const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
   const [editingInsumo, setEditingInsumo] = useState(null);
   const [detailsInsumo, setDetailsInsumo] = useState(null);
-  const [importReport, setImportReport] = useState(null);
   const [importAnalysis, setImportAnalysis] = useState(null);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [insumoToDelete, setInsumoToDelete] = useState(null);
@@ -533,26 +531,8 @@ export default function InsumosManagement({
     );
   };
 
-  // Cerrar modal de trazabilidad y pasar suavemente al reporte de observaciones si hubo errores
+  // Cerrar modal de trazabilidad de importación
   const handleCloseTraceModal = () => {
-    if (importAnalysis) {
-      const { duplicateErrors = [], missingFieldErrors = [], validRows = [], totalRows = 0 } = importAnalysis;
-      if (duplicateErrors.length > 0 || missingFieldErrors.length > 0) {
-        setImportReport({
-          total: totalRows,
-          agregados: validRows,
-          duplicados: duplicateErrors.map((d) => ({
-            fila: d.rowNumber,
-            nombre: d.nombre,
-            coincideCon: d.problem
-          })),
-          incompletos: missingFieldErrors.map((m) => ({
-            fila: m.rowNumber,
-            motivo: `${m.field}: ${m.problem}`
-          }))
-        });
-      }
-    }
     setImportAnalysis(null);
   };
 
@@ -1499,13 +1479,6 @@ export default function InsumosManagement({
         isOpen={Boolean(detailsInsumo)}
         insumo={detailsInsumo}
         onClose={() => setDetailsInsumo(null)}
-      />
-
-      {/* MODAL: Reporte de Importación Excel */}
-      <ImportReportModal
-        isOpen={Boolean(importReport)}
-        report={importReport}
-        onClose={() => setImportReport(null)}
       />
 
       {/* MODAL: Trazabilidad y Progreso de Importación Excel */}
