@@ -1485,7 +1485,7 @@ const CashierView = () => {
               </div>
             </div>
             {/* Custom Responsive Table - Desktop (hidden lg:block) */}
-            <div className="hidden lg:block -translate-y-10 overflow-x-auto relative z-10">
+            <div className="hidden lg:block  overflow-x-auto relative z-10">
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
                   <tr className="text-xs font-bold uppercase tracking-widest" style={{ background: 'var(--primary)', color: '#ffffff', borderBottom: '1px solid var(--table-row-border)' }}>
@@ -1721,11 +1721,10 @@ const CashierView = () => {
                     <div
                       key={s.id}
                       onClick={() => setSelectedArqueoId(s.id)}
-                      className={`rounded-2xl border transition-all p-3.5 space-y-3 cursor-pointer ${
-                        isSelected
-                          ? 'bg-[var(--item-hover)] border-[var(--primary)] shadow-md'
-                          : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-sm'
-                      }`}
+                      className={`rounded-2xl border transition-all p-3.5 space-y-3 cursor-pointer ${isSelected
+                        ? 'bg-[var(--item-hover)] border-[var(--primary)] shadow-md'
+                        : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-sm'
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>

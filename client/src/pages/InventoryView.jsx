@@ -15,6 +15,7 @@ import DeleteButton from '../components/ui/DeleteButton';
 import EditButton from '../components/ui/EditButton';
 import CloseButton from '../components/ui/CloseButton';
 import { CustomCheckbox } from '../components/ui/CustomCheckbox';
+import ToggleSwitch from '../components/ui/ToggleSwitch';
 import { motion } from 'motion/react';
 import { safeRecordProductShadow } from '../offline';
 import RecetarioEscandallo from '../components/recetario/RecetarioEscandallo';
@@ -1311,7 +1312,14 @@ const InventoryView = () => {
                                 <div><label>Categoría</label><select className="glass-input" value={formData.categoriaId || (categories.length > 0 ? categories[0].id : '')} onChange={e => setFormData({ ...formData, categoriaId: Number(e.target.value) })} required>{categories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
                                 <div><label>Precio (S/.)</label><input type="number" step="0.01" className="glass-input" value={Number.isNaN(formData.precio) ? '' : formData.precio} onChange={e => setFormData({ ...formData, precio: e.target.valueAsNumber })} required /></div>
                             </div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}><input type="checkbox" checked={formData.activo} onChange={e => setFormData({ ...formData, activo: e.target.checked })} /> Producto Activo</label>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
+                                <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Producto Activo</span>
+                                <ToggleSwitch
+                                    checked={formData.activo}
+                                    onChange={() => setFormData(prev => ({ ...prev, activo: !prev.activo }))}
+                                    ariaLabel="Producto Activo"
+                                />
+                            </div>
                             <div className="modal-footer" style={{ border: 'none', padding: 0, marginTop: 10 }}>
                                 <button type="submit" className="glass-button primary" style={{ width: '100%' }}><Save size={18} /> Guardar Plato</button>
                             </div>
@@ -1372,10 +1380,15 @@ const InventoryView = () => {
                                     <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 5 }}>Nivel de escasez.</p>
                                 </div>
                             </div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: (!insumoForm.stockMinimo || String(insumoForm.stockMinimo).trim() === '') ? 'not-allowed' : 'pointer', padding: '10px 0', opacity: (!insumoForm.stockMinimo || String(insumoForm.stockMinimo).trim() === '') ? 0.5 : 1 }}>
-                                <input type="checkbox" checked={insumoForm.notificarAlerta} disabled={!insumoForm.stockMinimo || String(insumoForm.stockMinimo).trim() === ''} onChange={e => setInsumoForm({ ...insumoForm, notificarAlerta: e.target.checked })} style={{ width: 18, height: 18, accentColor: 'var(--primary)', cursor: 'inherit' }} />
-                                Activar Alerta de Escasez en Dashboard
-                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', opacity: (!insumoForm.stockMinimo || String(insumoForm.stockMinimo).trim() === '') ? 0.5 : 1 }}>
+                                <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Activar Alerta de Escasez en Dashboard</span>
+                                <ToggleSwitch
+                                    checked={Boolean(insumoForm.notificarAlerta)}
+                                    disabled={!insumoForm.stockMinimo || String(insumoForm.stockMinimo).trim() === ''}
+                                    onChange={() => setInsumoForm(prev => ({ ...prev, notificarAlerta: !prev.notificarAlerta }))}
+                                    ariaLabel="Activar Alerta de Escasez en Dashboard"
+                                />
+                            </div>
                             <div className="modal-footer" style={{ border: 'none', padding: 0, marginTop: 10 }}>
                                 <button type="submit" className="glass-button primary" style={{ width: '100%' }}><Save size={18} /> Guardar Insumo</button>
                             </div>

@@ -8,6 +8,7 @@ import { CustomCheckbox } from '../components/ui/CustomCheckbox';
 import { DeleteButton } from '../components/ui/DeleteButton';
 import { CloseButton } from '../components/ui/CloseButton';
 import { EditButton } from '../components/ui/EditButton';
+import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 
 const EMOJI_CATEGORIES = [
     {
@@ -651,21 +652,11 @@ const CategoriesView = () => {
                                             </span>
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        role="switch"
-                                        aria-checked={Boolean(formData.enviarCocina)}
-                                        onClick={() => setFormData(prev => ({ ...prev, enviarCocina: !prev.enviarCocina }))}
-                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer border-none outline-none ${
-                                            formData.enviarCocina ? 'bg-amber-500' : 'bg-slate-600'
-                                        }`}
-                                    >
-                                        <span
-                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
-                                                formData.enviarCocina ? 'translate-x-6' : 'translate-x-1'
-                                            }`}
-                                        />
-                                    </button>
+                                    <ToggleSwitch
+                                        checked={Boolean(formData.enviarCocina)}
+                                        onChange={() => setFormData(prev => ({ ...prev, enviarCocina: !prev.enviarCocina }))}
+                                        ariaLabel="Enviar a Cocina"
+                                    />
                                 </div>
 
                                 {/* Categoría Activa Toggle */}
@@ -681,21 +672,11 @@ const CategoriesView = () => {
                                             </span>
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        role="switch"
-                                        aria-checked={Boolean(formData.activo)}
-                                        onClick={() => setFormData(prev => ({ ...prev, activo: !prev.activo }))}
-                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer border-none outline-none ${
-                                            formData.activo ? 'bg-emerald-500' : 'bg-slate-600'
-                                        }`}
-                                    >
-                                        <span
-                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
-                                                formData.activo ? 'translate-x-6' : 'translate-x-1'
-                                            }`}
-                                        />
-                                    </button>
+                                    <ToggleSwitch
+                                        checked={Boolean(formData.activo)}
+                                        onChange={() => setFormData(prev => ({ ...prev, activo: !prev.activo }))}
+                                        ariaLabel="Categoría Activa"
+                                    />
                                 </div>
                             </div>
 

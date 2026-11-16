@@ -28,6 +28,7 @@ import { useConfirmation } from '../context/ConfirmationContext';
 import { enqueueTicket } from '../utils/printer';
 import { getActiveRestaurant } from '../utils/tenant';
 import { networkStatus, NetworkState } from '../offline/network/networkStatus';
+import ToggleSwitch from '../components/ui/ToggleSwitch';
 
 const INITIAL_PERMISSIONS = [
   {
@@ -670,21 +671,11 @@ export default function SettingsView() {
                     Activa operación sin internet para pruebas o cortes de red.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={forceOffline}
-                  onClick={handleToggleOffline}
-                  className={`relative w-12 h-7 rounded-full transition-colors shrink-0 cursor-pointer ${
-                    forceOffline ? 'bg-[#F26522]' : 'bg-slate-300 dark:bg-slate-600'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                      forceOffline ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+                <ToggleSwitch
+                  checked={forceOffline}
+                  onChange={handleToggleOffline}
+                  ariaLabel="Forzar Modo Offline"
+                />
               </div>
 
               <div className="rounded-xl bg-slate-50/70 dark:bg-slate-800/40 p-3 flex items-start gap-2 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -720,21 +711,11 @@ export default function SettingsView() {
                     Avisa cuando detecta insumos agotándose.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={showAlerts}
-                  onClick={handleToggleStockAlerts}
-                  className={`relative w-12 h-7 rounded-full transition-colors shrink-0 cursor-pointer ${
-                    showAlerts ? 'bg-[#F26522]' : 'bg-slate-300 dark:bg-slate-600'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                      showAlerts ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+                <ToggleSwitch
+                  checked={showAlerts}
+                  onChange={handleToggleStockAlerts}
+                  ariaLabel="Mostrar Alertas de Stock"
+                />
               </div>
 
               <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
@@ -747,21 +728,11 @@ export default function SettingsView() {
                     Timbre breve en Cocina y Caja cuando entra un pedido.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={soundComandas}
-                  onClick={handleToggleSoundComandas}
-                  className={`relative w-12 h-7 rounded-full transition-colors shrink-0 cursor-pointer ${
-                    soundComandas ? 'bg-[#F26522]' : 'bg-slate-300 dark:bg-slate-600'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                      soundComandas ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+                <ToggleSwitch
+                  checked={soundComandas}
+                  onChange={handleToggleSoundComandas}
+                  ariaLabel="Aviso sonoro en comandas"
+                />
               </div>
             </section>
           </div>
@@ -1319,21 +1290,11 @@ export default function SettingsView() {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={forceOffline}
-                onClick={handleToggleOffline}
-                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 cursor-pointer ${
-                  forceOffline ? 'bg-[#F26522]' : 'bg-slate-300 dark:bg-slate-600'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                    forceOffline ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
+              <ToggleSwitch
+                checked={forceOffline}
+                onChange={handleToggleOffline}
+                ariaLabel="Forzar Modo Offline"
+              />
             </div>
 
             <div className="rounded-xl bg-slate-50/70 dark:bg-slate-800/40 p-3 flex items-start gap-2 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -1373,21 +1334,11 @@ export default function SettingsView() {
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={showAlerts}
-                  onClick={handleToggleStockAlerts}
-                  className={`relative w-11 h-6 rounded-full transition-colors shrink-0 cursor-pointer ${
-                    showAlerts ? 'bg-[#F26522]' : 'bg-slate-300 dark:bg-slate-600'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                      showAlerts ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+                <ToggleSwitch
+                  checked={showAlerts}
+                  onChange={handleToggleStockAlerts}
+                  ariaLabel="Mostrar Alertas de Stock"
+                />
               </div>
 
               <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
@@ -1402,21 +1353,11 @@ export default function SettingsView() {
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={soundComandas}
-                  onClick={handleToggleSoundComandas}
-                  className={`relative w-11 h-6 rounded-full transition-colors shrink-0 cursor-pointer ${
-                    soundComandas ? 'bg-[#F26522]' : 'bg-slate-300 dark:bg-slate-600'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                      soundComandas ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+                <ToggleSwitch
+                  checked={soundComandas}
+                  onChange={handleToggleSoundComandas}
+                  ariaLabel="Aviso sonoro al recibir comanda"
+                />
               </div>
             </div>
           </section>

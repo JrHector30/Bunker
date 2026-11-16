@@ -24,6 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import SmoothDropdown from '../ui/SmoothDropdown';
 import CloseButton from '../ui/CloseButton';
 import CustomCheckbox from '../ui/CustomCheckbox';
+import ToggleSwitch from '../ui/ToggleSwitch';
 import { getActiveRestaurant } from '../../utils/tenant';
 
 const ALMACENES_DISPONIBLES = ['Congelador', 'Congelador 2', 'Despensa', 'Refrigerador'];
@@ -1250,15 +1251,14 @@ export default function InsumosManagement({
 
               {/* Stock Mínimo y Notificación */}
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/80 dark:border-zinc-700/60 space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={formData.notificarAlerta}
-                    onChange={(e) => setFormData({ ...formData, notificarAlerta: e.target.checked })}
-                    className="w-4 h-4 rounded text-[var(--primary)] cursor-pointer"
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Activar alerta por stock crítico</span>
+                  <ToggleSwitch
+                    checked={Boolean(formData.notificarAlerta)}
+                    onChange={() => setFormData(prev => ({ ...prev, notificarAlerta: !prev.notificarAlerta }))}
+                    ariaLabel="Activar alerta por stock crítico"
                   />
-                  <span>Activar alerta por stock crítico</span>
-                </label>
+                </div>
                 {formData.notificarAlerta && (
                   <div className="pt-2 animate-fade-in">
                     <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
