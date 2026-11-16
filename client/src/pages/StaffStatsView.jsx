@@ -1,7 +1,22 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
-import { User, ChefHat, FileText, CalendarDays, ChevronDown, ChevronUp, Database } from 'lucide-react';
+import {
+    User,
+    ChefHat,
+    FileText,
+    CalendarDays,
+    ChevronDown,
+    ChevronUp,
+    Database,
+    Calendar,
+    FileDown,
+    FolderOpen,
+    Inbox,
+    X,
+    CheckCircle2,
+    AlertCircle
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -108,6 +123,171 @@ const CustomTooltip = ({ active, payload }) => {
     return null;
 };
 
+const KitchenDonutTooltip = ({ active, payload }) => {
+    if (!active || !payload || payload.length === 0) return null;
+    const item = payload[0].payload;
+
+    return (
+        <div className="rounded-lg border border-slate-200/80 bg-white/95 px-2.5 py-1.5 text-xs shadow-md backdrop-blur-sm dark:border-slate-700 dark:bg-[#1A2232]/95 pointer-events-none">
+            <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100">
+                <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                />
+                <span>{item.label}:</span>
+                <span className="text-[#F26522] font-bold tabular-nums">
+                    {item.dishesCount} platos ({item.percentage}%)
+                </span>
+            </div>
+            {item.avgPrepMinutes > 0 ? (
+                <p className="mt-0.5 text-[10px] text-slate-500 tabular-nums dark:text-slate-400">
+                    Promedio: ~{item.avgPrepMinutes} min
+                </p>
+            ) : null}
+        </div>
+    );
+};
+
+const WAITER_COLORS = ['#0ea5e9', '#3b82f6', '#22d3ee', '#2dd4bf', '#6366f1', '#8b5cf6', '#06b6d4', '#60a5fa'];
+const COOK_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#dc2626', '#ea580c', '#b91c1c', '#d97706'];
+
+const CookDonutChart = ({
+    totalCookDishes,
+    cookChartSegments,
+    activeCookId,
+    setActiveCookId,
+    activeCookSegment,
+}) => {
+    return (
+        <section
+            aria-label="Platos por Cocinero"
+            className="flex min-w-0 flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-3.5 sm:p-4 dark:border-slate-800 dark:bg-slate-900 shadow-xs"
+        >
+            <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                    <ChefHat className="w-4 h-4 text-amber-500" />
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        Platos por Cocinero
+                    </h2>
+                </div>
+                <span className="text-[11px] font-semibold text-[#F26522] tabular-nums">
+                    {totalCookDishes} platos
+                </span>
+            </div>
+
+            {cookChartSegments.length === 0 ? (
+                <div className="py-10 text-center text-xs text-slate-400">
+                    Sin platos preparados en este período
+                </div>
+            ) : (
+                <>
+                    <div className="my-auto flex flex-col items-center justify-around gap-3 py-1 sm:flex-row">
+                        <div className="relative h-[150px] w-[150px] shrink-0">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={cookChartSegments}
+                                        dataKey="dishesCount"
+                                        nameKey="label"
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={44}
+                                        outerRadius={68}
+                                        startAngle={90}
+                                        endAngle={-270}
+                                        stroke="transparent"
+                                        strokeWidth={2}
+                                        isAnimationActive={true}
+                                        animationDuration={450}
+                                        onMouseEnter={(_, index) => {
+                                            const seg = cookChartSegments[index];
+                                            if (seg) setActiveCookId(seg.id);
+                                        }}
+                                        onMouseLeave={() => setActiveCookId(null)}
+                                    >
+                                        {cookChartSegments.map((segment) => {
+                                            const isHovered = activeCookId === segment.id;
+                                            const isDimmed = activeCookId !== null && !isHovered;
+                                            return (
+                                                <Cell
+                                                    key={segment.id}
+                                                    fill={segment.color}
+                                                    fillOpacity={isDimmed ? 0.35 : 1}
+                                                    className="cursor-pointer transition-opacity duration-150 outline-none"
+                                                />
+                                            );
+                                        })}
+                                    </Pie>
+                                    <Tooltip content={<KitchenDonutTooltip />} wrapperStyle={{ zIndex: 30 }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+
+                            {/* Central count / percentage indicator */}
+                            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <span className="text-lg font-bold tracking-tight text-slate-900 tabular-nums dark:text-slate-100">
+                                    {activeCookSegment ? `${activeCookSegment.percentage}%` : `${totalCookDishes}`}
+                                </span>
+                                <span className="max-w-[76px] truncate text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                                    {activeCookSegment ? activeCookSegment.label : 'Total Platos'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Legend pills */}
+                        <div className="flex w-full flex-col justify-center gap-1 sm:max-w-[160px]">
+                            {cookChartSegments.map((segment) => {
+                                const isHovered = activeCookId === segment.id;
+                                return (
+                                    <div
+                                        key={segment.id}
+                                        onMouseEnter={() => setActiveCookId(segment.id)}
+                                        onMouseLeave={() => setActiveCookId(null)}
+                                        onClick={() => setActiveCookId(prev => prev === segment.id ? null : segment.id)}
+                                        className={`flex cursor-pointer items-center justify-between rounded-lg px-2 py-1 text-xs transition-colors ${
+                                            isHovered
+                                                ? 'bg-slate-100 font-semibold dark:bg-slate-800'
+                                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <span
+                                                className="h-2 w-2 rounded-xs shrink-0"
+                                                style={{ backgroundColor: segment.color }}
+                                            />
+                                            <span className="text-slate-600 dark:text-slate-300 truncate">
+                                                {segment.label}
+                                            </span>
+                                        </div>
+                                        <span className="font-semibold text-slate-800 tabular-nums dark:text-slate-200 shrink-0 ml-1">
+                                            {segment.percentage}%
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Summary card */}
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-2.5 py-1.5 text-[11px] text-slate-600 dark:text-slate-300 mt-2">
+                        {activeCookSegment ? (
+                            <p className="truncate text-center">
+                                <span className="font-bold text-slate-900 dark:text-slate-100">
+                                    {activeCookSegment.label}:
+                                </span>{' '}
+                                {activeCookSegment.dishesCount} platos ({activeCookSegment.percentage}%) • Prom: ~{activeCookSegment.avgPrepMinutes} min
+                            </p>
+                        ) : (
+                            <p className="truncate text-center text-slate-500 dark:text-slate-400">
+                                Total preparado en cocina: <strong>{totalCookDishes} platos</strong>
+                            </p>
+                        )}
+                    </div>
+                </>
+            )}
+        </section>
+    );
+};
+
 const StaffStatsView = () => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
@@ -125,6 +305,7 @@ const StaffStatsView = () => {
     const [filteredDay, setFilteredDay] = useState('TODO');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [activeCookId, setActiveCookId] = useState(null);
 
     // Expandible UI togglers for auditing sections
     const [expandedWaiters, setExpandedWaiters] = useState({});
@@ -544,6 +725,45 @@ const StaffStatsView = () => {
         return comboboxItems.find(item => item.id === filteredDay) || comboboxItems[0];
     }, [comboboxItems, filteredDay]);
 
+    const totalCookDishes = useMemo(() => {
+        return (activeData.cookChartData || []).reduce((acc, c) => acc + (c.totalDishes || 0), 0);
+    }, [activeData.cookChartData]);
+
+    const cookChartSegments = useMemo(() => {
+        return (activeData.cookChartData || []).map((c, index) => {
+            const pct = totalCookDishes > 0 ? Math.round((c.totalDishes / totalCookDishes) * 100) : 0;
+            return {
+                id: c.id,
+                label: c.nombre,
+                dishesCount: c.totalDishes,
+                percentage: pct,
+                avgPrepMinutes: c.avgTimeMin ? parseFloat(c.avgTimeMin.toFixed(1)) : 0,
+                color: COOK_COLORS[index % COOK_COLORS.length]
+            };
+        });
+    }, [activeData.cookChartData, totalCookDishes]);
+
+    const activeCookSegment = useMemo(() => {
+        return cookChartSegments.find(s => s.id === activeCookId) || null;
+    }, [cookChartSegments, activeCookId]);
+
+    const arqueoComboboxItems = useMemo(() => {
+        return sessions.map(s => {
+            const startStr = format(new Date(s.fechaInicio), 'HH:mm');
+            const endStr = s.fechaFin ? format(new Date(s.fechaFin), 'HH:mm') : 'Activa';
+            const userName = s.usuario?.nombre || 'Hector';
+            return {
+                id: String(s.id),
+                name: `Arqueo #${s.numeroSesion != null ? s.numeroSesion : s.id} (${startStr} - ${endStr}) - Resp: ${userName}`
+            };
+        });
+    }, [sessions]);
+
+    const selectedArqueoItem = useMemo(() => {
+        if (!selectedArqueoId) return arqueoComboboxItems[0] || null;
+        return arqueoComboboxItems.find(item => String(item.id) === String(selectedArqueoId)) || arqueoComboboxItems[0] || null;
+    }, [arqueoComboboxItems, selectedArqueoId]);
+
     // 7. Cleanup/Daily Delete functionality
     const handleCleanDay = async () => {
         if (!arqueoInfo) return;
@@ -777,17 +997,433 @@ const StaffStatsView = () => {
         doc.save(`${safeName}_Reporte_Rendimiento_Arqueo_${sesionNum}.pdf`);
     };
 
-    // Color palettes
-    const WAITER_COLORS = ['#0ea5e9', '#3b82f6', '#22d3ee', '#2dd4bf', '#6366f1', '#8b5cf6', '#06b6d4', '#60a5fa'];
-    const COOK_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#dc2626', '#ea580c', '#b91c1c', '#d97706'];
-
     return (
-        <div style={{ padding: 20 }}>
-            {/* Top Toolbar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 15 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="p-3 sm:p-5 md:p-6 space-y-4 max-w-7xl mx-auto">
+            {/* ========================================================================= */}
+            {/* MOBILE VIEW (md:hidden)                                                  */}
+            {/* ========================================================================= */}
+            <div className="block md:hidden space-y-4">
+                {/* Header Mobile */}
+                <header className="space-y-3">
                     <div>
-                        <h1 style={{ margin: 0, fontSize: '24px' }}>Rendimiento y Reportes</h1>
+                        <h1 className="text-[22px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                            Rendimiento y Reportes
+                        </h1>
+                        {arqueoInfo && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
+                                Caja N° {arqueoInfo.numeroSesion != null ? arqueoInfo.numeroSesion : arqueoInfo.id} ({arqueoInfo.estado === 'abierto' ? 'Abierta' : 'Cerrada'}) • Resp:{' '}
+                                <strong className="text-slate-700 dark:text-slate-200">
+                                    {sessions.find(s => s.id === arqueoInfo.id)?.usuario?.nombre || 'Hector'}
+                                </strong>
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Controles Fecha / Arqueo / Limpiar / PDF */}
+                    <div className="space-y-2">
+                        {sessions.length > 1 && (
+                            <SimpleCombobox
+                                items={arqueoComboboxItems}
+                                selectedItem={selectedArqueoItem}
+                                onSelect={(item) => {
+                                    if (item) {
+                                        const valId = parseInt(item.id);
+                                        setSelectedArqueoId(valId);
+                                        fetchArqueoStats(valId, true);
+                                    }
+                                }}
+                                placeholder="Seleccionar arqueo..."
+                            />
+                        )}
+
+                        <div className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                                <DropdownRangeDatePicker
+                                    mode="single"
+                                    value={date}
+                                    onChange={(selectedDate) => {
+                                        if (selectedDate) {
+                                            setDate(selectedDate);
+                                            setSelectedArqueoId(null);
+                                            setFilteredDay('TODO');
+                                        }
+                                    }}
+                                    placeholder="Seleccionar Fecha"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setDate(new Date());
+                                    setSelectedArqueoId(null);
+                                    setFilteredDay('TODO');
+                                }}
+                                aria-label="Restablecer a hoy"
+                                title="Hoy"
+                                className="w-[42px] h-[42px] rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/70 dark:border-rose-900/40 text-rose-500 flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            {arqueoInfo && (
+                                <button
+                                    type="button"
+                                    onClick={handleExportPDF}
+                                    className="min-h-[42px] px-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1.5 shrink-0 active:scale-95 transition-transform"
+                                >
+                                    <FileDown className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                                    <span>PDF</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </header>
+
+                {/* Loading Indicator Mobile */}
+                {loading && (
+                    <div className="flex justify-center py-10">
+                        <div className="border-3 border-slate-200 border-t-[#F26522] rounded-full w-8 h-8 animate-spin" />
+                    </div>
+                )}
+
+                {/* Error Alert Mobile */}
+                {!loading && error && (
+                    <div className="rounded-2xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 p-5 text-center">
+                        <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-500 flex items-center justify-center mx-auto mb-2">
+                            <AlertCircle className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-sm font-bold text-rose-600 dark:text-rose-400">Error de Conexión</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{error}</p>
+                    </div>
+                )}
+
+                {/* ESTADO 1: No hay sesión de caja Mobile */}
+                {!loading && !error && sessions.length === 0 && (
+                    <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-8 text-center">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
+                            <Inbox className="w-6 h-6" />
+                        </div>
+                        <h2 className="mt-3 text-base font-bold text-slate-900 dark:text-white">No hay sesión de caja</h2>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                            No se ha encontrado ninguna apertura de caja registrada para la fecha seleccionada ({dateDisplayStr}).
+                        </p>
+                    </section>
+                )}
+
+                {/* ESTADO 2: Múltiples Cajas Detectadas Mobile */}
+                {!loading && !error && (requiresSelection || (sessions.length > 1 && !arqueoInfo)) && (
+                    <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 text-center space-y-4">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center mx-auto">
+                            <FolderOpen className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h2 className="text-base font-bold text-slate-900 dark:text-white">Múltiples Cajas Detectadas</h2>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                Se abrieron varias sesiones el día {dateDisplayStr}. Selecciona una sesión:
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2.5">
+                            {sessions.map((sess) => {
+                                const startStr = format(new Date(sess.fechaInicio), 'HH:mm');
+                                const endStr = sess.fechaFin ? format(new Date(sess.fechaFin), 'HH:mm') : 'Activa';
+                                const userName = sess.usuario?.nombre || 'Hector';
+                                return (
+                                    <button
+                                        key={sess.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setRequiresSelection(false);
+                                            setSelectedArqueoId(sess.id);
+                                            fetchArqueoStats(sess.id, true);
+                                        }}
+                                        className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3.5 text-left flex items-center justify-between gap-2 active:scale-[0.99] transition-transform cursor-pointer"
+                                    >
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">
+                                                Arqueo N° {sess.numeroSesion != null ? sess.numeroSesion : sess.id}
+                                            </p>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
+                                                {startStr} a {endStr} ({sess.estado === 'abierto' ? 'Abierta' : 'Cerrada'})
+                                            </p>
+                                        </div>
+                                        <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 shrink-0">
+                                            Resp: {userName}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
+
+                {/* ESTADO 3: Reporte Completo en Mobile */}
+                {!loading && !error && arqueoInfo && (
+                    <div className="space-y-3.5">
+                        {/* Filtro por día de caja */}
+                        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-3.5 space-y-1.5">
+                            <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+                                Filtrar reporte por día de caja:
+                            </label>
+                            <SimpleCombobox
+                                items={comboboxItems}
+                                selectedItem={selectedComboboxItem}
+                                onSelect={(item) => {
+                                    if (item) setFilteredDay(item.id);
+                                }}
+                                placeholder="Seleccionar día de caja..."
+                            />
+                        </div>
+
+                        {/* 2 KPIs */}
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-3.5 text-center">
+                                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Venta Total</p>
+                                <p className="mt-1 text-xl font-bold text-emerald-500 tabular-nums">
+                                    S/. {activeData.totalSales.toFixed(2)}
+                                </p>
+                                <p className="mt-0.5 text-[10px] text-slate-400">Monto cobrado</p>
+                            </div>
+                            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-3.5 text-center">
+                                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Pedidos Atendidos</p>
+                                <p className="mt-1 text-xl font-bold text-[#F26522] tabular-nums">
+                                    {activeData.totalOrders}
+                                </p>
+                                <p className="mt-0.5 text-[10px] text-slate-400">Finalizadas</p>
+                            </div>
+                        </div>
+
+                        {/* Platos por Cocinero Mobile (Gráfico Donut idéntico a Estado de Cocina) */}
+                        <CookDonutChart
+                            totalCookDishes={totalCookDishes}
+                            cookChartSegments={cookChartSegments}
+                            activeCookId={activeCookId}
+                            setActiveCookId={setActiveCookId}
+                            activeCookSegment={activeCookSegment}
+                        />
+
+                        {/* Detalle Mozos Mobile */}
+                        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 space-y-2.5">
+                            <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-[#F26522]" />
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Detalle Mozos</h3>
+                            </div>
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {activeData.waiters.map((w) => (
+                                    <div key={w.id} className="py-2.5 flex items-center justify-between text-xs">
+                                        <div>
+                                            <span className="font-bold text-slate-900 dark:text-white">{w.nombre}</span>
+                                            <span className="text-slate-400 ml-1">({w.rol || 'mozo'})</span>
+                                            <p className="text-[11px] text-slate-400 tabular-nums">{w.totalTables} pedidos</p>
+                                        </div>
+                                        <span className="font-bold text-emerald-500 text-sm tabular-nums">
+                                            S/. {parseFloat(Number(w.totalSales).toFixed(2))}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Detalle Cocina Mobile */}
+                        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 space-y-2.5">
+                            <div className="flex items-center gap-2">
+                                <ChefHat className="w-4 h-4 text-amber-500" />
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Detalle Cocina</h3>
+                            </div>
+                            <div className="space-y-2">
+                                {activeData.cooks.map((chef) => {
+                                    const isOpen = !!expandedCooks[chef.id];
+                                    return (
+                                        <div key={chef.id} className="rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+                                            <button
+                                                type="button"
+                                                onClick={() => setExpandedCooks((p) => ({ ...p, [chef.id]: !p[chef.id] }))}
+                                                className="w-full px-3.5 py-3 flex items-center justify-between gap-2 text-left bg-slate-50/70 dark:bg-slate-800/40"
+                                            >
+                                                <div className="min-w-0">
+                                                    <span className="text-xs font-bold text-slate-900 dark:text-white">{chef.nombre}</span>
+                                                    <span className="text-[11px] text-slate-400 ml-1.5 tabular-nums">— {chef.totalDishes} platos</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0 text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+                                                    <span>
+                                                        Prom: <strong className="text-slate-800 dark:text-slate-200">{chef.avgTimeMin > 0 ? chef.avgTimeMin.toFixed(2) : '-'} min</strong>
+                                                    </span>
+                                                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                                </div>
+                                            </button>
+
+                                            {isOpen && (
+                                                <div className="px-3.5 pb-2 border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
+                                                    {(chef.platosList || []).map((dish, idx) => (
+                                                        <div key={`${dish.numeroComanda || dish.comandaId}-${idx}`} className="py-2.5 flex items-start justify-between gap-2 text-xs">
+                                                            <div className="min-w-0">
+                                                                <p className="font-semibold text-slate-800 dark:text-slate-100">
+                                                                    {dish.cantidad}× {dish.plato}
+                                                                </p>
+                                                                <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
+                                                                    Comanda #{dish.numeroComanda || dish.comandaId} · Mesa {dish.mesa} · {dish.mozo}
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-right shrink-0 tabular-nums">
+                                                                <span className="inline-block px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 text-[11px] font-bold">
+                                                                    {dish.tiempoPrep > 0 ? `${dish.tiempoPrep.toFixed(1)} min` : '—'}
+                                                                </span>
+                                                                <p className="text-[10.5px] text-slate-400 mt-0.5">{dish.fecha || '—'}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Platos comandados por mozo Mobile */}
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2 px-1">
+                                <User className="w-4 h-4 text-[#F26522]" />
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Platos comandados por mozo</h3>
+                            </div>
+                            {activeData.waiters.map((w) => {
+                                const wItems = activeData.waiterPlatos.filter(item => item.mozo === w.nombre);
+                                const isOpen = !!expandedWaiters[w.id];
+
+                                // Group items by comandaId
+                                const comandasMap = {};
+                                wItems.forEach(item => {
+                                    if (!comandasMap[item.comandaId]) {
+                                        comandasMap[item.comandaId] = {
+                                            id: item.comandaId,
+                                            numeroComanda: item.numeroComanda || item.comandaId,
+                                            mesa: item.mesa,
+                                            fecha: item.fecha,
+                                            hora: item.hora,
+                                            total: item.totalComanda,
+                                            platos: []
+                                        };
+                                    }
+                                    comandasMap[item.comandaId].platos.push(item);
+                                });
+                                const mozoComandas = Object.values(comandasMap);
+
+                                return (
+                                    <div key={w.id} className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+                                        <button
+                                            type="button"
+                                            onClick={() => setExpandedWaiters((p) => ({ ...p, [w.id]: !p[w.id] }))}
+                                            className="w-full px-4 py-3 flex items-center justify-between text-left"
+                                        >
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-900 dark:text-white">{w.nombre}</p>
+                                                <p className="text-[11px] text-slate-400 tabular-nums">{w.totalTables} pedidos</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-emerald-500 tabular-nums">S/. {parseFloat(Number(w.totalSales).toFixed(2))}</span>
+                                                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                            </div>
+                                        </button>
+
+                                        {isOpen && (
+                                            <div className="px-3 pb-3 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+                                                {mozoComandas.map((cmd) => (
+                                                    <div key={cmd.id} className="rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 space-y-2 bg-slate-50/50 dark:bg-slate-800/30">
+                                                        <div className="flex items-center justify-between text-xs">
+                                                            <span className="font-bold text-slate-800 dark:text-slate-100 tabular-nums">
+                                                                Comanda #{cmd.numeroComanda} · Mesa {cmd.mesa}
+                                                            </span>
+                                                            <span className="font-bold text-emerald-500 tabular-nums">S/. {Number(cmd.total).toFixed(2)}</span>
+                                                        </div>
+                                                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                            {cmd.platos.map((item, pIdx) => (
+                                                                <div key={pIdx} className="py-2 flex items-start justify-between gap-2 text-xs">
+                                                                    <div className="min-w-0">
+                                                                        <p className="font-semibold text-slate-800 dark:text-slate-100">{item.cantidad} x {item.plato}</p>
+                                                                        <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                                                                            {item.kardexStatus === 'Stock descontado' || item.kardexStatus === 'Stock verificado' ? (
+                                                                                <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                                                                            ) : (
+                                                                                <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" />
+                                                                            )}
+                                                                            <span className="truncate">{item.cocinero} · {item.kardexStatus}</span>
+                                                                        </p>
+                                                                    </div>
+                                                                    <span className="font-bold text-emerald-500 tabular-nums shrink-0">
+                                                                        S/. {Number(item.total).toFixed(2)}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Detalle de comandas (Auditoría Mobile) */}
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2 px-1">
+                                <Database className="w-4 h-4 text-emerald-500" />
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Detalle de comandas (Auditoría)</h3>
+                            </div>
+                            {activeData.comandasPeriodo.map((cmd) => {
+                                const isOpen = !!expandedOrders[cmd.id];
+                                return (
+                                    <div key={cmd.id} className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+                                        <button
+                                            type="button"
+                                            onClick={() => setExpandedOrders((p) => ({ ...p, [cmd.id]: !p[cmd.id] }))}
+                                            className="w-full px-4 py-3 flex items-center justify-between text-left"
+                                        >
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">
+                                                    Comanda #{cmd.numeroComanda} — Mesa {cmd.mesa}
+                                                </p>
+                                                <p className="text-[11px] text-slate-400 tabular-nums">{cmd.hora} ({cmd.mozo})</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-emerald-500 tabular-nums">S/. {cmd.total.toFixed(2)}</span>
+                                                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                            </div>
+                                        </button>
+
+                                        {isOpen && (
+                                            <div className="px-4 pb-3 border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
+                                                {(cmd.platos || []).map((item, idx) => (
+                                                    <div key={idx} className="py-2.5 flex items-start justify-between gap-2 text-xs">
+                                                        <div className="min-w-0">
+                                                            <p className="font-semibold text-slate-800 dark:text-slate-100">{item.cantidad} x {item.plato}</p>
+                                                            <p className="text-[11px] text-slate-400 mt-0.5">{item.cocinero} · {item.kardexStatus}</p>
+                                                            <span className="inline-block mt-1 text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                                {item.estado}
+                                                            </span>
+                                                        </div>
+                                                        <span className="font-bold text-emerald-500 tabular-nums shrink-0">
+                                                            S/. {(item.precio * item.cantidad).toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* ========================================================================= */}
+            {/* DESKTOP VIEW (hidden md:block)                                            */}
+            {/* ========================================================================= */}
+            <div className="hidden md:block space-y-6">
+                {/* Top Toolbar */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 15 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div>
+                            <h1 style={{ margin: 0, fontSize: '24px' }}>Rendimiento y Reportes</h1>
                         {arqueoInfo && (
                             <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginTop: 2 }}>
                                 Caja N° {arqueoInfo.numeroSesion != null ? arqueoInfo.numeroSesion : arqueoInfo.id} ({arqueoInfo.estado === 'abierto' ? 'Abierta' : 'Cerrada'})
@@ -829,35 +1465,19 @@ const StaffStatsView = () => {
 
                     {/* Secondary selector for multiple arqueos */}
                     {sessions.length > 1 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <CalendarDays size={16} className="text-teal-400" />
-                            <select
-                                value={selectedArqueoId || ''}
-                                onChange={(e) => {
-                                    const valId = parseInt(e.target.value);
-                                    setSelectedArqueoId(valId);
-                                    fetchArqueoStats(valId, true);
+                        <div style={{ minWidth: 260 }}>
+                            <SimpleCombobox
+                                items={arqueoComboboxItems}
+                                selectedItem={selectedArqueoItem}
+                                onSelect={(item) => {
+                                    if (item) {
+                                        const valId = parseInt(item.id);
+                                        setSelectedArqueoId(valId);
+                                        fetchArqueoStats(valId, true);
+                                    }
                                 }}
-                                className="glass-button"
-                                style={{
-                                    padding: '6px 12px',
-                                    fontSize: 12,
-                                    borderRadius: 12,
-                                    cursor: 'pointer',
-                                    fontWeight: 'bold'
-                                }}
-                            >
-                                {sessions.map(s => {
-                                    const startStr = format(new Date(s.fechaInicio), 'HH:mm');
-                                    const endStr = s.fechaFin ? format(new Date(s.fechaFin), 'HH:mm') : 'Activa';
-                                    const userName = s.usuario?.nombre || 'Hector';
-                                    return (
-                                        <option key={s.id} value={s.id}>
-                                            Arqueo #{s.numeroSesion != null ? s.numeroSesion : s.id} ({startStr} - {endStr}) - Resp: {userName}
-                                        </option>
-                                    );
-                                })}
-                            </select>
+                                placeholder="Seleccionar arqueo..."
+                            />
                         </div>
                     )}
 
@@ -1066,39 +1686,15 @@ const StaffStatsView = () => {
                             )}
                         </div>
 
-                        {/* 3. Kitchen Efficiency Chart */}
-                        <div className="glass-panel" style={{ padding: 20, height: 350, border: '1px solid var(--glass-border)', gridColumn: 'span 2' }}>
-                            <h3 style={{ textAlign: 'center', marginBottom: 15, fontSize: 14 }}>Platos por Cocinero</h3>
-                            {activeData.cookChartData.length === 0 ? (
-                                <div style={{ height: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
-                                    Sin platos preparados en este período
-                                </div>
-                            ) : (
-                                <ResponsiveContainer width="100%" height="90%">
-                                    <PieChart>
-                                        <Pie
-                                            data={activeData.cookChartData}
-                                            cx="50%"
-                                            cy="40%"
-                                            labelLine={true}
-                                            label={({ nombre, percent }) => `${nombre} (${(percent * 100).toFixed(0)}%)`}
-                                            outerRadius={70}
-                                            fill="#8884d8"
-                                            dataKey="totalDishes"
-                                            nameKey="nombre"
-                                        >
-                                            {activeData.cookChartData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COOK_COLORS[index % COOK_COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--glass-border)', color: 'var(--text-main)' }}
-                                            formatter={(value) => [value, "Platos Preparados"]}
-                                        />
-                                        <Legend verticalAlign="bottom" height={36} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            )}
+                        {/* 3. Kitchen Efficiency Donut Chart (Matching Estado de Cocina) */}
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <CookDonutChart
+                                totalCookDishes={totalCookDishes}
+                                cookChartSegments={cookChartSegments}
+                                activeCookId={activeCookId}
+                                setActiveCookId={setActiveCookId}
+                                activeCookSegment={activeCookSegment}
+                            />
                         </div>
                     </div>
 
@@ -1444,6 +2040,7 @@ const StaffStatsView = () => {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 };
