@@ -404,7 +404,7 @@ export default function SettingsView() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ habilitado: mod[role] }),
-              }).catch(() => {})
+              }).catch(() => { })
             );
           }
         });
@@ -488,7 +488,7 @@ export default function SettingsView() {
         }),
       }).catch(() => null);
       showToast(`Ancho ${width} guardado para la estación ${station}.`, 'success');
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const handleSaveUsbProfile = async (profile) => {
@@ -506,7 +506,7 @@ export default function SettingsView() {
         }),
       }).catch(() => null);
       showToast(`Perfil ${profile} guardado para la estación ${station}.`, 'success');
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const tabs = [
@@ -589,11 +589,10 @@ export default function SettingsView() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between gap-2 border transition-colors cursor-pointer ${
-                  isActive
-                    ? 'border-[#F26522] bg-orange-50/80 dark:bg-orange-950/30 text-[#F26522]'
-                    : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300'
-                }`}
+                className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between gap-2 border transition-colors cursor-pointer ${isActive
+                  ? 'border-[#F26522] bg-orange-50/80 dark:bg-orange-950/30 text-[#F26522]'
+                  : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300'
+                  }`}
               >
                 <span className="inline-flex items-center gap-2 min-w-0">
                   {tab.icon}
@@ -633,11 +632,10 @@ export default function SettingsView() {
               </div>
 
               <div
-                className={`rounded-xl border px-3 py-2.5 flex items-center justify-between gap-2 text-[11.5px] font-bold ${
-                  forceOffline
-                    ? 'border-amber-200 bg-amber-50/70 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300'
-                    : 'border-emerald-200 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
-                }`}
+                className={`rounded-xl border px-3 py-2.5 flex items-center justify-between gap-2 text-[11.5px] font-bold ${forceOffline
+                  ? 'border-amber-200 bg-amber-50/70 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300'
+                  : 'border-emerald-200 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
+                  }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   {forceOffline ? (
@@ -663,13 +661,16 @@ export default function SettingsView() {
               </div>
 
               <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white">
-                    Forzar Modo Offline
-                  </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Activa operación sin internet para pruebas o cortes de red.
-                  </p>
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <WifiOff className="w-4 h-4 text-slate-500 dark:text-slate-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      Forzar Modo Offline
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Activa el modo offline para realizar pruebas o operar ante cortes de internet.
+                    </p>
+                  </div>
                 </div>
                 <ToggleSwitch
                   checked={forceOffline}
@@ -703,13 +704,16 @@ export default function SettingsView() {
               </div>
 
               <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white">
-                    Mostrar Alertas de Stock
-                  </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Avisa cuando detecta insumos agotándose.
-                  </p>
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <Bell className="w-4 h-4 text-[#F26522] mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      Mostrar Alertas de Stock
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Muestra un panel lateral cuando detecta insumos agotándose.
+                    </p>
+                  </div>
                 </div>
                 <ToggleSwitch
                   checked={showAlerts}
@@ -719,19 +723,21 @@ export default function SettingsView() {
               </div>
 
               <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-                    Aviso sonoro en comandas
-                  </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Timbre breve en Cocina y Caja cuando entra un pedido.
-                  </p>
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <Sparkles className="w-4 h-4 text-slate-500 dark:text-slate-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      Aviso sonoro al recibir comanda
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Emite un timbre breve en Cocina (KDS) y Caja cuando entra un pedido.
+                    </p>
+                  </div>
                 </div>
                 <ToggleSwitch
                   checked={soundComandas}
                   onChange={handleToggleSoundComandas}
-                  ariaLabel="Aviso sonoro en comandas"
+                  ariaLabel="Aviso sonoro al recibir comanda"
                 />
               </div>
             </section>
@@ -765,11 +771,10 @@ export default function SettingsView() {
                   key={r.key}
                   type="button"
                   onClick={() => setSelectedRole(r.key)}
-                  className={`min-h-[38px] rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                    selectedRole === r.key
-                      ? 'bg-[#F26522] text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-300'
-                  }`}
+                  className={`min-h-[38px] rounded-lg text-xs font-bold transition-colors cursor-pointer ${selectedRole === r.key
+                    ? 'bg-[#F26522] text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300'
+                    }`}
                 >
                   {r.label}
                 </button>
@@ -801,11 +806,10 @@ export default function SettingsView() {
                             </p>
                           </div>
                           <span
-                            className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${
-                              enabled
-                                ? 'bg-[#F26522] border-[#F26522] text-white'
-                                : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
-                            }`}
+                            className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${enabled
+                              ? 'bg-[#F26522] border-[#F26522] text-white'
+                              : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
+                              }`}
                           >
                             {enabled && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                           </span>
@@ -820,11 +824,10 @@ export default function SettingsView() {
             <button
               type="button"
               onClick={handleSavePermissions}
-              className={`w-full min-h-[42px] rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors cursor-pointer ${
-                permissionsDirty
-                  ? 'bg-[#F26522] active:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)]'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
-              }`}
+              className={`w-full min-h-[42px] rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors cursor-pointer ${permissionsDirty
+                ? 'bg-[#F26522] active:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)]'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
+                }`}
             >
               <Save className="w-3.5 h-3.5" />
               <span>{permissionsDirty ? 'Guardar Cambios*' : 'Guardar Cambios'}</span>
@@ -875,11 +878,10 @@ export default function SettingsView() {
                       loadHardwareData(st);
                       showToast(`Mostrando impresoras asignadas a ${st}.`, 'info');
                     }}
-                    className={`min-h-[38px] rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
-                      station === st
-                        ? 'bg-[#F26522] border-[#F26522] text-white'
-                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                    }`}
+                    className={`min-h-[38px] rounded-xl text-xs font-bold border transition-colors cursor-pointer ${station === st
+                      ? 'bg-[#F26522] border-[#F26522] text-white'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                      }`}
                   >
                     {st}
                   </button>
@@ -923,11 +925,10 @@ export default function SettingsView() {
                           key={w}
                           type="button"
                           onClick={() => handleSaveUsbWidth(w)}
-                          className={`min-h-[34px] rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
-                            usbWidth === w
-                              ? 'bg-[#F26522] border-[#F26522] text-white'
-                              : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                          }`}
+                          className={`min-h-[34px] rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${usbWidth === w
+                            ? 'bg-[#F26522] border-[#F26522] text-white'
+                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                            }`}
                         >
                           {w}
                         </button>
@@ -945,11 +946,10 @@ export default function SettingsView() {
                           key={hw}
                           type="button"
                           onClick={() => handleSaveUsbProfile(hw)}
-                          className={`min-h-[32px] px-2.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
-                            usbHardware === hw
-                              ? 'bg-[#F26522] border-[#F26522] text-white'
-                              : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                          }`}
+                          className={`min-h-[32px] px-2.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${usbHardware === hw
+                            ? 'bg-[#F26522] border-[#F26522] text-white'
+                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                            }`}
                         >
                           {hw}
                         </button>
@@ -994,11 +994,10 @@ export default function SettingsView() {
                           'info'
                         );
                       }}
-                      className={`min-h-[36px] rounded-lg text-[11px] font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer ${
-                        ethRepairing
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                      }`}
+                      className={`min-h-[36px] rounded-lg text-[11px] font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer ${ethRepairing
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                        }`}
                     >
                       {ethRepairing ? (
                         <>
@@ -1098,11 +1097,10 @@ export default function SettingsView() {
               <button
                 type="button"
                 onClick={handleToggleAuditTicket}
-                className={`w-full min-h-[40px] rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer ${
-                  auditTicketOn
-                    ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
-                    : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                }`}
+                className={`w-full min-h-[40px] rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer ${auditTicketOn
+                  ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
+                  : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                  }`}
               >
                 <FileCheck2 className="w-3.5 h-3.5" />
                 <span>Ticket de Auditoría: {auditTicketOn ? 'ON' : 'OFF'}</span>
@@ -1136,9 +1134,8 @@ export default function SettingsView() {
                     key={themeItem.id}
                     type="button"
                     onClick={() => handleSelectTheme(themeItem)}
-                    className={`text-left rounded-2xl p-4 border-2 transition-all cursor-pointer ${themeItem.bgClass} ${
-                      isSelected ? themeItem.borderActiveClass : 'border-transparent'
-                    }`}
+                    className={`text-left rounded-2xl p-4 border-2 transition-all cursor-pointer ${themeItem.bgClass} ${isSelected ? themeItem.borderActiveClass : 'border-transparent'
+                      }`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div
@@ -1169,13 +1166,6 @@ export default function SettingsView() {
           </section>
         )}
 
-        {/* Footer anclado abajo del todo */}
-        <footer className="mt-auto pt-4 border-t border-slate-200/70 dark:border-slate-800 flex flex-col items-center text-center gap-1 text-[11px] text-slate-400">
-          <span>
-            © 2026 Búnker - Sistema de Gestión de Comandas Inteligentes.
-          </span>
-          <span>Hecho con 🧡 por Hector y Melanie</span>
-        </footer>
       </div>
 
       {/* ========================================================================= */}
@@ -1199,633 +1189,615 @@ export default function SettingsView() {
           </div>
         </header>
 
-      {/* Pestañas de Navegación */}
-      <nav
-        aria-label="Secciones de Ajustes"
-        className="flex items-center gap-1.5 border-b border-slate-200/80 dark:border-slate-800 pb-0.5 overflow-x-auto"
-      >
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`min-h-[40px] px-4 py-2 rounded-t-xl text-xs font-bold inline-flex items-center gap-2 whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
-                isActive
+        {/* Pestañas de Navegación */}
+        <nav
+          aria-label="Secciones de Ajustes"
+          className="flex items-center gap-1.5 border-b border-slate-200/80 dark:border-slate-800 pb-0.5 overflow-x-auto"
+        >
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`min-h-[40px] px-4 py-2 rounded-t-xl text-xs font-bold inline-flex items-center gap-2 whitespace-nowrap border-b-2 transition-colors cursor-pointer ${isActive
                   ? 'border-[#F26522] text-[#F26522] bg-orange-50/50 dark:bg-orange-950/20'
                   : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-              {tab.badge && (
-                <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 text-[10px] font-bold">
-                  {tab.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
+                  }`}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+                {tab.badge && (
+                  <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 text-[10px] font-bold">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
-      {/* TAB 1: OPERACIÓN Y ALERTAS */}
-      {activeTab === 'operacion' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
-          {/* Modo de Operación y Red */}
-          <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-[#F26522] flex items-center justify-center shrink-0">
-                {forceOffline ? <WifiOff className="w-4 h-4" /> : <Wifi className="w-4 h-4" />}
+        {/* TAB 1: OPERACIÓN Y ALERTAS */}
+        {activeTab === 'operacion' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+            {/* Modo de Operación y Red */}
+            <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-[#F26522] flex items-center justify-center shrink-0">
+                  {forceOffline ? <WifiOff className="w-4 h-4" /> : <Wifi className="w-4 h-4" />}
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    Modo de Operación y Red
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Controla la sincronización con el servidor en la nube.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  Modo de Operación y Red
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Controla la sincronización con el servidor en la nube.
-                </p>
-              </div>
-            </div>
 
-            <div
-              className={`rounded-xl border px-3.5 py-2.5 flex items-center justify-between gap-2.5 text-xs font-bold ${
-                forceOffline
+              <div
+                className={`rounded-xl border px-3.5 py-2.5 flex items-center justify-between gap-2.5 text-xs font-bold ${forceOffline
                   ? 'border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300'
                   : 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300'
-              }`}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                {forceOffline ? (
-                  <WifiOff className="w-4 h-4 shrink-0" />
-                ) : (
-                  <Wifi className="w-4 h-4 shrink-0" />
-                )}
-                <span>
-                  {forceOffline
-                    ? 'MODO OFFLINE — Operando de forma local sin internet'
-                    : 'MODO ONLINE — Conectado al servidor en tiempo real'}
-                </span>
-              </div>
-              {forceOffline && (
-                <button
-                  type="button"
-                  onClick={handleToggleOffline}
-                  className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shrink-0 transition-colors cursor-pointer border-0 shadow-xs active:scale-95"
-                >
-                  Restaurar Modo Online
-                </button>
-              )}
-            </div>
-
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
-              <div className="flex items-start gap-2.5 min-w-0">
-                <WifiOff className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-white">
-                    Forzar Modo Offline
-                  </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Activa el modo offline para realizar pruebas o operar ante cortes de internet.
-                  </p>
-                </div>
-              </div>
-              <ToggleSwitch
-                checked={forceOffline}
-                onChange={handleToggleOffline}
-                ariaLabel="Forzar Modo Offline"
-              />
-            </div>
-
-            <div className="rounded-xl bg-slate-50/70 dark:bg-slate-800/40 p-3 flex items-start gap-2 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              <Info className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-              <span>
-                <strong>Nota:</strong> La auto-detección y pings automáticos están deshabilitados. El sistema permanecerá en el modo elegido hasta que lo cambies aquí.
-              </span>
-            </div>
-          </section>
-
-          {/* Preferencias de Interfaz y Alertas */}
-          <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-[#F26522] flex items-center justify-center shrink-0">
-                <Bell className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  Preferencias de Interfaz y Alertas
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Notificaciones en tiempo real durante el servicio.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
-                <div className="flex items-start gap-2.5 min-w-0">
-                  <Bell className="w-4 h-4 text-[#F26522] mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">
-                      Mostrar Alertas de Stock
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      Muestra un panel lateral cuando detecta insumos agotándose.
-                    </p>
-                  </div>
-                </div>
-                <ToggleSwitch
-                  checked={showAlerts}
-                  onChange={handleToggleStockAlerts}
-                  ariaLabel="Mostrar Alertas de Stock"
-                />
-              </div>
-
-              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
-                <div className="flex items-start gap-2.5 min-w-0">
-                  <Sparkles className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">
-                      Aviso sonoro al recibir comanda
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      Emite un timbre breve en Cocina (KDS) y Caja cuando entra un pedido.
-                    </p>
-                  </div>
-                </div>
-                <ToggleSwitch
-                  checked={soundComandas}
-                  onChange={handleToggleSoundComandas}
-                  ariaLabel="Aviso sonoro al recibir comanda"
-                />
-              </div>
-            </div>
-          </section>
-        </div>
-      )}
-
-      {/* TAB 2: ROLES Y PERMISOS */}
-      {activeTab === 'permisos' && (
-        <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-start gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-[#F26522] flex items-center justify-center shrink-0 mt-0.5">
-                <Shield className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  Configuración de Permisos por Rol
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Módulos ordenados por área operativa. Habilita o deshabilita accesos para Mozo, Cocina y Caja.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleSavePermissions}
-              className={`min-h-[40px] px-4 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0 border-0 ${
-                permissionsDirty
-                  ? 'bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)]'
-                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
-              }`}
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{permissionsDirty ? 'Guardar Cambios*' : 'Guardar Cambios'}</span>
-            </button>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#F26522] text-white text-xs font-bold uppercase tracking-wider">
-                  <th className="py-3 px-4">Módulo</th>
-                  <th className="py-3 px-4 text-center w-28">Mozo</th>
-                  <th className="py-3 px-4 text-center w-28">Cocina</th>
-                  <th className="py-3 px-4 text-center w-28">Caja</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                {groupedPermissions.map((grp) => (
-                  <React.Fragment key={grp.grupo}>
-                    <tr className="bg-slate-50/90 dark:bg-slate-800/60">
-                      <td
-                        colSpan={4}
-                        className="py-1.5 px-4 text-[10.5px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
-                      >
-                        {grp.grupo}
-                      </td>
-                    </tr>
-                    {grp.items.map((mod) => (
-                      <tr
-                        key={mod.id}
-                        className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
-                      >
-                        <td className="py-3 px-4">
-                          <p className="text-xs font-bold text-slate-900 dark:text-white">
-                            {mod.nombre}
-                          </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            {mod.descripcion}
-                          </p>
-                        </td>
-                        {['mozo', 'cocina', 'caja'].map((role) => {
-                          const checked = !!mod[role];
-                          return (
-                            <td key={role} className="py-3 px-4 text-center">
-                              <button
-                                type="button"
-                                aria-label={`Permiso ${mod.nombre} para ${role}`}
-                                onClick={() => handleTogglePermission(mod.id, role)}
-                                className={`w-5 h-5 rounded-md border inline-flex items-center justify-center transition-colors cursor-pointer ${
-                                  checked
-                                    ? 'bg-[#F26522] border-[#F26522] text-white'
-                                    : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-[#F26522]'
-                                }`}
-                              >
-                                {checked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 pt-1">
-            <Info className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-            <span>
-              <strong>Nota:</strong> El rol &quot;Admin&quot; siempre tiene acceso completo a todos los módulos del sistema.
-            </span>
-          </div>
-        </section>
-      )}
-
-      {/* TAB 3: IMPRESORAS Y HARDWARE */}
-      {activeTab === 'impresoras' && (
-        <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="flex items-start gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-[#F26522] flex items-center justify-center shrink-0 mt-0.5">
-                <Printer className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  Administrador de Dispositivos de Impresión
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Administra impresoras USB y Ethernet, perfiles de hardware y tamaño de papel por estación.
-                </p>
-              </div>
-            </div>
-
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Servidor Local: {serverOnline ? 'En línea' : 'Desconectado'}
-            </span>
-          </div>
-
-          {/* Estación de Impresión */}
-          <div>
-            <span className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
-              Estación de Impresión:
-            </span>
-            <div className="inline-flex items-center gap-1.5">
-              {['Caja', 'Cocina'].map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => {
-                    setStation(st);
-                    localStorage.setItem('bunker_settings_selected_station', st);
-                    showToast(`Mostrando impresoras asignadas a ${st}.`, 'info');
-                  }}
-                  className={`min-h-[34px] px-4 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
-                    station === st
-                      ? 'bg-[#F26522] border-[#F26522] text-white'
-                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
-                >
-                  {st}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Impresoras USB */}
-          <div className="rounded-xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700 p-3.5 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 inline-flex items-center gap-1.5">
-                <Usb className="w-3.5 h-3.5 text-slate-500" />
-                Impresoras USB (Windows)
-              </span>
-              <span className="text-[11px] text-slate-400">
-                {printers.length > 0 ? `${printers.length} dispositivo(s)` : '1 dispositivo(s)'}
-              </span>
-            </div>
-
-            <div className="rounded-xl bg-white dark:bg-slate-900 border border-emerald-400/80 dark:border-emerald-500/60 p-3.5 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Printer className="w-4 h-4 text-[#F26522]" />
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">
-                    {printers[0]?.nombre || '80mm Series Printer'}
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase text-slate-400">
-                    USB
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {forceOffline ? (
+                    <WifiOff className="w-4 h-4 shrink-0" />
+                  ) : (
+                    <Wifi className="w-4 h-4 shrink-0" />
+                  )}
+                  <span>
+                    {forceOffline
+                      ? 'MODO OFFLINE — Operando de forma local sin internet'
+                      : 'MODO ONLINE — Conectado al servidor en tiempo real'}
                   </span>
                 </div>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10.5px] font-bold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                  CONECTADA
+                {forceOffline && (
+                  <button
+                    type="button"
+                    onClick={handleToggleOffline}
+                    className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shrink-0 transition-colors cursor-pointer border-0 shadow-xs active:scale-95"
+                  >
+                    Restaurar Modo Online
+                  </button>
+                )}
+              </div>
+
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <WifiOff className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      Forzar Modo Offline
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Activa el modo offline para realizar pruebas o operar ante cortes de internet.
+                    </p>
+                  </div>
+                </div>
+                <ToggleSwitch
+                  checked={forceOffline}
+                  onChange={handleToggleOffline}
+                  ariaLabel="Forzar Modo Offline"
+                />
+              </div>
+
+              <div className="rounded-xl bg-slate-50/70 dark:bg-slate-800/40 p-3 flex items-start gap-2 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                <Info className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Nota:</strong> La auto-detección y pings automáticos están deshabilitados. El sistema permanecerá en el modo elegido hasta que lo cambies aquí.
                 </span>
               </div>
+            </section>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div>
-                  <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
-                    Ancho de impresión:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {['80mm', '58mm', '50mm'].map((w) => (
-                      <button
-                        key={w}
-                        type="button"
-                        onClick={() => handleSaveUsbWidth(w)}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold border cursor-pointer transition-colors ${
-                          usbWidth === w
-                            ? 'bg-[#F26522] border-[#F26522] text-white'
-                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                        }`}
-                      >
-                        {w}
-                      </button>
-                    ))}
-                  </div>
+            {/* Preferencias de Interfaz y Alertas */}
+            <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-[#F26522] flex items-center justify-center shrink-0">
+                  <Bell className="w-4 h-4" />
                 </div>
-
                 <div>
-                  <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
-                    Perfil de Hardware:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {['Genérico', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((hw) => (
-                      <button
-                        key={hw}
-                        type="button"
-                        onClick={() => handleSaveUsbProfile(hw)}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold border cursor-pointer transition-colors ${
-                          usbHardware === hw
-                            ? 'bg-[#F26522] border-[#F26522] text-white'
-                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                        }`}
-                      >
-                        {hw}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Impresoras Ethernet */}
-          <div className="rounded-xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700 p-3.5 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 inline-flex items-center gap-1.5">
-                <Network className="w-3.5 h-3.5 text-slate-500" />
-                Impresoras Ethernet (Red Directa)
-              </span>
-              <span className="text-[11px] text-slate-400">
-                {ethLinked ? '1 dispositivo(s)' : '0 dispositivos'}
-              </span>
-            </div>
-
-            {ethLinked ? (
-              <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Printer className="w-4 h-4 text-slate-500 shrink-0" />
-                    <span className="text-xs font-bold text-slate-900 dark:text-white">
-                      80mm Series Printer Ethernet (192.168.1.114)
-                    </span>
-                    <span className="text-[10px] font-semibold text-slate-400">
-                      ETHERNET
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums mt-1">
-                    IP: <strong>192.168.1.22</strong> | MAC:{' '}
-                    <strong>28:0e:8b:a3:de:20</strong>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    Preferencias de Interfaz y Alertas
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Notificaciones en tiempo real durante el servicio.
                   </p>
                 </div>
+              </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEthRepairing((r) => !r);
-                      showToast(
-                        ethRepairing
-                          ? 'Impresora Ethernet reconectada.'
-                          : 'Reiniciando conexión Ethernet...',
-                        'info'
-                      );
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer border-0 ${
-                      ethRepairing
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
-                    }`}
-                  >
-                    {ethRepairing ? (
-                      <>
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                        <span>REPARANDO...</span>
-                      </>
-                    ) : (
-                      <span>EN LÍNEA</span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEthLinked(false);
-                      showToast('Impresora Ethernet desvinculada.', 'info');
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer border-0"
-                  >
-                    <Unlink className="w-3 h-3" />
-                    <span>Desvincular</span>
-                  </button>
+              <div className="space-y-3">
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <Bell className="w-4 h-4 text-[#F26522] mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">
+                        Mostrar Alertas de Stock
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Muestra un panel lateral cuando detecta insumos agotándose.
+                      </p>
+                    </div>
+                  </div>
+                  <ToggleSwitch
+                    checked={showAlerts}
+                    onChange={handleToggleStockAlerts}
+                    ariaLabel="Mostrar Alertas de Stock"
+                  />
+                </div>
+
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <Sparkles className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">
+                        Aviso sonoro al recibir comanda
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Emite un timbre breve en Cocina (KDS) y Caja cuando entra un pedido.
+                      </p>
+                    </div>
+                  </div>
+                  <ToggleSwitch
+                    checked={soundComandas}
+                    onChange={handleToggleSoundComandas}
+                    ariaLabel="Aviso sonoro al recibir comanda"
+                  />
                 </div>
               </div>
-            ) : (
-              <div className="rounded-xl bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 p-4 flex items-center justify-between gap-3">
-                <span className="text-xs text-slate-500">
-                  No hay impresoras Ethernet vinculadas.
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEthLinked(true);
-                    setEthRepairing(false);
-                    showToast('Impresora Ethernet vinculada nuevamente.', 'success');
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-[#F26522] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer border-0"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Vincular</span>
-                </button>
-              </div>
-            )}
+            </section>
           </div>
+        )}
 
-          {/* Historial de Reparaciones y Acciones */}
-          <div className="space-y-3 pt-1">
-            <button
-              type="button"
-              onClick={() => setShowRecoveryLogs((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-bold text-slate-700 dark:text-slate-200 py-1 cursor-pointer bg-transparent border-0"
-            >
-              <span className="inline-flex items-center gap-2">
-                <AlertTriangle className="w-3.5 h-3.5 text-sky-500" />
-                Historial de Reparaciones (Búnker Auto Recovery)
-              </span>
-              {showRecoveryLogs ? (
-                <EyeOff className="w-4 h-4 text-slate-400" />
-              ) : (
-                <Eye className="w-4 h-4 text-slate-400" />
-              )}
-            </button>
-
-            {showRecoveryLogs && (
-              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 divide-y divide-slate-200/60 dark:divide-slate-700 text-xs">
-                {recoveryLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="px-3.5 py-2.5 flex items-center justify-between gap-2"
-                  >
-                    <span className="font-semibold text-slate-800 dark:text-slate-100">
-                      {log.dispositivo}
-                    </span>
-                    <span className="text-slate-500 dark:text-slate-400 text-[11px]">
-                      {log.hora} · {log.resultado}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isRefreshingPrinters}
-                  onClick={handleRefreshPrinters}
-                  className="min-h-[38px] px-3.5 rounded-xl border border-orange-200 dark:border-orange-900/50 bg-orange-50/60 dark:bg-orange-950/30 text-[#F26522] text-xs font-bold inline-flex items-center gap-1.5 hover:bg-orange-100/70 dark:hover:bg-orange-900/40 cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingPrinters ? 'animate-spin' : ''}`} />
-                  <span>Actualizar</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleTestPrint}
-                  className="min-h-[38px] px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Imprimir Ticket de Prueba</span>
-                </button>
+        {/* TAB 2: ROLES Y PERMISOS */}
+        {activeTab === 'permisos' && (
+          <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-[#F26522] flex items-center justify-center shrink-0 mt-0.5">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    Configuración de Permisos por Rol
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Módulos ordenados por área operativa. Habilita o deshabilita accesos para Mozo, Cocina y Caja.
+                  </p>
+                </div>
               </div>
 
               <button
                 type="button"
-                onClick={handleToggleAuditTicket}
-                className={`min-h-[38px] px-3.5 rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer ${
-                  auditTicketOn
-                    ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
-                    : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                }`}
+                onClick={handleSavePermissions}
+                className={`min-h-[40px] px-4 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0 border-0 ${permissionsDirty
+                  ? 'bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)]'
+                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
+                  }`}
               >
-                <FileCheck2 className="w-3.5 h-3.5" />
-                <span>Ticket de Auditoría: {auditTicketOn ? 'ON' : 'OFF'}</span>
+                <Save className="w-3.5 h-3.5" />
+                <span>{permissionsDirty ? 'Guardar Cambios*' : 'Guardar Cambios'}</span>
               </button>
             </div>
-          </div>
-        </section>
-      )}
 
-      {/* TAB 4: TEMAS Y APARIENCIA */}
-      {activeTab === 'apariencia' && (
-        <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-[#F26522] flex items-center justify-center shrink-0 mt-0.5">
-              <Palette className="w-4 h-4" />
+            <div className="overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#F26522] text-white text-xs font-bold uppercase tracking-wider">
+                    <th className="py-3 px-4">Módulo</th>
+                    <th className="py-3 px-4 text-center w-28">Mozo</th>
+                    <th className="py-3 px-4 text-center w-28">Cocina</th>
+                    <th className="py-3 px-4 text-center w-28">Caja</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                  {groupedPermissions.map((grp) => (
+                    <React.Fragment key={grp.grupo}>
+                      <tr className="bg-slate-50/90 dark:bg-slate-800/60">
+                        <td
+                          colSpan={4}
+                          className="py-1.5 px-4 text-[10.5px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+                        >
+                          {grp.grupo}
+                        </td>
+                      </tr>
+                      {grp.items.map((mod) => (
+                        <tr
+                          key={mod.id}
+                          className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
+                        >
+                          <td className="py-3 px-4">
+                            <p className="text-xs font-bold text-slate-900 dark:text-white">
+                              {mod.nombre}
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {mod.descripcion}
+                            </p>
+                          </td>
+                          {['mozo', 'cocina', 'caja'].map((role) => {
+                            const checked = !!mod[role];
+                            return (
+                              <td key={role} className="py-3 px-4 text-center">
+                                <button
+                                  type="button"
+                                  aria-label={`Permiso ${mod.nombre} para ${role}`}
+                                  onClick={() => handleTogglePermission(mod.id, role)}
+                                  className={`w-5 h-5 rounded-md border inline-flex items-center justify-center transition-colors cursor-pointer ${checked
+                                    ? 'bg-[#F26522] border-[#F26522] text-white'
+                                    : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-[#F26522]'
+                                    }`}
+                                >
+                                  {checked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                </button>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
             </div>
+
+            <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+              <Info className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+              <span>
+                <strong>Nota:</strong> El rol &quot;Admin&quot; siempre tiene acceso completo a todos los módulos del sistema.
+              </span>
+            </div>
+          </section>
+        )}
+
+        {/* TAB 3: IMPRESORAS Y HARDWARE */}
+        {activeTab === 'impresoras' && (
+          <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-[#F26522] flex items-center justify-center shrink-0 mt-0.5">
+                  <Printer className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    Administrador de Dispositivos de Impresión
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Administra impresoras USB y Ethernet, perfiles de hardware y tamaño de papel por estación.
+                  </p>
+                </div>
+              </div>
+
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Servidor Local: {serverOnline ? 'En línea' : 'Desconectado'}
+              </span>
+            </div>
+
+            {/* Estación de Impresión */}
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Temas y Apariencia
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Elige la paleta de color del panel de barra lateral y acentos principales.
-              </p>
+              <span className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
+                Estación de Impresión:
+              </span>
+              <div className="inline-flex items-center gap-1.5">
+                {['Caja', 'Cocina'].map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => {
+                      setStation(st);
+                      localStorage.setItem('bunker_settings_selected_station', st);
+                      showToast(`Mostrando impresoras asignadas a ${st}.`, 'info');
+                    }}
+                    className={`min-h-[34px] px-4 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${station === st
+                      ? 'bg-[#F26522] border-[#F26522] text-white'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                      }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {THEMES.map((themeItem) => {
-              const isSelected = theme === themeItem.id;
-              return (
+            {/* Impresoras USB */}
+            <div className="rounded-xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700 p-3.5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 inline-flex items-center gap-1.5">
+                  <Usb className="w-3.5 h-3.5 text-slate-500" />
+                  Impresoras USB (Windows)
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  {printers.length > 0 ? `${printers.length} dispositivo(s)` : '1 dispositivo(s)'}
+                </span>
+              </div>
+
+              <div className="rounded-xl bg-white dark:bg-slate-900 border border-emerald-400/80 dark:border-emerald-500/60 p-3.5 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Printer className="w-4 h-4 text-[#F26522]" />
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      {printers[0]?.nombre || '80mm Series Printer'}
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase text-slate-400">
+                      USB
+                    </span>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10.5px] font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                    CONECTADA
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div>
+                    <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+                      Ancho de impresión:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['80mm', '58mm', '50mm'].map((w) => (
+                        <button
+                          key={w}
+                          type="button"
+                          onClick={() => handleSaveUsbWidth(w)}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-bold border cursor-pointer transition-colors ${usbWidth === w
+                            ? 'bg-[#F26522] border-[#F26522] text-white'
+                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                            }`}
+                        >
+                          {w}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+                      Perfil de Hardware:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['Genérico', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((hw) => (
+                        <button
+                          key={hw}
+                          type="button"
+                          onClick={() => handleSaveUsbProfile(hw)}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-bold border cursor-pointer transition-colors ${usbHardware === hw
+                            ? 'bg-[#F26522] border-[#F26522] text-white'
+                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                            }`}
+                        >
+                          {hw}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Impresoras Ethernet */}
+            <div className="rounded-xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700 p-3.5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 inline-flex items-center gap-1.5">
+                  <Network className="w-3.5 h-3.5 text-slate-500" />
+                  Impresoras Ethernet (Red Directa)
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  {ethLinked ? '1 dispositivo(s)' : '0 dispositivos'}
+                </span>
+              </div>
+
+              {ethLinked ? (
+                <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Printer className="w-4 h-4 text-slate-500 shrink-0" />
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        80mm Series Printer Ethernet (192.168.1.114)
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-400">
+                        ETHERNET
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums mt-1">
+                      IP: <strong>192.168.1.22</strong> | MAC:{' '}
+                      <strong>28:0e:8b:a3:de:20</strong>
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEthRepairing((r) => !r);
+                        showToast(
+                          ethRepairing
+                            ? 'Impresora Ethernet reconectada.'
+                            : 'Reiniciando conexión Ethernet...',
+                          'info'
+                        );
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer border-0 ${ethRepairing
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                        }`}
+                    >
+                      {ethRepairing ? (
+                        <>
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          <span>REPARANDO...</span>
+                        </>
+                      ) : (
+                        <span>EN LÍNEA</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEthLinked(false);
+                        showToast('Impresora Ethernet desvinculada.', 'info');
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer border-0"
+                    >
+                      <Unlink className="w-3 h-3" />
+                      <span>Desvincular</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 p-4 flex items-center justify-between gap-3">
+                  <span className="text-xs text-slate-500">
+                    No hay impresoras Ethernet vinculadas.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEthLinked(true);
+                      setEthRepairing(false);
+                      showToast('Impresora Ethernet vinculada nuevamente.', 'success');
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-[#F26522] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer border-0"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Vincular</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Historial de Reparaciones y Acciones */}
+            <div className="space-y-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowRecoveryLogs((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 text-xs font-bold text-slate-700 dark:text-slate-200 py-1 cursor-pointer bg-transparent border-0"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-sky-500" />
+                  Historial de Reparaciones (Búnker Auto Recovery)
+                </span>
+                {showRecoveryLogs ? (
+                  <EyeOff className="w-4 h-4 text-slate-400" />
+                ) : (
+                  <Eye className="w-4 h-4 text-slate-400" />
+                )}
+              </button>
+
+              {showRecoveryLogs && (
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 divide-y divide-slate-200/60 dark:divide-slate-700 text-xs">
+                  {recoveryLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="px-3.5 py-2.5 flex items-center justify-between gap-2"
+                    >
+                      <span className="font-semibold text-slate-800 dark:text-slate-100">
+                        {log.dispositivo}
+                      </span>
+                      <span className="text-slate-500 dark:text-slate-400 text-[11px]">
+                        {log.hora} · {log.resultado}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isRefreshingPrinters}
+                    onClick={handleRefreshPrinters}
+                    className="min-h-[38px] px-3.5 rounded-xl border border-orange-200 dark:border-orange-900/50 bg-orange-50/60 dark:bg-orange-950/30 text-[#F26522] text-xs font-bold inline-flex items-center gap-1.5 hover:bg-orange-100/70 dark:hover:bg-orange-900/40 cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingPrinters ? 'animate-spin' : ''}`} />
+                    <span>Actualizar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleTestPrint}
+                    className="min-h-[38px] px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Imprimir Ticket de Prueba</span>
+                  </button>
+                </div>
+
                 <button
-                  key={themeItem.id}
                   type="button"
-                  onClick={() => handleSelectTheme(themeItem)}
-                  className={`text-left rounded-2xl p-4 border-2 transition-all cursor-pointer ${themeItem.bgClass} ${
-                    isSelected
+                  onClick={handleToggleAuditTicket}
+                  className={`min-h-[38px] px-3.5 rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer ${auditTicketOn
+                    ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                    : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                    }`}
+                >
+                  <FileCheck2 className="w-3.5 h-3.5" />
+                  <span>Ticket de Auditoría: {auditTicketOn ? 'ON' : 'OFF'}</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* TAB 4: TEMAS Y APARIENCIA */}
+        {activeTab === 'apariencia' && (
+          <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+            <div className="flex items-start gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-[#F26522] flex items-center justify-center shrink-0 mt-0.5">
+                <Palette className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  Temas y Apariencia
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Elige la paleta de color del panel de barra lateral y acentos principales.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {THEMES.map((themeItem) => {
+                const isSelected = theme === themeItem.id;
+                return (
+                  <button
+                    key={themeItem.id}
+                    type="button"
+                    onClick={() => handleSelectTheme(themeItem)}
+                    className={`text-left rounded-2xl p-4 border-2 transition-all cursor-pointer ${themeItem.bgClass} ${isSelected
                       ? themeItem.borderActiveClass
                       : 'border-transparent hover:border-white/20'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div
-                      className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/10"
-                      style={{ color: themeItem.accentHex }}
-                    >
-                      <Palette className="w-4 h-4" />
-                    </div>
-                    {isSelected && (
-                      <span
-                        className="px-2 py-0.5 rounded-md text-[10px] font-bold text-white tracking-wide"
-                        style={{ backgroundColor: themeItem.accentHex }}
+                      }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/10"
+                        style={{ color: themeItem.accentHex }}
                       >
-                        {themeItem.badgeText}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="mt-3 text-sm font-bold text-white">
-                    {themeItem.nombre}
-                  </h3>
-                  <p className="mt-1 text-[11px] text-slate-300 leading-relaxed">
-                    {themeItem.descripcion}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Footer anclado abajo del todo */}
-      <footer className="mt-auto pt-4 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-400">
-        <span>
-          © 2026 Búnker - Sistema de Gestión de Comandas Inteligentes.
-        </span>
-        <span>Hecho con 🧡 por Hector y Melanie</span>
-      </footer>
+                        <Palette className="w-4 h-4" />
+                      </div>
+                      {isSelected && (
+                        <span
+                          className="px-2 py-0.5 rounded-md text-[10px] font-bold text-white tracking-wide"
+                          style={{ backgroundColor: themeItem.accentHex }}
+                        >
+                          {themeItem.badgeText}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="mt-3 text-sm font-bold text-white">
+                      {themeItem.nombre}
+                    </h3>
+                    <p className="mt-1 text-[11px] text-slate-300 leading-relaxed">
+                      {themeItem.descripcion}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
