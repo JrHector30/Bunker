@@ -3,7 +3,7 @@ import { X, AlertCircle } from 'lucide-react';
 import ToggleSwitch from '../ui/ToggleSwitch';
 import { areNamesMatching } from '../../utils/textMatching';
 
-const ALMACENES = [
+const DEFAULT_ALMACENES = [
   'Congelador',
   'Congelador 2',
   'Alacena',
@@ -17,13 +17,14 @@ export const InsumoModal = ({
   mode = 'create',
   initialInsumo,
   existingInsumos = [],
+  almacenes = DEFAULT_ALMACENES,
   onClose,
   onSave,
 }) => {
   const [nombre, setNombre] = useState('');
   const [cantidad, setCantidad] = useState('');
   const [unidad, setUnidad] = useState('kg');
-  const [almacen, setAlmacen] = useState('Congelador');
+  const [almacen, setAlmacen] = useState(almacenes[0] || 'Congelador');
   const [costoUnitario, setCostoUnitario] = useState('');
   const [alertaStockCritico, setAlertaStockCritico] = useState(false);
   const [stockCriticoMin, setStockCriticoMin] = useState('');
@@ -41,7 +42,7 @@ export const InsumoModal = ({
           : ''
       );
       setUnidad(initialInsumo.unidad || initialInsumo.unidadMedida || 'kg');
-      setAlmacen(initialInsumo.almacen || 'Congelador');
+      setAlmacen(initialInsumo.almacen || almacenes[0] || 'Congelador');
       setCostoUnitario(
         initialInsumo.costoUnitario !== undefined
           ? Number(initialInsumo.costoUnitario || 0).toFixed(2)
@@ -68,13 +69,13 @@ export const InsumoModal = ({
       setNombre('');
       setCantidad('');
       setUnidad('kg');
-      setAlmacen('Congelador');
+      setAlmacen(almacenes[0] || 'Congelador');
       setCostoUnitario('');
       setAlertaStockCritico(false);
       setStockCriticoMin('');
     }
     setError('');
-  }, [isOpen, mode, initialInsumo]);
+  }, [isOpen, mode, initialInsumo, almacenes]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -303,7 +304,7 @@ export const InsumoModal = ({
                 onChange={(e) => setAlmacen(e.target.value)}
                 className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F26522]/25 focus:border-[#F26522]"
               >
-                {ALMACENES.map((a) => (
+                {almacenes.map((a) => (
                   <option key={a} value={a}>
                     {a}
                   </option>

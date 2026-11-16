@@ -5019,15 +5019,19 @@ app.post('/api/insumos', async (req, res) => {
             where: { deleted: false, restauranteId: tenantId }
         });
         const matched = existingInsumos.find(ins => areNamesMatching(nombre, ins.nombre));
+        const safeStockMinimo = (stockMinimo !== undefined && stockMinimo !== null && String(stockMinimo).trim() !== '')
+            ? (parseFloat(stockMinimo) || 0)
+            : 0;
+
         if (matched) {
             const updated = await prisma.insumo.update({
                 where: { id: matched.id },
                 data: {
-                    precioCompra: precioCompra !== undefined ? (precioCompra || 0) : matched.precioCompra,
+                    precioCompra: precioCompra !== undefined ? (parseFloat(precioCompra) || 0) : matched.precioCompra,
                     unidadMedida: unidadMedida || matched.unidadMedida,
-                    stock: stock !== undefined ? (stock || 0) : matched.stock,
-                    stockMinimo: stockMinimo !== undefined ? (stockMinimo ? stockMinimo : null) : matched.stockMinimo,
-                    notificarAlerta: notificarAlerta !== undefined ? notificarAlerta : matched.notificarAlerta,
+                    stock: stock !== undefined ? (parseFloat(stock) || 0) : matched.stock,
+                    stockMinimo: stockMinimo !== undefined ? safeStockMinimo : matched.stockMinimo,
+                    notificarAlerta: notificarAlerta !== undefined ? Boolean(notificarAlerta) : matched.notificarAlerta,
                     almacen: almacen || matched.almacen,
                     fechaActualizacion: new Date()
                 }
@@ -5038,11 +5042,11 @@ app.post('/api/insumos', async (req, res) => {
         const insumo = await prisma.insumo.create({
             data: {
                 nombre,
-                precioCompra: precioCompra || 0,
-                unidadMedida,
-                stock: stock || 0,
-                stockMinimo: stockMinimo ? stockMinimo : null,
-                notificarAlerta: notificarAlerta || false,
+                precioCompra: parseFloat(precioCompra) || 0,
+                unidadMedida: unidadMedida || 'kg',
+                stock: parseFloat(stock) || 0,
+                stockMinimo: safeStockMinimo,
+                notificarAlerta: Boolean(notificarAlerta),
                 almacen: almacen || 'Congelador',
                 fechaActualizacion: new Date(),
                 restauranteId: tenantId
@@ -5050,7 +5054,22 @@ app.post('/api/insumos', async (req, res) => {
         });
         res.json(insumo);
     } catch (e) {
-        res.status(400).json({ error: e.message });
+        console.error('Error al registrar insumo:', e);
+        let errorMsg = 'Error al registrar el insumo en el sistema.';
+        if (e.message && e.message.includes('Unique constraint')) {
+            errorMsg = `Ya existe un insumo con el nombre "${nombre}".`;
+        } else if (e.message && e.message.includes('stockMinimo')) {
+            errorMsg = 'El stock mínimo debe ser un número válido.';
+        } else if (e.message) {
+            const cleanMsg = e.message
+                .replace(/Invalid `prisma.*` invocation:[\s\S]*?\n/g, '')
+                .replace(/Argument `.*` must not be null\./g, 'Datos requeridos no válidos.')
+                .trim();
+            if (cleanMsg && cleanMsg.length < 150 && !cleanMsg.includes('{') && !cleanMsg.includes('}')) {
+                errorMsg = cleanMsg;
+            }
+        }
+        res.status(400).json({ error: errorMsg });
     }
 });
 
@@ -5102,12 +5121,14 @@ app.put('/api/insumos/:id', async (req, res) => {
     try {
         const updateData = { fechaActualizacion: new Date() };
         if (nombre) updateData.nombre = nombre;
-        if (precioCompra !== undefined) updateData.precioCompra = precioCompra || 0;
+        if (precioCompra !== undefined) updateData.precioCompra = parseFloat(precioCompra) || 0;
         if (unidadMedida) updateData.unidadMedida = unidadMedida;
-        if (stock !== undefined) updateData.stock = stock || 0;
-        if (stockMinimo !== undefined) updateData.stockMinimo = stockMinimo ? stockMinimo : null;
-        if (notificarAlerta !== undefined) updateData.notificarAlerta = notificarAlerta;
-        if (activo !== undefined) updateData.activo = activo;
+        if (stock !== undefined) updateData.stock = parseFloat(stock) || 0;
+        if (stockMinimo !== undefined) {
+            updateData.stockMinimo = (stockMinimo !== null && String(stockMinimo).trim() !== '') ? (parseFloat(stockMinimo) || 0) : 0;
+        }
+        if (notificarAlerta !== undefined) updateData.notificarAlerta = Boolean(notificarAlerta);
+        if (activo !== undefined) updateData.activo = Boolean(activo);
         if (almacen) updateData.almacen = almacen;
 
         const insumo = await prisma.insumo.update({
@@ -5116,7 +5137,83 @@ app.put('/api/insumos/:id', async (req, res) => {
         });
         res.json(insumo);
     } catch (e) {
-        res.status(400).json({ error: e.message });
+        console.error('Error al actualizar insumo:', e);
+        res.status(400).json({ error: 'Error al actualizar el insumo en el sistema.' });
+    }
+});
+
+app.post('/api/insumos/bulk-move', async (req, res) => {
+    const { ids, targetAlmacen } = req.body;
+    try {
+        if (!Array.isArray(ids) || ids.length === 0 || !targetAlmacen) {
+            return res.status(400).json({ error: "Datos de traslado incompletos" });
+        }
+        const tenantId = getTenantId(req);
+        const numericIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+        await prisma.insumo.updateMany({
+            where: {
+                id: { in: numericIds },
+                restauranteId: tenantId
+            },
+            data: {
+                almacen: targetAlmacen,
+                fechaActualizacion: new Date()
+            }
+        });
+        res.json({ success: true, count: numericIds.length });
+    } catch (e) {
+        console.error('Error al trasladar insumos:', e);
+        res.status(500).json({ error: 'Error al trasladar los insumos.' });
+    }
+});
+
+app.post('/api/insumos/rename-almacen', async (req, res) => {
+    const { oldName, newName } = req.body;
+    try {
+        if (!oldName || !newName) {
+            return res.status(400).json({ error: "Nombres requeridos" });
+        }
+        const tenantId = getTenantId(req);
+        const result = await prisma.insumo.updateMany({
+            where: {
+                almacen: oldName,
+                restauranteId: tenantId
+            },
+            data: {
+                almacen: newName,
+                fechaActualizacion: new Date()
+            }
+        });
+        res.json({ success: true, updatedCount: result.count });
+    } catch (e) {
+        console.error('Error al renombrar almacén:', e);
+        res.status(500).json({ error: 'Error al renombrar el almacén.' });
+    }
+});
+
+app.post('/api/insumos/delete-almacen', async (req, res) => {
+    const { name, targetAlmacen } = req.body;
+    try {
+        if (!name) {
+            return res.status(400).json({ error: "Nombre de almacén requerido" });
+        }
+        const tenantId = getTenantId(req);
+        if (targetAlmacen) {
+            await prisma.insumo.updateMany({
+                where: {
+                    almacen: name,
+                    restauranteId: tenantId
+                },
+                data: {
+                    almacen: targetAlmacen,
+                    fechaActualizacion: new Date()
+                }
+            });
+        }
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Error al eliminar almacén:', e);
+        res.status(500).json({ error: 'Error al eliminar el almacén.' });
     }
 });
 
@@ -5133,7 +5230,7 @@ app.post('/api/insumos/bulk-delete', async (req, res) => {
         });
         res.json({ message: `${numericIds.length} insumos eliminados con éxito.` });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Error al eliminar insumos en lote.' });
     }
 });
 

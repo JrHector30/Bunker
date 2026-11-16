@@ -21,7 +21,9 @@ import {
   AlertTriangle,
   Eye,
   Download,
-  Upload
+  Upload,
+  Warehouse,
+  ArrowRightLeft
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
@@ -32,18 +34,20 @@ import ToggleSwitch from '../ui/ToggleSwitch';
 import { InsumoModal } from './InsumoModal';
 import { InsumoDetailsModal } from './InsumoDetailsModal';
 import { ImportReportModal } from './ImportReportModal';
+import { AlmacenesModal } from './AlmacenesModal';
+import { MoveAlmacenModal } from './MoveAlmacenModal';
 import { areNamesMatching } from '../../utils/textMatching';
 import { getActiveRestaurant } from '../../utils/tenant';
 
-const ALMACENES_DISPONIBLES = ['Congelador', 'Congelador 2', 'Despensa', 'Refrigerador'];
+const DEFAULT_ALMACENES = ['Congelador', 'Congelador 2', 'Alacena', 'Refrigerador'];
 const UNIDADES_DISPONIBLES = ['kg', 'L', 'und', 'g'];
 const ESTADOS_DISPONIBLES = ['Todos', 'Bueno', 'Bajo Stock', 'Sin Stock', 'Vencido'];
 const PAGE_SIZE = 10;
 
-// Deterministic fallback para almacén y fecha si no vinieran definidos
-function getInsumoAlmacen(item, index) {
+// Fallback para almacén y fecha
+function getInsumoAlmacen(item, index, availableAlmacenes = DEFAULT_ALMACENES) {
   if (item.almacen) return item.almacen;
-  return ALMACENES_DISPONIBLES[(item.id || index) % ALMACENES_DISPONIBLES.length];
+  return availableAlmacenes[(item.id || index) % availableAlmacenes.length] || 'Congelador';
 }
 
 function getInsumoFecha(item, index) {
@@ -103,6 +107,45 @@ export default function InsumosManagement({
 }) {
   const navigate = useNavigate();
 
+  // Estado centralizado y persistente de Almacenes
+  const [almacenes, setAlmacenes] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bunker_almacenes_list');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_ALMACENES;
+  });
+
+  const [almacenesModalOpen, setAlmacenesModalOpen] = useState(false);
+  const [moveTarget, setMoveTarget] = useState(null); // { ids: [], label: '', currentAlmacen?: '' }
+
+  // Sincronizar almacenes con insumos si vinieran almacenes adicionales de la base de datos
+  useEffect(() => {
+    if (insumos && insumos.length > 0) {
+      setAlmacenes((prev) => {
+        const set = new Set(prev);
+        let changed = false;
+        insumos.forEach((i) => {
+          if (i.almacen && !set.has(i.almacen)) {
+            set.add(i.almacen);
+            changed = true;
+          }
+        });
+        const updated = Array.from(set);
+        if (changed) {
+          try {
+            localStorage.setItem('bunker_almacenes_list', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        }
+        return prev;
+      });
+    }
+  }, [insumos]);
+
   // Estados de Filtros y Búsqueda
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
@@ -139,7 +182,7 @@ export default function InsumosManagement({
   const enrichedInsumos = useMemo(() => {
     return insumos.map((item, idx) => {
       const fecha = getInsumoFecha(item, idx);
-      const almacen = getInsumoAlmacen(item, idx);
+      const almacen = getInsumoAlmacen(item, idx, almacenes);
       const estado = calculateInsumoStatus(item.stock, fecha);
       return {
         ...item,
@@ -149,7 +192,7 @@ export default function InsumosManagement({
         formattedFecha: formatSpanishDate(fecha)
       };
     });
-  }, [insumos]);
+  }, [insumos, almacenes]);
 
   // Cálculos de KPIs en tiempo real
   const kpiData = useMemo(() => {
@@ -291,6 +334,117 @@ export default function InsumosManagement({
     }
   };
 
+  // Handlers de Almacenes y Traslados
+  const handleAddAlmacen = (nombre) => {
+    const clean = nombre.trim();
+    if (!clean) return;
+    setAlmacenes((prev) => {
+      const next = [...prev, clean];
+      try { localStorage.setItem('bunker_almacenes_list', JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
+    showToast?.(`Almacén "${clean}" creado con éxito.`, 'success');
+  };
+
+  const handleRenameAlmacen = async (oldName, newName) => {
+    const clean = newName.trim();
+    if (!clean || oldName === clean) return;
+    const tenantId = getActiveRestaurant()?.id || 1;
+
+    setAlmacenes((prev) => {
+      const next = prev.map((a) => (a === oldName ? clean : a));
+      try { localStorage.setItem('bunker_almacenes_list', JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
+
+    if (almacenFilter === oldName) {
+      setAlmacenFilter(clean);
+    }
+
+    try {
+      await fetch('/api/insumos/rename-almacen', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-restaurante-id': String(tenantId)
+        },
+        body: JSON.stringify({ oldName, newName: clean })
+      });
+      showToast?.(`Almacén "${oldName}" renombrado a "${clean}".`, 'success');
+      onRefresh?.();
+    } catch (e) {
+      showToast?.(`Almacén "${oldName}" renombrado.`, 'success');
+    }
+  };
+
+  const handleDeleteAlmacen = async (name, targetAlmacen) => {
+    const tenantId = getActiveRestaurant()?.id || 1;
+
+    setAlmacenes((prev) => {
+      const next = prev.filter((a) => a !== name);
+      try { localStorage.setItem('bunker_almacenes_list', JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
+
+    if (almacenFilter === name) {
+      setAlmacenFilter('Todos');
+    }
+
+    try {
+      await fetch('/api/insumos/delete-almacen', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-restaurante-id': String(tenantId)
+        },
+        body: JSON.stringify({ name, targetAlmacen })
+      });
+      showToast?.(
+        targetAlmacen
+          ? `Almacén "${name}" eliminado y sus insumos trasladados a "${targetAlmacen}".`
+          : `Almacén "${name}" eliminado.`,
+        'success'
+      );
+      onRefresh?.();
+    } catch (e) {
+      showToast?.(`Almacén "${name}" eliminado.`, 'success');
+    }
+  };
+
+  const handleConfirmMoveAlmacen = async (targetAlmacen) => {
+    if (!moveTarget) return;
+    const tenantId = getActiveRestaurant()?.id || 1;
+    const numericIds = moveTarget.ids.map((id) => parseInt(id)).filter((id) => !isNaN(id));
+
+    try {
+      const res = await fetch('/api/insumos/bulk-move', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-restaurante-id': String(tenantId)
+        },
+        body: JSON.stringify({ ids: numericIds, targetAlmacen })
+      });
+
+      if (res.ok) {
+        showToast?.(
+          moveTarget.ids.length > 1
+            ? `${moveTarget.ids.length} insumos trasladados a "${targetAlmacen}".`
+            : `Insumo "${moveTarget.label}" trasladado a "${targetAlmacen}".`,
+          'success'
+        );
+        onRefresh?.();
+      } else {
+        showToast?.('Error al trasladar insumo(s)', 'error');
+      }
+    } catch (e) {
+      showToast?.('Error de conexión al trasladar', 'error');
+    } finally {
+      setSelectedIds([]);
+      setMoveTarget(null);
+    }
+  };
+
   // Descargar Plantilla Excel preconfigurada
   const handleDownloadTemplate = () => {
     const link = document.createElement('a');
@@ -376,14 +530,40 @@ export default function InsumosManagement({
             continue; // OMITIR duplicado de acuerdo al requerimiento
           }
 
-          // 3. Preparar campos opcionales
-          const rawUnidad = row['Unidad de Medida'] || row['Unidad'] || row['unidad'] || 'kg';
-          const unidadMedida = ['kg', 'L', 'und', 'g'].includes(rawUnidad) ? rawUnidad : 'kg';
+          // 3. Validar Almacén existente en el sistema
+          const rawAlmacen = row['Almacén'] || row['Almacen'] || row['almacen'];
+          const trimmedAlmacen = rawAlmacen !== undefined && rawAlmacen !== null ? String(rawAlmacen).trim() : '';
 
-          const rawAlmacen = row['Almacén'] || row['Almacen'] || row['almacen'] || 'Congelador';
-          const almacen = ['Congelador', 'Congelador 2', 'Alacena', 'Refrigerador'].includes(rawAlmacen)
-            ? rawAlmacen
-            : 'Congelador';
+          let finalAlmacen = almacenes[0] || 'Congelador';
+          if (trimmedAlmacen) {
+            const matchedAlmacen = almacenes.find(
+              (a) => a.toLowerCase() === trimmedAlmacen.toLowerCase()
+            );
+            if (!matchedAlmacen) {
+              incompletos.push({
+                fila: rowNum,
+                motivo: `El almacén "${trimmedAlmacen}" no está creado y no existe en nuestro sistema por eso no se ha añadido. Debes crearlo previamente en Gestionar Almacenes.`
+              });
+              continue;
+            }
+            finalAlmacen = matchedAlmacen;
+          }
+
+          // 4. Validar Unidad de Medida
+          const rawUnidad = row['Unidad de Medida'] || row['Unidad'] || row['unidad'];
+          const trimmedUnidad = rawUnidad !== undefined && rawUnidad !== null ? String(rawUnidad).trim() : '';
+          const validUnits = ['kg', 'L', 'und', 'g'];
+          let finalUnidad = 'kg';
+          if (trimmedUnidad) {
+            if (!validUnits.includes(trimmedUnidad)) {
+              incompletos.push({
+                fila: rowNum,
+                motivo: `La unidad de medida "${trimmedUnidad}" no es reconocida por el sistema (debe ser kg, L, und o g).`
+              });
+              continue;
+            }
+            finalUnidad = trimmedUnidad;
+          }
 
           const rawCosto = row['Costo Unitario'] || row['Costo'] || row['costo'] || row['Precio Compra'] || 0;
           const precioCompra = Number(Number(rawCosto || 0).toFixed(2)) || 0;
@@ -403,7 +583,7 @@ export default function InsumosManagement({
             stockMinimo = Number(Number(rawStockCritico).toFixed(2));
           }
 
-          // 4. Registrar en base de datos
+          // 5. Registrar en base de datos
           try {
             const res = await fetch('/api/insumos', {
               method: 'POST',
@@ -414,8 +594,8 @@ export default function InsumosManagement({
               body: JSON.stringify({
                 nombre: trimmedNombre,
                 stock: parsedStock,
-                unidadMedida,
-                almacen,
+                unidadMedida: finalUnidad,
+                almacen: finalAlmacen,
                 precioCompra,
                 notificarAlerta,
                 stockMinimo
@@ -427,14 +607,23 @@ export default function InsumosManagement({
                 fila: rowNum,
                 nombre: trimmedNombre,
                 stock: parsedStock,
-                unidadMedida
+                unidadMedida: finalUnidad
               });
               processedNames.push(trimmedNombre);
             } else {
               const errData = await res.json().catch(() => ({}));
+              let userFriendlyReason = errData.error || 'No se pudo guardar el insumo en el sistema.';
+              if (
+                userFriendlyReason.includes('prisma') ||
+                userFriendlyReason.includes('invocation') ||
+                userFriendlyReason.includes('Invocation') ||
+                userFriendlyReason.includes('Argument')
+              ) {
+                userFriendlyReason = 'Los datos del insumo contienen valores no reconocidos por el sistema.';
+              }
               incompletos.push({
                 fila: rowNum,
-                motivo: errData.error || 'Error al guardar en el servidor'
+                motivo: userFriendlyReason
               });
             }
           } catch (apiErr) {
@@ -559,14 +748,15 @@ export default function InsumosManagement({
   // Items de acción centralizados para SmoothDropdown (Desktop y Mobile)
   const dropdownActions = [
     { id: 'details', label: 'Detalles', icon: Eye },
+    { id: 'move', label: 'Mover almacén', icon: ArrowRightLeft },
     { id: 'edit', label: 'Editar', icon: Pencil },
     { id: 'delete', label: 'Borrar', icon: Trash2, isDestructive: true }
   ];
 
   return (
     <div className="space-y-6 animate-fade-in font-sans">
-      {/* 1. Header con Título y Fecha dinámica */}
-      <header className="flex items-start gap-3.5">
+      {/* 1. Header con Título, Fecha dinámica y Botón Gestionar Almacenes */}
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5">
         <div>
           <h1 className="text-[22px] sm:text-[24px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight font-sans">
             Gestión de Inventario
@@ -575,6 +765,16 @@ export default function InsumosManagement({
             {formatTodaySpanish()}
           </p>
         </div>
+
+        {/* Botón Almacenes */}
+        <button
+          type="button"
+          onClick={() => setAlmacenesModalOpen(true)}
+          className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors whitespace-nowrap shrink-0 cursor-pointer self-start sm:self-auto"
+        >
+          <Warehouse className="w-4 h-4 text-[#F26522]" />
+          <span>Almacenes ({almacenes.length})</span>
+        </button>
       </header>
 
       {/* 2. KPIs Row: 2 cols móvil (2 filas de 2 cards) -> 4 cols desktop con tamaño notablemente reducido */}
@@ -706,10 +906,24 @@ export default function InsumosManagement({
 
             {/* Pill de Selección Masiva */}
             {selectedIds.length > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-900 text-xs font-medium text-emerald-800 dark:text-emerald-300 animate-fade-in">
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-900 text-xs font-medium text-emerald-800 dark:text-emerald-300 animate-fade-in flex-wrap">
                 <span className="tabular-nums font-semibold">
                   {selectedIds.length} {selectedIds.length === 1 ? 'seleccionado' : 'seleccionados'}
                 </span>
+                <span aria-hidden="true">·</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMoveTarget({
+                      ids: selectedIds,
+                      label: `${selectedIds.length} insumos`,
+                    })
+                  }
+                  className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 hover:underline cursor-pointer"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  <span>Mover a almacén</span>
+                </button>
                 <span aria-hidden="true">·</span>
                 <button
                   type="button"
@@ -863,7 +1077,7 @@ export default function InsumosManagement({
                           Almacén
                         </p>
                         <div className="flex flex-wrap gap-1.5">
-                          {['Todos', ...ALMACENES_DISPONIBLES].map((alm) => {
+                          {['Todos', ...almacenes].map((alm) => {
                             const isSelected = almacenFilter === alm;
                             return (
                               <button
@@ -1133,6 +1347,12 @@ export default function InsumosManagement({
                               onAction={(actionId) => {
                                 if (actionId === 'details') {
                                   setDetailsInsumo(item);
+                                } else if (actionId === 'move') {
+                                  setMoveTarget({
+                                    ids: [item.id],
+                                    label: item.nombre,
+                                    currentAlmacen: item.almacen
+                                  });
                                 } else if (actionId === 'edit') {
                                   handleOpenEdit(item);
                                 } else if (actionId === 'delete') {
@@ -1159,13 +1379,29 @@ export default function InsumosManagement({
                 <span>Seleccionar página ({paginatedItems.length})</span>
               </label>
               {selectedIds.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setBulkDeleteModalOpen(true)}
-                  className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
-                >
-                  Borrar ({selectedIds.length})
-                </button>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMoveTarget({
+                        ids: selectedIds,
+                        label: `${selectedIds.length} insumos`,
+                      })
+                    }
+                    className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    <ArrowRightLeft className="w-3 h-3" />
+                    <span>Mover</span>
+                  </button>
+                  <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setBulkDeleteModalOpen(true)}
+                    className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+                  >
+                    Borrar ({selectedIds.length})
+                  </button>
+                </div>
               )}
             </div>
 
@@ -1217,6 +1453,12 @@ export default function InsumosManagement({
                           onAction={(actionId) => {
                             if (actionId === 'details') {
                               setDetailsInsumo(item);
+                            } else if (actionId === 'move') {
+                              setMoveTarget({
+                                ids: [item.id],
+                                label: item.nombre,
+                                currentAlmacen: item.almacen
+                              });
                             } else if (actionId === 'edit') {
                               handleOpenEdit(item);
                             } else if (actionId === 'delete') {
@@ -1323,11 +1565,34 @@ export default function InsumosManagement({
         mode={modalMode}
         initialInsumo={editingInsumo}
         existingInsumos={enrichedInsumos}
+        almacenes={almacenes}
         onClose={() => {
           setIsModalOpen(false);
           setEditingInsumo(null);
         }}
         onSave={handleSaveInsumoModal}
+      />
+
+      {/* MODAL: Gestionar Almacenes */}
+      <AlmacenesModal
+        isOpen={almacenesModalOpen}
+        almacenes={almacenes}
+        insumos={enrichedInsumos}
+        onClose={() => setAlmacenesModalOpen(false)}
+        onAddAlmacen={handleAddAlmacen}
+        onRenameAlmacen={handleRenameAlmacen}
+        onDeleteAlmacen={handleDeleteAlmacen}
+      />
+
+      {/* MODAL: Mover a otro almacén */}
+      <MoveAlmacenModal
+        isOpen={moveTarget !== null}
+        selectedCount={moveTarget?.ids?.length ?? 1}
+        label={moveTarget?.label ?? ''}
+        currentAlmacen={moveTarget?.currentAlmacen}
+        almacenes={almacenes}
+        onClose={() => setMoveTarget(null)}
+        onConfirmMove={handleConfirmMoveAlmacen}
       />
 
       {/* MODAL: Detalles del Insumo (platos del menú asociados) */}
