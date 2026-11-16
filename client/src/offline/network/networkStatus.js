@@ -13,11 +13,17 @@ let currentState = NetworkState.ONLINE;
 
 // Inicializar desde localStorage al cargar el módulo
 try {
-  const savedState = localStorage.getItem(OVERRIDE_STATE_KEY);
-  if (savedState && Object.values(NetworkState).includes(savedState)) {
-    currentState = savedState;
-  } else {
+  if (localStorage.getItem('bunker_network_reset_online_v1') !== 'true') {
+    localStorage.setItem(OVERRIDE_STATE_KEY, NetworkState.ONLINE);
+    localStorage.setItem('bunker_network_reset_online_v1', 'true');
     currentState = NetworkState.ONLINE;
+  } else {
+    const savedState = localStorage.getItem(OVERRIDE_STATE_KEY);
+    if (savedState && Object.values(NetworkState).includes(savedState)) {
+      currentState = savedState;
+    } else {
+      currentState = NetworkState.ONLINE;
+    }
   }
 } catch {
   currentState = NetworkState.ONLINE;

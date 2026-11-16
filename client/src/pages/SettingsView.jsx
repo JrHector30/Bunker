@@ -24,6 +24,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
+import { useConfirmation } from '../context/ConfirmationContext';
 import { enqueueTicket } from '../utils/printer';
 import { getActiveRestaurant } from '../utils/tenant';
 import { networkStatus, NetworkState } from '../offline/network/networkStatus';
@@ -172,6 +173,7 @@ export default function SettingsView() {
   const tenantId = user?.restauranteId || activeTenant?.id || 1;
   const { theme, changeTheme, showAlerts, setShowAlerts } = useTheme();
   const { showToast } = useNotification();
+  const { showConfirmation } = useConfirmation();
 
   const [activeTab, setActiveTab] = useState('operacion');
 
@@ -313,12 +315,34 @@ export default function SettingsView() {
   }, [station, loadHardwareData]);
 
   // Handlers
-  const handleToggleOffline = () => {
+  const handleToggleOffline = async () => {
     if (!forceOffline) {
+      const confirmed = await showConfirmation({
+        title: '¿Activar Modo Offline?',
+        message: 'El sistema operará de manera local sin sincronizar con el servidor en tiempo real. Esta opción se recomienda únicamente ante cortes de internet o pruebas técnicas. ¿Deseas activar el modo Offline?',
+        confirmText: 'Sí, activar Offline',
+        cancelText: 'Cancelar',
+        isDestructive: false,
+      });
+
+      if (!confirmed) return;
+
       networkStatus.setManualOverride(NetworkState.OFFLINE_CONFIRMED);
+      setNetState(NetworkState.OFFLINE_CONFIRMED);
       showToast('Modo Offline activado de forma persistente. Operando de forma local.', 'info');
     } else {
+      const confirmed = await showConfirmation({
+        title: '¿Restaurar Modo Online?',
+        message: 'El sistema restablecerá la conexión con el servidor en tiempo real y sincronizará los cambios pendientes. ¿Deseas volver al modo Online?',
+        confirmText: 'Sí, volver a Online',
+        cancelText: 'Cancelar',
+        isDestructive: false,
+      });
+
+      if (!confirmed) return;
+
       networkStatus.setManualOverride(NetworkState.ONLINE);
+      setNetState(NetworkState.ONLINE);
       showToast('Modo Online restaurado. Sincronización en tiempo real activa.', 'success');
     }
   };
@@ -608,22 +632,33 @@ export default function SettingsView() {
               </div>
 
               <div
-                className={`rounded-xl border px-3 py-2.5 flex items-center gap-2 text-[11.5px] font-bold ${
+                className={`rounded-xl border px-3 py-2.5 flex items-center justify-between gap-2 text-[11.5px] font-bold ${
                   forceOffline
                     ? 'border-amber-200 bg-amber-50/70 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300'
                     : 'border-emerald-200 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
                 }`}
               >
-                {forceOffline ? (
-                  <WifiOff className="w-4 h-4 shrink-0" />
-                ) : (
-                  <Wifi className="w-4 h-4 shrink-0" />
+                <div className="flex items-center gap-2 min-w-0">
+                  {forceOffline ? (
+                    <WifiOff className="w-4 h-4 shrink-0" />
+                  ) : (
+                    <Wifi className="w-4 h-4 shrink-0" />
+                  )}
+                  <span>
+                    {forceOffline
+                      ? 'MODO OFFLINE — Operación local sin internet'
+                      : 'MODO ONLINE — Conectado en tiempo real'}
+                  </span>
+                </div>
+                {forceOffline && (
+                  <button
+                    type="button"
+                    onClick={handleToggleOffline}
+                    className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold shrink-0 transition-colors cursor-pointer border-0 shadow-xs active:scale-95"
+                  >
+                    Restaurar Online
+                  </button>
                 )}
-                <span>
-                  {forceOffline
-                    ? 'MODO OFFLINE — Operación local sin internet'
-                    : 'MODO ONLINE — Conectado en tiempo real'}
-                </span>
               </div>
 
               <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
@@ -1243,22 +1278,33 @@ export default function SettingsView() {
             </div>
 
             <div
-              className={`rounded-xl border px-3.5 py-2.5 flex items-center gap-2.5 text-xs font-bold ${
+              className={`rounded-xl border px-3.5 py-2.5 flex items-center justify-between gap-2.5 text-xs font-bold ${
                 forceOffline
                   ? 'border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300'
                   : 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300'
               }`}
             >
-              {forceOffline ? (
-                <WifiOff className="w-4 h-4 shrink-0" />
-              ) : (
-                <Wifi className="w-4 h-4 shrink-0" />
+              <div className="flex items-center gap-2 min-w-0">
+                {forceOffline ? (
+                  <WifiOff className="w-4 h-4 shrink-0" />
+                ) : (
+                  <Wifi className="w-4 h-4 shrink-0" />
+                )}
+                <span>
+                  {forceOffline
+                    ? 'MODO OFFLINE — Operando de forma local sin internet'
+                    : 'MODO ONLINE — Conectado al servidor en tiempo real'}
+                </span>
+              </div>
+              {forceOffline && (
+                <button
+                  type="button"
+                  onClick={handleToggleOffline}
+                  className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shrink-0 transition-colors cursor-pointer border-0 shadow-xs active:scale-95"
+                >
+                  Restaurar Modo Online
+                </button>
               )}
-              <span>
-                {forceOffline
-                  ? 'MODO OFFLINE — Operando de forma local sin internet'
-                  : 'MODO ONLINE — Conectado al servidor en tiempo real'}
-              </span>
             </div>
 
             <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 p-3.5 flex items-center justify-between gap-3">
