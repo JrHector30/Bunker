@@ -1619,10 +1619,55 @@ app.post('/api/sync/operations', async (req, res) => {
     }
 });
 
+// Helper de coincidencia palabra por palabra para evitar duplicados en insumos y platos
+function normalizeWords(str) {
+    if (!str) return [];
+    return str
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+}
+
+function areNamesMatching(nameA, nameB) {
+    if (!nameA || !nameB) return false;
+    const wordsA = normalizeWords(nameA);
+    const wordsB = normalizeWords(nameB);
+    if (wordsA.length === 0 || wordsB.length === 0) return false;
+    if (wordsA.join(' ') === wordsB.join(' ')) return true;
+    const sortedA = [...wordsA].sort().join(' ');
+    const sortedB = [...wordsB].sort().join(' ');
+    return sortedA === sortedB;
+}
+
 app.post('/api/products', async (req, res) => {
     const { nombre, precio, categoriaId, descripcion, imagen, costoProduccion } = req.body;
     try {
         const tenantId = getTenantId(req);
+
+        // Lógica de coincidencia palabra por palabra para platos
+        const existingProducts = await prisma.plato.findMany({
+            where: { deleted: false, restauranteId: tenantId }
+        });
+        const matched = existingProducts.find(p => areNamesMatching(nombre, p.nombre));
+        if (matched) {
+            const updated = await prisma.plato.update({
+                where: { id: matched.id },
+                data: {
+                    precio: precio !== undefined ? precio : matched.precio,
+                    categoriaId: categoriaId || matched.categoriaId,
+                    descripcion: descripcion !== undefined ? descripcion : matched.descripcion,
+                    imagen: imagen !== undefined ? imagen : matched.imagen,
+                    costoProduccion: costoProduccion !== undefined ? (parseFloat(costoProduccion) || 0) : matched.costoProduccion
+                }
+            });
+            return res.json(updated);
+        }
+
         const product = await prisma.plato.create({
             data: {
                 nombre,
@@ -4968,6 +5013,28 @@ app.post('/api/insumos', async (req, res) => {
     const { nombre, precioCompra, unidadMedida, stock, stockMinimo, notificarAlerta, almacen } = req.body;
     try {
         const tenantId = getTenantId(req);
+
+        // Lógica de coincidencia palabra por palabra para insumos
+        const existingInsumos = await prisma.insumo.findMany({
+            where: { deleted: false, restauranteId: tenantId }
+        });
+        const matched = existingInsumos.find(ins => areNamesMatching(nombre, ins.nombre));
+        if (matched) {
+            const updated = await prisma.insumo.update({
+                where: { id: matched.id },
+                data: {
+                    precioCompra: precioCompra !== undefined ? (precioCompra || 0) : matched.precioCompra,
+                    unidadMedida: unidadMedida || matched.unidadMedida,
+                    stock: stock !== undefined ? (stock || 0) : matched.stock,
+                    stockMinimo: stockMinimo !== undefined ? (stockMinimo ? stockMinimo : null) : matched.stockMinimo,
+                    notificarAlerta: notificarAlerta !== undefined ? notificarAlerta : matched.notificarAlerta,
+                    almacen: almacen || matched.almacen,
+                    fechaActualizacion: new Date()
+                }
+            });
+            return res.json(updated);
+        }
+
         const insumo = await prisma.insumo.create({
             data: {
                 nombre,
@@ -4984,6 +5051,48 @@ app.post('/api/insumos', async (req, res) => {
         res.json(insumo);
     } catch (e) {
         res.status(400).json({ error: e.message });
+    }
+});
+
+app.get('/api/insumos/:id/platos', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const tenantId = getTenantId(req);
+        const insumoId = parseInt(id, 10);
+        const recetas = await prisma.recetaInsumo.findMany({
+            where: {
+                insumoId: insumoId,
+                plato: {
+                    deleted: false,
+                    restauranteId: tenantId
+                }
+            },
+            include: {
+                plato: {
+                    include: {
+                        categoria: true
+                    }
+                },
+                insumo: true
+            }
+        });
+
+        const platos = recetas.map(r => {
+            const costo = Number((r.cantidad * (r.insumo.precioCompra || 0)).toFixed(2));
+            return {
+                id: r.plato.id,
+                nombre: r.plato.nombre,
+                categoria: r.plato.categoria?.nombre || 'General',
+                imagen: r.plato.imagen,
+                cantidad: r.cantidad,
+                unidad: r.insumo.unidadMedida,
+                costo: costo
+            };
+        });
+
+        res.json(platos);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 

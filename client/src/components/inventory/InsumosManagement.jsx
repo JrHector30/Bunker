@@ -18,13 +18,21 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronLast,
-  AlertTriangle
+  AlertTriangle,
+  Eye,
+  Download,
+  Upload
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import SmoothDropdown from '../ui/SmoothDropdown';
 import CloseButton from '../ui/CloseButton';
 import CustomCheckbox from '../ui/CustomCheckbox';
 import ToggleSwitch from '../ui/ToggleSwitch';
+import { InsumoModal } from './InsumoModal';
+import { InsumoDetailsModal } from './InsumoDetailsModal';
+import { ImportReportModal } from './ImportReportModal';
+import { areNamesMatching } from '../../utils/textMatching';
 import { getActiveRestaurant } from '../../utils/tenant';
 
 const ALMACENES_DISPONIBLES = ['Congelador', 'Congelador 2', 'Despensa', 'Refrigerador'];
@@ -110,20 +118,11 @@ export default function InsumosManagement({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
   const [editingInsumo, setEditingInsumo] = useState(null);
+  const [detailsInsumo, setDetailsInsumo] = useState(null);
+  const [importReport, setImportReport] = useState(null);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [insumoToDelete, setInsumoToDelete] = useState(null);
-
-  // Formulario Insumo
-  const [formData, setFormData] = useState({
-    nombre: '',
-    stock: '',
-    unidadMedida: 'kg',
-    precioCompra: '',
-    stockMinimo: '',
-    notificarAlerta: false,
-    almacen: 'Congelador'
-  });
-  const [formError, setFormError] = useState('');
+  const importInputRef = useRef(null);
 
   // Cerrar popover de filtros al hacer clic fuera
   useEffect(() => {
@@ -235,16 +234,6 @@ export default function InsumosManagement({
   const handleOpenCreate = () => {
     setModalMode('create');
     setEditingInsumo(null);
-    setFormData({
-      nombre: '',
-      stock: '',
-      unidadMedida: 'kg',
-      precioCompra: '',
-      stockMinimo: '',
-      notificarAlerta: false,
-      almacen: 'Congelador'
-    });
-    setFormError('');
     setIsModalOpen(true);
   };
 
@@ -252,50 +241,26 @@ export default function InsumosManagement({
   const handleOpenEdit = (item) => {
     setModalMode('edit');
     setEditingInsumo(item);
-    setFormData({
-      nombre: item.nombre || '',
-      stock: item.stock !== undefined && item.stock !== null ? String(item.stock) : '',
-      unidadMedida: item.unidadMedida || 'kg',
-      precioCompra: item.precioCompra !== undefined && item.precioCompra !== null ? String(item.precioCompra) : '',
-      stockMinimo: item.stockMinimo !== undefined && item.stockMinimo !== null ? String(item.stockMinimo) : '',
-      notificarAlerta: Boolean(item.notificarAlerta),
-      almacen: item.almacen || 'Congelador'
-    });
-    setFormError('');
     setIsModalOpen(true);
   };
 
-  // Guardar insumo (creación / edición)
-  const handleSaveInsumo = async (e) => {
-    e.preventDefault();
-    setFormError('');
-
-    const trimmedNombre = formData.nombre.trim();
-    if (!trimmedNombre) {
-      setFormError('El nombre del insumo es obligatorio.');
-      return;
-    }
-
-    const parsedStock = Number(formData.stock);
-    if (Number.isNaN(parsedStock) || parsedStock < 0) {
-      setFormError('La cantidad/stock debe ser un número mayor o igual a 0.');
-      return;
-    }
+  // Guardar insumo (creación / edición / autocoincidencia palabra por palabra)
+  const handleSaveInsumoModal = async (savedData) => {
+    const tenantId = getActiveRestaurant()?.id || 1;
+    const isEdit = modalMode === 'edit' || Boolean(savedData.isExistingMatch);
+    const targetId = savedData.id || (savedData.matchedInsumo ? savedData.matchedInsumo.id : (editingInsumo ? editingInsumo.id : null));
+    const url = (isEdit && targetId) ? `/api/insumos/${targetId}` : '/api/insumos';
+    const method = (isEdit && targetId) ? 'PUT' : 'POST';
 
     const payload = {
-      nombre: trimmedNombre,
-      stock: parsedStock,
-      unidadMedida: formData.unidadMedida || 'kg',
-      precioCompra: Number(formData.precioCompra) || 0,
-      stockMinimo: formData.stockMinimo ? Number(formData.stockMinimo) : 0,
-      notificarAlerta: Boolean(formData.notificarAlerta),
-      almacen: formData.almacen || 'Congelador'
+      nombre: savedData.nombre,
+      stock: savedData.stock,
+      unidadMedida: savedData.unidadMedida,
+      precioCompra: savedData.precioCompra,
+      stockMinimo: savedData.stockMinimo,
+      notificarAlerta: savedData.notificarAlerta,
+      almacen: savedData.almacen
     };
-
-    const tenantId = getActiveRestaurant()?.id || 1;
-    const isEdit = modalMode === 'edit' && editingInsumo;
-    const url = isEdit ? `/api/insumos/${editingInsumo.id}` : '/api/insumos';
-    const method = isEdit ? 'PUT' : 'POST';
 
     try {
       const res = await fetch(url, {
@@ -313,14 +278,194 @@ export default function InsumosManagement({
       }
 
       showToast?.(
-        isEdit ? `Insumo "${trimmedNombre}" actualizado con éxito.` : `Insumo "${trimmedNombre}" registrado con éxito.`,
+        isEdit
+          ? `Insumo "${savedData.nombre}" actualizado con éxito.`
+          : `Insumo "${savedData.nombre}" registrado con éxito.`,
         'success'
       );
       setIsModalOpen(false);
+      setEditingInsumo(null);
       onRefresh?.();
     } catch (err) {
-      setFormError(err.message || 'Error de conexión');
+      showToast?.(err.message || 'Error de conexión', 'error');
     }
+  };
+
+  // Descargar Plantilla Excel preconfigurada
+  const handleDownloadTemplate = () => {
+    const link = document.createElement('a');
+    link.href = '/plantilla_inventario_bunker.xlsx';
+    link.download = 'plantilla_inventario_bunker.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (showToast) showToast('Plantilla Excel descargada.', 'success');
+  };
+
+  // Importar Excel con validación estricta y descarte de duplicados
+  const handleImportExcel = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const rows = XLSX.utils.sheet_to_json(ws);
+
+        if (!rows || rows.length === 0) {
+          if (showToast) showToast('El archivo Excel no contiene filas válidas.', 'error');
+          return;
+        }
+
+        const tenantId = getActiveRestaurant()?.id || 1;
+        const agregados = [];
+        const duplicados = [];
+        const incompletos = [];
+        const processedNames = [...insumos.map((i) => i.nombre)];
+
+        for (let idx = 0; idx < rows.length; idx++) {
+          const row = rows[idx];
+          const rowNum = idx + 2; // Fila Excel considerando cabecera en fila 1
+
+          const rawNombre = row['Nombre'] || row['nombre'] || row['NOMBRE'];
+          const rawCantidad = row['Cantidad'] !== undefined ? row['Cantidad'] : (row['cantidad'] !== undefined ? row['cantidad'] : row['CANTIDAD']);
+
+          // 1. Validar campos obligatorios: Nombre y Cantidad (la cantidad puede ser 0 pero no vacía o inválida)
+          if (!rawNombre || String(rawNombre).trim() === '') {
+            incompletos.push({
+              fila: rowNum,
+              motivo: 'El campo "Nombre" es obligatorio y está vacío.'
+            });
+            continue;
+          }
+
+          if (rawCantidad === undefined || rawCantidad === null || String(rawCantidad).trim() === '') {
+            incompletos.push({
+              fila: rowNum,
+              motivo: `El campo "Cantidad" es obligatorio para "${String(rawNombre).trim()}".`
+            });
+            continue;
+          }
+
+          const parsedStock = Number(rawCantidad);
+          if (Number.isNaN(parsedStock) || parsedStock < 0) {
+            incompletos.push({
+              fila: rowNum,
+              motivo: `La "Cantidad" (${rawCantidad}) debe ser un número mayor o igual a 0.`
+            });
+            continue;
+          }
+
+          const trimmedNombre = String(rawNombre).trim();
+
+          // 2. Comprobar si ya existe en el sistema o en el lote actual palabra por palabra
+          const matchedExisting = processedNames.find((existingName) =>
+            areNamesMatching(trimmedNombre, existingName)
+          );
+
+          if (matchedExisting) {
+            duplicados.push({
+              fila: rowNum,
+              nombre: trimmedNombre,
+              coincideCon: matchedExisting
+            });
+            continue; // OMITIR duplicado de acuerdo al requerimiento
+          }
+
+          // 3. Preparar campos opcionales
+          const rawUnidad = row['Unidad de Medida'] || row['Unidad'] || row['unidad'] || 'kg';
+          const unidadMedida = ['kg', 'L', 'und', 'g'].includes(rawUnidad) ? rawUnidad : 'kg';
+
+          const rawAlmacen = row['Almacén'] || row['Almacen'] || row['almacen'] || 'Congelador';
+          const almacen = ['Congelador', 'Congelador 2', 'Alacena', 'Refrigerador'].includes(rawAlmacen)
+            ? rawAlmacen
+            : 'Congelador';
+
+          const rawCosto = row['Costo Unitario'] || row['Costo'] || row['costo'] || row['Precio Compra'] || 0;
+          const precioCompra = Number(Number(rawCosto || 0).toFixed(2)) || 0;
+
+          const rawStockCritico = row['Stock Crítico'] !== undefined ? row['Stock Crítico'] : (row['Stock Critico'] !== undefined ? row['Stock Critico'] : row['stockCritico']);
+          let notificarAlerta = false;
+          let stockMinimo = 0;
+
+          if (
+            rawStockCritico !== undefined &&
+            rawStockCritico !== null &&
+            String(rawStockCritico).trim() !== '' &&
+            !Number.isNaN(Number(rawStockCritico)) &&
+            Number(rawStockCritico) >= 0
+          ) {
+            notificarAlerta = true;
+            stockMinimo = Number(Number(rawStockCritico).toFixed(2));
+          }
+
+          // 4. Registrar en base de datos
+          try {
+            const res = await fetch('/api/insumos', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-restaurante-id': String(tenantId)
+              },
+              body: JSON.stringify({
+                nombre: trimmedNombre,
+                stock: parsedStock,
+                unidadMedida,
+                almacen,
+                precioCompra,
+                notificarAlerta,
+                stockMinimo
+              })
+            });
+
+            if (res.ok) {
+              agregados.push({
+                fila: rowNum,
+                nombre: trimmedNombre,
+                stock: parsedStock,
+                unidadMedida
+              });
+              processedNames.push(trimmedNombre);
+            } else {
+              const errData = await res.json().catch(() => ({}));
+              incompletos.push({
+                fila: rowNum,
+                motivo: errData.error || 'Error al guardar en el servidor'
+              });
+            }
+          } catch (apiErr) {
+            incompletos.push({
+              fila: rowNum,
+              motivo: 'Fallo de red al conectar con el servidor'
+            });
+          }
+        }
+
+        setImportReport({
+          total: rows.length,
+          agregados,
+          duplicados,
+          incompletos
+        });
+
+        if (agregados.length > 0) {
+          showToast?.(`${agregados.length} insumos importados correctamente.`, 'success');
+          onRefresh?.();
+        } else if (duplicados.length > 0 || incompletos.length > 0) {
+          showToast?.('Se procesó el archivo con observaciones. Revisa el informe.', 'warning');
+        }
+      } catch (err) {
+        console.error('Error al importar Excel:', err);
+        showToast?.('Error al procesar el archivo Excel.', 'error');
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   // Borrar individual
@@ -413,6 +558,7 @@ export default function InsumosManagement({
 
   // Items de acción centralizados para SmoothDropdown (Desktop y Mobile)
   const dropdownActions = [
+    { id: 'details', label: 'Detalles', icon: Eye },
     { id: 'edit', label: 'Editar', icon: Pencil },
     { id: 'delete', label: 'Borrar', icon: Trash2, isDestructive: true }
   ];
@@ -756,6 +902,35 @@ export default function InsumosManagement({
                 )}
               </div>
 
+              {/* Botón Descargar Plantilla */}
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="px-4 py-2.5 sm:py-2 rounded-full border-0 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 whitespace-nowrap shrink-0"
+              >
+                <Download className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                <span>Descargar Plantilla</span>
+              </button>
+
+              {/* Input archivo oculto */}
+              <input
+                type="file"
+                ref={importInputRef}
+                onChange={handleImportExcel}
+                accept=".xlsx,.xls"
+                className="hidden"
+              />
+
+              {/* Botón Importar Excel */}
+              <button
+                type="button"
+                onClick={() => importInputRef.current?.click()}
+                className="px-4 py-2.5 sm:py-2 rounded-full border-0 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 whitespace-nowrap shrink-0"
+              >
+                <Upload className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                <span>Importar Excel</span>
+              </button>
+
               {/* Botón Nuevo Insumo - Estilo Pill Superadmin con color de tema */}
               <button
                 type="button"
@@ -956,7 +1131,9 @@ export default function InsumosManagement({
                               compact={true}
                               items={dropdownActions}
                               onAction={(actionId) => {
-                                if (actionId === 'edit') {
+                                if (actionId === 'details') {
+                                  setDetailsInsumo(item);
+                                } else if (actionId === 'edit') {
                                   handleOpenEdit(item);
                                 } else if (actionId === 'delete') {
                                   handleDeleteSingle(item);
@@ -1038,7 +1215,9 @@ export default function InsumosManagement({
                           compact={false}
                           items={dropdownActions}
                           onAction={(actionId) => {
-                            if (actionId === 'edit') {
+                            if (actionId === 'details') {
+                              setDetailsInsumo(item);
+                            } else if (actionId === 'edit') {
                               handleOpenEdit(item);
                             } else if (actionId === 'delete') {
                               handleDeleteSingle(item);
@@ -1138,166 +1317,32 @@ export default function InsumosManagement({
         )}
       </section>
 
-      {/* MODAL: Nuevo Insumo / Editar Insumo con CloseButton */}
-      {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm animate-fade-in text-left"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)' }}
-          onClick={() => setIsModalOpen(false)}
-        >
-          <div
-            className="w-full sm:max-w-lg bg-white dark:bg-[#0f1016] rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl relative border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Mobile drag handle */}
-            <div className="w-10 h-1 bg-slate-300 dark:bg-zinc-700 rounded-full mx-auto mb-3 sm:hidden" />
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800/80 mb-5">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                {modalMode === 'create' ? 'Nuevo Insumo' : 'Editar Insumo'}
-              </h3>
-              <CloseButton onClick={() => setIsModalOpen(false)} />
-            </div>
+      {/* MODAL: Nuevo Insumo / Editar Insumo con ToggleSwitch y word matching */}
+      <InsumoModal
+        isOpen={isModalOpen}
+        mode={modalMode}
+        initialInsumo={editingInsumo}
+        existingInsumos={enrichedInsumos}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingInsumo(null);
+        }}
+        onSave={handleSaveInsumoModal}
+      />
 
-            <form onSubmit={handleSaveInsumo} className="space-y-4">
-              {formError && (
-                <div className="px-3.5 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-xs font-semibold text-red-700 dark:text-red-300">
-                  {formError}
-                </div>
-              )}
+      {/* MODAL: Detalles del Insumo (platos del menú asociados) */}
+      <InsumoDetailsModal
+        isOpen={Boolean(detailsInsumo)}
+        insumo={detailsInsumo}
+        onClose={() => setDetailsInsumo(null)}
+      />
 
-              {/* Nombre */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Nombre del Insumo *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.nombre}
-                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  placeholder="Ej. Carne de Res (Lomo), Harina, Leche..."
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)]"
-                />
-              </div>
-
-              {/* Cantidad y Unidad */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Cantidad / Stock *
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0"
-                    required
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    placeholder="0.00"
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/80 text-slate-900 dark:text-white tabular-nums font-mono focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Unidad de Medida
-                  </label>
-                  <select
-                    value={formData.unidadMedida}
-                    onChange={(e) => setFormData({ ...formData, unidadMedida: e.target.value })}
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] cursor-pointer"
-                  >
-                    {UNIDADES_DISPONIBLES.map((u) => (
-                      <option key={u} value={u}>
-                        {u}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Almacén y Costo Unitario */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Almacén *
-                  </label>
-                  <select
-                    value={formData.almacen}
-                    onChange={(e) => setFormData({ ...formData, almacen: e.target.value })}
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] cursor-pointer font-medium"
-                  >
-                    {ALMACENES_DISPONIBLES.map((alm) => (
-                      <option key={alm} value={alm}>
-                        {alm}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Costo Unitario (S/.)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.precioCompra}
-                    onChange={(e) => setFormData({ ...formData, precioCompra: e.target.value })}
-                    placeholder="0.00"
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/80 text-slate-900 dark:text-white tabular-nums font-mono focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)]"
-                  />
-                </div>
-              </div>
-
-              {/* Stock Mínimo y Notificación */}
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/80 dark:border-zinc-700/60 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Activar alerta por stock crítico</span>
-                  <ToggleSwitch
-                    checked={Boolean(formData.notificarAlerta)}
-                    onChange={() => setFormData(prev => ({ ...prev, notificarAlerta: !prev.notificarAlerta }))}
-                    ariaLabel="Activar alerta por stock crítico"
-                  />
-                </div>
-                {formData.notificarAlerta && (
-                  <div className="pt-2 animate-fade-in">
-                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                      Stock mínimo de seguridad
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      value={formData.stockMinimo}
-                      onChange={(e) => setFormData({ ...formData, stockMinimo: e.target.value })}
-                      placeholder="Ej. 10.00"
-                      className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white tabular-nums font-mono"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Botones de Acción Estilo Pill */}
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2 rounded-full text-xs font-bold border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-full text-xs font-bold text-white shadow-md active:scale-95 transition-all cursor-pointer"
-                  style={{ backgroundColor: 'var(--primary)' }}
-                >
-                  {modalMode === 'create' ? 'Guardar Insumo' : 'Actualizar Insumo'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* MODAL: Reporte de Importación Excel */}
+      <ImportReportModal
+        isOpen={Boolean(importReport)}
+        report={importReport}
+        onClose={() => setImportReport(null)}
+      />
 
       {/* MODAL: Confirmación de Borrado Individual */}
       {insumoToDelete && (

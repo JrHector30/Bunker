@@ -392,8 +392,10 @@ export default function MenuPlatosManagement({
 
   // Guardar creación o edición
   const handleSaveDish = async (data) => {
-    const url = dishModalMode === 'create' ? '/api/products' : `/api/products/${editingDish.id}`;
-    const method = dishModalMode === 'create' ? 'POST' : 'PUT';
+    const isEdit = dishModalMode === 'edit' || Boolean(data.isExistingMatch);
+    const targetId = data.id || (data.matchedDish ? data.matchedDish.id : (editingDish ? editingDish.id : null));
+    const url = (isEdit && targetId) ? `/api/products/${targetId}` : '/api/products';
+    const method = (isEdit && targetId) ? 'PUT' : 'POST';
 
     const res = await fetch(url, {
       method,
@@ -1277,6 +1279,7 @@ export default function MenuPlatosManagement({
         mode={dishModalMode}
         initialDish={editingDish}
         categories={categories}
+        existingDishes={normalizedDishes}
         onClose={() => {
           setDishModalOpen(false);
           setEditingDish(null);

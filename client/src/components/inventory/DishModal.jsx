@@ -1,13 +1,15 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { X, Image as ImageIcon, AlertCircle, Upload, Check, Tag } from 'lucide-react';
 import CloseButton from '../ui/CloseButton';
 import FilterCombobox from './FilterCombobox';
+import { areNamesMatching } from '../../utils/textMatching';
 
 export const DishModal = ({
   isOpen,
   mode = 'create',
   initialDish = null,
   categories = [],
+  existingDishes = [],
   onClose,
   onSave,
 }) => {
@@ -80,6 +82,14 @@ export const DishModal = ({
     setError('');
   };
 
+  const existingMatch = useMemo(() => {
+    if (!nombre.trim() || mode === 'edit') return null;
+    return existingDishes.find((item) => {
+      if (initialDish && item.id === initialDish.id) return false;
+      return areNamesMatching(nombre, item.nombre);
+    });
+  }, [nombre, existingDishes, mode, initialDish]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!nombre.trim()) {
@@ -113,6 +123,7 @@ export const DishModal = ({
       }
 
       await onSave({
+        id: existingMatch ? existingMatch.id : initialDish?.id,
         nombre: nombre.trim(),
         categoriaId: parseInt(categoriaId, 10),
         precio: parseFloat(precio),
@@ -120,6 +131,8 @@ export const DishModal = ({
         estado,
         activo: estado === 'Activo',
         imagen: finalImageUrl,
+        isExistingMatch: Boolean(existingMatch),
+        matchedDish: existingMatch,
       });
       onClose();
     } catch (err) {
@@ -171,6 +184,19 @@ export const DishModal = ({
             <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/80 text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {existingMatch && (
+            <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2 animate-fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <div>
+                <p className="font-semibold">Plato existente detectado</p>
+                <p className="mt-0.5">
+                  Ya existe un plato con nombre coincidente:{' '}
+                  <strong>&quot;{existingMatch.nombre}&quot;</strong>. Al guardar se actualizará este plato en lugar de duplicarlo.
+                </p>
+              </div>
             </div>
           )}
 
