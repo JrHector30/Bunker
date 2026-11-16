@@ -108,15 +108,90 @@ app.get('/uploads/:type/:file', (req, res) => {
 
 // --- PRINTERS PROXY ENDPOINTS ---
 // --- PRINTERS PROXY ENDPOINTS ---
+function scanWindowsPrintersLive() {
+    return new Promise((resolve) => {
+        if (process.platform !== 'win32') return resolve([]);
+        const psCmd = `
+          $activePorts = [System.IO.Ports.SerialPort]::GetPortNames();
+          Get-CimInstance -ClassName Win32_Printer | ForEach-Object {
+            $pName = $_.Name;
+            $port = $_.PortName;
+            $offline = [bool]$_.WorkOffline;
+            if ($port -like 'COM*' -or $port -like 'BTH*') {
+              $clean = ($port -replace ':','').Trim();
+              if ($activePorts -notcontains $clean) {
+                $offline = $true;
+              }
+            };
+            if ($_.PrinterStatus -eq 2 -or $_.ExtendedPrinterStatus -eq 7) {
+              $offline = $true;
+            };
+            [PSCustomObject]@{
+              Name = $pName;
+              WorkOffline = $offline;
+              PortName = $port
+            }
+          } | ConvertTo-Json -Compress
+        `.replace(/\r?\n/g, ' ').trim();
+
+        const command = `powershell -NoProfile -Command "${psCmd}"`;
+        const { exec } = require('child_process');
+        exec(command, { timeout: 5000 }, (error, stdout) => {
+            if (error) {
+                console.error("Error al escanear impresoras con PowerShell:", error);
+                return resolve([]);
+            }
+            try {
+                const raw = (stdout || '').trim();
+                if (!raw) return resolve([]);
+                let parsed = JSON.parse(raw);
+                if (!Array.isArray(parsed)) parsed = [parsed];
+                const list = parsed.map(item => ({
+                    name: item.Name || '',
+                    offline: item.WorkOffline === true,
+                    port: item.PortName || ''
+                }));
+                resolve(list);
+            } catch (err) {
+                resolve([]);
+            }
+        });
+    });
+}
+
 app.get('/api/impresoras', async (req, res) => {
     const estacion = req.query.estacion || 'Caja';
     const tenantId = getTenantId(req);
     try {
         // Fetch Windows printers from local station cache
-        const config = await prisma.configuracion.findUnique({
+        let config = await prisma.configuracion.findUnique({
             where: { clave: `impresoras_disponibles_${estacion}` }
         });
-        const winPrinters = config ? JSON.parse(config.valor) : [];
+        let winPrinters = config ? JSON.parse(config.valor) : [];
+
+        // Si no hay impresoras cacheadas para esta estación en Windows, escanear en vivo
+        if (winPrinters.length === 0 && process.platform === 'win32') {
+            winPrinters = await scanWindowsPrintersLive();
+            if (winPrinters.length > 0) {
+                await prisma.configuracion.upsert({
+                    where: { clave: `impresoras_disponibles_${estacion}` },
+                    update: { valor: JSON.stringify(winPrinters) },
+                    create: { clave: `impresoras_disponibles_${estacion}`, valor: JSON.stringify(winPrinters) }
+                }).catch(() => {});
+            }
+        }
+
+        // Traer mapas de medidas y perfiles guardados para esta estación
+        const [medidasConf, perfilesConf] = await Promise.all([
+            prisma.configuracion.findUnique({
+                where: { clave: tenantId === 1 ? `impresora_medidas_${estacion}` : `impresora_medidas_${tenantId}_${estacion}` }
+            }).catch(() => null),
+            prisma.configuracion.findUnique({
+                where: { clave: tenantId === 1 ? `impresora_perfiles_${estacion}` : `impresora_perfiles_${tenantId}_${estacion}` }
+            }).catch(() => null)
+        ]);
+        const medidasMap = medidasConf?.valor ? JSON.parse(medidasConf.valor) : {};
+        const perfilesMap = perfilesConf?.valor ? JSON.parse(perfilesConf.valor) : {};
         
         // Mapear impresoras físicas de Windows con su estado real de conexión (ONLINE / OFFLINE)
         const winPrintersMapped = winPrinters
@@ -132,6 +207,8 @@ app.get('/api/impresoras', async (req, res) => {
                 ultimoEstado: p.offline ? 'OFFLINE' : 'ONLINE',
                 offline: !!p.offline,
                 port: p.port,
+                medida: medidasMap[p.name] || '80mm',
+                perfil: perfilesMap[p.name] || 'Genérico',
                 ultimaRespuestaMs: 0
             }));
 
@@ -229,12 +306,28 @@ app.post('/api/impresoras/solicitar-actualizacion', async (req, res) => {
     try {
         const { estacion } = req.body || {};
         const targetEstacion = estacion || 'Caja';
+
+        // 1. Escaneo inmediato en tiempo real si el servidor corre sobre Windows
+        let livePrinters = [];
+        if (process.platform === 'win32') {
+            livePrinters = await scanWindowsPrintersLive();
+            if (livePrinters.length > 0) {
+                await prisma.configuracion.upsert({
+                    where: { clave: `impresoras_disponibles_${targetEstacion}` },
+                    update: { valor: JSON.stringify(livePrinters) },
+                    create: { clave: `impresoras_disponibles_${targetEstacion}`, valor: JSON.stringify(livePrinters) }
+                });
+            }
+        }
+
+        // 2. Notificar a printer-server local por si ejecuta tareas de red TCP9100 / ARP
         await prisma.configuracion.upsert({
             where: { clave: 'solicitar_actualizacion_impresoras' },
             update: { valor: targetEstacion },
             create: { clave: 'solicitar_actualizacion_impresoras', valor: targetEstacion }
         });
-        res.json({ success: true });
+
+        res.json({ success: true, count: livePrinters.length });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

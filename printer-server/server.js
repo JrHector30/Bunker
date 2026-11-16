@@ -192,7 +192,8 @@ async function handlePrinterScanRequests() {
   try {
     client = await pool.connect();
     const res = await client.query(`SELECT valor FROM "Configuracion" WHERE clave = 'solicitar_actualizacion_impresoras'`);
-    const shouldScan = res.rows[0]?.valor === STATION_ID;
+    const requested = res.rows[0]?.valor;
+    const shouldScan = requested && requested !== 'false' && (requested === STATION_ID || requested === 'true' || requested === 'todas');
 
     if (shouldScan) {
       // Intentar adquirir el bloqueo

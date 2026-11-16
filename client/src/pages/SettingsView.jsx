@@ -197,6 +197,8 @@ export default function SettingsView() {
   const [serverOnline, setServerOnline] = useState(true);
   const [usbWidth, setUsbWidth] = useState('80mm');
   const [usbHardware, setUsbHardware] = useState('SPRT');
+  const [printerSizes, setPrinterSizes] = useState({});
+  const [printerProfiles, setPrinterProfiles] = useState({});
   const [ethRepairing, setEthRepairing] = useState(false);
   const [ethLinked, setEthLinked] = useState(true);
   const [auditTicketOn, setAuditTicketOn] = useState(false);
@@ -275,6 +277,7 @@ export default function SettingsView() {
       if (sizesRes && sizesRes.ok) {
         const sizesData = await sizesRes.json();
         if (sizesData && typeof sizesData === 'object') {
+          setPrinterSizes(sizesData);
           const firstKey = Object.keys(sizesData)[0];
           if (firstKey && sizesData[firstKey]) setUsbWidth(sizesData[firstKey]);
         }
@@ -283,6 +286,7 @@ export default function SettingsView() {
       if (profilesRes && profilesRes.ok) {
         const profilesData = await profilesRes.json();
         if (profilesData && typeof profilesData === 'object') {
+          setPrinterProfiles(profilesData);
           const firstKey = Object.keys(profilesData)[0];
           if (firstKey && profilesData[firstKey]) setUsbHardware(profilesData[firstKey]);
         }
@@ -426,25 +430,30 @@ export default function SettingsView() {
   const handleRefreshPrinters = async () => {
     setIsRefreshingPrinters(true);
     try {
-      await fetch('/api/impresoras/solicitar-actualizacion', {
+      const scanReq = await fetch('/api/impresoras/solicitar-actualizacion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
         body: JSON.stringify({ estacion: station, restauranteId: tenantId }),
       }).catch(() => null);
 
-      // Esperar activamente a que el servidor local de impresión procese el escaneo (máx 6s)
-      for (let i = 0; i < 6; i++) {
-        await new Promise((r) => setTimeout(r, 1000));
-        const stRes = await fetch(`/api/impresoras/estado-solicitud?estacion=${station}`, {
-          headers: { 'x-restaurante-id': String(tenantId) }
-        }).catch(() => null);
-        if (stRes && stRes.ok) {
-          const stData = await stRes.json();
-          if (!stData.solicitando) break;
+      // Si el servidor local respondió directamente, recargar de inmediato
+      if (scanReq && scanReq.ok) {
+        await loadHardwareData(station);
+      } else {
+        // Fallback: esperar activamente a que el printer-server procese el escaneo
+        for (let i = 0; i < 4; i++) {
+          await new Promise((r) => setTimeout(r, 1000));
+          const stRes = await fetch(`/api/impresoras/estado-solicitud?estacion=${station}`, {
+            headers: { 'x-restaurante-id': String(tenantId) }
+          }).catch(() => null);
+          if (stRes && stRes.ok) {
+            const stData = await stRes.json();
+            if (!stData.solicitando) break;
+          }
         }
+        await loadHardwareData(station);
       }
 
-      await loadHardwareData(station);
       setEthRepairing(false);
       showToast(`Estación ${station}: escaneo completado en tiempo real.`, 'success');
     } catch (err) {
@@ -485,10 +494,12 @@ export default function SettingsView() {
     }
   };
 
-  const handleSaveUsbWidth = async (width) => {
+  const handleSaveUsbWidth = async (printerNameOrWidth, widthVal) => {
+    const printerName = widthVal ? printerNameOrWidth : (printers[0]?.nombre || '80mm Series Printer');
+    const width = widthVal || printerNameOrWidth;
+    setPrinterSizes((prev) => ({ ...prev, [printerName]: width }));
     setUsbWidth(width);
     try {
-      const printerName = printers[0]?.nombre || '80mm Series Printer';
       await fetch('/api/impresoras/medida', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
@@ -499,14 +510,16 @@ export default function SettingsView() {
           restauranteId: tenantId,
         }),
       }).catch(() => null);
-      showToast(`Ancho ${width} guardado para la estación ${station}.`, 'success');
+      showToast(`Ancho ${width} guardado para "${printerName}".`, 'success');
     } catch (_) { }
   };
 
-  const handleSaveUsbProfile = async (profile) => {
+  const handleSaveUsbProfile = async (printerNameOrProfile, profileVal) => {
+    const printerName = profileVal ? printerNameOrProfile : (printers[0]?.nombre || '80mm Series Printer');
+    const profile = profileVal || printerNameOrProfile;
+    setPrinterProfiles((prev) => ({ ...prev, [printerName]: profile }));
     setUsbHardware(profile);
     try {
-      const printerName = printers[0]?.nombre || '80mm Series Printer';
       await fetch('/api/impresoras/perfil', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
@@ -517,7 +530,7 @@ export default function SettingsView() {
           restauranteId: tenantId,
         }),
       }).catch(() => null);
-      showToast(`Perfil ${profile} guardado para la estación ${station}.`, 'success');
+      showToast(`Perfil ${profile} guardado para "${printerName}".`, 'success');
     } catch (_) { }
   };
 
@@ -942,19 +955,22 @@ export default function SettingsView() {
                             Ancho de impresión:
                           </span>
                           <div className="grid grid-cols-3 gap-1.5">
-                            {['80mm', '58mm', '50mm'].map((w) => (
-                              <button
-                                key={w}
-                                type="button"
-                                onClick={() => handleSaveUsbWidth(w)}
-                                className={`min-h-[34px] rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${usbWidth === w
-                                  ? 'bg-[#F26522] border-[#F26522] text-white'
-                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                                  }`}
-                              >
-                                {w}
-                              </button>
-                            ))}
+                            {['80mm', '58mm', '50mm'].map((w) => {
+                              const isSelected = (printerSizes[usbP.nombre] || usbP.medida || usbWidth) === w;
+                              return (
+                                <button
+                                  key={w}
+                                  type="button"
+                                  onClick={() => handleSaveUsbWidth(usbP.nombre, w)}
+                                  className={`min-h-[34px] rounded-lg text-[11px] font-bold border-0 transition-colors cursor-pointer ${isSelected
+                                    ? 'bg-[#F26522] text-white shadow-sm'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                    }`}
+                                >
+                                  {w}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
 
@@ -963,19 +979,22 @@ export default function SettingsView() {
                             Perfil de Hardware:
                           </span>
                           <div className="flex flex-wrap gap-1.5">
-                            {['Genérico', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((hw) => (
-                              <button
-                                key={hw}
-                                type="button"
-                                onClick={() => handleSaveUsbProfile(hw)}
-                                className={`min-h-[32px] px-2.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${usbHardware === hw
-                                  ? 'bg-[#F26522] border-[#F26522] text-white'
-                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                                  }`}
-                              >
-                                {hw}
-                              </button>
-                            ))}
+                            {['Genérico', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((hw) => {
+                              const isSelected = (printerProfiles[usbP.nombre] || usbP.perfil || usbHardware) === hw;
+                              return (
+                                <button
+                                  key={hw}
+                                  type="button"
+                                  onClick={() => handleSaveUsbProfile(usbP.nombre, hw)}
+                                  className={`min-h-[32px] px-2.5 rounded-lg text-[11px] font-bold border-0 transition-colors cursor-pointer ${isSelected
+                                    ? 'bg-[#F26522] text-white shadow-sm'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                    }`}
+                                >
+                                  {hw}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
@@ -1576,19 +1595,22 @@ export default function SettingsView() {
                             Ancho de impresión:
                           </span>
                           <div className="flex flex-wrap gap-1.5">
-                            {['80mm', '58mm', '50mm'].map((w) => (
-                              <button
-                                key={w}
-                                type="button"
-                                onClick={() => handleSaveUsbWidth(w)}
-                                className={`px-2.5 py-1 rounded-md text-[11px] font-bold border cursor-pointer transition-colors ${usbWidth === w
-                                  ? 'bg-[#F26522] border-[#F26522] text-white'
-                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                                  }`}
-                              >
-                                {w}
-                              </button>
-                            ))}
+                            {['80mm', '58mm', '50mm'].map((w) => {
+                              const isSelected = (printerSizes[usbP.nombre] || usbP.medida || usbWidth) === w;
+                              return (
+                                <button
+                                  key={w}
+                                  type="button"
+                                  onClick={() => handleSaveUsbWidth(usbP.nombre, w)}
+                                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold border-0 cursor-pointer transition-colors ${isSelected
+                                    ? 'bg-[#F26522] text-white shadow-sm'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                    }`}
+                                >
+                                  {w}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
 
@@ -1597,19 +1619,22 @@ export default function SettingsView() {
                             Perfil de Hardware:
                           </span>
                           <div className="flex flex-wrap gap-1.5">
-                            {['Genérico', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((hw) => (
-                              <button
-                                key={hw}
-                                type="button"
-                                onClick={() => handleSaveUsbProfile(hw)}
-                                className={`px-2.5 py-1 rounded-md text-[11px] font-bold border cursor-pointer transition-colors ${usbHardware === hw
-                                  ? 'bg-[#F26522] border-[#F26522] text-white'
-                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                                  }`}
-                              >
-                                {hw}
-                              </button>
-                            ))}
+                            {['Genérico', 'SPRT', 'Epson', 'Xprinter', 'Rongta'].map((hw) => {
+                              const isSelected = (printerProfiles[usbP.nombre] || usbP.perfil || usbHardware) === hw;
+                              return (
+                                <button
+                                  key={hw}
+                                  type="button"
+                                  onClick={() => handleSaveUsbProfile(usbP.nombre, hw)}
+                                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold border-0 cursor-pointer transition-colors ${isSelected
+                                    ? 'bg-[#F26522] text-white shadow-sm'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                    }`}
+                                >
+                                  {hw}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
