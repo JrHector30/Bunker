@@ -5705,12 +5705,18 @@ app.post('/api/voice/chat', async (req, res) => {
         }
 
         const lower = (message || '').toLowerCase();
+        let targetEstacion = station || 'Caja';
+        if (lower.includes("cocina") || lower.includes("horno")) {
+            targetEstacion = 'Cocina';
+        } else if (lower.includes("caja") || lower.includes("bar")) {
+            targetEstacion = 'Caja';
+        }
+
         let actionTriggered = null;
         let realDiagnosticContext = "";
 
         // 1. AUTODIAGNÓSTICO Y AUTOREPARACIÓN DE ESTACIÓN / IMPRESORA
         if (lower.includes("impresora") || lower.includes("imprime") || lower.includes("servidor") || lower.includes("ticket") || lower.includes("cocina") || lower.includes("caja")) {
-            const targetEstacion = (lower.includes("cocina") || lower.includes("horno")) ? 'Cocina' : station;
             try {
                 const latido = await prisma.configuracion.findUnique({
                     where: { clave: `estacion_latido_${targetEstacion}` }
@@ -5783,36 +5789,41 @@ app.post('/api/voice/chat', async (req, res) => {
         const isPrintTest = lower.includes("ticket") || lower.includes("prueba") || lower.includes("imprime") || lower.includes("repara");
         if (isPrintTest) {
             try {
-                const formattedDate = new Date().toLocaleString('es-PE');
-                const testTicketText = 
-`================================
-     BUNKER AUTO RECOVERY
-   TICKET DE PRUEBA FISICA
-================================
-Estacion: ${targetEstacion}
-Fecha: ${formattedDate}
-Diagnostico: HARDWARE OPERACIONAL
-Estado: Enlace de Red Verificado
-Accion: Impresion de Prueba Exitosa
-================================
-  Bunker POS - Soporte Activo
-================================\n\n\n`;
+                let printEstacion = targetEstacion;
+                const activeDevice = await prisma.dispositivoRed.findFirst({
+                    where: { estacion: printEstacion, activo: true }
+                });
+                if (!activeDevice) {
+                    printEstacion = 'Caja'; // Redirigir a Caja si en Cocina no hay impresora física activa
+                }
 
-                await prisma.ticketPendiente.create({
+                const ticketPayload = {
+                    type: 'ticket',
+                    tipoComprobante: 'TICKET DE PRUEBA',
+                    restauranteNombre: 'BUNKER RESTOBAR',
+                    items: [
+                        { cantidad: 1, precio: 0, nombre: 'AUTODIAGNOSTICO HARDWARE' },
+                        { cantidad: 1, precio: 0, nombre: `ESTACION: ${targetEstacion.toUpperCase()}` },
+                        { cantidad: 1, precio: 0, nombre: 'ENLACE FISICO OPERACIONAL' }
+                    ],
+                    total: 0
+                };
+
+                const createdTicket = await prisma.ticketPendiente.create({
                     data: {
                         mesa_id: 'PRUEBA',
                         mozo: 'Búnker Voice AI',
-                        contenido: testTicketText,
+                        contenido: ticketPayload,
                         impreso: false,
-                        estacion: 'Caja', // Enviar a Caja donde está la impresora USB activa
+                        estacion: printEstacion,
                         restauranteId: tenantId
                     }
                 });
                 actionTriggered = 'print_test_sent';
-                realDiagnosticContext += `\n[ACCIÓN FÍSICA EJECUTADA]: Acabas de enviar un ticket de prueba físico a la impresora térmica de comandas. Dile al cliente con entusiasmo que el ticket de prueba ya fue emitido y enviado a la impresora para que lo revise físicamente.`;
-                console.log("✅ [VoiceAI] Ticket de prueba físico insertado en TicketPendiente para impresión real!");
+                realDiagnosticContext += `\n[ACCIÓN FÍSICA EJECUTADA CON ÉXITO]: Acabas de enviar el ticket de prueba físico (#${createdTicket.id}) a la impresora térmica de ${printEstacion}. Dile al cliente con entusiasmo y total seguridad que el ticket de prueba ya está saliendo por la impresora para que lo revise físicamente.`;
+                console.log(`✅ [VoiceAI] Ticket de prueba físico #${createdTicket.id} insertado para estación ${printEstacion}!`);
             } catch (ticketErr) {
-                console.warn("[VoiceAI] Error al crear ticket físico:", ticketErr.message);
+                console.error("[VoiceAI] Error al crear ticket físico:", ticketErr.message);
             }
         }
 

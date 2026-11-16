@@ -298,7 +298,13 @@ async function handlePrinterScanRequests() {
 
 // --- 3. Formateadores de Tickets (Texto Plano Monoespacio) ---
 function formatTicket(ticket, lineWidth) {
+  if (typeof ticket.contenido === 'string') {
+    return ticket.contenido;
+  }
   const type = ticket.contenido?.type;
+  if (type === 'test') {
+    return formatComprobante(ticket, lineWidth);
+  }
   if (type === 'arqueo') {
     return formatArqueo(ticket, lineWidth);
   } else if (type === 'precuenta') {
