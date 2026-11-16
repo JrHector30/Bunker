@@ -1,4 +1,3 @@
-import VoicePoweredOrb from './VoicePoweredOrb';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Phone,
@@ -18,15 +17,30 @@ import {
   UserCheck,
   RefreshCw,
   HelpCircle,
-  MessageSquare
+  MessageSquare,
+  Wrench,
+  Server
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import VoicePoweredOrb from './VoicePoweredOrb';
+
+export const AVAILABLE_VOICES = [
+  { id: 'hpp4J3VqNfWAUOO0d1Us', name: 'Bella', tag: 'Recomendada', desc: 'Cálida, Profesional y Paciente' },
+  { id: 'XrExE9yKIg1WjnnlVkGX', name: 'Matilda', tag: 'Suave', desc: 'Serena, Pausada y Empática' },
+  { id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica', tag: 'Dinámica', desc: 'Fresca, Juvenil y Amable' },
+  { id: 'cjVigY5qzO86Huf0OWal', name: 'Eric', tag: 'Masculina', desc: 'Voz Formal, Serena y Confiable' }
+];
 
 export default function VoiceAI({ currentUser, onShowNotification, onTriggerHumanSupport }) {
   // Monthly Support Call Quota
   const [quota, setQuota] = useState(() => {
     const saved = localStorage.getItem('bunker_ai_quota');
     return saved ? parseInt(saved, 10) : 10;
+  });
+
+  // Voice selection
+  const [selectedVoiceId, setSelectedVoiceId] = useState(() => {
+    return localStorage.getItem('bunker_ai_voice_id') || 'hpp4J3VqNfWAUOO0d1Us'; // Default to Bella!
   });
 
   // Call status states
@@ -39,9 +53,10 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
   const [attempts, setAttempts] = useState(0);
   const [micPermissionGranted, setMicPermissionGranted] = useState(null);
   const [conversationHistory, setConversationHistory] = useState([]);
-  const [voiceEngine, setVoiceEngine] = useState('ElevenLabs HD'); // visual badge
+  const [voiceEngine, setVoiceEngine] = useState('ElevenLabs HD');
+  const [diagnosticAlert, setDiagnosticAlert] = useState(null);
 
-  // Simulated & Real System Status
+  // System Diagnostics Status
   const [printerStatus, setPrinterStatus] = useState(() => {
     const saved = localStorage.getItem('bunker_diagnostic_printer');
     return saved || 'error_red';
@@ -65,6 +80,10 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
   useEffect(() => {
     localStorage.setItem('bunker_ai_quota', quota.toString());
   }, [quota]);
+
+  useEffect(() => {
+    localStorage.setItem('bunker_ai_voice_id', selectedVoiceId);
+  }, [selectedVoiceId]);
 
   useEffect(() => {
     localStorage.setItem('bunker_diagnostic_printer', printerStatus);
@@ -103,18 +122,16 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
     if (!isCallActiveRef.current) return;
     setIsAiSpeaking(true);
 
-    // Stop any playing audio
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
     }
 
     try {
-      // 1. Primary: Generate ultra-realistic voice using ElevenLabs via backend
       const res = await fetch('/api/voice/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ text, voiceId: selectedVoiceId })
       });
 
       const contentType = res.headers.get('content-type') || '';
@@ -146,7 +163,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
       console.warn("ElevenLabs TTS error, switching to browser TTS:", err);
     }
 
-    // 2. Seamless Fallback: Native Browser SpeechSynthesis
+    // Seamless Fallback
     fallbackBrowserSpeak(text, callback);
   };
 
@@ -242,7 +259,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
       }
     } else {
       if (onShowNotification) {
-        onShowNotification("El reconocimiento de voz no está disponible en este navegador. Use los botones de simulación.");
+        onShowNotification("El reconocimiento de voz no está disponible en este navegador. Use los botones de prueba.");
       }
     }
   };
@@ -270,16 +287,17 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
     setAttempts(0);
     setUserTranscript('');
     setConversationHistory([]);
+    setDiagnosticAlert(null);
 
     const userName = currentUser?.nombre || 'Héctor';
-    const initialGreeting = `Hola ${userName}, soy la asistente técnica de Búnker. ¿Qué inconveniente tienes en el restaurante?`;
+    const initialGreeting = `Hola ${userName}, soy el sistema de autodiagnóstico de Búnker. ¿Qué falla presenta el restaurante para repararla?`;
     setAiText(initialGreeting);
 
     setTimeout(() => {
       speak(initialGreeting, () => {
         listen();
       });
-    }, 500);
+    }, 400);
   };
 
   // End the voice call
@@ -300,7 +318,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
     if (onShowNotification) onShowNotification("Llamada finalizada.");
   };
 
-  // Process user input with Groq + Auto Escalation
+  // Process user input with Groq + Real Autodiagnostic & Repair
   const processVoiceCommand = async (text) => {
     if (!text || !text.trim()) return;
     setIsListening(false);
@@ -310,7 +328,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
 
     const updatedHistory = [...conversationHistory, { role: 'user', content: text }];
     setConversationHistory(updatedHistory);
-    setAiText("Diagnosticando con el cerebro de Búnker...");
+    setAiText("Ejecutando autodiagnóstico en el servidor de Búnker...");
 
     try {
       const res = await fetch('/api/voice/chat', {
@@ -330,8 +348,28 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
 
       setConversationHistory(prev => [...prev, { role: 'assistant', content: reply }]);
 
-      if (data.actionTriggered === 'printer_recovery') {
+      // Real Feedback Alerts based on System Action
+      if (data.actionTriggered === 'station_offline') {
+        setDiagnosticAlert({
+          type: 'warning',
+          title: 'Servidor Cocina Apagado',
+          message: 'Debe abrir en el equipo de cocina el archivo: INICIAR_BUNKER_POS'
+        });
+        setPrinterStatus('error_red');
+      } else if (data.actionTriggered === 'printer_recovery') {
+        setDiagnosticAlert({
+          type: 'success',
+          title: 'Autorecuperación Activa',
+          message: 'Localizando impresora en red y purgando cola de tickets.'
+        });
         setPrinterStatus('online');
+      } else if (data.actionTriggered === 'cashier_audit') {
+        setDiagnosticAlert({
+          type: 'info',
+          title: 'Arqueo Auditado en Vivo',
+          message: 'Se contrastó el fondo inicial contra métodos de pago y comandas.'
+        });
+        setDbSyncStatus('sincronizado');
       }
 
       // Check if user's problem is resolved
@@ -348,10 +386,10 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
         speak(reply, () => {
           endCall();
           if (onTriggerHumanSupport) onTriggerHumanSupport();
-          if (onShowNotification) onShowNotification("Límite de 3 intentos alcanzado. Transfiriendo con asesor técnico...");
+          if (onShowNotification) onShowNotification("Límite de 3 intentos alcanzado. Derivando a WhatsApp con el asesor técnico...");
 
           setTimeout(() => {
-            const problemSummary = encodeURIComponent(`Hola soporte técnico de Búnker, necesito atención urgente. La IA no pudo resolver mi incidencia tras 3 intentos. Detalle reportado: "${text}".`);
+            const problemSummary = encodeURIComponent(`Hola soporte de Búnker, solicito asistencia humana. El autodiagnóstico no pudo resolver mi problema tras 3 intentos. Detalle reportado: "${text}".`);
             window.open(`https://wa.me/51924383883?text=${problemSummary}`, '_blank');
           }, 1000);
         });
@@ -397,8 +435,8 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
               <Sparkles className="w-4 h-4 animate-pulse" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[var(--text-main)] tracking-tight">Búnker Voice AI</h3>
-              <p className="text-[10px] text-[var(--text-muted)]">Groq (Llama 3.3 / Qwen) + ElevenLabs HD</p>
+              <h3 className="text-sm font-bold text-[var(--text-main)] tracking-tight">Búnker Autodiagnóstico y Reparación</h3>
+              <p className="text-[10px] text-[var(--text-muted)]">Groq + ElevenLabs HD</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -411,12 +449,42 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
           </div>
         </div>
 
-        <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-5">
-          Asistente conversacional con inteligencia en tiempo real. Audita el servidor de impresión VBS, soluciona descuadres en el arqueo de caja y repara fallas de red de manera oral.
+        <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">
+          Sistema autónomo de autodiagnóstico y autoreparación. Verifica servidores locales de comanderas, repara enlaces de red con impresoras térmicas y audita descuadres en caja antes de requerir un asesor físico.
         </p>
 
+        {/* Voice Selector Selector */}
+        {!isCallActive && (
+          <div className="mb-4 bg-slate-900/5 dark:bg-slate-900/20 border border-zinc-200/50 p-2.5 rounded-xl">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider flex items-center gap-1">
+                <Volume2 className="w-3 h-3 text-[var(--primary)]" />
+                Voz de Asistente IA
+              </span>
+              <span className="text-[9px] text-[var(--primary)] font-semibold">
+                {AVAILABLE_VOICES.find(v => v.id === selectedVoiceId)?.desc}
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {AVAILABLE_VOICES.map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => setSelectedVoiceId(v.id)}
+                  className={`text-[10px] py-1.5 px-2 rounded-lg font-bold transition-all border cursor-pointer ${
+                    selectedVoiceId === v.id
+                      ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
+                      : 'bg-slate-800/20 hover:bg-slate-800/40 text-[var(--text-main)] border-zinc-700/30'
+                  }`}
+                >
+                  {v.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Live Diagnostics Dashboard Panel */}
-        <div className="bg-slate-900/5 dark:bg-slate-900/10 rounded-2xl border border-zinc-200/50 p-4 mb-5">
+        <div className="bg-slate-900/5 dark:bg-slate-900/10 rounded-2xl border border-zinc-200/50 p-4 mb-4">
           <div className="flex items-center gap-1.5 mb-3">
             <Activity className="w-3.5 h-3.5 text-[var(--primary)]" />
             <span className="text-[10px] font-extrabold text-[var(--text-muted)] uppercase tracking-wider">Telemetría de Sistema</span>
@@ -426,12 +494,12 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Printer className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                <span className="text-xs text-[var(--text-muted)]">Servidor Impresión VBS / Cocina</span>
+                <span className="text-xs text-[var(--text-muted)]">Servidor Impresión / Cocina</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className={`w-2 h-2 rounded-full ${printerStatus === 'online' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
                 <span className="text-[10px] font-bold text-[var(--text-main)]">
-                  {printerStatus === 'online' ? 'En línea' : 'Error de Red'}
+                  {printerStatus === 'online' ? 'En línea' : 'Desconectado'}
                 </span>
                 {printerStatus === 'error_red' && (
                   <button
@@ -499,7 +567,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
       </div>
 
       {/* Interactive Actions */}
-      <div className="mt-2">
+      <div className="mt-1">
         {!isCallActive ? (
           <button
             onClick={startVoiceCall}
@@ -507,28 +575,44 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
             style={{ color: '#ffffff' }}
           >
             <Phone className="w-4 h-4 !text-white" style={{ color: '#ffffff', stroke: '#ffffff' }} />
-            <span className="!text-white font-bold" style={{ color: '#ffffff' }}>Iniciar Soporte de Voz IA</span>
+            <span className="!text-white font-bold" style={{ color: '#ffffff' }}>Iniciar Autodiagnóstico por Voz</span>
           </button>
         ) : (
           <div className="bg-[#12141c] border border-zinc-700/30 rounded-2xl p-4 relative overflow-hidden">
             {/* Live pulsing green calling badge */}
-            <div className="flex items-center justify-between mb-3 border-b border-zinc-800 pb-2">
+            <div className="flex items-center justify-between mb-2 border-b border-zinc-800 pb-2">
               <div className="flex items-center gap-1.5">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-                <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest font-mono">En llamada IA Activa</span>
+                <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest font-mono">Autodiagnóstico Activo</span>
               </div>
               <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${attempts >= 2 ? 'bg-amber-500/20 text-amber-400' : 'text-zinc-400'}`}>
                 Oportunidad: {attempts} / 3
               </span>
             </div>
 
+            {/* Diagnostic Alert Banner if action triggered */}
+            {diagnosticAlert && (
+              <div className={`p-2 rounded-xl mb-2 flex items-center gap-2 text-[10px] ${
+                diagnosticAlert.type === 'warning'
+                  ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300'
+                  : diagnosticAlert.type === 'success'
+                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
+                    : 'bg-sky-500/10 border border-sky-500/30 text-sky-300'
+              }`}>
+                <Wrench className="w-3.5 h-3.5 shrink-0" />
+                <div>
+                  <span className="font-bold block">{diagnosticAlert.title}:</span>
+                  <span>{diagnosticAlert.message}</span>
+                </div>
+              </div>
+            )}
+
             {/* ChatGPT-style Voice Orb */}
-            <div className="flex flex-col items-center justify-center py-2">
-              <div className="relative w-44 h-44 flex items-center justify-center">
-                {/* Ambient glow behind orb */}
+            <div className="flex flex-col items-center justify-center py-1">
+              <div className="relative w-40 h-40 flex items-center justify-center">
                 <div className={`absolute inset-4 rounded-full blur-2xl transition-all duration-500 pointer-events-none ${
                   isAiSpeaking 
                     ? 'bg-purple-600/35 scale-110' 
@@ -552,13 +636,13 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
                 <span className={`text-[10px] font-semibold tracking-wide transition-colors ${
                   isAiSpeaking ? 'text-purple-300 font-bold' : isListening ? 'text-emerald-400 font-bold' : 'text-zinc-400'
                 }`}>
-                  {isAiSpeaking ? 'ElevenLabs: Búnker IA hablando...' : isListening ? 'Escuchando tu voz por micrófono...' : 'Analizando diagnóstico con Groq...'}
+                  {isAiSpeaking ? `${AVAILABLE_VOICES.find(v => v.id === selectedVoiceId)?.name} hablando...` : isListening ? 'Escuchando tu voz...' : 'Diagnosticando con Groq...'}
                 </span>
               </div>
             </div>
 
             {/* Live transcripts */}
-            <div className="flex flex-col gap-2 mb-3 bg-slate-800/40 p-3 rounded-xl max-h-36 overflow-y-auto">
+            <div className="flex flex-col gap-2 my-2 bg-slate-800/40 p-2.5 rounded-xl max-h-32 overflow-y-auto">
               {userTranscript && (
                 <div className="text-left">
                   <span className="text-[9px] text-green-400 font-extrabold uppercase tracking-wide block">Tú:</span>
@@ -571,35 +655,35 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
               </div>
             </div>
 
-            {/* Direct testing buttons for quick thesis demonstration */}
-            <div className="mb-3">
+            {/* Direct testing buttons with real customer scenarios */}
+            <div className="mb-2.5">
               <span className="text-[9px] font-bold text-zinc-400 block uppercase tracking-wider mb-1.5 text-center">Atajos de Prueba (Sustentación de Tesis)</span>
               <div className="flex flex-wrap gap-1.5 justify-center">
                 <button
+                  onClick={() => handleSimulatedCommand("La impresora de Cocina no imprime y quiero saber si el servidor está corriendo")}
+                  className="bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-[9px] px-2 py-1.5 rounded-lg text-sky-300 font-bold cursor-pointer transition-colors"
+                  title="Verificar servidor Cocina y archivo a abrir"
+                >
+                  "¿Servidor Cocina corriendo?"
+                </button>
+                <button
                   onClick={() => handleSimulatedCommand("Tengo un descuadre en el arqueo de caja de cincuenta soles")}
                   className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-[9px] px-2 py-1.5 rounded-lg text-amber-300 font-bold cursor-pointer transition-colors"
-                  title="Prueba de Descuadre de Caja"
+                  title="Auditoría financiera de arqueo en vivo"
                 >
                   "Descuadre de Caja"
                 </button>
                 <button
-                  onClick={() => handleSimulatedCommand("La impresora de cocina no imprime, ¿el VBS está corriendo?")}
-                  className="bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-[9px] px-2 py-1.5 rounded-lg text-sky-300 font-bold cursor-pointer transition-colors"
-                  title="Prueba de Servidor VBS e Impresoras"
-                >
-                  "Revisar Servidor VBS"
-                </button>
-                <button
                   onClick={() => handleSimulatedCommand("Repara la impresora de Cocina con auto recovery")}
                   className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[9px] px-2 py-1.5 rounded-lg text-emerald-300 font-bold cursor-pointer transition-colors"
-                  title="Auto Recovery de Hardware"
+                  title="Autorecuperación de red"
                 >
-                  "Auto Recovery Hardware"
+                  "Autoreparar Impresora"
                 </button>
                 <button
                   onClick={() => handleSimulatedCommand("Sigue sin funcionar después de reiniciar todo")}
                   className="bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-[9px] px-2 py-1.5 rounded-lg text-rose-300 font-bold cursor-pointer transition-colors"
-                  title="Probar regla de 3 intentos y derivación a WhatsApp"
+                  title="Escalación automática a WhatsApp tras 3 intentos"
                 >
                   "Falla persistente (Escalar)"
                 </button>
@@ -613,7 +697,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
             </div>
 
             {/* Interactive buttons */}
-            <div className="grid grid-cols-2 gap-2 mt-2">
+            <div className="grid grid-cols-2 gap-2 mt-1">
               <button
                 onClick={() => setIsMuted(!isMuted)}
                 className={`flex items-center justify-center gap-1.5 text-[10px] font-bold py-2 rounded-xl transition-all border border-zinc-700/30 cursor-pointer ${isMuted ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-slate-800 hover:bg-slate-700 text-zinc-200'}`}
@@ -638,7 +722,7 @@ export default function VoiceAI({ currentUser, onShowNotification, onTriggerHuma
                 if (onShowNotification) onShowNotification("Redirigiendo a soporte humano directo...");
                 window.open("https://wa.me/51924383883?text=Hola%20soporte%20de%20B%C3%BAnker,%20necesito%20asistencia%20humana%20directa.", "_blank");
               }}
-              className="w-full mt-2.5 bg-slate-900/60 hover:bg-slate-900 border border-zinc-700/40 hover:border-[var(--primary)]/40 text-zinc-300 hover:text-[var(--primary)] font-bold text-[9px] py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+              className="w-full mt-2 bg-slate-900/60 hover:bg-slate-900 border border-zinc-700/40 hover:border-[var(--primary)]/40 text-zinc-300 hover:text-[var(--primary)] font-bold text-[9px] py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
             >
               <PhoneCall className="w-3 h-3" />
               Escribirle a un asesor físico

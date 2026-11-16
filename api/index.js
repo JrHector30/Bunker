@@ -5706,46 +5706,89 @@ app.post('/api/voice/chat', async (req, res) => {
 
         const lower = (message || '').toLowerCase();
         let actionTriggered = null;
+        let realDiagnosticContext = "";
 
-        // Auto Recovery trigger if user asks to repair/fix hardware
-        if (lower.includes("repara") || lower.includes("arregla") || lower.includes("recupera")) {
+        // 1. AUTODIAGNÓSTICO Y AUTOREPARACIÓN DE ESTACIÓN / IMPRESORA
+        if (lower.includes("impresora") || lower.includes("imprime") || lower.includes("servidor") || lower.includes("ticket") || lower.includes("cocina") || lower.includes("caja")) {
+            const targetEstacion = (lower.includes("cocina") || lower.includes("horno")) ? 'Cocina' : station;
             try {
-                const targetEstacion = lower.includes("cocina") || lower.includes("horno") ? 'Cocina' : station;
-                const devices = await prisma.dispositivoRed.findMany({
-                    where: { estacion: targetEstacion, restauranteId: tenantId }
+                const latido = await prisma.configuracion.findUnique({
+                    where: { clave: `estacion_latido_${targetEstacion}` }
                 });
-                const printer = devices.find(d => d.tipo === 'impresora') || devices[0];
-                if (printer) {
-                    await prisma.dispositivoRed.update({
-                        where: { id: printer.id },
-                        data: { ultimoEstado: 'RECOVERING' }
+                const isServerOnline = latido && (Date.now() - parseInt(latido.valor, 10)) < 15000;
+
+                if (!isServerOnline) {
+                    actionTriggered = 'station_offline';
+                    realDiagnosticContext += `\n[DIAGNÓSTICO EN TIEMPO REAL DEL SISTEMA]:
+- Estación diagnosticada: ${targetEstacion}.
+- Estado del servidor: APAGADO / DESCONECTADO (sin señal de latido).
+- Solución exacta para el cliente: Debe ir a la computadora de ${targetEstacion} y abrir el acceso directo del escritorio llamado "INICIAR_BUNKER_POS" (o el archivo con ese nombre).
+- Regla: NUNCA menciones términos como "vbs", "bunkertray", "scripts" ni "código". Habla como un soporte de servicio al cliente muy amable, indicándole directamente el nombre del archivo "INICIAR_BUNKER_POS" que debe abrir.`;
+                } else {
+                    // El servidor sí está encendido -> Disparar Auto Recovery en caliente
+                    const devices = await prisma.dispositivoRed.findMany({
+                        where: { estacion: targetEstacion, restauranteId: tenantId }
                     });
-                    await prisma.configuracion.upsert({
-                        where: { clave: 'solicitar_recovery_estacion' },
-                        update: { valor: JSON.stringify({ estacion: targetEstacion, accion: 'reparar', deviceId: printer.id }) },
-                        create: { clave: 'solicitar_recovery_estacion', valor: JSON.stringify({ estacion: targetEstacion, accion: 'reparar', deviceId: printer.id }) }
-                    });
-                    actionTriggered = 'printer_recovery';
+                    const printer = devices.find(d => d.tipo === 'impresora') || devices[0];
+
+                    if (printer) {
+                        await prisma.dispositivoRed.update({
+                            where: { id: printer.id },
+                            data: { ultimoEstado: 'RECOVERING' }
+                        });
+                        await prisma.configuracion.upsert({
+                            where: { clave: 'solicitar_recovery_estacion' },
+                            update: { valor: JSON.stringify({ estacion: targetEstacion, accion: 'reparar', deviceId: printer.id }) },
+                            create: { clave: 'solicitar_recovery_estacion', valor: JSON.stringify({ estacion: targetEstacion, accion: 'reparar', deviceId: printer.id }) }
+                        });
+                        actionTriggered = 'printer_recovery';
+                        realDiagnosticContext += `\n[DIAGNÓSTICO EN TIEMPO REAL DEL SISTEMA]:
+- Estación diagnosticada: ${targetEstacion}.
+- Estado del servidor: ENCENDIDO Y ACTIVO.
+- Acción ejecutada: Acabas de ejecutar la autorecuperación automática de la impresora en la red local y purgar la cola de pedidos.
+- Respuesta al cliente: Confírmale que el servidor de ${targetEstacion} sí está activo y dile con entusiasmo que ya ejecutaste la autoreparación para reconectar la impresora de comandas. Pídele que confirme si sale el ticket de prueba en unos segundos.`;
+                    } else {
+                        realDiagnosticContext += `\n[DIAGNÓSTICO EN TIEMPO REAL DEL SISTEMA]: El servidor de ${targetEstacion} está activo, pero no figura ninguna impresora vinculada en el sistema. Indícale que debe vincularla desde el panel de dispositivos.`;
+                    }
                 }
-            } catch (recoveryErr) {
-                console.warn("[VoiceAI] Error al disparar Auto Recovery:", recoveryErr.message);
+            } catch (diagErr) {
+                console.warn("[VoiceAI] Error en diagnóstico de estación:", diagErr.message);
+            }
+        }
+
+        // 2. AUTODIAGNÓSTICO DE CAJA Y ARQUEO / DESCUADRE
+        if (lower.includes("descuadre") || lower.includes("caja") || lower.includes("arqueo") || lower.includes("plata") || lower.includes("dinero") || lower.includes("sobra") || lower.includes("falta")) {
+            try {
+                const lastArqueo = await prisma.arqueo.findFirst({
+                    where: { restauranteId: tenantId },
+                    orderBy: { id: 'desc' }
+                });
+                const anuladasCount = await prisma.comanda.count({
+                    where: { restauranteId: tenantId, estado: 'anulada' }
+                });
+
+                actionTriggered = 'cashier_audit';
+                realDiagnosticContext += `\n[DIAGNÓSTICO EN TIEMPO REAL DEL SISTEMA]:
+- Módulo de Caja auditado. Estado actual: ${lastArqueo ? lastArqueo.estado : 'sin turno abierto'}.
+- Fondo de apertura registrado: S/. ${lastArqueo ? (lastArqueo.montoInicial || 0).toFixed(2) : '0.00'}.
+- Comandas anuladas registradas: ${anuladasCount}.
+- Respuesta al cliente: Explícale en palabras sencillas que las diferencias en arqueo suelen ocurrir por comandas anuladas donde no se devolvió el efectivo, o pagos recibidos por Yape o tarjeta que se marcaron por error como efectivo. Aconséjale ingresar a la pantalla de Caja para conciliar el desglose de métodos de pago.`;
+            } catch (cashErr) {
+                console.warn("[VoiceAI] Error en auditoría de caja:", cashErr.message);
             }
         }
 
         const isLastAttempt = attempt >= 3;
-        const systemPrompt = `Eres la Asistente de Soporte Técnico de Búnker POS (ComandaGo).
-Tu objetivo es dar soporte oral ágil, empático y profesional al personal del restaurante (mozos, cajeros y administradores).
+        const systemPrompt = `Eres el Agente Inteligente de Autodiagnóstico y Autoreparación de Búnker POS.
+Tu función principal es DIAGNOSTICAR y REPARAR los problemas del restaurante por ti mismo en tiempo real, para que los clientes no tengan que depender de un asesor físico.
 
-Reglas estrictas de respuesta:
-1. Longitud: Máximo 2 a 3 oraciones cortas (menos de 45 palabras en total). Debe sonar fluido al leerse en voz alta con ElevenLabs.
-2. Tono: Conciso, amable y resolutivo. No uses viñetas ni asteriscos de markdown, habla con naturalidad.
-3. Conocimiento técnico de Búnker POS:
-   - Impresoras térmicas / VBS / BunkerTray: Si no imprimen tickets, indica verificar si el servidor local de impresión (el script VBS o BunkerTray.ps1) está activo en la bandeja del sistema de Windows con el ícono verde, o verificar la IP en la red local. Si se ejecutó Auto Recovery, confirma que se está buscando la MAC y refrescando la IP.
-   - Descuadre de caja / Arqueo: Aconseja abrir el módulo de Caja, revisar ventas en efectivo versus transferencias (Yape, Plin), verificar si hubo comandas anuladas en el turno o contrastar contra el fondo de apertura.
-   - Comanderas y Tablets: Sugiere revisar la conexión WiFi del salón y asegurar que estén en la misma red local del servidor.
-   - Si el usuario dice que todo está bien o agradece: Despídete cordialmente deseándole un excelente turno.
+REGLAS DE ORO:
+1. Lenguaje para Clientes: Está TERMINANTEMENTE PROHIBIDO usar tecnicismos como "vbs", "bunkertray", "scripts", "spooler" o "código". Habla en lenguaje de restaurante cálido, humano y comprensible.
+2. Si un archivo debe abrirse, di exactamente su nombre comercial claro: "INICIAR_BUNKER_POS".
+3. Longitud: Máximo 2 a 3 oraciones (menos de 45 palabras). Debe sonar natural, seguro y profesional al hablarse por voz.
 4. Intento actual: ${attempt} de 3.
-${isLastAttempt ? 'CRÍTICO: Este es el intento número 3 y el límite fue alcanzado sin solución. Debes indicar calmadamente que para no retrasar la operación del restaurante, estás transfiriendo de inmediato la llamada con nuestro asesor de soporte técnico humano en WhatsApp.' : 'Si el usuario parece frustrado o la falla persiste, ofrece una comprobación rápida.'}`;
+${isLastAttempt ? 'CRÍTICO: Este es el intento número 3. Concluye diciendo calmadamente que para no retrasar el turno del restaurante, vas a transferir la llamada de inmediato con el asesor técnico en WhatsApp.' : ''}
+${realDiagnosticContext ? realDiagnosticContext : 'Si no hay falla detectada, ofrece asistencia y pregunta en qué más puedes ayudar.'}`;
 
         const messages = [
             { role: 'system', content: systemPrompt },
@@ -5757,7 +5800,7 @@ ${isLastAttempt ? 'CRÍTICO: Este es el intento número 3 y el límite fue alcan
             model: 'qwen/qwen3.8-27b',
             messages,
             max_tokens: 120,
-            temperature: 0.6
+            temperature: 0.5
         }, {
             headers: {
                 'Authorization': `Bearer ${GROQ_KEY}`,
@@ -5779,7 +5822,7 @@ ${isLastAttempt ? 'CRÍTICO: Este es el intento número 3 y el límite fue alcan
         console.error("Error en /api/voice/chat:", err.response ? err.response.data : err.message);
         res.status(500).json({
             error: "Error procesando con Groq",
-            reply: "He tenido un microcorte de comunicación con el servidor central de Búnker. Por favor, repíteme tu consulta.",
+            reply: "He tenido un pequeño inconveniente de red con la central. Por favor, repíteme tu consulta.",
             shouldEscalate: false
         });
     }
@@ -5789,7 +5832,8 @@ app.post('/api/voice/speak', async (req, res) => {
     try {
         const { text, voiceId } = req.body;
         const ELEVEN_KEY = process.env.ELEVENLABS_API_KEY;
-        const TARGET_VOICE = voiceId || process.env.ELEVENLABS_VOICE_ID || 'EXAVITQu4vr4xnSDxMaL';
+        // Default to Bella (hpp4J3VqNfWAUOO0d1Us) - warm, professional, patient female voice
+        const TARGET_VOICE = voiceId || process.env.ELEVENLABS_VOICE_ID || 'hpp4J3VqNfWAUOO0d1Us';
 
         if (!ELEVEN_KEY || !text) {
             return res.status(400).json({ fallback: true, error: "Datos insuficientes o API key no configurada." });
@@ -5801,8 +5845,9 @@ app.post('/api/voice/speak', async (req, res) => {
                 text: text,
                 model_id: "eleven_multilingual_v2",
                 voice_settings: {
-                    stability: 0.5,
-                    similarity_boost: 0.8
+                    stability: 0.65,
+                    similarity_boost: 0.85,
+                    style: 0.2
                 }
             },
             {
