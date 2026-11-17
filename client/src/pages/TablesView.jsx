@@ -12,6 +12,7 @@ import { getActiveRestaurant } from '../utils/tenant';
 import DeleteButton from '../components/ui/DeleteButton';
 import CloseButton from '../components/ui/CloseButton';
 import { networkStatus, NetworkState, db, offlineOrderService, offlineSnapshotService } from '../offline';
+import MesasMobileView from '../components/tables/MesasMobileView';
 
 export function BackupRestoreIcon({ size = 24, ...props }) {
     return (
@@ -161,6 +162,87 @@ const TablesView = () => {
     // States for dynamically modifying comensales of occupied tables upon merge
     const [isUpdatingDiners, setIsUpdatingDiners] = useState(false);
     const [updatingComandaId, setUpdatingComandaId] = useState(null);
+
+    // Productos y platos disponibles para comanda móvil
+    const [productsList, setProductsList] = useState([]);
+
+    useEffect(() => {
+        const loadProducts = async () => {
+            try {
+                if (networkStatus.isOffline()) {
+                    const localProds = await db.products.toArray();
+                    setProductsList(localProds || []);
+                } else {
+                    const res = await fetch('/api/products');
+                    if (res.ok) {
+                        const data = await res.json();
+                        setProductsList(Array.isArray(data) ? data : []);
+                    }
+                }
+            } catch (e) {
+                try {
+                    const localProds = await db.products.toArray();
+                    setProductsList(localProds || []);
+                } catch (_) {}
+            }
+        };
+        loadProducts();
+    }, []);
+
+    const dishesForMobile = React.useMemo(() => {
+        return productsList.map(p => ({
+            id: p.id,
+            nombre: p.nombre,
+            precioVenta: Number(p.precio || p.precioVenta || 0),
+            estado: (p.activo === false || p.estado === 'Inactivo') ? 'Inactivo' : 'Activo'
+        }));
+    }, [productsList]);
+
+    // Adaptador de mesas para el módulo táctil Mobile
+    const [mobileTables, setMobileTables] = useState([]);
+
+    useEffect(() => {
+        if (tablesState && tablesState.length > 0) {
+            setMobileTables(tablesState.map(t => {
+                const comandaActiva = t.comandas?.find(c => c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase()));
+                const debaBloquear = t.estado === 'libre' && !isCajaAbierta;
+
+                let estadoMobile = 'CERRADA';
+                if (t.estado === 'ocupada') {
+                    estadoMobile = (t.estado === 'cuenta' || comandaActiva?.estado === 'cuenta') ? 'CUENTA' : 'OCUPADA';
+                } else if (debaBloquear) {
+                    estadoMobile = 'CERRADA';
+                }
+
+                const pedidos = (comandaActiva?.detalles || []).map(d => ({
+                    dishId: d.platoId || d.dishId || d.id,
+                    nombre: d.plato?.nombre || d.nombre || 'Plato',
+                    precio: Number(d.precio || d.plato?.precio || 0),
+                    cantidad: Number(d.cantidad || 1)
+                }));
+
+                const mergedWith = (t.mesasHijas || []).map(h => parseInt(h.numero, 10)).filter(Boolean);
+
+                return {
+                    id: t.id,
+                    numero: parseInt(t.numero, 10) || t.id,
+                    capacidad: t.capacidad || 4,
+                    estado: estadoMobile,
+                    comensales: (comandaActiva?.comensales) || 0,
+                    horaApertura: comandaActiva?.fechaHora ? new Date(comandaActiva.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : undefined,
+                    mesero: comandaActiva?.usuario?.nombre?.split(' ')[0] || 'Hector',
+                    pedidos,
+                    mergedWith: mergedWith.length > 0 ? mergedWith : undefined
+                };
+            }));
+        }
+    }, [tablesState, isCajaAbierta]);
+
+    const handleUpdateMobileTables = (updater) => {
+        setMobileTables(prev => {
+            return typeof updater === 'function' ? updater(prev) : updater;
+        });
+    };
 
     // Fetch edit mode on mount
     const fetchEditMode = async () => {
@@ -1465,164 +1547,15 @@ const TablesView = () => {
                 )}
             </div>
 
-            {/* 1. CABECERA MÓVIL (< md) CON BOTONES >= 44px Y FILTROS */}
-            <header className="md:hidden flex flex-col gap-3.5 mb-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-[22px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
-                            Salón Principal
-                        </h1>
-                        <p className="mt-0.5 text-xs font-medium text-slate-500 tabular-nums">
-                            {counts.total} mesas · {counts.ocupadas} ocupadas
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    {/* Unir Mesas */}
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (!isCajaAbierta) {
-                                showToast('Operación denegada. Se requiere la apertura de caja para unir mesas.', 'error');
-                                return;
-                            }
-                            setShowGlobalMergeModal(true);
-                            setSelectedMergeTableIds([]);
-                        }}
-                        disabled={!isCajaAbierta}
-                        className={`min-h-[44px] flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-bold rounded-2xl transition-all active:scale-95 cursor-pointer border shadow-sm ${
-                            !isCajaAbierta
-                                ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-zinc-800 text-slate-400 border-slate-200 dark:border-zinc-700'
-                                : 'border-[#6EE7B7] bg-white dark:bg-zinc-900 text-[#059669] dark:text-[#34D399] hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20'
-                        }`}
-                    >
-                        <Link2 className="w-4 h-4 text-[#059669] dark:text-[#34D399]" />
-                        <span>Unir Mesas</span>
-                    </button>
-
-                    {/* Toggle Bloqueado / Modo Edición (Diseño exacto Google AI Studio) */}
-                    <button
-                        type="button"
-                        onClick={() => handleToggleEditMode(!isEditMode)}
-                        className="min-h-[44px] flex-1 sm:flex-initial inline-flex items-center justify-center gap-2.5 px-3.5 py-2 text-[13px] font-bold rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-700 text-slate-700 dark:text-slate-200 whitespace-nowrap shadow-sm active:scale-95 cursor-pointer transition-all"
-                    >
-                        {/* Switch capsule */}
-                        <div className={`w-11 h-6 rounded-full p-0.5 flex items-center transition-colors ${!isEditMode ? 'bg-[#F43F5E] justify-end' : 'bg-emerald-500 justify-start'}`}>
-                            <div className="w-5 h-5 rounded-full bg-white shadow-sm flex items-center justify-center">
-                                {!isEditMode ? (
-                                    <Lock className="w-3 h-3 text-slate-700" />
-                                ) : (
-                                    <Unlock className="w-3 h-3 text-slate-700" />
-                                )}
-                            </div>
-                        </div>
-                        <span className="text-slate-900 dark:text-white">{!isEditMode ? 'Bloqueado' : 'Modo Edición'}</span>
-                    </button>
-
-                    {/* Refresh */}
-                    <button
-                        type="button"
-                        onClick={fetchTables}
-                        title="Actualizar mesas"
-                        className="min-h-[44px] min-w-[44px] rounded-2xl bg-slate-200/80 hover:bg-slate-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 flex items-center justify-center shrink-0 transition-all active:scale-95 border-0 text-slate-700 dark:text-slate-300 cursor-pointer shadow-sm"
-                    >
-                        <RotateCcw className="w-4 h-4" />
-                    </button>
-                </div>
-
-                {/* Filtros rápidos por estado */}
-                <div
-                    role="tablist"
-                    className="inline-flex items-center gap-1 p-1 rounded-full bg-slate-200/70 dark:bg-zinc-800/80 overflow-x-auto max-w-full"
-                >
-                    {['Todas', 'Cerradas', 'Ocupadas', 'Cuenta'].map((f) => {
-                        const isActive = statusFilter === f;
-                        return (
-                            <button
-                                key={f}
-                                type="button"
-                                role="tab"
-                                aria-selected={isActive}
-                                onClick={() => setStatusFilter(f)}
-                                className={`flex-1 px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap min-h-[36px] transition-all cursor-pointer border-0 active:scale-95 ${
-                                    isActive
-                                        ? 'bg-[#F26522] text-white shadow-md'
-                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                                }`}
-                            >
-                                {f}
-                            </button>
-                        );
-                    })}
-                </div>
-            </header>
-
-            {/* 2. LIENZO Y GRILLA ADAPTATIVA PARA CELULAR (< md) */}
-            <section className="md:hidden rounded-2xl bg-[#EAEAE8] dark:bg-zinc-900 border border-slate-300/70 dark:border-zinc-800 p-4 min-h-[500px] mb-4">
-                {filteredTablesMobile.length === 0 ? (
-                    <div className="py-16 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
-                        No hay mesas registradas con el filtro &ldquo;{statusFilter}&rdquo;.
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-2 gap-y-7 gap-x-3.5 place-items-center py-2">
-                        {filteredTablesMobile.map((table) => {
-                            const debaBloquear = table.estado === 'libre' && !isCajaAbierta;
-                            const isDaughter = table.mesaPadreId !== null;
-                            const padreMesa = isDaughter ? tablesState.find(t => t.id === table.mesaPadreId) : null;
-                            const badgeText = padreMesa ? `→ M${padreMesa.numero}` : 'Unida';
-                            const comandaActiva = table.comandas?.find(c => c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase()));
-                            const totalComensales = table.estado === 'ocupada' && comandaActiva ? (comandaActiva.comensales || 2) : 0;
-
-                            return (
-                                <div key={table.id} className="relative flex items-center justify-center p-2.5">
-                                    {/* Sillas alrededor */}
-                                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-6 rounded-l-md bg-[#C4C6CA] dark:bg-zinc-700" />
-                                    <span className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-6 rounded-r-md bg-[#C4C6CA] dark:bg-zinc-700" />
-
-                                    {/* Botón de la mesa */}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (isEditMode) return;
-                                            if (isDaughter) {
-                                                showToast(`Esta mesa está unida a la Mesa ${padreMesa ? padreMesa.numero : ''}. Realice el pedido en ella.`, "info");
-                                                return;
-                                            }
-                                            handleTableClick(table);
-                                        }}
-                                        className={`relative w-[114px] h-[114px] rounded-[22px] flex flex-col items-center justify-center border shadow-sm active:scale-[0.96] transition-all cursor-pointer ${
-                                            table.estado === 'ocupada'
-                                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-500 dark:bg-amber-500/20'
-                                                : debaBloquear
-                                                ? 'bg-[#F4F4F3] dark:bg-zinc-800 border-slate-300/80 dark:border-zinc-700 text-slate-400'
-                                                : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
-                                        }`}
-                                    >
-                                        <span className="text-[26px] font-black tabular-nums leading-none text-slate-800 dark:text-slate-100">
-                                            {getTableDisplayName(table)}
-                                        </span>
-                                        <span className={`mt-1.5 text-[10px] font-extrabold tracking-[0.08em] uppercase ${
-                                            table.estado === 'ocupada'
-                                                ? 'text-amber-500'
-                                                : debaBloquear
-                                                ? 'text-slate-400'
-                                                : 'text-emerald-600 dark:text-emerald-400'
-                                        }`}>
-                                            {isDaughter ? badgeText : (debaBloquear ? 'CERRADA' : (table.estado === 'ocupada' ? 'OCUPADA' : 'LIBRE'))}
-                                        </span>
-                                        {table.estado === 'ocupada' && totalComensales > 0 && (
-                                            <span className="mt-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                                                👥 {totalComensales} comensales
-                                            </span>
-                                        )}
-                                    </button>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </section>
+            {/* 1. VISTA MÓVIL COMPLETA (< md) CON PLANO 2 COLUMNAS, BOTONERA TÁCTIL Y BOTTOM SHEET */}
+            <div className="md:hidden mb-4">
+                <MesasMobileView
+                    tables={mobileTables}
+                    onUpdateTables={handleUpdateMobileTables}
+                    dishes={dishesForMobile}
+                    onNotify={(msg) => showToast(msg, 'info')}
+                />
+            </div>
 
             {/* 3. LIENZO ESCRITORIO (>= md) ORIGINAL E INTACTO */}
             <div className="hidden md:block salon-contenedor">
