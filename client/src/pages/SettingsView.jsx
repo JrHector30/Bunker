@@ -921,12 +921,12 @@ export default function SettingsView() {
                   Impresoras USB
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  {printers.filter(p => p.transport === 'USB').length} disp.
+                  {printers.filter(p => p.transport === 'USB' && !p.offline).length} disp.
                 </span>
               </div>
 
-              {printers.filter(p => p.transport === 'USB').length > 0 ? (
-                printers.filter(p => p.transport === 'USB').map(usbP => {
+              {printers.filter(p => p.transport === 'USB' && !p.offline).length > 0 ? (
+                printers.filter(p => p.transport === 'USB' && !p.offline).map(usbP => {
                   const isOnline = usbP.ultimoEstado === 'ONLINE' && !usbP.offline;
                   return (
                     <div key={usbP.id} className={`rounded-xl bg-white dark:bg-slate-900 border p-3 space-y-3 transition-colors ${
@@ -1560,12 +1560,12 @@ export default function SettingsView() {
                   Impresoras USB (Windows)
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  {printers.filter(p => p.transport === 'USB').length} dispositivo(s)
+                  {printers.filter(p => p.transport === 'USB' && !p.offline).length} dispositivo(s)
                 </span>
               </div>
 
-              {printers.filter(p => p.transport === 'USB').length > 0 ? (
-                printers.filter(p => p.transport === 'USB').map(usbP => {
+              {printers.filter(p => p.transport === 'USB' && !p.offline).length > 0 ? (
+                printers.filter(p => p.transport === 'USB' && !p.offline).map(usbP => {
                   const isOnline = usbP.ultimoEstado === 'ONLINE' && !usbP.offline;
                   return (
                     <div key={usbP.id} className={`rounded-xl bg-white dark:bg-slate-900 border p-3.5 space-y-3 transition-colors ${

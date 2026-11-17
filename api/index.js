@@ -193,9 +193,10 @@ app.get('/api/impresoras', async (req, res) => {
         const medidasMap = medidasConf?.valor ? JSON.parse(medidasConf.valor) : {};
         const perfilesMap = perfilesConf?.valor ? JSON.parse(perfilesConf.valor) : {};
         
-        // Mapear impresoras físicas de Windows con su estado real de conexión (ONLINE / OFFLINE)
+        // Mapear impresoras físicas de Windows: solo mostrar las que estén REALMENTE CONECTADAS / EN LÍNEA
         const winPrintersMapped = winPrinters
             .filter(p => !p.name.match(/pdf|xps|onenote|fax|root|microsoft|nitro/i))
+            .filter(p => !p.offline)
             .map(p => ({
                 id: `usb_${p.name}`,
                 nombre: p.name,
@@ -204,8 +205,8 @@ app.get('/api/impresoras', async (req, res) => {
                 transport: 'USB',
                 mac: null,
                 ultimaIp: null,
-                ultimoEstado: p.offline ? 'OFFLINE' : 'ONLINE',
-                offline: !!p.offline,
+                ultimoEstado: 'ONLINE',
+                offline: false,
                 port: p.port,
                 medida: medidasMap[p.name] || '80mm',
                 perfil: perfilesMap[p.name] || 'Genérico',
