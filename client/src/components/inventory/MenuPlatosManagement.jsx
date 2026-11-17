@@ -46,6 +46,7 @@ import imgConchitasParmesana from '../../assets/images/dishes/dish_conchitas_par
 import imgLomoSaltado from '../../assets/images/dishes/dish_lomo_saltado_1794716324291.jpg';
 import imgSuspiroLimena from '../../assets/images/dishes/dish_suspiro_limena_1794716324940.jpg';
 
+// Mapa de clases de colores fallback para categorías estándar
 const CATEGORY_BADGES = {
   Bebida: { emoji: '🍹', className: 'bg-[#ECFCCB] text-[#4D7C0F] dark:bg-lime-950/60 dark:text-lime-300' },
   Bebidas: { emoji: '🍹', className: 'bg-[#ECFCCB] text-[#4D7C0F] dark:bg-lime-950/60 dark:text-lime-300' },
@@ -60,6 +61,20 @@ const CATEGORY_BADGES = {
   Parrillas: { emoji: '🔥', className: 'bg-[#FFF7ED] text-[#C2410C] dark:bg-orange-950/60 dark:text-orange-300' },
   Default: { emoji: '🍽️', className: 'bg-[#F1F5F9] text-[#475569] dark:bg-slate-800 dark:text-slate-300' }
 };
+
+// Resolver dinámicamente el ícono y color de la categoría de la BD
+export function getDishCategoryBadge(dish, categories = []) {
+  const cat = dish?.categoriaObj || categories.find((c) => c.id === dish?.categoriaId || c.nombre === dish?.categoriaNombre);
+  const fallbackBadge = CATEGORY_BADGES[dish?.categoriaNombre] || CATEGORY_BADGES.Default;
+  const emoji = cat?.icono || dish?.categoria?.icono || fallbackBadge?.emoji || '🍽️';
+  const color = cat?.color || dish?.categoria?.color;
+  return {
+    emoji,
+    color,
+    nombre: cat?.nombre || dish?.categoriaNombre || 'General',
+    className: fallbackBadge?.className || 'bg-[#F1F5F9] text-[#475569] dark:bg-slate-800 dark:text-slate-300'
+  };
+}
 
 const STATUS_BADGES = {
   Activo: {
@@ -1004,7 +1019,7 @@ export default function MenuPlatosManagement({
             {pageDishes.map((dish) => {
               const costPct = dish.precioVenta > 0 ? (dish.costoProd / dish.precioVenta) * 100 : 0;
               const isSelected = selectedIds.includes(dish.id);
-              const catBadge = CATEGORY_BADGES[dish.categoriaNombre] || CATEGORY_BADGES.Default;
+              const catBadge = getDishCategoryBadge(dish, categories);
               const statusCfg = STATUS_BADGES[dish.estado] || STATUS_BADGES.Activo;
               const dropdownActions = getDropdownActions(dish);
 
@@ -1035,6 +1050,7 @@ export default function MenuPlatosManagement({
                       <div className="absolute top-2.5 right-2.5">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold shadow-xs ${catBadge.className}`}
+                          style={catBadge.color ? { borderColor: `${catBadge.color}60` } : undefined}
                         >
                           <span>{catBadge.emoji}</span>
                           <span>{dish.categoriaNombre}</span>
@@ -1046,7 +1062,15 @@ export default function MenuPlatosManagement({
                     <div className="p-3.5">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <h3 className="text-[14px] font-bold text-slate-900 dark:text-white truncate" title={dish.nombre}>
+                          <h3
+                            onClick={() => {
+                              setDishModalMode('edit');
+                              setEditingDish(dish);
+                              setDishModalOpen(true);
+                            }}
+                            className="text-[14px] font-bold text-slate-900 dark:text-white truncate cursor-pointer hover:text-[#F26522] transition-colors"
+                            title={dish.nombre}
+                          >
                             {dish.nombre}
                           </h3>
                           <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 tabular-nums">
@@ -1058,12 +1082,7 @@ export default function MenuPlatosManagement({
                         <div className="shrink-0 relative">
                           <SmoothDropdown
                             id={`grid-${dish.id}`}
-                            items={dropdownActions.map((a) => ({
-                              id: a.id,
-                              label: a.label,
-                              icon: a.icon,
-                              isDestructive: a.isDestructive,
-                            }))}
+                            items={dropdownActions}
                             onAction={(actionId) => {
                               const act = dropdownActions.find((a) => a.id === actionId);
                               if (act) act.onClick();
@@ -1130,7 +1149,7 @@ export default function MenuPlatosManagement({
           /* ========================================================= */
           /* VISTA TABLA (FILAS COMPACTAS, SIN ESPACIOS EXCESIVOS)     */
           /* ========================================================= */
-          <div className="overflow-x-auto border-t border-slate-100 dark:border-slate-800">
+          <div className="overflow-x-auto min-h-[300px] pb-14 border-t border-slate-100 dark:border-slate-800">
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold text-xs uppercase tracking-wider">
@@ -1147,7 +1166,7 @@ export default function MenuPlatosManagement({
                   <th className="py-2.5 px-3 text-right">Costo Prod.</th>
                   <th className="py-2.5 px-3 w-32">Costo %</th>
                   <th className="py-2.5 px-3 text-center">Estado</th>
-                  <th className="py-2.5 px-3 text-center w-20">Acciones</th>
+                  <th className="py-2.5 px-3 text-center w-28">Acciones</th>
                 </tr>
               </thead>
 
@@ -1155,7 +1174,7 @@ export default function MenuPlatosManagement({
                 {pageDishes.map((dish) => {
                   const isSelected = selectedIds.includes(dish.id);
                   const costPct = dish.precioVenta > 0 ? (dish.costoProd / dish.precioVenta) * 100 : 0;
-                  const catBadge = CATEGORY_BADGES[dish.categoriaNombre] || CATEGORY_BADGES.Default;
+                  const catBadge = getDishCategoryBadge(dish, categories);
                   const statusCfg = STATUS_BADGES[dish.estado] || STATUS_BADGES.Activo;
                   const isHighAlert = costPct > 40;
                   const isMediumWarn = costPct >= 30 && costPct <= 40;
@@ -1180,16 +1199,24 @@ export default function MenuPlatosManagement({
                         />
                       </td>
 
-                      {/* Plato: Imagen compacta + Nombre + # Insumos (NO SKU) */}
+                      {/* Plato: Imagen compacta + Nombre + # Insumos (Clic para editar) */}
                       <td className="py-2 px-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className="flex items-center gap-2.5 min-w-0 cursor-pointer group"
+                          onClick={() => {
+                            setDishModalMode('edit');
+                            setEditingDish(dish);
+                            setDishModalOpen(true);
+                          }}
+                          title="Clic para editar plato"
+                        >
                           <DishThumbnail
                             src={dish.imagen}
                             alt={dish.nombre}
-                            className="w-9 h-9 rounded-lg object-cover border border-slate-100 dark:border-slate-700 shrink-0 bg-slate-50"
+                            className="w-9 h-9 rounded-lg object-cover border border-slate-100 dark:border-slate-700 shrink-0 bg-slate-50 group-hover:scale-105 transition-transform"
                           />
                           <div className="min-w-0">
-                            <p className="font-bold text-slate-800 dark:text-slate-100 truncate text-[13px]">
+                            <p className="font-bold text-slate-800 dark:text-slate-100 truncate text-[13px] group-hover:text-[#F26522] transition-colors">
                               {dish.nombre}
                             </p>
                             <p className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
@@ -1199,10 +1226,11 @@ export default function MenuPlatosManagement({
                         </div>
                       </td>
 
-                      {/* Categoría */}
+                      {/* Categoría Dinámica de la BD */}
                       <td className="py-2 px-3 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${catBadge.className}`}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-xs ${catBadge.className}`}
+                          style={catBadge.color ? { borderColor: `${catBadge.color}60` } : undefined}
                         >
                           <span aria-hidden="true">{catBadge.emoji}</span>
                           <span>{dish.categoriaNombre}</span>
@@ -1276,18 +1304,25 @@ export default function MenuPlatosManagement({
                         </button>
                       </td>
 
-                      {/* Acciones: SmoothDropdown al Centro de la columna */}
+                      {/* Acciones: Botón Editar directo + SmoothDropdown */}
                       <td className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-center items-center h-8 mx-auto">
+                        <div className="flex justify-center items-center gap-1 h-8 mx-auto">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDishModalMode('edit');
+                              setEditingDish(dish);
+                              setDishModalOpen(true);
+                            }}
+                            title="Editar Plato"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-[#F26522] hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-colors border-0 cursor-pointer inline-flex items-center justify-center shrink-0"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
                           <SmoothDropdown
                             id={`table-${dish.id}`}
-                            dropUp={pageDishes.indexOf(dish) >= Math.max(0, pageDishes.length - 3)}
-                            items={dropdownActions.map((a) => ({
-                              id: a.id,
-                              label: a.label,
-                              icon: a.icon,
-                              isDestructive: a.isDestructive,
-                            }))}
+                            dropUp={pageDishes.length > 3 && pageDishes.indexOf(dish) >= pageDishes.length - 2}
+                            items={dropdownActions}
                             onAction={(actionId) => {
                               const act = dropdownActions.find((a) => a.id === actionId);
                               if (act) act.onClick();

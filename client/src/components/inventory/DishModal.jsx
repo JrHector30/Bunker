@@ -104,10 +104,6 @@ export const DishModal = ({
       setError('El precio de venta debe ser mayor a S/. 0.00.');
       return;
     }
-    if (Number.isNaN(Number(costoProduccion)) || Number(costoProduccion) < 0) {
-      setError('El costo de producción no puede ser negativo.');
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -122,12 +118,16 @@ export const DishModal = ({
         }
       }
 
+      const existingCost = initialDish?.costoProduccion !== undefined
+        ? initialDish.costoProduccion
+        : (initialDish?.costoProd !== undefined ? initialDish.costoProd : (existingMatch?.costoProd || 0));
+
       await onSave({
         id: existingMatch ? existingMatch.id : initialDish?.id,
         nombre: nombre.trim(),
         categoriaId: parseInt(categoriaId, 10),
         precio: parseFloat(precio),
-        costoProduccion: parseFloat(costoProduccion) || 0,
+        costoProduccion: parseFloat(existingCost) || 0,
         estado,
         activo: estado === 'Activo',
         imagen: finalImageUrl,

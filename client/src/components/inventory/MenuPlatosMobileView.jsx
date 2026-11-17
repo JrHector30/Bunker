@@ -61,6 +61,20 @@ const CATEGORY_BADGES = {
   },
 };
 
+function getMobileCategoryBadge(dish, categories = []) {
+  const catObj = categories.find((c) => c.id === dish.categoriaId || c.nombre === dish.categoria);
+  const fallbackBadge = CATEGORY_BADGES[dish.categoria] || {
+    emoji: '🍽️',
+    className:
+      'bg-[#F1F5F9] text-[#475569] dark:bg-slate-800 dark:text-slate-300',
+  };
+  return {
+    emoji: catObj?.icono || dish.categoriaIcono || fallbackBadge.emoji || '🍽️',
+    color: catObj?.color || dish.categoriaColor,
+    className: fallbackBadge.className,
+  };
+}
+
 const STATUS_BADGES = {
   Activo:
     'bg-[#DCFCE7] text-[#15803D] dark:bg-emerald-950/60 dark:text-emerald-300',
@@ -852,10 +866,7 @@ export const MenuPlatosMobileView = ({
                   ? (dish.costoProd / dish.precioVenta) * 100
                   : 0;
               const isSelected = selectedIds.includes(dish.id);
-              const catBadge = CATEGORY_BADGES[dish.categoria] || {
-                emoji: '🍽️',
-                className: 'bg-slate-100 text-slate-700',
-              };
+              const catBadge = getMobileCategoryBadge(dish, categories);
 
               return (
                 <article
@@ -980,10 +991,7 @@ export const MenuPlatosMobileView = ({
                 dish.precioVenta > 0
                   ? (dish.costoProd / dish.precioVenta) * 100
                   : 0;
-              const catBadge = CATEGORY_BADGES[dish.categoria] || {
-                emoji: '🍽️',
-                className: 'bg-slate-100 text-slate-700',
-              };
+              const catBadge = getMobileCategoryBadge(dish, categories);
               const isHighAlert = costPct > 40;
               const isMediumWarn = costPct >= 30 && costPct <= 40;
 
