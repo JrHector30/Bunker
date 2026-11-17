@@ -429,41 +429,41 @@ const UsersView = () => {
 
                 {/* Filtros debajo del botón de Nuevo Usuario */}
                 <div className="space-y-2 pt-0.5">
-                    <div className="relative">
-                        <Filter className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => {
-                                setStatusFilter(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                            className="w-full min-h-[42px] pl-10 pr-9 text-xs font-semibold rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 shadow-2xs cursor-pointer"
-                        >
-                            <option value="all">Todos los estados</option>
-                            <option value="active">Activo</option>
-                            <option value="inactive">Inactivo</option>
-                        </select>
-                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
+                    <FilterCombobox
+                        value={statusFilter}
+                        defaultValue="all"
+                        icon={Filter}
+                        ariaLabel="Filtrar por estado"
+                        onChange={(val) => {
+                            setStatusFilter(val);
+                            setCurrentPage(1);
+                        }}
+                        className="w-full"
+                        options={[
+                            { value: 'all', label: 'Todos los estados' },
+                            { value: 'active', label: 'Activos', indicatorClass: 'bg-emerald-500' },
+                            { value: 'inactive', label: 'Inactivos', indicatorClass: 'bg-slate-400' },
+                        ]}
+                    />
 
-                    <div className="relative">
-                        <Shield className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <select
-                            value={roleFilter}
-                            onChange={(e) => {
-                                setRoleFilter(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                            className="w-full min-h-[42px] pl-10 pr-9 text-xs font-semibold rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 shadow-2xs cursor-pointer"
-                        >
-                            <option value="all">Todos los roles</option>
-                            <option value="admin">Administrador</option>
-                            <option value="caja">Caja</option>
-                            <option value="cocina">Cocina</option>
-                            <option value="mozo">Mozo</option>
-                        </select>
-                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
+                    <FilterCombobox
+                        value={roleFilter}
+                        defaultValue="all"
+                        icon={Shield}
+                        ariaLabel="Filtrar por rol"
+                        onChange={(val) => {
+                            setRoleFilter(val);
+                            setCurrentPage(1);
+                        }}
+                        className="w-full"
+                        options={[
+                            { value: 'all', label: 'Todos los roles' },
+                            { value: 'admin', label: 'Administrador' },
+                            { value: 'caja', label: 'Caja' },
+                            { value: 'cocina', label: 'Cocina' },
+                            { value: 'mozo', label: 'Mozo' },
+                        ]}
+                    />
                 </div>
             </header>
 

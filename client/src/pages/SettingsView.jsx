@@ -848,7 +848,7 @@ export default function SettingsView() {
             <button
               type="button"
               onClick={handleSavePermissions}
-              className={`w-full min-h-[42px] rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors cursor-pointer ${permissionsDirty
+              className={`w-full min-h-[42px] rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-all cursor-pointer border-0 active:scale-95 ${permissionsDirty
                 ? 'bg-[#F26522] active:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)]'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
                 }`}
@@ -1082,7 +1082,7 @@ export default function SettingsView() {
                       setEthRepairing(false);
                       showToast('Impresora Ethernet vinculada nuevamente.', 'success');
                     }}
-                    className="min-h-[34px] px-3 rounded-lg bg-[#F26522] text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-[34px] px-3 rounded-lg border-0 bg-[#F26522] text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
                   >
                     <RotateCcw className="w-3 h-3" />
                     <span>Vincular</span>

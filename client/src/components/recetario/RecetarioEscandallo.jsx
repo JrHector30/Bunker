@@ -584,7 +584,7 @@ export const RecetarioEscandallo = ({
                                   items={insumoOptions}
                                   selectedItem={insumoOptions.find((o) => o.id === item.insumoId?.toString()) || null}
                                   onSelect={(opt) => handleUpdateIngredient(index, 'insumoId', opt ? opt.id : '')}
-                                  dropUp={index >= Math.max(1, filteredRecipe.length - 2)}
+                                  forceDown={true}
                                   placeholder="Seleccionar insumo..."
                                 />
                               </div>
@@ -690,6 +690,7 @@ export const RecetarioEscandallo = ({
                                   items={insumoOptions}
                                   selectedItem={insumoOptions.find((o) => o.id === item.insumoId?.toString()) || null}
                                   onSelect={(opt) => handleUpdateIngredient(idx, 'insumoId', opt ? opt.id : '')}
+                                  forceDown={true}
                                   placeholder="Seleccionar insumo..."
                                 />
                               </div>

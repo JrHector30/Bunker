@@ -144,6 +144,9 @@ export default function SmoothDropdown({
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsOpen(false);
+                      if (item.onClick) {
+                        item.onClick();
+                      }
                       if (onAction) {
                         onAction(item.id);
                       }
@@ -215,3 +218,5 @@ export default function SmoothDropdown({
     </div>
   );
 }
+
+export { SmoothDropdown, SmoothDropdown as SmoothDropDown };

@@ -9,6 +9,7 @@ export default function SimpleCombobox({
   placeholder = "Seleccione...",
   closeOnSelect = true,
   dropUp = false,
+  forceDown = false,
   align = "auto",
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,6 +23,10 @@ export default function SimpleCombobox({
 
   // Auto-detect if opening downwards would overflow window bottom or right
   useEffect(() => {
+    if (forceDown) {
+      setAutoDropUp(false);
+      return;
+    }
     if (isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
@@ -36,9 +41,9 @@ export default function SimpleCombobox({
         setAutoAlignRight(false);
       }
     }
-  }, [isOpen]);
+  }, [isOpen, forceDown]);
 
-  const shouldDropUp = dropUp || autoDropUp;
+  const shouldDropUp = forceDown ? false : (dropUp || autoDropUp);
 
   // Close dropdown on click outside
   useEffect(() => {

@@ -273,6 +273,7 @@ export const InsumoModal = ({
                 onChange={setUnidad}
                 options={UNIDADES.map((u) => ({ value: u, label: u }))}
                 ariaLabel="Unidad de Medida"
+                className="w-full"
               />
             </div>
           </div>
@@ -290,6 +291,7 @@ export const InsumoModal = ({
                 onChange={setAlmacen}
                 options={almacenes.map((a) => ({ value: a, label: a }))}
                 ariaLabel="Almacén"
+                className="w-full"
               />
             </div>
 
