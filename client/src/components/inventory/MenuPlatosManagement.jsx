@@ -32,6 +32,7 @@ import SmoothDropdown from '../ui/SmoothDropdown';
 import CustomCheckbox from '../ui/CustomCheckbox';
 import { getActiveRestaurant } from '../../utils/tenant';
 import MenuPlatosMobileView from './MenuPlatosMobileView';
+import { validatePlatosExcelHeaders } from '../../utils/inventoryExcel';
 
 // Imágenes de platos de alta definición
 import imgAguaMineral from '../../assets/images/dishes/dish_agua_mineral_1794716320063.jpg';
@@ -509,7 +510,7 @@ export default function MenuPlatosManagement({
     if (showToast) showToast('Plantilla Excel descargada.', 'success');
   };
 
-  // Importar Excel
+  // Importar Excel con validación estricta de formato de platos
   const handleImportExcel = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -521,41 +522,99 @@ export default function MenuPlatosManagement({
         const wb = XLSX.read(bstr, { type: 'binary' });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
-        const rows = XLSX.utils.sheet_to_json(ws);
 
+        // 1. Extraer matriz de filas para validar cabeceras de la fila 0
+        const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        if (!matrix || matrix.length < 2) {
+          if (showToast) showToast('El archivo Excel está vacío o no contiene filas de datos.', 'warning');
+          return;
+        }
+
+        const rawHeaders = (matrix[0] || []).map((h) => String(h || '').trim());
+        const headerCheck = validatePlatosExcelHeaders(rawHeaders);
+
+        // Si es un archivo de inventario de insumos o no tiene formato de platos, bloquear inmediatamente
+        if (!headerCheck.isValid) {
+          if (showToast) {
+            showToast(headerCheck.error, 'error');
+          }
+          return;
+        }
+
+        const rows = XLSX.utils.sheet_to_json(ws);
         if (!rows || rows.length === 0) {
-          if (showToast) showToast('El archivo no contiene filas válidas.', 'error');
+          if (showToast) showToast('El archivo no contiene filas válidas de platos.', 'error');
           return;
         }
 
         let importados = 0;
-        for (const row of rows) {
-          const nombre = row['Nombre del Plato'] || row['Nombre'] || row['nombre'];
-          if (!nombre) continue;
+        let omitidos = 0;
 
-          const precio = parseFloat(row['Precio Venta'] || row['Precio'] || row['precio']) || 0;
-          const costo = parseFloat(row['Costo Prod'] || row['Costo'] || row['costo']) || 0;
+        for (const row of rows) {
+          const nombre =
+            row['Nombre del Plato'] ||
+            row['Nombre de Plato'] ||
+            row['Plato'] ||
+            row['plato'] ||
+            row['Nombre'] ||
+            row['nombre'];
+
+          if (!nombre || String(nombre).trim() === '') {
+            omitidos += 1;
+            continue;
+          }
+
+          const rawPrecio =
+            row['Precio Venta'] ??
+            row['Precio de Venta'] ??
+            row['Precio'] ??
+            row['precio'] ??
+            row['P. Venta'] ??
+            row['p. venta'] ??
+            row['PVP'] ??
+            row['pvp'];
+
+          const precio = parseFloat(String(rawPrecio ?? 0).replace(/,/g, '.')) || 0;
+
+          const rawCosto =
+            row['Costo Prod'] ??
+            row['Costo Producción'] ??
+            row['Costo Produccion'] ??
+            row['Costo'] ??
+            row['costo'];
+
+          const costo = parseFloat(String(rawCosto ?? 0).replace(/,/g, '.')) || 0;
+
           const catName = row['Categoría'] || row['Categoria'] || row['categoria'];
-          const matchedCat = categories.find((c) => c.nombre?.toLowerCase() === String(catName).toLowerCase()) || categories[0];
+          const matchedCat = categories.find((c) =>
+            c.nombre?.toLowerCase().trim() === String(catName || '').toLowerCase().trim()
+          ) || categories[0];
+
+          const rawEstado = row['Estado'] || row['estado'];
+          const isActivo = rawEstado ? String(rawEstado).toLowerCase().trim() !== 'inactivo' : true;
 
           await fetch('/api/products', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              nombre,
+              nombre: String(nombre).trim(),
               precio,
               costoProduccion: costo,
               categoriaId: matchedCat ? matchedCat.id : 1,
-              activo: true,
+              activo: isActivo,
             }),
           });
           importados += 1;
         }
 
-        if (showToast) showToast(`${importados} platos importados con éxito.`, 'success');
-        if (onRefresh) onRefresh();
+        if (importados > 0) {
+          if (showToast) showToast(`${importados} platos importados con éxito a la carta.`, 'success');
+          if (onRefresh) onRefresh();
+        } else {
+          if (showToast) showToast('No se encontraron platos válidos para registrar en el archivo.', 'warning');
+        }
       } catch (err) {
-        if (showToast) showToast('Error al procesar el archivo Excel.', 'error');
+        if (showToast) showToast('Error al procesar el archivo Excel: ' + (err.message || 'formato inválido'), 'error');
       } finally {
         e.target.value = '';
       }

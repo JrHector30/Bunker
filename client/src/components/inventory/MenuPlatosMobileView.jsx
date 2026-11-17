@@ -29,6 +29,7 @@ import { FilterCombobox } from './FilterCombobox';
 import { DishModal } from './DishModal';
 import { RecipeCostModal } from './RecipeCostModal';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { validatePlatosExcelHeaders } from '../../utils/inventoryExcel';
 
 const PAGE_SIZE = 10;
 
@@ -285,8 +286,37 @@ export const MenuPlatosMobileView = ({
   const handleImportFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    onNotify(`Archivo "${file.name}" procesado correctamente.`);
-    e.target.value = '';
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+
+        const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        if (!matrix || matrix.length < 2) {
+          onNotify('El archivo Excel está vacío o no contiene filas de datos.');
+          return;
+        }
+
+        const rawHeaders = (matrix[0] || []).map((h) => String(h || '').trim());
+        const headerCheck = validatePlatosExcelHeaders(rawHeaders);
+
+        if (!headerCheck.isValid) {
+          onNotify(headerCheck.error);
+          return;
+        }
+
+        onNotify(`Archivo "${file.name}" validado e importado correctamente.`);
+      } catch (err) {
+        onNotify('Error al procesar el archivo Excel: formato incompatible.');
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   const handleDuplicateDish = (dish) => {

@@ -72,6 +72,107 @@ export function triggerBlobDownload(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
+export function validatePlatosExcelHeaders(rawHeaders = []) {
+  if (!rawHeaders || rawHeaders.length === 0) {
+    return {
+      isValid: false,
+      error: 'El archivo Excel no contiene cabeceras o filas válidas.',
+    };
+  }
+
+  const normalized = rawHeaders.map(normalizeHeader);
+
+  // 1. Detectar si es un archivo de Inventario de Insumos
+  const INVENTORY_KEYWORDS = [
+    'almacen',
+    'stock',
+    'stock actual',
+    'stock critico',
+    'stock critico minimo',
+    'stock minimo',
+    'cantidad stock',
+    'unidad de medida',
+    'unidad',
+    'u m',
+    'um',
+    'nombre del insumo',
+    'insumo',
+    'costo unitario',
+    'costo unitario s',
+  ];
+
+  const hasStrongInventoryHeader = normalized.some((h) =>
+    h === 'almacen' ||
+    h === 'unidad de medida' ||
+    h === 'cantidad stock' ||
+    h === 'stock actual' ||
+    h === 'stock critico' ||
+    h === 'stock critico minimo' ||
+    h === 'stock minimo' ||
+    h === 'nombre del insumo' ||
+    h === 'costo unitario' ||
+    h === 'costo unitario s'
+  );
+
+  const matchedInventoryCount = INVENTORY_KEYWORDS.filter((kw) =>
+    normalized.some((h) => h === kw || h.includes(kw))
+  ).length;
+
+  if (hasStrongInventoryHeader || matchedInventoryCount >= 2) {
+    return {
+      isValid: false,
+      isInventoryFile: true,
+      error: 'El archivo seleccionado corresponde al Inventario de Insumos (contiene columnas como Almacén, Stock o Unidad de Medida). No puede ser importado como platos en la carta. Por favor impórtelo en el módulo Inventario o use la plantilla oficial de Menú Platos.',
+    };
+  }
+
+  // 2. Detectar si tiene las columnas necesarias para Platos
+  const hasDishNameHeader = normalized.some((h) =>
+    h === 'nombre del plato' ||
+    h === 'nombre de plato' ||
+    h === 'plato' ||
+    h === 'platos' ||
+    h === 'nombre plato' ||
+    h === 'nombre' ||
+    h === 'item'
+  );
+
+  const hasPriceHeader = normalized.some((h) =>
+    h === 'precio venta' ||
+    h === 'precio de venta' ||
+    h === 'precio' ||
+    h === 'p venta' ||
+    h === 'p. venta' ||
+    h === 'precio s' ||
+    h === 'precio venta s' ||
+    h === 'pvp'
+  );
+
+  const hasCategoryHeader = normalized.some((h) =>
+    h === 'categoria' ||
+    h === 'categorias'
+  );
+
+  if (!hasDishNameHeader) {
+    return {
+      isValid: false,
+      isInventoryFile: false,
+      error: 'El archivo no contiene una columna válida para el nombre del plato (ej: "Nombre del Plato" o "Plato").',
+    };
+  }
+
+  // Si solo tiene "Nombre" pero no tiene ni "Precio Venta" ni "Categoría", no es un archivo de platos
+  if (!hasPriceHeader && !hasCategoryHeader) {
+    return {
+      isValid: false,
+      isInventoryFile: false,
+      error: 'El archivo no posee las columnas mínimas para platos ("Precio Venta" o "Categoría"). Verifique el formato o descargue la plantilla oficial.',
+    };
+  }
+
+  return { isValid: true };
+}
+
 export function escapeCsvCell(value) {
   const str = String(value ?? '');
   if (/[",\n\r]/.test(str)) {
@@ -165,6 +266,13 @@ export async function analyzeInventoryExcelFile(
   const nonEmptyHeaderIndexes = rawHeaders
     .map((h, idx) => ({ h, idx }))
     .filter((entry) => entry.h !== '');
+
+  const normHeaders = nonEmptyHeaderIndexes.map((e) => normalizeHeader(e.h));
+  const isDishFile = normHeaders.some((h) => h === 'nombre del plato' || h === 'precio venta' || h === 'costo prod') &&
+    !normHeaders.some((h) => h === 'almacen' || h.includes('stock') || h.includes('unidad'));
+  if (isDishFile) {
+    throw new Error('El archivo seleccionado parece ser una carta de platos (contiene columnas como Precio Venta / Nombre del Plato). Por favor impórtelo en el módulo Menú Platos.');
+  }
 
   const colIndex = {};
   let mappedColumnsCount = 0;
