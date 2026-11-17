@@ -115,7 +115,7 @@ export const offlineKitchenService = {
           observacion: item.observacion || '',
           cocineroId: item.cocineroId || null,
           fechaCreacion: item.fechaCreacion || item.createdAt || (order ? order.fecha : null),
-          plato: plato || { id: productKey, nombre: 'Plato sin datos', precio: 0 },
+          plato: plato || { id: productKey, nombre: item.nombre || item.plato?.nombre || 'Plato sin datos', precio: item.precio != null ? Number(item.precio) : 0 },
           comanda: order ? {
             id: order.id,
             fecha: order.fecha,

@@ -1,7 +1,7 @@
 import db from '../database';
 import { QueueStatus } from '../tables';
 import { createOperation } from '../operations/createOperation';
-import { getCurrentDate } from '../offlineUtils';
+import { generateUUID, getCurrentDate } from '../offlineUtils';
 
 export const offlineCheckoutService = {
   /**
@@ -18,7 +18,7 @@ export const offlineCheckoutService = {
     const timestamp = getCurrentDate();
     let closedOrder = null;
 
-    await db.transaction('rw', [db.orders, db.table('tables'), db.arqueos, db.syncQueue], async () => {
+    await db.transaction('rw', [db.orders, db.orderItems, db.table('tables'), db.arqueos, db.movimientosCaja, db.syncQueue], async () => {
       // 1. Verificar si hay un arqueo abierto
       const openArqueos = await db.arqueos
         .where('estado')
@@ -58,7 +58,7 @@ export const offlineCheckoutService = {
         throw new Error('OFFLINE_CHECKOUT_INVALID_ACCOUNT: La comanda no tiene detalles locales válidos.');
       }
 
-      // 3. Estructurar la actualización de la comanda con los datos del cobro
+      // 4. Estructurar la actualización de la comanda con los datos del cobro
       const checkoutUpdates = {
         estado: 'cerrada',
         status: 'cerrada', // Soportar propiedad duplicada por compatibilidad de esquemas
@@ -74,14 +74,30 @@ export const offlineCheckoutService = {
         updatedAt: timestamp
       };
 
-      // 4. Actualizar comanda local
+      // 5. Actualizar comanda local
       await db.orders.update(order.id, checkoutUpdates);
 
-      // 5. Liberar la mesa localmente (usar String para evitar NaN con UUIDs)
+      // 6. Liberar la mesa localmente (usar String para evitar NaN con UUIDs)
       await db.table('tables').update(String(mesaId), {
         estado: 'libre',
         updatedAt: timestamp
       });
+
+      // 7. Registrar movimiento de caja local para actualizar arqueo offline
+      const montoTotalCobrado = Number(paymentDetails.totalReceived || 0);
+      if (montoTotalCobrado > 0) {
+        await db.movimientosCaja.add({
+          id: generateUUID(),
+          arqueoId: activeArqueo.id,
+          tipo: 'INGRESO',
+          tipoComprobante: checkoutUpdates.tipoComprobante || 'Ticket',
+          concepto: `Venta Mesa ${mesaId} (${checkoutUpdates.metodoPago.toUpperCase()})`,
+          observacion: `Cobro offline Comanda #${order.numeroComanda || order.id}`,
+          monto: montoTotalCobrado,
+          fecha: timestamp,
+          metodoPago: checkoutUpdates.metodoPago
+        });
+      }
 
       // Buscar si existe la operación CREATE_ORDER pendiente en cola
       const pendingCreate = await db.syncQueue
@@ -91,7 +107,7 @@ export const offlineCheckoutService = {
         .toArray();
       const dependsOnOperationId = pendingCreate.length > 0 ? pendingCreate[0].operationId : null;
 
-      // 6. Registrar la operación PAY_ORDER
+      // 8. Registrar la operación PAY_ORDER
       const op = createOperation({
         entity: 'ORDER',
         entityId: order.id,

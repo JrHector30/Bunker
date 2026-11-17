@@ -8,7 +8,7 @@ import { enqueueTicket } from '../utils/printer';
 import { getActiveRestaurant } from '../utils/tenant';
 import DeleteButton from '../components/ui/DeleteButton';
 import CloseButton from '../components/ui/CloseButton';
-import { networkStatus, NetworkState, offlineOrderService, offlineSnapshotService } from '../offline';
+import { db, networkStatus, NetworkState, offlineOrderService, offlineSnapshotService } from '../offline';
 
 const WaiterOrderView = () => {
     const { showToast } = useNotification();
@@ -25,6 +25,23 @@ const WaiterOrderView = () => {
     const { data: categories, mutate: fetchCategories } = useCache('categories', categoriesFetcher, []);
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    // Mantener la base de datos local Dexie sincronizada con la carta
+    useEffect(() => {
+        if (Array.isArray(products) && products.length > 0) {
+            const productRecords = products.map(p => ({
+                id: p.id,
+                remoteId: p.id,
+                categoryId: p.categoriaId,
+                nombre: p.nombre,
+                precio: Number(p.precio),
+                activo: p.activo,
+                deleted: p.deleted,
+                syncStatus: 'SYNCED'
+            }));
+            db.products.bulkPut(productRecords).catch(e => console.warn('Error guardando productos en Dexie:', e));
+        }
+    }, [products]);
 
     // Table Info
     const [tableInfo, setTableInfo] = useState({ numero: tableId, comensales: location.state?.comensales || 1 });
@@ -184,6 +201,9 @@ const WaiterOrderView = () => {
                 comensales: tableInfo.comensales,
                 detalles: cart.map(item => ({
                     platoId: item.platoId,
+                    nombre: item.nombre,
+                    precio: item.precio,
+                    enviarCocina: item.enviarCocina,
                     cantidad: item.cantidad,
                     observacion: item.observacion
                 }))

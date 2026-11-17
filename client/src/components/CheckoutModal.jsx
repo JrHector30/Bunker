@@ -430,7 +430,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                 <div>
                   <div className="font-bold">⚠️ No se puede cobrar: Hay platos pendientes en cocina.</div>
                   <div className="text-[10px] opacity-90 mt-1 font-normal">
-                    Faltan: {pendingKitchenItems.map(p => p.plato?.nombre || 'Plato sin datos').join(', ')}
+                    Faltan: {pendingKitchenItems.map(p => p.plato?.nombre || p.nombre || 'Plato sin datos').join(', ')}
                   </div>
                 </div>
               </div>
@@ -458,7 +458,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
                     <div key={index} className="flex justify-between items-center text-xs">
                       <span className="text-[var(--text-muted)] truncate max-w-[250px]">
                         <span className="font-mono font-bold text-[var(--text-muted)] mr-1.5">{d.cantidad}x</span>
-                        {d.plato?.nombre || 'Plato sin datos'}
+                        {d.plato?.nombre || d.nombre || 'Plato sin datos'}
                       </span>
                       <span className="font-mono font-medium text-[var(--text-main)]">
                         {price !== null ? `S/. ${(d.cantidad * price).toFixed(2)}` : 'Precio no disponible'}

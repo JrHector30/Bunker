@@ -161,7 +161,7 @@ const CashierView = () => {
           _unitPrice: unitPrice,
           plato: product
             ? { ...product, precio: unitPrice }
-            : { id: productKey, nombre: 'Plato sin datos', precio: unitPrice }
+            : { id: productKey, nombre: item.nombre || item.plato?.nombre || 'Plato sin datos', precio: unitPrice }
         });
       });
 

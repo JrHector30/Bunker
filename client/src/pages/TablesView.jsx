@@ -46,15 +46,26 @@ const TablesView = () => {
                 db.products.toArray()
             ]);
 
-            const productMap = new Map(localProducts.map(p => [p.id, p]));
+            const productMap = new Map();
+            localProducts.forEach(p => {
+                if (p.id != null) {
+                    productMap.set(p.id, p);
+                    productMap.set(String(p.id), p);
+                }
+            });
             const orderItemMap = new Map();
             localOrderItems.forEach(item => {
                 if (!orderItemMap.has(item.comandaId)) {
                     orderItemMap.set(item.comandaId, []);
                 }
+                const plato = productMap.get(item.platoId) || productMap.get(String(item.platoId)) || {
+                    id: item.platoId,
+                    nombre: item.nombre || item.plato?.nombre || 'Plato',
+                    precio: item.precio != null ? Number(item.precio) : (item.precioVenta != null ? Number(item.precioVenta) : 0)
+                };
                 orderItemMap.get(item.comandaId).push({
                     ...item,
-                    plato: productMap.get(item.platoId) || { id: item.platoId, nombre: 'Plato Desconocido', precio: 0 }
+                    plato
                 });
             });
 

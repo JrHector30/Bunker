@@ -46,9 +46,10 @@ export const offlineOrderService = {
       updatedAt: timestamp
     };
 
-    // Estructurar los detalles de comanda con duplicación defensiva
+    // Estructurar los detalles de comanda con duplicación defensiva y datos completos del plato
     const itemRecords = normalizedItems.map(item => {
       const localItemId = generateUUID();
+      const precioNum = Number(item.precio || item.precioVenta || 0);
       return {
         id: localItemId,
         remoteId: null,
@@ -56,6 +57,10 @@ export const offlineOrderService = {
         orderId: localOrderId, // Duplicado para compatibilidad de esquema Dexie
         platoId: Number(item.platoId),
         productId: Number(item.platoId), // Duplicado para compatibilidad de esquema Dexie
+        nombre: item.nombre || 'Plato',
+        precio: precioNum,
+        precioVenta: precioNum,
+        enviarCocina: item.enviarCocina ?? true,
         cantidad: Number(item.cantidad),
         estado: 'pendiente',
         observacion: item.observacion || '',
@@ -78,6 +83,8 @@ export const offlineOrderService = {
         detalles: itemRecords.map(item => ({
           localItemId: item.id,
           platoId: item.platoId,
+          nombre: item.nombre,
+          precio: item.precio,
           cantidad: item.cantidad,
           observacion: item.observacion
         })),
@@ -86,20 +93,40 @@ export const offlineOrderService = {
     });
 
     // Transacción atómica Dexie (todo o nada)
-    await db.transaction('rw', [db.orders, db.orderItems, db.table('tables'), db.syncQueue], async () => {
+    await db.transaction('rw', [db.orders, db.orderItems, db.products, db.table('tables'), db.syncQueue], async () => {
       // 1. Agregar comanda
       await db.orders.add(orderRecord);
 
       // 2. Agregar detalles en lote
       await db.orderItems.bulkAdd(itemRecords);
 
-      // 3. Actualizar estado de la mesa a ocupada
+      // 3. Garantizar que cada producto ordenado exista en db.products
+      for (const item of itemRecords) {
+        if (item.platoId) {
+          const numId = Number(item.platoId);
+          const existing = await db.products.get(numId);
+          if (!existing) {
+            await db.products.put({
+              id: numId,
+              remoteId: numId,
+              nombre: item.nombre || 'Plato',
+              precio: Number(item.precio || 0),
+              activo: true,
+              syncStatus: 'SYNCED',
+              createdAt: timestamp,
+              updatedAt: timestamp
+            });
+          }
+        }
+      }
+
+      // 4. Actualizar estado de la mesa a ocupada
       await db.table('tables').update(Number(mesaId), { 
         estado: 'ocupada',
         updatedAt: timestamp
       });
 
-      // 4. Registrar en cola de sincronización
+      // 5. Registrar en cola de sincronización
       await db.syncQueue.add(op);
     });
 

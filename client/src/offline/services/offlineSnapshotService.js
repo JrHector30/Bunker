@@ -1,6 +1,7 @@
 import db from '../database';
 import { networkStatus } from '../network/networkStatus';
 import { offlineReadiness } from '../readiness/offlineReadiness';
+import { getActiveRestaurant } from '../../utils/tenant';
 
 export const offlineSnapshotService = {
   /**
@@ -33,11 +34,14 @@ export const offlineSnapshotService = {
         if (op.entity === 'CASH_SESSION' || op.entity === 'CASH_MOVEMENT') pendingCashIds.add(String(op.entityId));
       });
 
+      const tenantId = getActiveRestaurant()?.id || 1;
+      const tenantHeaders = { 'x-restaurante-id': String(tenantId) };
+
       // 3. Ejecutar peticiones en paralelo a las APIs reales
       const promises = [
-        fetch('/api/tables'),
-        skipProducts ? Promise.resolve(null) : fetch('/api/products'),
-        fetch('/api/cashier/balance')
+        fetch('/api/tables', { headers: tenantHeaders }),
+        skipProducts ? Promise.resolve(null) : fetch('/api/products', { headers: tenantHeaders }),
+        fetch('/api/cashier/balance', { headers: tenantHeaders })
       ];
 
       const [tablesRes, productsRes, balanceRes] = await Promise.all(promises);
