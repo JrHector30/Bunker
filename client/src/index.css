@@ -2022,16 +2022,13 @@ body {
   }
 
   .mobile-left-panel {
-    min-height: 250px !important;
-    flex: none !important;
-    border-right: none !important;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+    display: none !important;
   }
 
-  /* Contenedor desplazable y action button visible */
+  /* Contenedor desplazable y action button visible con espacio para botón Volver */
   .mobile-right-panel {
     flex: 1 !important;
-    padding: 30px 20px 80px 20px !important;
+    padding: 85px 20px 80px 20px !important;
     justify-content: flex-start !important;
     border-left: none !important;
   }

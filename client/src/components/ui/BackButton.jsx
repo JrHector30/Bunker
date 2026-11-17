@@ -2,13 +2,14 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
-export function BackButton() {
+export function BackButton({ to = '/acceso' }) {
   const navigate = useNavigate();
 
   return (
     <button 
-      onClick={() => navigate('/')}
-      className="group relative overflow-hidden inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-300 active:scale-95 text-sm h-10 w-28 bg-[#1e1e24]/40 border border-white/10 text-white backdrop-blur-md cursor-pointer hover:border-teal-500/40 hover:shadow-[0_0_15px_rgba(20,184,166,0.15)]"
+      type="button"
+      onClick={() => navigate(to)}
+      className="group relative overflow-hidden inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-300 active:scale-95 text-sm h-10 w-28 bg-[#1e1e24] border border-white/10 text-white shadow-lg backdrop-blur-md cursor-pointer hover:border-teal-500/50 hover:shadow-[0_0_15px_rgba(20,184,166,0.2)]"
     >
       {/* Texto que se desplaza y desvanece en Hover */}
       <span className="translate-x-3 transition-all duration-300 group-hover:opacity-0 group-hover:translate-x-6">

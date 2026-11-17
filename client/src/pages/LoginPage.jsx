@@ -234,12 +234,12 @@ const LoginPage = () => {
                 position: 'relative'
             }}>
                 {/* Botón Flotante de Regreso */}
-                <div className="absolute top-6 left-6 z-50">
-                    <BackButton />
+                <div className="absolute top-5 left-5 sm:top-6 sm:left-6 z-50">
+                    <BackButton to="/acceso" />
                 </div>
 
-                {/* LADO IZQUIERDO: Branding */}
-                <div className="mobile-left-panel" style={{ flex: 1, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRight: '1px solid rgba(0,0,0,0.05)' }}>
+                {/* LADO IZQUIERDO: Branding (Solo Visible en PC / Desktop) */}
+                <div className="mobile-left-panel hidden lg:flex" style={{ flex: 1, backgroundColor: '#ffffff', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRight: '1px solid rgba(0,0,0,0.05)' }}>
                     <div style={{ textAlign: 'center', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 30 }}>
                             <img src={logoMinimalista} alt="Logo" style={{ width: 100, height: 100, objectFit: 'contain' }} />
@@ -257,8 +257,8 @@ const LoginPage = () => {
                 <div className="mobile-right-panel" style={{ flex: 1, backgroundColor: '#121212', borderLeft: '1px solid #222222', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: 40, position: 'relative', zIndex: 2 }}>
                     <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', position: 'relative' }}>
 
-                        <h2 style={{ fontFamily: '"Montserrat", sans-serif', fontWeight: 400, fontSize: '1.4rem', color: 'var(--primary)', marginBottom: 40, textAlign: 'center', letterSpacing: '1px' }}>
-                            Acceso de Personal
+                        <h2 style={{ fontFamily: '"Montserrat", sans-serif', fontWeight: 500, fontSize: '1.4rem', color: 'var(--primary)', marginBottom: 30, textAlign: 'center', letterSpacing: '1px' }}>
+                            Acceso al Personal
                         </h2>
 
                         <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: 15, textAlign: 'center', fontWeight: 300 }}>
