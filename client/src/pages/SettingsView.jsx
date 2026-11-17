@@ -29,6 +29,7 @@ import { enqueueTicket } from '../utils/printer';
 import { getActiveRestaurant } from '../utils/tenant';
 import { networkStatus, NetworkState } from '../offline/network/networkStatus';
 import ToggleSwitch from '../components/ui/ToggleSwitch';
+import CustomCheckbox from '../components/ui/CustomCheckbox';
 
 const INITIAL_PERMISSIONS = [
   {
@@ -816,9 +817,8 @@ export default function SettingsView() {
                     {grp.items.map((mod) => {
                       const enabled = mod[selectedRole];
                       return (
-                        <button
+                        <div
                           key={mod.id}
-                          type="button"
                           onClick={() => handleTogglePermission(mod.id, selectedRole)}
                           className="w-full min-h-[54px] px-3.5 py-2.5 flex items-center justify-between gap-3 text-left bg-white dark:bg-slate-900 active:bg-slate-50 dark:active:bg-slate-800/60 cursor-pointer"
                         >
@@ -830,15 +830,14 @@ export default function SettingsView() {
                               {mod.descripcion}
                             </p>
                           </div>
-                          <span
-                            className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${enabled
-                              ? 'bg-[#F26522] border-[#F26522] text-white'
-                              : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
-                              }`}
-                          >
-                            {enabled && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                          </span>
-                        </button>
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <CustomCheckbox
+                              checked={enabled}
+                              onChange={() => handleTogglePermission(mod.id, selectedRole)}
+                              aria-label={`Permiso ${mod.nombre} para ${selectedRole}`}
+                            />
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -1203,10 +1202,16 @@ export default function SettingsView() {
                         </span>
                       )}
                     </div>
-                    <h3 className="mt-2.5 text-sm font-bold text-white">
+                    <h3 
+                      className="mt-2.5 text-sm font-bold !text-white"
+                      style={{ color: '#ffffff' }}
+                    >
                       {themeItem.nombre}
                     </h3>
-                    <p className="mt-0.5 text-[11px] text-slate-300 leading-relaxed">
+                    <p 
+                      className="mt-0.5 text-[11px] !text-slate-300 leading-relaxed"
+                      style={{ color: '#cbd5e1' }}
+                    >
                       {themeItem.descripcion}
                     </p>
                   </button>
@@ -1471,17 +1476,13 @@ export default function SettingsView() {
                             const checked = !!mod[role];
                             return (
                               <td key={role} className="py-3 px-4 text-center">
-                                <button
-                                  type="button"
-                                  aria-label={`Permiso ${mod.nombre} para ${role}`}
-                                  onClick={() => handleTogglePermission(mod.id, role)}
-                                  className={`w-5 h-5 rounded-md border inline-flex items-center justify-center transition-colors cursor-pointer ${checked
-                                    ? 'bg-[#F26522] border-[#F26522] text-white'
-                                    : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-[#F26522]'
-                                    }`}
-                                >
-                                  {checked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                                </button>
+                                <div className="flex items-center justify-center">
+                                  <CustomCheckbox
+                                    checked={checked}
+                                    onChange={() => handleTogglePermission(mod.id, role)}
+                                    aria-label={`Permiso ${mod.nombre} para ${role}`}
+                                  />
+                                </div>
                               </td>
                             );
                           })}
@@ -1859,10 +1860,16 @@ export default function SettingsView() {
                         </span>
                       )}
                     </div>
-                    <h3 className="mt-3 text-sm font-bold text-white">
+                    <h3 
+                      className="mt-3 text-sm font-bold !text-white"
+                      style={{ color: '#ffffff' }}
+                    >
                       {themeItem.nombre}
                     </h3>
-                    <p className="mt-1 text-[11px] text-slate-300 leading-relaxed">
+                    <p 
+                      className="mt-1 text-[11px] !text-slate-300 leading-relaxed"
+                      style={{ color: '#cbd5e1' }}
+                    >
                       {themeItem.descripcion}
                     </p>
                   </button>

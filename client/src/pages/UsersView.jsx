@@ -6,6 +6,7 @@ import { Plus, Edit, Trash2, Search, X, User, Save, Upload, Power, CheckCircle, 
 import { useCache } from '../hooks/useCache';
 import CloseButton from '../components/ui/CloseButton';
 import SmoothDropdown from '../components/ui/SmoothDropdown';
+import { FilterCombobox } from '../components/inventory/FilterCombobox';
 
 const UsersView = () => {
     const { showConfirmation } = useConfirmation();
@@ -38,7 +39,6 @@ const UsersView = () => {
     const [sortDirection, setSortDirection] = useState('asc'); // 'asc' | 'desc'
     const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
     const [roleFilter, setRoleFilter] = useState('all'); // 'all' | 'admin' | 'caja' | 'cocina' | 'mozo'
-    const [openHeaderFilter, setOpenHeaderFilter] = useState(null); // 'estado' | 'rol' | null
 
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 6;
@@ -51,17 +51,6 @@ const UsersView = () => {
             setSortDirection('asc');
         }
     };
-
-    // Close header popovers on click outside
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (openHeaderFilter && !e.target.closest('.header-filter-popover')) {
-                setOpenHeaderFilter(null);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [openHeaderFilter]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -624,60 +613,41 @@ const UsersView = () => {
                                                 <ChevronsUpDown size={13} className="text-white opacity-40" />
                                             )}
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setOpenHeaderFilter(openHeaderFilter === 'estado' ? null : 'estado');
-                                            }}
-                                            className={`p-1 rounded-md transition-all cursor-pointer border bg-transparent flex items-center justify-center outline-none ${
-                                                statusFilter !== 'all' 
-                                                    ? 'border-white bg-white/25 text-white shadow-xs' 
-                                                    : 'border-white/40 text-white hover:border-white hover:bg-white/10'
-                                            }`}
-                                            title="Filtrar por Estado"
-                                        >
-                                            <Filter size={12} />
-                                        </button>
-
-                                        {openHeaderFilter === 'estado' && (
-                                            <div 
-                                                className="smooth-dropdown-bg absolute top-full left-1/2 -translate-x-1/2 mt-2 w-36 rounded-xl border shadow-2xl p-1.5 z-50 text-xs normal-case font-normal"
-                                                style={{ borderColor: 'var(--glass-border)' }}
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
+                                        <FilterCombobox
+                                            value={statusFilter}
+                                            defaultValue="all"
+                                            ariaLabel="Filtrar por Estado"
+                                            onChange={setStatusFilter}
+                                            align="center"
+                                            options={[
+                                                { value: 'all', label: 'Todos los estados' },
+                                                { value: 'active', label: 'Activos', indicatorClass: 'bg-emerald-500' },
+                                                { value: 'inactive', label: 'Inactivos', indicatorClass: 'bg-slate-400' },
+                                            ]}
+                                            renderTrigger={({ isFiltered, setOpen }) => (
                                                 <button
                                                     type="button"
-                                                    onClick={() => { setStatusFilter('all'); setOpenHeaderFilter(null); }}
-                                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${statusFilter === 'all' ? 'bg-white/10 font-bold text-[var(--text-main)]' : 'text-[var(--text-muted)] hover:bg-white/5'}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpen((prev) => !prev);
+                                                    }}
+                                                    className={`p-1 rounded-md transition-all cursor-pointer border bg-transparent flex items-center justify-center outline-none ${
+                                                        isFiltered 
+                                                            ? 'border-white bg-white/25 text-white shadow-xs' 
+                                                            : 'border-white/40 text-white hover:border-white hover:bg-white/10'
+                                                    }`}
+                                                    title="Filtrar por Estado"
                                                 >
-                                                    <span>Todos</span>
-                                                    {statusFilter === 'all' && <Check size={13} />}
+                                                    <Filter size={12} />
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => { setStatusFilter('active'); setOpenHeaderFilter(null); }}
-                                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${statusFilter === 'active' ? 'bg-white/10 font-bold text-emerald-400' : 'text-[var(--text-muted)] hover:bg-white/5'}`}
-                                                >
-                                                    <span>Activos</span>
-                                                    {statusFilter === 'active' && <Check size={13} />}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => { setStatusFilter('inactive'); setOpenHeaderFilter(null); }}
-                                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${statusFilter === 'inactive' ? 'bg-white/10 font-bold text-zinc-300' : 'text-[var(--text-muted)] hover:bg-white/5'}`}
-                                                >
-                                                    <span>Inactivos</span>
-                                                    {statusFilter === 'inactive' && <Check size={13} />}
-                                                </button>
-                                            </div>
-                                        )}
+                                            )}
+                                        />
                                     </div>
                                 </th>
 
                                 {/* 3. Columna Rol */}
                                 <th className="py-2.5 px-4 !text-center font-semibold relative">
-                                    <div className="inline-flex items-center justify-center gap-2 header-filter-popover relative">
+                                    <div className="inline-flex items-center justify-center gap-2 relative">
                                         <div
                                             onClick={() => handleSort('rol')}
                                             className="inline-flex items-center gap-1 hover:opacity-90 transition-opacity uppercase tracking-wider font-semibold cursor-pointer select-none"
@@ -690,47 +660,37 @@ const UsersView = () => {
                                                 <ChevronsUpDown size={13} className="text-white opacity-40" />
                                             )}
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setOpenHeaderFilter(openHeaderFilter === 'rol' ? null : 'rol');
-                                            }}
-                                            className={`p-1 rounded-md transition-all cursor-pointer border bg-transparent flex items-center justify-center outline-none ${
-                                                roleFilter !== 'all' 
-                                                    ? 'border-white bg-white/25 text-white shadow-xs' 
-                                                    : 'border-white/40 text-white hover:border-white hover:bg-white/10'
-                                            }`}
-                                            title="Filtrar por Rol"
-                                        >
-                                            <Filter size={12} />
-                                        </button>
-
-                                        {openHeaderFilter === 'rol' && (
-                                            <div 
-                                                className="smooth-dropdown-bg absolute top-full left-1/2 -translate-x-1/2 mt-2 w-40 rounded-xl border shadow-2xl p-1.5 z-50 text-xs normal-case font-normal"
-                                                style={{ borderColor: 'var(--glass-border)' }}
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                {[
-                                                    { id: 'all', label: 'Todos los roles' },
-                                                    { id: 'admin', label: 'Administrador' },
-                                                    { id: 'caja', label: 'Caja' },
-                                                    { id: 'cocina', label: 'Cocina' },
-                                                    { id: 'mozo', label: 'Mozo' },
-                                                ].map((r) => (
-                                                    <button
-                                                        key={r.id}
-                                                        type="button"
-                                                        onClick={() => { setRoleFilter(r.id); setOpenHeaderFilter(null); }}
-                                                        className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${roleFilter === r.id ? 'bg-white/10 font-bold text-[var(--text-main)]' : 'text-[var(--text-muted)] hover:bg-white/5'}`}
-                                                    >
-                                                        <span>{r.label}</span>
-                                                        {roleFilter === r.id && <Check size={13} />}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
+                                        <FilterCombobox
+                                            value={roleFilter}
+                                            defaultValue="all"
+                                            ariaLabel="Filtrar por Rol"
+                                            onChange={setRoleFilter}
+                                            align="center"
+                                            options={[
+                                                { value: 'all', label: 'Todos los roles' },
+                                                { value: 'admin', label: 'Administrador' },
+                                                { value: 'caja', label: 'Caja' },
+                                                { value: 'cocina', label: 'Cocina' },
+                                                { value: 'mozo', label: 'Mozo' },
+                                            ]}
+                                            renderTrigger={({ isFiltered, setOpen }) => (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpen((prev) => !prev);
+                                                    }}
+                                                    className={`p-1 rounded-md transition-all cursor-pointer border bg-transparent flex items-center justify-center outline-none ${
+                                                        isFiltered 
+                                                            ? 'border-white bg-white/25 text-white shadow-xs' 
+                                                            : 'border-white/40 text-white hover:border-white hover:bg-white/10'
+                                                    }`}
+                                                    title="Filtrar por Rol"
+                                                >
+                                                    <Filter size={12} />
+                                                </button>
+                                            )}
+                                        />
                                     </div>
                                 </th>
 
@@ -1053,18 +1013,18 @@ const UsersView = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                 <div>
                                     <label>Rol</label>
-                                    <select 
-                                        className="glass-input" 
+                                    <FilterCombobox 
                                         value={formData.rol} 
-                                        onChange={e => setFormData({ ...formData, rol: e.target.value })}
+                                        onChange={val => setFormData({ ...formData, rol: val })}
                                         disabled={isSoleAdmin}
-                                        style={isSoleAdmin ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
-                                    >
-                                        <option value="mozo">Mozo</option>
-                                        <option value="cocina">Cocina</option>
-                                        <option value="caja">Caja</option>
-                                        <option value="admin">Admin</option>
-                                    </select>
+                                        className="w-full mt-1"
+                                        options={[
+                                            { value: 'mozo', label: 'Mozo' },
+                                            { value: 'cocina', label: 'Cocina' },
+                                            { value: 'caja', label: 'Caja' },
+                                            { value: 'admin', label: 'Admin' },
+                                        ]}
+                                    />
                                     {isSoleAdmin && (
                                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>
                                             🔒 Único Administrador (no se puede cambiar el rol)

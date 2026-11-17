@@ -4,11 +4,21 @@ import { Phone, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import VoiceAI from '../components/VoiceAI';
+import { FilterCombobox } from '../components/inventory/FilterCombobox';
+
+const INCIDENCIA_OPTIONS = [
+  { value: 'impresora', label: 'Problemas con Impresora Térmica de Cocina' },
+  { value: 'cuadre', label: 'Diferencia de Montos / Cuadre de Caja' },
+  { value: 'conexion', label: 'Problema de Conexión de Comandera Tablet' },
+  { value: 'menu', label: 'Modificación de Precios en Menú' },
+  { value: 'otro', label: 'Otro inconveniente técnico' },
+];
 
 export default function SupportView() {
   const { user } = useAuth();
   const { showToast } = useNotification();
   const [highlightHumanSupport, setHighlightHumanSupport] = useState(false);
+  const [tipoIncidencia, setTipoIncidencia] = useState('impresora');
 
   return (
     <motion.div
@@ -95,19 +105,17 @@ export default function SupportView() {
           e.preventDefault();
           showToast("¡Ticket de Soporte enviado! Un asesor TI te llamará en breve.", "success");
           e.target.reset();
+          setTipoIncidencia('impresora');
         }} className="flex flex-col gap-4 font-sans">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase font-sans">Tipo de Incidencia</label>
-            <select
-              className="bg-slate-800/30 border border-zinc-200/50 p-2.5 rounded-xl text-xs text-[var(--text-main)] focus:outline-none font-sans"
-              style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
-            >
-              <option className="bg-[var(--bg-secondary)] text-[var(--text-main)]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Problemas con Impresora Térmica de Cocina</option>
-              <option className="bg-[var(--bg-secondary)] text-[var(--text-main)]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Diferencia de Montos / Cuadre de Caja</option>
-              <option className="bg-[var(--bg-secondary)] text-[var(--text-main)]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Problema de Conexión de Comandera Tablet</option>
-              <option className="bg-[var(--bg-secondary)] text-[var(--text-main)]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Modificación de Precios en Menú</option>
-              <option className="bg-[var(--bg-secondary)] text-[var(--text-main)]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Otro inconveniente técnico</option>
-            </select>
+            <FilterCombobox
+              value={tipoIncidencia}
+              onChange={setTipoIncidencia}
+              options={INCIDENCIA_OPTIONS}
+              className="w-full"
+              ariaLabel="Tipo de Incidencia"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase font-sans">Mensaje Detallado</label>
