@@ -499,21 +499,18 @@ export default function MenuPlatosManagement({
         'Nombre del Plato': 'Lomo Saltado Criollo',
         'Categoría': 'Platos de Fondo',
         'Precio Venta': 38.50,
-        'Costo Prod': 12.00,
         'Estado': 'Activo'
       },
       {
         'Nombre del Plato': 'Ceviche Clásico',
         'Categoría': 'Mariscos',
         'Precio Venta': 42.00,
-        'Costo Prod': 14.50,
         'Estado': 'Activo'
       },
       {
         'Nombre del Plato': 'Limonada Frozen',
         'Categoría': 'Bebidas',
         'Precio Venta': 12.00,
-        'Costo Prod': 2.50,
         'Estado': 'Activo'
       }
     ];

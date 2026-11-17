@@ -537,8 +537,8 @@ export const RecetarioEscandallo = ({
             </div>
           ) : (
             <>
-              {/* Tabla Desktop (hidden md:block) - 100% Inalterada */}
-              <div className="hidden md:block overflow-x-auto">
+              {/* Tabla Desktop (hidden md:block) - con min-h y padding inferior para visibilidad completa de dropdowns hacia abajo */}
+              <div className="hidden md:block overflow-x-auto min-h-[380px] pb-36">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="sticky top-0 z-10" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>
                     <tr className="border-b border-black/10 text-white text-[10px] uppercase font-bold tracking-wider" style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}>
@@ -563,7 +563,7 @@ export const RecetarioEscandallo = ({
                       return (
                         <tr
                           key={index}
-                          className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
+                          className={`transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40 ${!insu ? 'relative z-20' : ''}`}
                         >
                           <td className="py-2 px-3 text-center font-mono text-[11px] text-slate-400">
                             {index + 1}

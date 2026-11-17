@@ -255,7 +255,6 @@ export const MenuPlatosMobileView = ({
       'Nombre del Plato': d.nombre,
       Categoría: d.categoria,
       'Precio Venta': Number(d.precioVenta.toFixed(2)),
-      'Costo Prod': Number(d.costoProd.toFixed(2)),
       Estado: d.estado,
     }));
 
@@ -264,7 +263,6 @@ export const MenuPlatosMobileView = ({
         'Nombre del Plato',
         'Categoría',
         'Precio Venta',
-        'Costo Prod',
         'Estado',
       ],
     });
@@ -273,7 +271,6 @@ export const MenuPlatosMobileView = ({
       { wch: 28 },
       { wch: 18 },
       { wch: 13 },
-      { wch: 12 },
       { wch: 14 },
     ];
 

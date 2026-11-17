@@ -263,38 +263,26 @@ export const DishModal = ({
             </div>
           </div>
 
-          {/* Precios y Costos */}
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Precio de Venta (S/.) *
-              </label>
-              <input
-                type="number"
-                step="0.10"
-                min="0"
-                required
-                value={precio}
-                onChange={(e) => setPrecio(e.target.value)}
-                placeholder="0.00"
-                className="w-full px-4 py-2 text-xs font-bold rounded-full border-0 shadow-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors tabular-nums"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Costo Prod. Estimado (S/.)
-              </label>
-              <input
-                type="number"
-                step="0.10"
-                min="0"
-                value={costoProduccion}
-                onChange={(e) => setCostoProduccion(e.target.value)}
-                placeholder="0.00"
-                className="w-full px-4 py-2 text-xs font-bold rounded-full border-0 shadow-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors tabular-nums"
-              />
-            </div>
+          {/* Precio de Venta */}
+          <div className="pt-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Precio de Venta (S/.) *
+            </label>
+            <input
+              type="number"
+              step="0.10"
+              min="0"
+              required
+              value={precio}
+              onChange={(e) => setPrecio(e.target.value)}
+              placeholder="0.00"
+              className="w-full px-4 py-2.5 text-xs font-bold rounded-full border-0 shadow-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors tabular-nums"
+            />
+            {mode === 'edit' && parsedCosto > 0 && (
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Costo de producción: <span className="font-semibold text-slate-700 dark:text-slate-300">S/. {parsedCosto.toFixed(2)}</span> (autoasignado desde Recetario).
+              </p>
+            )}
           </div>
 
           {/* Estado del Plato con estilo Pill */}
