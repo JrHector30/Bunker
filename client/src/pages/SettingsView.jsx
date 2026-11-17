@@ -350,6 +350,7 @@ export default function SettingsView() {
       networkStatus.setManualOverride(NetworkState.ONLINE);
       setNetState(NetworkState.ONLINE);
       showToast('Modo Online restaurado. Sincronización en tiempo real activa.', 'success');
+      window.dispatchEvent(new CustomEvent('triggerAtomicSync'));
     }
   };
 

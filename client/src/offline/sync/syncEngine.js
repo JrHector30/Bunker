@@ -259,8 +259,8 @@ export const syncEngine = {
           // Sincronización Real Exitosa (Fase 5B)
           // Actualizar snapshot local conservando el ID local estable
           await db.transaction('rw', [db.products, db.syncQueue], async () => {
-            const localId = result.result.localEntityId;
-            const remoteId = String(result.result.remoteEntityId);
+            const localId = result.result?.localEntityId || operation.entityId;
+            const remoteId = String(result.result?.remoteEntityId || '');
             
             // 1. Actualizar el snapshot del producto con su remoteId y syncStatus
             if (operation.entity === 'PRODUCT') {

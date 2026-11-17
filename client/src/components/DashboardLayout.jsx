@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import CloseButton from './ui/CloseButton';
 import ErrorBoundary from './ErrorBoundary';
+import AtomicSyncModal from './AtomicSyncModal';
 
 const DashboardLayout = () => {
     const { user, logout, tienePermiso } = useAuth();
@@ -46,8 +47,34 @@ const DashboardLayout = () => {
 
     const [netState, setNetState] = useState(networkStatus.getStatus());
     const [pendingOps, setPendingOps] = useState(0);
+    const [showAtomicSyncModal, setShowAtomicSyncModal] = useState(false);
+    const prevNetStateRef = useRef(netState);
 
     const isOffline = netState === NetworkState.OFFLINE_CONFIRMED || netState === NetworkState.REMOTE_RESULT_UNKNOWN;
+
+    // Detectar transición Offline -> Online y abrir automáticamente el modal de sincronización si hay pendientes
+    useEffect(() => {
+        const wasOffline = prevNetStateRef.current === NetworkState.OFFLINE_CONFIRMED || prevNetStateRef.current === NetworkState.REMOTE_RESULT_UNKNOWN;
+        const isNowOnline = netState === NetworkState.ONLINE;
+
+        if (wasOffline && isNowOnline && pendingOps > 0) {
+            setShowAtomicSyncModal(true);
+        }
+        prevNetStateRef.current = netState;
+    }, [netState, pendingOps]);
+
+    // Listener global para invocar la sincronización atómica desde Ajustes o cualquier vista
+    useEffect(() => {
+        const handleTrigger = () => {
+            db.syncQueue.where('status').equals('PENDING').count().then(count => {
+                if (count > 0) {
+                    setShowAtomicSyncModal(true);
+                }
+            }).catch(() => {});
+        };
+        window.addEventListener('triggerAtomicSync', handleTrigger);
+        return () => window.removeEventListener('triggerAtomicSync', handleTrigger);
+    }, []);
 
     // Sincroniza el modo claro/oscuro solo dentro del dashboard autenticado
     useEffect(() => {
@@ -892,6 +919,21 @@ const DashboardLayout = () => {
                                 </span>
                             </div>
                         )}
+                        {!isOffline && pendingOps > 0 && (
+                            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3 mb-6 flex items-center justify-between gap-4 backdrop-blur-md shadow-lg shadow-blue-500/5 mx-4 sm:mx-6 lg:mx-8 mt-4">
+                                <div className="flex items-center gap-2.5 text-blue-500 font-bold text-xs">
+                                    <AlertCircle size={18} className="flex-shrink-0" />
+                                    <span className="font-sans tracking-wide">Hay {pendingOps} operación{pendingOps === 1 ? '' : 'es'} pendiente{pendingOps === 1 ? '' : 's'} por sincronizar con la base de datos</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAtomicSyncModal(true)}
+                                    className="text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer border-0"
+                                >
+                                    Sincronizar ahora
+                                </button>
+                            </div>
+                        )}
                         <div className="flex-grow pb-8">
                             <ErrorBoundary>
                                 <Outlet />
@@ -953,6 +995,23 @@ const DashboardLayout = () => {
                     </div>
                 </div>
             )}
+
+            {/* Modal de Sincronización Atómica de Operaciones Offline */}
+            <AtomicSyncModal
+                isOpen={showAtomicSyncModal}
+                onClose={() => {
+                    setShowAtomicSyncModal(false);
+                    db.syncQueue.where('status').equals('PENDING').count()
+                        .then(setPendingOps)
+                        .catch(() => {});
+                }}
+                onComplete={() => {
+                    showToast('Sincronización atómica completada exitosamente. Base de datos actualizada.', 'success');
+                    db.syncQueue.where('status').equals('PENDING').count()
+                        .then(setPendingOps)
+                        .catch(() => {});
+                }}
+            />
         </React.Fragment>
     );
 };

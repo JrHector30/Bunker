@@ -1586,41 +1586,15 @@ app.get('/api/products', async (req, res) => {
 
 app.post('/api/sync/operations', async (req, res) => {
     const { operationId, entity, entityId, operation, payload } = req.body;
+    const tenantId = getTenantId(req);
 
     // 1. Validar campos mínimos de sincronización
     if (!operationId || !entity || !entityId || !operation || !payload) {
         return res.status(400).json({ error: "Faltan campos obligatorios en el contrato de sincronización." });
     }
 
-    // 2. Restricción estricta de alcance (Solo PRODUCT CREATE en Fase 5B)
-    if (entity !== 'PRODUCT' || operation !== 'CREATE') {
-        return res.status(400).json({ error: `La combinación de entidad "${entity}" y operación "${operation}" no está soportada en la Fase 5B.` });
-    }
-
-    // 3. Validar payload mínimo del producto (no confiar en el cliente)
-    const { nombre, precio, categoriaId, descripcion, imagen } = payload;
-    if (!nombre || nombre.toString().trim() === '') {
-        return res.status(400).json({ error: "El nombre del plato es obligatorio." });
-    }
-    const parsedPrecio = parseFloat(precio);
-    if (Number.isNaN(parsedPrecio) || parsedPrecio <= 0) {
-        return res.status(400).json({ error: "El precio del plato debe ser un número positivo válido." });
-    }
-    const parsedCategoriaId = parseInt(categoriaId);
-    if (Number.isNaN(parsedCategoriaId)) {
-        return res.status(400).json({ error: "Debe seleccionar una categoría válida." });
-    }
-
     try {
-        // Verificar que la categoría realmente exista en el servidor
-        const categoryExists = await prisma.categoria.findUnique({
-            where: { id: parsedCategoriaId }
-        });
-        if (!categoryExists) {
-            return res.status(400).json({ error: `La categoría con ID ${parsedCategoriaId} no existe.` });
-        }
-
-        // 4. Procesar dentro de una transacción interactiva de Prisma
+        // 2. Procesar dentro de una transacción interactiva de Prisma
         const syncResult = await prisma.$transaction(async (tx) => {
             // A. Intentar insertar el registro de idempotencia en estado PROCESSING
             // Lanza error Prisma P2002 si el operationId ya está tomado
@@ -1635,22 +1609,263 @@ app.post('/api/sync/operations', async (req, res) => {
                 }
             });
 
-            // B. Aplicar mutación de negocio (Crear Plato)
-            const product = await tx.plato.create({
-                data: {
-                    nombre: nombre.toString().trim(),
-                    precio: parsedPrecio,
-                    categoriaId: parsedCategoriaId,
-                    descripcion: descripcion || '',
-                    imagen: imagen || null
-                }
-            });
+            let businessResult = { localEntityId: entityId };
 
-            const businessResult = {
-                localEntityId: entityId,
-                remoteEntityId: product.id,
-                product
-            };
+            // B. Enrutamiento por entidad y operación
+            if (entity === 'PRODUCT' && operation === 'CREATE') {
+                const { nombre, precio, categoriaId, descripcion, imagen } = payload;
+                const parsedPrecio = parseFloat(precio) || 0;
+                const parsedCategoriaId = parseInt(categoriaId);
+                const product = await tx.plato.create({
+                    data: {
+                        nombre: nombre.toString().trim(),
+                        precio: parsedPrecio,
+                        categoriaId: parsedCategoriaId,
+                        descripcion: descripcion || '',
+                        imagen: imagen || null,
+                        restauranteId: tenantId
+                    }
+                });
+                businessResult = {
+                    localEntityId: entityId,
+                    remoteEntityId: product.id,
+                    product
+                };
+            } else if (entity === 'ORDER' && operation === 'CREATE_ORDER') {
+                const { mesaId, usuarioId, comensales, detalles = [] } = payload;
+                const targetMesaId = parseInt(mesaId);
+
+                // Verificar si ya existe comanda abierta en la mesa
+                const activeOrders = await tx.comanda.findMany({
+                    where: { 
+                        mesaId: targetMesaId, 
+                        estado: { notIn: ['cerrada', 'anulada'] },
+                        restauranteId: tenantId 
+                    },
+                    orderBy: { id: 'desc' }
+                });
+
+                let order = activeOrders.length > 0 ? activeOrders[0] : null;
+
+                if (!order) {
+                    const maxOrder = await tx.comanda.findFirst({
+                        where: { restauranteId: tenantId, numeroComanda: { not: null } },
+                        orderBy: { numeroComanda: 'desc' }
+                    });
+                    const totalCount = await tx.comanda.count({ where: { restauranteId: tenantId } });
+                    const nextNum = Math.max(maxOrder?.numeroComanda || 0, totalCount) + 1;
+
+                    order = await tx.comanda.create({
+                        data: {
+                            mesaId: targetMesaId,
+                            usuarioId: parseInt(usuarioId || 1),
+                            estado: 'enviada',
+                            comensales: parseInt(comensales || 1),
+                            restauranteId: tenantId,
+                            numeroComanda: nextNum,
+                            detalles: {
+                                create: detalles.map(d => ({
+                                    platoId: parseInt(d.platoId),
+                                    cantidad: parseInt(d.cantidad || 1),
+                                    estado: 'pendiente',
+                                    observacion: d.observacion || null
+                                }))
+                            }
+                        },
+                        include: { detalles: true }
+                    });
+
+                    await tx.mesa.update({
+                        where: { id: targetMesaId },
+                        data: { estado: 'ocupada' }
+                    });
+                } else {
+                    if (detalles.length > 0) {
+                        await tx.detalleComanda.createMany({
+                            data: detalles.map(d => ({
+                                comandaId: order.id,
+                                platoId: parseInt(d.platoId),
+                                cantidad: parseInt(d.cantidad || 1),
+                                estado: 'pendiente',
+                                observacion: d.observacion || null
+                            }))
+                        });
+                    }
+                }
+
+                businessResult = {
+                    localEntityId: entityId,
+                    remoteEntityId: order.id,
+                    orderId: order.id
+                };
+            } else if (entity === 'ORDER' && operation === 'PAY_ORDER') {
+                const targetMesaId = parseInt(payload.mesaId || payload.tableId);
+                
+                let order = null;
+                if (payload.dependsOnOperationId) {
+                    const parentOp = await tx.syncOperation.findUnique({
+                        where: { operationId: payload.dependsOnOperationId }
+                    });
+                    if (parentOp?.resultPayload?.remoteEntityId) {
+                        order = await tx.comanda.findUnique({
+                            where: { id: parentOp.resultPayload.remoteEntityId },
+                            include: { detalles: { include: { plato: true } } }
+                        });
+                    }
+                }
+
+                if (!order && targetMesaId) {
+                    order = await tx.comanda.findFirst({
+                        where: { mesaId: targetMesaId, restauranteId: tenantId, estado: { notIn: ['cerrada', 'anulada'] } },
+                        include: { detalles: { include: { plato: true } } },
+                        orderBy: { id: 'desc' }
+                    });
+                }
+
+                if (!order && targetMesaId) {
+                    order = await tx.comanda.findFirst({
+                        where: { mesaId: targetMesaId, restauranteId: tenantId },
+                        include: { detalles: { include: { plato: true } } },
+                        orderBy: { id: 'desc' }
+                    });
+                }
+
+                if (order) {
+                    // 1. Cerrar comanda
+                    await tx.comanda.update({
+                        where: { id: order.id },
+                        data: {
+                            estado: 'cerrada',
+                            metodoPago: payload.metodoPago || 'efectivo',
+                            tipoDocumento: payload.tipoDocumento || 'sin_comprobante',
+                            montoRecibido: parseFloat(payload.montoRecibido || 0),
+                            propina: parseFloat(payload.propina || 0),
+                            tipoComprobante: payload.tipoComprobante || 'ticket',
+                            documentoCliente: payload.documentoCliente || null,
+                            razonSocial: payload.razonSocial || null,
+                            direccionFiscal: payload.direccionFiscal || null
+                        }
+                    });
+
+                    // 2. Marcar detalles como entregados y liberar mesa
+                    await tx.detalleComanda.updateMany({
+                        where: { comandaId: order.id, estado: { notIn: ['anulado'] } },
+                        data: { estado: 'entregado' }
+                    });
+
+                    if (order.mesaId) {
+                        await tx.mesa.update({
+                            where: { id: order.mesaId },
+                            data: { estado: 'libre' }
+                        });
+                        await tx.mesa.updateMany({
+                            where: { mesaPadreId: order.mesaId },
+                            data: { mesaPadreId: null, estado: 'libre' }
+                        });
+                    }
+
+                    // 3. Impactar Kardex y reducir stock de insumos por receta
+                    const platosActivos = order.detalles.filter(d => d.estado !== 'anulado');
+                    const platoIds = platosActivos.map(d => d.platoId);
+
+                    if (platoIds.length > 0) {
+                        const recetas = await tx.recetaInsumo.findMany({
+                            where: { platoId: { in: platoIds } },
+                            include: { insumo: true }
+                        });
+
+                        const insumoUpdates = {};
+                        for (const detalle of platosActivos) {
+                            const recetaDelPlato = recetas.filter(r => r.platoId === detalle.platoId);
+                            for (const ingrediente of recetaDelPlato) {
+                                if (!ingrediente.insumo) continue;
+                                const cantidadConsumida = round2(ingrediente.cantidad * (detalle.cantidad || 1));
+                                const insumoId = ingrediente.insumoId;
+
+                                if (!insumoUpdates[insumoId]) {
+                                    insumoUpdates[insumoId] = {
+                                        change: 0,
+                                        currentStock: ingrediente.insumo.stock,
+                                        name: ingrediente.insumo.nombre,
+                                        motivos: []
+                                    };
+                                }
+                                insumoUpdates[insumoId].change = round2(insumoUpdates[insumoId].change + cantidadConsumida);
+                                insumoUpdates[insumoId].motivos.push(`Plato: ${detalle.plato?.nombre || 'Plato'} (x${detalle.cantidad})`);
+                            }
+                        }
+
+                        for (const [insumoId, data] of Object.entries(insumoUpdates)) {
+                            const newStock = round2(data.currentStock - data.change);
+                            await tx.insumo.update({
+                                where: { id: parseInt(insumoId) },
+                                data: { stock: newStock }
+                            }).catch(() => {});
+                        }
+
+                        const comandaNum = order.numeroComanda || order.id;
+                        const movimientosData = Object.entries(insumoUpdates).map(([insumoId, data]) => ({
+                            insumoId: parseInt(insumoId),
+                            tipoMovimiento: 'VENTA',
+                            cantidad: round2(-1 * data.change),
+                            motivo: `Venta sincronizada offline Comanda N° ${comandaNum} - ${data.motivos.join(', ')}`,
+                            usuarioId: order.usuarioId || 1,
+                            fecha: new Date()
+                        }));
+
+                        if (movimientosData.length > 0) {
+                            await tx.movimientoInsumo.createMany({
+                                data: movimientosData
+                            }).catch(() => {});
+                        }
+                    }
+
+                    // 4. Actualizar arqueo de turno y registrar movimiento de caja
+                    const activeArqueo = await tx.arqueo.findFirst({
+                        where: { restauranteId: tenantId, estado: 'abierto' },
+                        orderBy: { id: 'desc' }
+                    });
+
+                    if (activeArqueo) {
+                        const totalCobrado = parseFloat(payload.montoRecibido || 0);
+                        if (totalCobrado > 0) {
+                            await tx.movimientoCaja.create({
+                                data: {
+                                    arqueoId: activeArqueo.id,
+                                    tipo: 'INGRESO',
+                                    tipoComprobante: payload.tipoComprobante || 'Ticket',
+                                    concepto: `Venta offline Mesa ${order.mesaId} (${(payload.metodoPago || 'efectivo').toUpperCase()})`,
+                                    observacion: `Comanda #${order.numeroComanda || order.id}`,
+                                    monto: totalCobrado,
+                                    fecha: new Date(),
+                                    metodoPago: payload.metodoPago || 'efectivo'
+                                }
+                            }).catch(() => {});
+                        }
+                    }
+
+                    businessResult = {
+                        localEntityId: entityId,
+                        remoteEntityId: order.id,
+                        success: true
+                    };
+                }
+            } else if (entity === 'ORDER' && operation === 'UPDATE_ORDER_STATUS') {
+                const targetMesaId = parseInt(payload.mesaId);
+                if (payload.estado === 'anulada') {
+                    if (targetMesaId) {
+                        await tx.comanda.updateMany({
+                            where: { mesaId: targetMesaId, restauranteId: tenantId, estado: { notIn: ['cerrada', 'anulada'] } },
+                            data: { estado: 'anulada' }
+                        });
+                        await tx.mesa.update({
+                            where: { id: targetMesaId },
+                            data: { estado: 'libre' }
+                        });
+                    }
+                }
+                businessResult = { localEntityId: entityId, success: true };
+            }
 
             // C. Actualizar estado a COMPLETED y guardar el payload de resultado
             await tx.syncOperation.update({

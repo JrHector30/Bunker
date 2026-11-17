@@ -1,5 +1,6 @@
 import { EntityType } from '../operations/entityTypes';
 import { productSyncHandler } from './handlers/productSyncHandler';
+import { orderSyncHandler } from './handlers/orderSyncHandler';
 
 export const syncDispatcher = {
   /**
@@ -28,7 +29,23 @@ export const syncDispatcher = {
       throw err;
     }
 
-    const err = new Error(`Entidad "${entity}" sin despachador configurado en la Fase 5A.`);
+    if (entity === EntityType.ORDER) {
+      if (opName === 'CREATE_ORDER') {
+        return await orderSyncHandler.create(operation);
+      }
+      if (opName === 'PAY_ORDER') {
+        return await orderSyncHandler.pay(operation);
+      }
+      if (opName === 'UPDATE_ORDER_STATUS') {
+        return await orderSyncHandler.updateStatus(operation);
+      }
+
+      const err = new Error(`Operación de comanda no soportada: "${opName}"`);
+      err.status = 400;
+      throw err;
+    }
+
+    const err = new Error(`Entidad "${entity}" sin despachador configurado.`);
     err.status = 400; // Clasificado como NON_RETRYABLE
     throw err;
   }
