@@ -8,6 +8,7 @@ import {
   X,
   AlertTriangle,
 } from 'lucide-react';
+import CloseButton from '../ui/CloseButton';
 
 export const AlmacenesModal = ({
   isOpen,
@@ -170,14 +171,7 @@ export const AlmacenesModal = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar ventana"
-            className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <CloseButton onClick={onClose} className="scale-90 shrink-0" />
         </div>
 
         {/* Body */}
@@ -200,7 +194,7 @@ export const AlmacenesModal = ({
             />
             <button
               type="submit"
-              className="min-h-[42px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#F26522] hover:bg-[#DC5616] text-white shadow-xs transition-colors cursor-pointer shrink-0"
+              className="min-h-[42px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border-0 bg-[#F26522] hover:bg-[#DC5616] text-white shadow-xs transition-all cursor-pointer shrink-0 active:scale-95"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Crear</span>
@@ -240,7 +234,7 @@ export const AlmacenesModal = ({
                           type="button"
                           onClick={() => handleConfirmEdit(name)}
                           aria-label="Guardar nombre"
-                          className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 flex items-center justify-center cursor-pointer"
+                          className="w-8 h-8 rounded-lg border-0 bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center cursor-pointer shadow-xs active:scale-95 transition-all"
                         >
                           <Check className="w-4 h-4" />
                         </button>
@@ -248,7 +242,7 @@ export const AlmacenesModal = ({
                           type="button"
                           onClick={() => setEditingName(null)}
                           aria-label="Cancelar edición"
-                          className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 flex items-center justify-center cursor-pointer"
+                          className="w-8 h-8 rounded-lg border-0 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 flex items-center justify-center cursor-pointer shadow-xs active:scale-95 transition-all"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -349,7 +343,7 @@ export const AlmacenesModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+            className="px-5 py-2 text-xs font-bold rounded-full border-0 bg-slate-900 hover:bg-black text-white dark:bg-white dark:hover:bg-slate-200 dark:text-slate-900 transition-all cursor-pointer shadow-sm active:scale-95"
           >
             Listo
           </button>

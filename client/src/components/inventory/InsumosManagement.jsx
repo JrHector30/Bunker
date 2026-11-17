@@ -898,19 +898,6 @@ export default function InsumosManagement({
                           Filtrar Inventario
                         </span>
                         <div className="flex items-center gap-2">
-                          {activeFiltersCount > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setStatusFilter('Todos');
-                                setAlmacenFilter('Todos');
-                                setCurrentPage(1);
-                              }}
-                              className="text-xs font-bold text-[var(--primary)] hover:underline cursor-pointer"
-                            >
-                              Limpiar
-                            </button>
-                          )}
                           <button
                             type="button"
                             onClick={() => setFilterDropdownOpen(false)}
@@ -1061,19 +1048,6 @@ export default function InsumosManagement({
                 <span>Almacén: <strong>{almacenFilter}</strong></span>
               </>
             )}
-            <span aria-hidden="true">·</span>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setStatusFilter('Todos');
-                setAlmacenFilter('Todos');
-                setCurrentPage(1);
-              }}
-              className="text-[var(--primary)] hover:underline font-bold cursor-pointer"
-            >
-              Restablecer filtros
-            </button>
           </div>
         )}
 
@@ -1092,22 +1066,12 @@ export default function InsumosManagement({
             <div className="mt-5 flex items-center justify-center gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setStatusFilter('Todos');
-                  setAlmacenFilter('Todos');
-                }}
-                className="px-4 py-2 text-xs font-semibold rounded-full border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                Limpiar filtros
-              </button>
-              <button
-                type="button"
                 onClick={handleOpenCreate}
-                className="px-4 py-2 text-xs font-semibold rounded-full text-white cursor-pointer shadow-sm"
+                className="px-4 py-2.5 sm:py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md border-0 active:scale-95 text-white whitespace-nowrap"
                 style={{ backgroundColor: 'var(--primary)' }}
               >
-                + Nuevo Insumo
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <span>Nuevo Insumo</span>
               </button>
             </div>
           </div>

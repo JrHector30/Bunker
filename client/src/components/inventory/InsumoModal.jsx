@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { X, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import ToggleSwitch from '../ui/ToggleSwitch';
+import CloseButton from '../ui/CloseButton';
+import { FilterCombobox } from './FilterCombobox';
 import { areNamesMatching } from '../../utils/textMatching';
 
 const DEFAULT_ALMACENES = [
@@ -200,14 +202,7 @@ export const InsumoModal = ({
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar ventana"
-            className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <CloseButton onClick={onClose} className="scale-90 shrink-0" />
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
@@ -247,7 +242,7 @@ export const InsumoModal = ({
           </div>
 
           {/* Cantidad / Stock *  |  Unidad de Medida */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 items-end">
             <div>
               <label
                 htmlFor="insumo-cantidad"
@@ -263,53 +258,39 @@ export const InsumoModal = ({
                 value={cantidad}
                 onChange={(e) => setCantidad(e.target.value)}
                 placeholder="0.00"
-                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 tabular-nums focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F26522]/25 focus:border-[#F26522]"
+                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 tabular-nums focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F26522]/25 focus:border-[#F26522]"
               />
             </div>
 
             <div>
               <label
-                htmlFor="insumo-unidad"
                 className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5"
               >
                 Unidad de Medida
               </label>
-              <select
-                id="insumo-unidad"
+              <FilterCombobox
                 value={unidad}
-                onChange={(e) => setUnidad(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F26522]/25 focus:border-[#F26522]"
-              >
-                {UNIDADES.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
+                onChange={setUnidad}
+                options={UNIDADES.map((u) => ({ value: u, label: u }))}
+                ariaLabel="Unidad de Medida"
+              />
             </div>
           </div>
 
           {/* Almacén *  |  Costo Unitario (S/.) */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 items-end">
             <div>
               <label
-                htmlFor="insumo-almacen"
                 className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5"
               >
                 Almacén <span className="text-slate-500">*</span>
               </label>
-              <select
-                id="insumo-almacen"
+              <FilterCombobox
                 value={almacen}
-                onChange={(e) => setAlmacen(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F26522]/25 focus:border-[#F26522]"
-              >
-                {almacenes.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
+                onChange={setAlmacen}
+                options={almacenes.map((a) => ({ value: a, label: a }))}
+                ariaLabel="Almacén"
+              />
             </div>
 
             <div>
@@ -327,7 +308,7 @@ export const InsumoModal = ({
                 value={costoUnitario}
                 onChange={(e) => setCostoUnitario(e.target.value)}
                 placeholder="0.00"
-                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 tabular-nums focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F26522]/25 focus:border-[#F26522]"
+                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 tabular-nums focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F26522]/25 focus:border-[#F26522]"
               />
             </div>
           </div>
@@ -372,13 +353,13 @@ export const InsumoModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+              className="px-5 py-2.5 text-xs font-semibold rounded-full border border-slate-200 dark:border-slate-700 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all active:scale-95 cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 text-xs font-bold rounded-full bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_14px_-3px_rgba(242,101,34,0.5)] transition-colors cursor-pointer"
+              className="px-6 py-2.5 text-xs font-bold rounded-full border-0 bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_14px_-3px_rgba(242,101,34,0.5)] transition-all active:scale-95 cursor-pointer"
             >
               {mode === 'create'
                 ? existingMatch

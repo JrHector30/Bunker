@@ -101,10 +101,10 @@ const DashboardLayout = () => {
         }
     }, [netState]);
 
-    // Bloqueo estricto de navegación a módulos administrativos offline
+    // Bloqueo estricto de navegación a módulos administrativos offline (Ajustes /settings permanece habilitado para pruebas y control)
     useEffect(() => {
         if (isOffline) {
-            const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/settings';
+            const isAdminRoute = location.pathname.startsWith('/admin');
             if (isAdminRoute) {
                 showToast('Módulo administrativo no disponible en modo offline.', 'error');
                 navigate('/home');
@@ -440,7 +440,7 @@ const DashboardLayout = () => {
                                 );
                             }
 
-                            const isAdminItem = item.to.startsWith('/admin') || item.to === '/settings';
+                            const isAdminItem = item.to.startsWith('/admin');
 
                             return (
                                 <NavLink
@@ -773,7 +773,7 @@ const DashboardLayout = () => {
                                             );
                                         }
 
-                                        const isAdminItem = item.to.startsWith('/admin') || item.to === '/settings';
+                                        const isAdminItem = item.to.startsWith('/admin');
                                         const isLinkActive = location.pathname.startsWith(item.to);
 
                                         return (

@@ -59,6 +59,14 @@ export const DishModal = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
+  const existingMatch = useMemo(() => {
+    if (!isOpen || !nombre.trim() || mode === 'edit') return null;
+    return existingDishes.find((item) => {
+      if (initialDish && item.id === initialDish.id) return false;
+      return areNamesMatching(nombre, item.nombre);
+    });
+  }, [isOpen, nombre, existingDishes, mode, initialDish]);
+
   if (!isOpen) return null;
 
   const parsedPrecio = Number(precio) || 0;
@@ -81,14 +89,6 @@ export const DishModal = ({
     reader.readAsDataURL(file);
     setError('');
   };
-
-  const existingMatch = useMemo(() => {
-    if (!nombre.trim() || mode === 'edit') return null;
-    return existingDishes.find((item) => {
-      if (initialDish && item.id === initialDish.id) return false;
-      return areNamesMatching(nombre, item.nombre);
-    });
-  }, [nombre, existingDishes, mode, initialDish]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -362,14 +362,14 @@ export const DishModal = ({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 shadow-sm bg-zinc-200 hover:bg-zinc-300 text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 disabled:opacity-50"
+              className="px-5 py-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 active:scale-95 disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-md border-0 active:scale-95 bg-[#F26522] hover:bg-[#DC5616] text-white disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-md border-0 active:scale-95 bg-[#F26522] hover:bg-[#DC5616] text-white disabled:opacity-50"
             >
               {isSubmitting ? (
                 <span>Guardando...</span>

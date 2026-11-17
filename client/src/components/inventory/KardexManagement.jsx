@@ -442,7 +442,7 @@ export default function KardexManagement({
           <button
             type="button"
             onClick={() => setIsManualModalOpen(true)}
-            className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)] cursor-pointer active:scale-95 transition-all"
+            className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border-0 bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)] cursor-pointer active:scale-95 transition-all"
           >
             <Plus className="w-4 h-4" />
             <span>Nuevo Movimiento</span>
@@ -1056,37 +1056,36 @@ export default function KardexManagement({
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Insumo Afectado *
                 </label>
-                <select
-                  value={modalForm.insumoId}
-                  onChange={(e) => setModalForm({ ...modalForm, insumoId: e.target.value })}
-                  required
-                  className="w-full px-3.5 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-orange-400 cursor-pointer"
-                >
-                  <option value="">Seleccione un insumo...</option>
-                  {insumos.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.nombre} ({i.unidadMedida}) - Disp: {i.stock}
-                    </option>
-                  ))}
-                </select>
+                <FilterCombobox
+                  value={String(modalForm.insumoId || '')}
+                  onChange={(val) => setModalForm({ ...modalForm, insumoId: val })}
+                  options={insumos.map((i) => ({
+                    value: String(i.id),
+                    label: `${i.nombre} (${i.unidadMedida}) - Disp: ${i.stock}`,
+                  }))}
+                  placeholder="Seleccione un insumo..."
+                  ariaLabel="Insumo Afectado"
+                  className="w-full"
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 items-end">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Tipo de Movimiento *
                   </label>
-                  <select
+                  <FilterCombobox
                     value={modalForm.tipoMovimiento}
-                    onChange={(e) => setModalForm({ ...modalForm, tipoMovimiento: e.target.value })}
-                    required
-                    className="w-full px-3.5 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-orange-400 cursor-pointer"
-                  >
-                    <option value="COMPRA">COMPRA (+)</option>
-                    <option value="MERMA">MERMA (-)</option>
-                    <option value="TRANSFERENCIA">TRANSFERENCIA (-)</option>
-                    <option value="AJUSTE">AJUSTE</option>
-                  </select>
+                    onChange={(val) => setModalForm({ ...modalForm, tipoMovimiento: val })}
+                    options={[
+                      { value: 'COMPRA', label: 'COMPRA (+)' },
+                      { value: 'MERMA', label: 'MERMA (-)' },
+                      { value: 'TRANSFERENCIA', label: 'TRANSFERENCIA (-)' },
+                      { value: 'AJUSTE', label: 'AJUSTE' },
+                    ]}
+                    ariaLabel="Tipo de Movimiento"
+                    className="w-full"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
