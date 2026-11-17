@@ -42,7 +42,7 @@ export const ReviewsModal = ({ onClose }) => {
         </div>
 
         {/* Filter tabs */}
-        <div className="mt-4 flex w-fit items-center gap-1.5 rounded-xl bg-[#F8FAFC] p-1 border border-slate-200/60 dark:border-slate-800 dark:bg-[#1A2232]">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           {REVIEW_TABS.map((tab) => {
             const isActive = reviewFilter === tab.id;
             return (
@@ -50,10 +50,10 @@ export const ReviewsModal = ({ onClose }) => {
                 key={tab.id}
                 type="button"
                 onClick={() => setReviewFilter(tab.id)}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all whitespace-nowrap cursor-pointer select-none ${
+                className={`px-4 py-2 rounded-full border-0 text-xs font-semibold transition-all whitespace-nowrap cursor-pointer select-none shadow-sm active:scale-95 ${
                   isActive
-                    ? 'bg-white text-slate-900 shadow-xs dark:bg-[#253045] dark:text-white'
-                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    ? 'bg-[#F26522] text-white shadow-md'
+                    : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300'
                 }`}
               >
                 {tab.label}

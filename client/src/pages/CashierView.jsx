@@ -1439,15 +1439,15 @@ const CashierView = () => {
           </header>
 
           {/* Arqueos sessions table list */}
-          <div className="glass-panel overflow-hidden" style={{ boxShadow: 'var(--panel-shadow, 0 8px 32px 0 rgba(0, 0, 0, 0.37)), -6px 0 25px -5px rgba(0, 0, 0, 0.3)' }}>
-            <div className="px-4 py-3.5 bg-transparent flex flex-col md:flex-row justify-between items-start md:items-center gap-4" style={{ borderBottom: '1px solid var(--glass-border)' }}>
+          <div className="glass-panel rounded-2xl relative z-20" style={{ boxShadow: 'var(--panel-shadow, 0 8px 32px 0 rgba(0, 0, 0, 0.37)), -6px 0 25px -5px rgba(0, 0, 0, 0.3)' }}>
+            <div className="px-4 py-3.5 bg-transparent flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-30" style={{ borderBottom: '1px solid var(--glass-border)' }}>
               <div>
                 <h2 className="text-base font-bold text-[var(--text-main)] font-sans">Historial de Sesiones de Arqueo</h2>
                 <p className="text-[12px] text-[var(--text-muted)] mt-0.5 font-sans">Auditoría completa de movimientos de caja registrados en el sistema.</p>
               </div>
 
               {/* Actions Ribbon */}
-              <div className="flex flex-wrap items-center gap-2 relative z-10">
+              <div className="flex flex-wrap items-center gap-2 relative z-30">
                 <button
                   onClick={() => {
                     if (shiftStatus !== 'abierto') {
@@ -1903,14 +1903,6 @@ const CashierView = () => {
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   Métricas de Arqueo N° {activeKpiData.numeroSesion != null ? activeKpiData.numeroSesion : activeKpiData.id} {activeKpiData.id === currentStatus?.id ? '(Turno Actual)' : '(Seleccionado)'}
                 </span>
-                {activeKpiData.id !== currentStatus?.id && currentStatus?.id && (
-                  <button
-                    onClick={() => setSelectedArqueoId(currentStatus.id)}
-                    className="text-[11px] text-[var(--primary)] hover:underline cursor-pointer font-medium"
-                  >
-                    Ver Turno Actual (N° {currentStatus.numeroSesion != null ? currentStatus.numeroSesion : currentStatus.id})
-                  </button>
-                )}
               </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 cashier-kpi-grid">

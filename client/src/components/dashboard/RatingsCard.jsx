@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Star } from 'lucide-react';
-import { Info } from '@/components/animate-ui/icons/info';
+import React from 'react';
+import { Star, Info } from 'lucide-react';
 import { RATINGS_SUMMARY } from './dashboardData';
+import { useNotification } from '../../context/NotificationContext';
 
 export const RatingsCard = ({ onOpenReviewsModal }) => {
-  const [showTooltip, setShowTooltip] = useState(false);
+  const { showToast } = useNotification();
+  const onNotify = (msg) => showToast(msg, 'info');
 
   return (
     <section
@@ -15,53 +16,33 @@ export const RatingsCard = ({ onOpenReviewsModal }) => {
         Calificación y Reseñas
       </h2>
 
-      {/* Stars and score container */}
-      <div className="relative mt-2 flex items-center justify-between gap-2 rounded-xl bg-[#F8F9FA] px-3 py-2 dark:bg-[#1A2232]">
-        <div
-          className="flex items-center gap-0.5"
-          aria-label={`${RATINGS_SUMMARY.score} de ${RATINGS_SUMMARY.totalStars} estrellas`}
-        >
-          {Array.from({ length: RATINGS_SUMMARY.totalStars }).map((_, idx) => {
-            const isFilled = idx < RATINGS_SUMMARY.filledStars;
-            return (
-              <Star
-                key={idx}
-                className={`h-3.5 w-3.5 ${
-                  isFilled
-                    ? 'fill-[#F59E0B] text-[#F59E0B]'
-                    : 'fill-slate-300 text-slate-300 dark:fill-slate-600 dark:text-slate-600'
-                }`}
-              />
-            );
-          })}
+      {/* Rating Summary Bar */}
+      <div className="mt-4 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-0.5">
+          {[1, 2, 3, 4].map((s) => (
+            <Star
+              key={s}
+              className="w-4 h-4 fill-amber-400 text-amber-400"
+            />
+          ))}
+          <Star className="w-4 h-4 fill-amber-400/70 text-amber-400" />
         </div>
 
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-bold text-slate-800 tabular-nums whitespace-nowrap dark:text-slate-100">
-            {RATINGS_SUMMARY.score} Estrellas
+          <span className="text-[13px] font-bold text-slate-900 dark:text-white tabular-nums">
+            4,80 Estrellas
           </span>
           <button
             type="button"
-            aria-label="Información sobre la calificación"
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
-            onFocus={() => setShowTooltip(true)}
-            onBlur={() => setShowTooltip(false)}
-            onClick={() => setShowTooltip((prev) => !prev)}
-            className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition-colors hover:text-[var(--primary)] hover:bg-slate-200/50 dark:text-slate-400 dark:hover:text-[var(--primary)] dark:hover:bg-slate-700/50 cursor-pointer"
+            onClick={() =>
+              onNotify('Promedio calculado sobre 128 reseñas verificadas.')
+            }
+            aria-label="Información sobre calificación"
+            className="inline-flex items-center justify-center bg-transparent border-0 p-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
           >
-            <Info animateOnHover size={14} />
+            <Info className="w-3.5 h-3.5" />
           </button>
         </div>
-
-        {showTooltip && (
-          <div
-            role="tooltip"
-            className="absolute right-2 top-10 z-20 w-52 rounded-xl border border-slate-100 bg-slate-900 px-3 py-2 text-[11px] leading-snug text-white shadow-lg dark:border-slate-700 dark:bg-slate-800 animate-fade-in"
-          >
-            Promedio ponderado de {RATINGS_SUMMARY.totalReviews} opiniones verificadas en salón.
-          </div>
-        )}
       </div>
 
       {/* Positive vs Negative breakdown */}

@@ -212,23 +212,6 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
               Comparativa de Ingresos vs. Egresos (Arqueo N° {selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id})
             </h3>
           </div>
-          <button
-            onClick={() => {
-              const details = [
-                `Historial de arqueos de caja (últimas ${lastArqueos.length} sesiones).`,
-                `Arqueo seleccionado: N° ${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}`,
-                `Ingreso registrado: S/. ${(selectedArqueo.totalBruto || 0).toFixed(2)}`,
-                `Egreso registrado: S/. ${(selectedArqueo.egresos || selectedArqueo.egreso || 0).toFixed(2)}`,
-                `Balance Neto: S/. {((selectedArqueo.totalBruto || 0) - (selectedArqueo.egresos || selectedArqueo.egreso || 0)).toFixed(2)}`,
-                `Fecha de exportación: ${new Date().toLocaleString()}`
-              ];
-              handleExportChart(chartASvgRef, `Arqueos_Ingresos_Egresos_N${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}.png`, `Comparativa de Ingresos vs. Egresos (Arqueo N° ${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}) - Bunker`, details);
-            }}
-            className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans"
-          >
-            <Download className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            <span className="text-[var(--text-main)]">Exportar</span>
-          </button>
         </div>
 
         {/* Selected Arqueo Comparison Summary Pills */}
@@ -462,24 +445,6 @@ export function CustomCharts({ arqueos, selectedArqueoId, onSelectArqueo }) {
               Distribución de Métodos de Pago (Arqueo N° {selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id})
             </h3>
           </div>
-          <button
-            onClick={() => {
-              const details = [
-                `Desglose del Arqueo de Caja N° ${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}.`,
-                `Monto Neto Total: S/. ${selectedArqueo.totalBruto.toFixed(2)}`,
-                `Efectivo en caja: S/. ${detailEfectivo.toFixed(2)} (${((detailEfectivo / totalMethods) * 100).toFixed(0)}%)`,
-                `Digital (Yape/Plin): S/. ${detailDigital.toFixed(2)} (${((detailDigital / totalMethods) * 100).toFixed(0)}%)`,
-                `Tarjeta (POS): S/. ${detailTarjeta.toFixed(2)} (${((detailTarjeta / totalMethods) * 100).toFixed(0)}%)`,
-                `Manual/Otros: S/. ${detailManual.toFixed(2)} (${((detailManual / totalMethods) * 100).toFixed(0)}%)`,
-                `Fecha de exportación: ${new Date().toLocaleString()}`
-              ];
-              handleExportChart(chartBSvgRef, `Arqueo_${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}_Distribucion_Pagos.png`, `Distribución de Métodos de Pago (Arqueo N° ${selectedArqueo.numeroSesion != null ? selectedArqueo.numeroSesion : selectedArqueo.id}) - Bunker`, details);
-            }}
-            className="glass-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer font-sans"
-          >
-            <Download className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            <span className="text-[var(--text-main)]">Exportar</span>
-          </button>
         </div>
 
         {/* Selection Indicator Banner */}

@@ -189,12 +189,11 @@ export default function KitchenHeader() {
             onClick={toggleSound}
             aria-label={isAudioEnabled ? 'Sonido Activado' : 'Sonido Silenciado'}
             title={isAudioEnabled ? 'Sonido Activado' : 'Sonido Silenciado'}
-            className={`w-[42px] h-[42px] md:w-auto md:min-h-[42px] inline-flex items-center justify-center gap-2 md:px-4 md:py-2 text-xs font-bold rounded-full transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95 shadow-sm ${isAudioEnabled
-              ? 'bg-[#F26522] hover:bg-[#EA580C] text-white shadow-xs'
-              : isDarkMode
-                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                : 'bg-slate-200 hover:bg-slate-300 text-slate-700 border border-slate-300'
-              }`}
+            className={`w-[42px] h-[42px] md:w-auto md:min-h-[42px] inline-flex items-center justify-center gap-2 md:px-4 md:py-2 text-xs font-bold rounded-full border-0 transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95 shadow-sm ${
+              isAudioEnabled
+                ? 'bg-[#F26522] hover:bg-[#EA580C] text-white shadow-md'
+                : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300'
+            }`}
           >
             {isAudioEnabled ? (
               <Volume2 className="w-4 h-4" />
@@ -218,6 +217,7 @@ export default function KitchenHeader() {
                 selectedItem={selectedComboboxItem}
                 onSelect={handleComboboxSelect}
                 placeholder="Todas las Mesas"
+                align="center"
               />
             </div>
           </div>

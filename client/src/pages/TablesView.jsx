@@ -13,6 +13,25 @@ import DeleteButton from '../components/ui/DeleteButton';
 import CloseButton from '../components/ui/CloseButton';
 import { networkStatus, NetworkState, db, offlineOrderService, offlineSnapshotService } from '../offline';
 
+export function BackupRestoreIcon({ size = 24, ...props }) {
+    return (
+        <svg width={size} height={size} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" {...props}>
+            <path fill="none" stroke="currentColor" strokeDasharray="48" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.25 14c0.89 3.45 4.02 6 7.75 6c4.42 0 8 -3.58 8 -8c0 -4.42 -3.58 -8 -8 -8c-2.39 0 -4.53 1.05 -6 2.71l-2 2.29">
+                <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="48;0"/>
+            </path>
+            <g fill="currentColor">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" d="M5.63 7.38l-2.13 -2.13l0 4.25l4.25 0Z" opacity="0">
+                    <set fill="freeze" attributeName="opacity" begin="0.6s" to="1"/>
+                    <animate fill="freeze" attributeName="d" begin="0.6s" dur="0.2s" values="M4 9l0 0l0 0l0 0Z;M5.63 7.38l-2.13 -2.13l0 4.25l4.25 0Z"/>
+                </path>
+                <circle cx="12" cy="12">
+                    <animate fill="freeze" attributeName="r" begin="0.8s" dur="0.2s" to="2"/>
+                </circle>
+            </g>
+        </svg>
+    );
+}
+
 const TablesView = () => {
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
@@ -1422,8 +1441,7 @@ const TablesView = () => {
                                     Modo Edición
                                 </span>
                                 <span
-                                    className={`absolute left-0 top-0 text-sm font-bold transition-all duration-500 transform ${!isEditMode ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2'}`}
-                                    style={{ color: 'var(--warning)' }}
+                                    className={`absolute left-0 top-0 text-sm font-bold transition-all duration-500 transform text-slate-900 dark:text-white ${!isEditMode ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2'}`}
                                 >
                                     Bloqueado
                                 </span>
@@ -1432,14 +1450,15 @@ const TablesView = () => {
 
                         {/* Botón de Reset de Posición */}
                         <button
+                            type="button"
                             onClick={handleResetPositions}
-                            className="group flex items-center justify-center p-2 rounded-lg bg-gray-950/40 border border-gray-900 hover:border-gray-800 transition-all duration-200"
+                            className="flex items-center justify-center p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 transition-all duration-200 cursor-pointer shadow-xs active:scale-95"
                             title="Restablecer posición de todas las mesas"
                             style={{ height: 40, width: 40 }}
                         >
-                            <RotateCcw
-                                className="text-gray-400 group-hover:text-white group-hover:-rotate-180 transition-transform duration-500 ease-out"
-                                size={16}
+                            <BackupRestoreIcon
+                                size={18}
+                                className="text-slate-900 dark:text-white"
                             />
                         </button>
                     </div>
@@ -1498,7 +1517,7 @@ const TablesView = () => {
                                 )}
                             </div>
                         </div>
-                        <span>{!isEditMode ? 'Bloqueado' : 'Modo Edición'}</span>
+                        <span className="text-slate-900 dark:text-white">{!isEditMode ? 'Bloqueado' : 'Modo Edición'}</span>
                     </button>
 
                     {/* Refresh */}

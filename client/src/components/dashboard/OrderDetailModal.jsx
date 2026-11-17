@@ -8,8 +8,6 @@ import {
 import CloseButton from '../ui/CloseButton';
 import { formatCurrencyAmount } from './dashboardData';
 
-const STATUS_OPTIONS = ['Pendiente', 'En Proceso', 'Listo'];
-
 export const OrderDetailModal = ({
   order,
   currency = 'PEN',
@@ -115,35 +113,6 @@ export const OrderDetailModal = ({
             </dd>
           </div>
         </dl>
-
-        {/* Change status section */}
-        {onUpdateStatus && (
-          <div className="mt-5 border-t border-slate-100 pt-4 dark:border-slate-800">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Actualizar Estado en Cocina
-            </label>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {STATUS_OPTIONS.map((st) => {
-                const isCurrent = order.status === st;
-                return (
-                  <button
-                    key={st}
-                    type="button"
-                    disabled={isCurrent}
-                    onClick={() => onUpdateStatus(order, st)}
-                    className={`rounded-xl px-2 py-2 text-xs font-bold transition-all cursor-pointer ${
-                      isCurrent
-                        ? 'bg-[var(--primary)] text-white shadow-sm ring-2 ring-[var(--primary)]/30'
-                        : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {st}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

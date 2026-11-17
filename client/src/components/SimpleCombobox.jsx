@@ -9,16 +9,18 @@ export default function SimpleCombobox({
   placeholder = "Seleccione...",
   closeOnSelect = true,
   dropUp = false,
+  align = "auto",
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [autoDropUp, setAutoDropUp] = useState(false);
+  const [autoAlignRight, setAutoAlignRight] = useState(false);
 
   const containerRef = useRef(null);
   const listRef = useRef(null);
 
-  // Auto-detect if opening downwards would overflow window bottom
+  // Auto-detect if opening downwards would overflow window bottom or right
   useEffect(() => {
     if (isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
@@ -27,6 +29,11 @@ export default function SimpleCombobox({
         setAutoDropUp(true);
       } else {
         setAutoDropUp(false);
+      }
+      if (rect.left + 300 > window.innerWidth - 16) {
+        setAutoAlignRight(true);
+      } else {
+        setAutoAlignRight(false);
       }
     }
   }, [isOpen]);
@@ -144,8 +151,14 @@ export default function SimpleCombobox({
             animate={{ opacity: 1, y: shouldDropUp ? -8 : 8, scale: 1 }}
             exit={{ opacity: 0, y: shouldDropUp ? -4 : 4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className={`absolute left-0 z-[150] rounded-xl shadow-2xl overflow-hidden flex flex-col w-[320px] max-w-[90vw] ${
-              shouldDropUp ? 'bottom-full mb-2 origin-bottom-left' : 'top-full mt-1 origin-top-left'
+            className={`absolute z-[150] rounded-xl shadow-2xl overflow-hidden flex flex-col w-[280px] sm:w-[300px] max-w-[calc(100vw-2rem)] ${
+              align === 'center'
+                ? 'left-1/2 -translate-x-1/2 origin-top'
+                : (align === 'right' || autoAlignRight)
+                  ? 'right-0 left-auto origin-top-right'
+                  : 'left-0 origin-top-left'
+            } ${
+              shouldDropUp ? 'bottom-full mb-2' : 'top-full mt-1'
             }`}
             style={{
               backgroundColor: 'var(--bg-surface)',
