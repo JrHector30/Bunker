@@ -1459,9 +1459,40 @@ app.post('/api/categories', async (req, res) => {
     const { nombre, color, icono, orden, activo, enviarCocina } = req.body;
     try {
         const tenantId = getTenantId(req);
+        const trimmedNombre = (nombre || '').trim();
+
+        // 1. Verificar si ya existe una categoría con ese nombre para este restaurante (incluyendo soft-deleted)
+        const existing = await prisma.categoria.findFirst({
+            where: {
+                nombre: { equals: trimmedNombre, mode: 'insensitive' },
+                restauranteId: tenantId
+            }
+        });
+
+        if (existing) {
+            if (existing.deleted) {
+                // Si estaba eliminada (soft delete), la reactivamos y actualizamos
+                const restored = await prisma.categoria.update({
+                    where: { id: existing.id },
+                    data: {
+                        nombre: trimmedNombre,
+                        color: color || existing.color || '#000000',
+                        icono: icono || existing.icono || '',
+                        orden: orden !== undefined ? parseInt(orden || 0) : existing.orden,
+                        activo: activo !== undefined ? Boolean(activo) : true,
+                        enviarCocina: enviarCocina !== undefined ? Boolean(enviarCocina) : true,
+                        deleted: false
+                    }
+                });
+                return res.json(restored);
+            } else {
+                return res.status(400).json({ error: `Ya existe una categoría llamada "${trimmedNombre}" en este restaurante.` });
+            }
+        }
+
         const category = await prisma.categoria.create({
             data: {
-                nombre: (nombre || '').trim(),
+                nombre: trimmedNombre,
                 color: color || '#000000',
                 icono: icono || '',
                 orden: parseInt(orden || 0),
@@ -1472,7 +1503,7 @@ app.post('/api/categories', async (req, res) => {
         });
         res.json(category);
     } catch (e) {
-        if (e.code === 'P2002') {
+        if (e.code === 'P2002' || (e.message && e.message.includes('Unique constraint'))) {
             return res.status(400).json({ error: `Ya existe una categoría llamada "${nombre}" en este restaurante.` });
         }
         res.status(400).json({ error: e.message || 'Error al crear la categoría.' });
@@ -5134,6 +5165,32 @@ app.post('/api/insumos', async (req, res) => {
                 }
             });
             return res.json(updated);
+        }
+
+        // Si estaba soft-deleted, restaurar
+        const softDeleted = await prisma.insumo.findFirst({
+            where: {
+                nombre: { equals: (nombre || '').trim(), mode: 'insensitive' },
+                restauranteId: tenantId,
+                deleted: true
+            }
+        });
+        if (softDeleted) {
+            const restored = await prisma.insumo.update({
+                where: { id: softDeleted.id },
+                data: {
+                    precioCompra: precioCompra !== undefined ? (parseFloat(precioCompra) || 0) : softDeleted.precioCompra,
+                    unidadMedida: unidadMedida || softDeleted.unidadMedida,
+                    stock: stock !== undefined ? (parseFloat(stock) || 0) : softDeleted.stock,
+                    stockMinimo: safeStockMinimo,
+                    notificarAlerta: notificarAlerta !== undefined ? Boolean(notificarAlerta) : softDeleted.notificarAlerta,
+                    almacen: almacen || softDeleted.almacen,
+                    deleted: false,
+                    activo: true,
+                    fechaActualizacion: new Date()
+                }
+            });
+            return res.json(restored);
         }
 
         const insumo = await prisma.insumo.create({
