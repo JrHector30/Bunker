@@ -27,6 +27,9 @@ export default function SmoothDropdown({
   isHighlighted = false,
   align = "right",
   openWidth = 220,
+  triggerWidth,
+  triggerHeight,
+  triggerBorderRadius,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
@@ -52,23 +55,29 @@ export default function SmoothDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  const closedSize = compact ? 26 : 40;
+  const closedW = triggerWidth || (compact ? 26 : 40);
+  const closedH = triggerHeight || (compact ? 26 : 40);
+  const closedRadius = triggerBorderRadius ?? (compact ? 8 : 12);
   const targetOpenWidth = compact ? openWidth : 240;
-  const openHeight = Math.max(closedSize, Math.ceil(contentBounds.height));
+  const openHeight = Math.max(closedH, Math.ceil(contentBounds.height));
 
   return (
     <div
       ref={containerRef}
-      className={`relative not-prose select-none md:!bg-transparent ${compact ? "h-[26px] w-[26px]" : "h-10 w-10"}`}
-      style={{ zIndex: isOpen ? 60 : 1 }}
+      className={`relative not-prose select-none md:!bg-transparent ${!triggerWidth && !triggerHeight ? (compact ? "h-[26px] w-[26px]" : "h-10 w-10") : ""}`}
+      style={{
+        zIndex: isOpen ? 60 : 1,
+        ...(triggerWidth ? { width: closedW } : {}),
+        ...(triggerHeight ? { height: closedH } : {}),
+      }}
     >
       <motion.div
         layout
         initial={false}
         animate={{
-          width: isOpen ? targetOpenWidth : closedSize,
-          height: isOpen ? openHeight : closedSize,
-          borderRadius: isOpen ? 14 : (compact ? 8 : 12),
+          width: isOpen ? targetOpenWidth : closedW,
+          height: isOpen ? openHeight : closedH,
+          borderRadius: isOpen ? 14 : closedRadius,
         }}
         transition={{
           type: "spring",

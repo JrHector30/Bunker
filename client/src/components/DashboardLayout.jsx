@@ -724,7 +724,7 @@ const DashboardLayout = () => {
                                             <span className="text-[15px] font-bold tracking-wide text-white whitespace-nowrap">
                                                 BÚNKER
                                             </span>
-                                            <span className="text-[10px] font-bold tracking-[0.16em] text-[#F26522] whitespace-nowrap mt-0.5">
+                                            <span className="text-[10px] font-bold tracking-[0.16em] text-[var(--primary)] whitespace-nowrap mt-0.5">
                                                 SISTEMA
                                             </span>
                                         </div>
@@ -762,7 +762,7 @@ const DashboardLayout = () => {
                                                         className="w-full flex items-center justify-between px-4 py-2.5 rounded-full text-xs font-semibold bg-white/[0.06] text-white hover:bg-white/[0.1] transition-all cursor-pointer border-0 shadow-sm active:scale-95"
                                                     >
                                                         <div className="flex items-center gap-3 min-w-0">
-                                                            <Icon className="w-4 h-4 shrink-0 text-[#F26522]" />
+                                                            <Icon className="w-4 h-4 shrink-0 text-[var(--primary)]" />
                                                             <span className="truncate">{item.label}</span>
                                                         </div>
                                                         {isLogisticaExpanded ? (
@@ -785,7 +785,7 @@ const DashboardLayout = () => {
                                                                         onClick={() => setMobileMenuOpen(false)}
                                                                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-medium transition-all duration-150 cursor-pointer no-underline active:scale-95 ${
                                                                             isSubActive
-                                                                                ? 'bg-[#F26522] text-white font-bold shadow-[0_4px_14px_-2px_rgba(242,101,34,0.55)]'
+                                                                                ? 'bg-[var(--primary)] text-white font-bold shadow-md shadow-[var(--primary)]/25'
                                                                                 : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
                                                                         }`}
                                                                     >
@@ -817,7 +817,7 @@ const DashboardLayout = () => {
                                                 }}
                                                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-xs font-semibold transition-all duration-150 cursor-pointer no-underline border-0 shadow-sm active:scale-95 ${
                                                     isLinkActive
-                                                        ? 'bg-[#F26522] text-white font-bold shadow-[0_6px_18px_-4px_rgba(242,101,34,0.55)]'
+                                                        ? 'bg-[var(--primary)] text-white font-bold shadow-md shadow-[var(--primary)]/25'
                                                         : 'text-slate-300/90 hover:text-white hover:bg-white/[0.05]'
                                                 } ${isOffline && isAdminItem ? 'opacity-40 cursor-not-allowed' : ''}`}
                                             >
@@ -896,7 +896,7 @@ const DashboardLayout = () => {
                                 <span className="text-sm font-bold tracking-wide block text-white font-sans">
                                     BÚNKER
                                 </span>
-                                <span className="text-[10px] font-bold tracking-[0.14em] text-[#F26522] block font-sans">
+                                <span className="text-[10px] font-bold tracking-[0.14em] text-[var(--primary)] block font-sans">
                                     SISTEMA
                                 </span>
                             </div>

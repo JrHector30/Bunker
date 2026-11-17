@@ -14,6 +14,7 @@ export function FilterCombobox({
   disabled = false,
   align = 'left',
   renderTrigger,
+  triggerClassName = '',
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -57,7 +58,7 @@ export function FilterCombobox({
           aria-label={ariaLabel}
           aria-haspopup="listbox"
           aria-expanded={open}
-          className={`inline-flex items-center justify-between gap-2.5 px-3.5 py-2 text-[13px] font-medium rounded-xl border transition-all duration-150 select-none ${
+          className={`inline-flex items-center justify-between gap-2.5 px-3.5 py-2 text-[13px] font-medium rounded-xl border transition-all duration-150 select-none ${triggerClassName} ${
             disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
           } ${
             isFull ? 'w-full' : 'whitespace-nowrap'

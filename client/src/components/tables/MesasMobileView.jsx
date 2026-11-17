@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Link2,
   Lock,
@@ -17,7 +18,7 @@ import {
 
 const STATUS_FILTERS = [
   { value: 'TODAS', label: 'Todas' },
-  { value: 'CERRADA', label: 'Cerradas' },
+  { value: 'LIBRE', label: 'Libres' },
   { value: 'OCUPADA', label: 'Ocupadas' },
   { value: 'CUENTA', label: 'Cuenta' },
 ];
@@ -26,8 +27,10 @@ export const MesasMobileView = ({
   tables = [],
   onUpdateTables,
   dishes = [],
+  onOpenOrder,
   onNotify = () => {},
 }) => {
+  const navigate = useNavigate();
   const [locked, setLocked] = useState(true);
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeSelection, setMergeSelection] = useState([]);
@@ -48,13 +51,15 @@ export const MesasMobileView = ({
   }, [tables, statusFilter]);
 
   const counts = useMemo(() => {
+    let libres = 0;
     let ocupadas = 0;
     let cuenta = 0;
     for (const t of tables) {
-      if (t.estado === 'OCUPADA') ocupadas += 1;
+      if (t.estado === 'LIBRE') libres += 1;
+      else if (t.estado === 'OCUPADA') ocupadas += 1;
       else if (t.estado === 'CUENTA') cuenta += 1;
     }
-    return { total: tables.length, ocupadas, cuenta };
+    return { total: tables.length, libres, ocupadas, cuenta };
   }, [tables]);
 
   const activeDishes = useMemo(() => {
@@ -149,26 +154,12 @@ export const MesasMobileView = ({
   };
 
   const handleOpenTable = (table) => {
-    const nowTime = new Intl.DateTimeFormat('es-PE', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).format(new Date());
-
-    onUpdateTables((prev) =>
-      prev.map((t) =>
-        t.id === table.id
-          ? {
-              ...t,
-              estado: 'OCUPADA',
-              comensales: guestCountInput,
-              mesero: 'Hector',
-              horaApertura: nowTime,
-            }
-          : t
-      )
-    );
-    onNotify(`Mesa ${table.numero} abierta (${guestCountInput} personas).`);
+    setActiveTableId(null);
+    if (onOpenOrder) {
+      onOpenOrder(table.id, guestCountInput);
+    } else {
+      navigate(`/order/${table.id}`, { state: { comensales: guestCountInput } });
+    }
   };
 
   const handleAddDishToTable = (tableId, dish) => {
@@ -453,6 +444,8 @@ export const MesasMobileView = ({
               const isSelectedForMerge = mergeSelection.includes(table.numero);
               const isOcupada = table.estado === 'OCUPADA';
               const isCuenta = table.estado === 'CUENTA';
+              const isLibre = table.estado === 'LIBRE';
+              const isCerrada = table.estado === 'CERRADA';
               const tableTotal = table.pedidos.reduce(
                 (s, p) => s + p.precio * p.cantidad,
                 0
@@ -466,7 +459,9 @@ export const MesasMobileView = ({
                 ? 'bg-[#F26522]/45'
                 : isCuenta
                   ? 'bg-amber-400/60'
-                  : 'bg-[#C4C6CA] dark:bg-slate-600';
+                  : isLibre
+                    ? 'bg-emerald-500/40 dark:bg-emerald-400/40'
+                    : 'bg-[#C4C6CA] dark:bg-slate-600';
 
               return (
                 <div
@@ -520,7 +515,9 @@ export const MesasMobileView = ({
                           ? 'bg-white dark:bg-slate-800 border-[#F26522] ring-2 ring-[#F26522]/15 shadow-sm'
                           : isCuenta
                             ? 'bg-amber-50/90 dark:bg-amber-950/50 border-amber-400 shadow-sm'
-                            : 'bg-[#F4F4F3] dark:bg-slate-800 border-slate-300/60 dark:border-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
+                            : isLibre
+                              ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-500/80 dark:border-emerald-600 ring-2 ring-emerald-500/15 shadow-sm'
+                              : 'bg-[#F4F4F3] dark:bg-slate-800 border-slate-300/60 dark:border-slate-700 opacity-60 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
                     }`}
                   >
                     {table.mergedWith && table.mergedWith.length > 0 && (
@@ -541,7 +538,9 @@ export const MesasMobileView = ({
                           ? 'text-[#F26522]'
                           : isCuenta
                             ? 'text-amber-700 dark:text-amber-300'
-                            : 'text-slate-600 dark:text-slate-200'
+                            : isLibre
+                              ? 'text-emerald-700 dark:text-emerald-300'
+                              : 'text-slate-600 dark:text-slate-200'
                       }`}
                     >
                       {table.numero}
@@ -553,7 +552,9 @@ export const MesasMobileView = ({
                           ? 'text-[#F26522]'
                           : isCuenta
                             ? 'text-amber-700 dark:text-amber-300'
-                            : 'text-slate-400 dark:text-slate-400'
+                            : isLibre
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-slate-400 dark:text-slate-400'
                       }`}
                     >
                       {table.estado === 'CUENTA' ? 'POR COBRAR' : table.estado}
@@ -612,7 +613,9 @@ export const MesasMobileView = ({
                         ? 'bg-orange-100 text-[#C2410C] dark:bg-orange-950/60 dark:text-orange-300'
                         : activeTable.estado === 'CUENTA'
                           ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                          : activeTable.estado === 'LIBRE'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                     }`}
                   >
                     {activeTable.estado}
@@ -685,6 +688,11 @@ export const MesasMobileView = ({
               )}
 
               {activeTable.estado === 'CERRADA' ? (
+                <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-center text-xs text-rose-700 dark:text-rose-300">
+                  <p className="font-bold">Mesa Bloqueada (Caja Cerrada)</p>
+                  <p className="text-[11px] mt-1">Se requiere la apertura de caja para iniciar comandas.</p>
+                </div>
+              ) : activeTable.estado === 'LIBRE' ? (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
@@ -721,13 +729,26 @@ export const MesasMobileView = ({
                   <button
                     type="button"
                     onClick={() => handleOpenTable(activeTable)}
-                    className="w-full min-h-[48px] rounded-xl border-0 bg-[#F26522] hover:bg-[#DC5616] text-white font-semibold text-sm shadow-sm cursor-pointer transition-colors"
+                    className="w-full min-h-[48px] rounded-xl border-0 bg-[var(--primary,#F26522)] hover:opacity-90 text-white font-semibold text-sm shadow-sm cursor-pointer transition-colors"
                   >
                     Abrir Mesa {activeTable.numero}
                   </button>
                 </div>
               ) : (
                 <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTableId(null);
+                      if (onOpenOrder) onOpenOrder(activeTable.id, activeTable.comensales);
+                      else navigate(`/order/${activeTable.id}`);
+                    }}
+                    className="w-full min-h-[44px] rounded-xl border border-[var(--primary,#F26522)] bg-transparent text-[var(--primary,#F26522)] font-bold text-xs shadow-xs hover:bg-[var(--primary,#F26522)]/10 cursor-pointer transition-colors flex items-center justify-center gap-2"
+                  >
+                    <UtensilsCrossed className="w-4 h-4" />
+                    <span>Ir a Comanda / Enviar a Cocina</span>
+                  </button>
+
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
                       Comanda Actual

@@ -86,7 +86,7 @@ export function DropdownRangeDatePicker({
       className={`relative inline-flex items-center w-[280px] ${triggerClassName} ${open ? 'z-[9999]' : 'z-20'}`}
       style={{ zIndex: open ? 9999 : undefined }}
     >
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} className="w-full">
         <PopoverTrigger asChild>
           <Button
             variant="outline"

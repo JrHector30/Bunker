@@ -1049,21 +1049,9 @@ const StaffStatsView = () => {
                                         }
                                     }}
                                     placeholder="Seleccionar Fecha"
+                                    triggerClassName="!w-full"
                                 />
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setDate(new Date());
-                                    setSelectedArqueoId(null);
-                                    setFilteredDay('TODO');
-                                }}
-                                aria-label="Restablecer a hoy"
-                                title="Hoy"
-                                className="w-[42px] h-[42px] rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/70 dark:border-rose-900/40 text-rose-500 flex items-center justify-center shrink-0 active:scale-95 transition-transform"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
                             {arqueoInfo && (
                                 <button
                                     type="button"

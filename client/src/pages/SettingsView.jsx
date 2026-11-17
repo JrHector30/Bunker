@@ -788,7 +788,7 @@ export default function SettingsView() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <div className="grid grid-cols-3 gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
               {[
                 { key: 'mozo', label: 'Mozo' },
                 { key: 'cocina', label: 'Cocina' },
@@ -798,10 +798,11 @@ export default function SettingsView() {
                   key={r.key}
                   type="button"
                   onClick={() => setSelectedRole(r.key)}
-                  className={`min-h-[38px] rounded-lg text-xs font-bold transition-colors cursor-pointer ${selectedRole === r.key
-                    ? 'bg-[#F26522] text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300'
+                  className={`min-h-[38px] rounded-xl text-xs font-bold transition-all cursor-pointer border-0 active:scale-95 ${selectedRole === r.key
+                    ? 'text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-transparent'
                     }`}
+                  style={selectedRole === r.key ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
                 >
                   {r.label}
                 </button>

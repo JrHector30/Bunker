@@ -1428,7 +1428,7 @@ const CashierView = () => {
             <button
               type="button"
               onClick={() => setIsSidebarOpen(true)}
-              className="xl:hidden min-h-[42px] w-full sm:w-auto px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 shadow-sm active:scale-95 cursor-pointer transition-all"
+              className="xl:hidden min-h-[42px] w-full sm:w-auto px-4 py-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 shadow-xs active:scale-95 cursor-pointer transition-all border-0"
             >
               <span className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
                 <Wallet className="w-4 h-4 text-emerald-600" />
@@ -1449,6 +1449,7 @@ const CashierView = () => {
               {/* Actions Ribbon */}
               <div className="flex flex-wrap items-center gap-2 relative z-30">
                 <button
+                  type="button"
                   onClick={() => {
                     if (shiftStatus !== 'abierto') {
                       showToast("Debe abrir caja antes de registrar un movimiento.", "error");
@@ -1457,7 +1458,8 @@ const CashierView = () => {
                     setIsMovModalOpen(true);
                   }}
                   disabled={shiftStatus !== 'abierto'}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-[#F26522] hover:bg-[#EA580C] text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group shadow-sm active:scale-95 transition-all font-sans"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group shadow-[0_4px_12px_-2px_rgba(242,101,34,0.4)] active:scale-95 transition-all font-sans border-0"
+                  style={{ backgroundColor: 'var(--primary, #F26522)' }}
                 >
                   <Plus className="w-3.5 h-3.5 text-white group-hover:rotate-90 transition-transform" />
                   <span>Movimiento</span>
@@ -1741,76 +1743,14 @@ const CashierView = () => {
                             <p className="text-[10px] font-bold uppercase text-slate-400">Bruto</p>
                             <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">S/. {sTotalBruto.toFixed(2)}</p>
                           </div>
-                          {/* Botón de Acción (⋮) + Menú desplegable de 4 opciones */}
-                          <div className="relative" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuNumero((prev) => (prev === s.id ? null : s.id));
-                              }}
-                              aria-label={`Acciones de Arqueo ${sNumero}`}
-                              className="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer active:scale-95 transition-all shadow-xs"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-
-                            {openMenuNumero === s.id && (
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-10 z-30 w-48 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700 shadow-[0_12px_30px_-6px_rgba(15,23,42,0.18)] p-1.5 text-left animate-in fade-in zoom-in-95 duration-100"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMenuNumero(null);
-                                    handleRowAction('detail', s.id);
-                                  }}
-                                  className="w-full px-3 py-2 text-xs font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
-                                >
-                                  <ClipboardList className="w-3.5 h-3.5 text-slate-500" />
-                                  <span>Auditar Detalles</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMenuNumero(null);
-                                    handleRowAction('resumen', s.id);
-                                  }}
-                                  className="w-full px-3 py-2 text-xs font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
-                                >
-                                  <Receipt className="w-3.5 h-3.5 text-[#F26522]" />
-                                  <span>Ver Ticket Resumen</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMenuNumero(null);
-                                    handleRowAction('paloteo', s.id);
-                                  }}
-                                  className="w-full px-3 py-2 text-xs font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
-                                >
-                                  <ListChecks className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>Ver Paloteo</span>
-                                </button>
-
-                                <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMenuNumero(null);
-                                    handleRowAction('pdf', s.id);
-                                  }}
-                                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 flex items-center gap-2 cursor-pointer transition-colors"
-                                >
-                                  <FileText className="w-3.5 h-3.5" />
-                                  <span>Exportar PDF</span>
-                                </button>
-                              </div>
-                            )}
+                          {/* Botón de Acción (⋮) con SmoothDropdown */}
+                          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <SmoothDropdown
+                              id={`mob-arq-${s.id}`}
+                              dropUp={paginatedHistory.indexOf(s) >= Math.max(1, paginatedHistory.length - 2)}
+                              items={cashierActions}
+                              onAction={(actionId) => handleRowAction(actionId, s.id)}
+                            />
                           </div>
                         </div>
                       </div>
@@ -1821,24 +1761,69 @@ const CashierView = () => {
                         <div className="text-right"><span className="text-slate-400 block">Total Caja</span><strong className="text-slate-800 dark:text-slate-100">S/. {sTotalCaja.toFixed(2)}</strong></div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-1.5 text-[11px] tabular-nums">
-                        <div className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex justify-between">
+                      <div className="grid grid-cols-2 gap-1.5 text-[11px] tabular-nums pt-1">
+                        <div className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex justify-between items-center">
                           <span className="text-slate-500 dark:text-slate-400">Efectivo:</span>
                           <strong className="text-slate-800 dark:text-slate-100">{sEfectivo.toFixed(2)}</strong>
                         </div>
-                        <div className="px-2.5 py-1.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-900/30 flex justify-between">
-                          <span className="text-blue-600 dark:text-blue-400">Digital:</span>
+                        <div className="px-2.5 py-1.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-900/30 flex justify-between items-center">
+                          <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                            <span>Digital:</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedDig(prev => ({ ...prev, [s.id]: !prev[s.id] }));
+                              }}
+                              className="p-0.5 text-blue-500 hover:text-blue-700 dark:text-blue-400 cursor-pointer border-0 bg-transparent inline-flex items-center"
+                              title="Ver desglose Yape y Plin"
+                            >
+                              <Eye className="w-3 h-3" />
+                            </button>
+                          </span>
                           <strong className="text-blue-700 dark:text-blue-300">{digitalSum.toFixed(2)}</strong>
                         </div>
-                        <div className="px-2.5 py-1.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/30 flex justify-between">
-                          <span className="text-amber-600 dark:text-amber-400">Tarjeta:</span>
+                        <div className="px-2.5 py-1.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/30 flex justify-between items-center">
+                          <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                            <span>Tarjeta:</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedTarj(prev => ({ ...prev, [s.id]: !prev[s.id] }));
+                              }}
+                              className="p-0.5 text-amber-500 hover:text-amber-700 dark:text-amber-400 cursor-pointer border-0 bg-transparent inline-flex items-center"
+                              title="Ver desglose Tarjetas"
+                            >
+                              <Eye className="w-3 h-3" />
+                            </button>
+                          </span>
                           <strong className="text-amber-700 dark:text-amber-300">{cardSum.toFixed(2)}</strong>
                         </div>
-                        <div className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex justify-between">
+                        <div className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex justify-between items-center">
                           <span className="text-slate-500 dark:text-slate-400">Propinas:</span>
                           <strong className="text-amber-600 dark:text-amber-400">{sPropinas.toFixed(2)}</strong>
                         </div>
                       </div>
+
+                      {/* Desglose Digital expandido en Mobile */}
+                      {expandedDig[s.id] && (
+                        <div className="text-[11px] p-2 rounded-xl bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/40 text-blue-900 dark:text-blue-200 space-y-1 animate-in fade-in duration-150">
+                          <div className="flex justify-between"><span>Yape:</span><strong className="tabular-nums">S/. {(s.ingresos?.yape || 0).toFixed(2)}</strong></div>
+                          <div className="flex justify-between"><span>Plin:</span><strong className="tabular-nums">S/. {(s.ingresos?.plin || 0).toFixed(2)}</strong></div>
+                        </div>
+                      )}
+
+                      {/* Desglose Tarjetas expandido en Mobile */}
+                      {expandedTarj[s.id] && (
+                        <div className="text-[11px] p-2 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/40 text-amber-900 dark:text-amber-200 space-y-1 animate-in fade-in duration-150">
+                          <div className="flex justify-between"><span>Izipay:</span><strong className="tabular-nums">S/. {(s.ingresos?.izipay || 0).toFixed(2)}</strong></div>
+                          <div className="flex justify-between"><span>Niubiz:</span><strong className="tabular-nums">S/. {(s.ingresos?.niubiz || 0).toFixed(2)}</strong></div>
+                          {(s.ingresos?.tarjeta || 0) > 0 && (
+                            <div className="flex justify-between"><span>Otros:</span><strong className="tabular-nums">S/. {(s.ingresos?.tarjeta || 0).toFixed(2)}</strong></div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })

@@ -218,11 +218,13 @@ const TablesView = () => {
                 const comandaActiva = t.comandas?.find(c => c.estado && !['cerrada', 'anulada'].includes(c.estado.toLowerCase()));
                 const debaBloquear = t.estado === 'libre' && !isCajaAbierta;
 
-                let estadoMobile = 'CERRADA';
-                if (t.estado === 'ocupada') {
-                    estadoMobile = (t.estado === 'cuenta' || comandaActiva?.estado === 'cuenta') ? 'CUENTA' : 'OCUPADA';
-                } else if (debaBloquear) {
+                let estadoMobile = 'LIBRE';
+                if (debaBloquear) {
                     estadoMobile = 'CERRADA';
+                } else if (t.estado === 'ocupada' || t.estado === 'cuenta') {
+                    estadoMobile = (t.estado === 'cuenta' || comandaActiva?.estado === 'cuenta') ? 'CUENTA' : 'OCUPADA';
+                } else {
+                    estadoMobile = 'LIBRE';
                 }
 
                 const pedidos = (comandaActiva?.detalles || []).map(d => ({
@@ -1564,6 +1566,9 @@ const TablesView = () => {
                     tables={mobileTables}
                     onUpdateTables={handleUpdateMobileTables}
                     dishes={dishesForMobile}
+                    onOpenOrder={(tableId, comensales) => {
+                        navigate(`/order/${tableId}`, { state: { comensales } });
+                    }}
                     onNotify={(msg) => showToast(msg, 'info')}
                 />
             </div>
