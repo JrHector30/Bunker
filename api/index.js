@@ -1461,8 +1461,8 @@ app.post('/api/categories', async (req, res) => {
         const tenantId = getTenantId(req);
         const category = await prisma.categoria.create({
             data: {
-                nombre,
-                color,
+                nombre: (nombre || '').trim(),
+                color: color || '#000000',
                 icono: icono || '',
                 orden: parseInt(orden || 0),
                 activo: activo !== undefined ? Boolean(activo) : true,
@@ -1472,7 +1472,10 @@ app.post('/api/categories', async (req, res) => {
         });
         res.json(category);
     } catch (e) {
-        res.status(400).json({ error: e.message });
+        if (e.code === 'P2002') {
+            return res.status(400).json({ error: `Ya existe una categoría llamada "${nombre}" en este restaurante.` });
+        }
+        res.status(400).json({ error: e.message || 'Error al crear la categoría.' });
     }
 });
 
