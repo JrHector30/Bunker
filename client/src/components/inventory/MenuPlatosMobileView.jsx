@@ -128,6 +128,7 @@ function CheckboxButton({ checked, indeterminate = false, onChange, ariaLabel })
 export const MenuPlatosMobileView = ({
   dishes = [],
   insumos = [],
+  categories = [],
   onUpdateDishes,
   onNotify = () => {},
 }) => {
@@ -635,7 +636,7 @@ export const MenuPlatosMobileView = ({
                 ...ALL_CATEGORIES.map((cat) => ({
                   value: cat,
                   label: cat,
-                  emoji: CATEGORY_BADGES[cat].emoji,
+                  emoji: CATEGORY_BADGES[cat]?.emoji || '🍽️',
                 })),
               ]}
             />
@@ -1116,6 +1117,8 @@ export const MenuPlatosMobileView = ({
         isOpen={dishModalOpen}
         mode={dishModalMode}
         initialDish={editingDish}
+        categories={categories}
+        existingDishes={dishes}
         onClose={() => {
           setDishModalOpen(false);
           setEditingDish(null);

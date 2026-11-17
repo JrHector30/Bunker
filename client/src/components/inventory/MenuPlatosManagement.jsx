@@ -31,6 +31,7 @@ import { DeleteConfirmModal } from './DeleteConfirmModal';
 import SmoothDropdown from '../ui/SmoothDropdown';
 import CustomCheckbox from '../ui/CustomCheckbox';
 import { getActiveRestaurant } from '../../utils/tenant';
+import MenuPlatosMobileView from './MenuPlatosMobileView';
 
 // Imágenes de platos de alta definición
 import imgAguaMineral from '../../assets/images/dishes/dish_agua_mineral_1794716320063.jpg';
@@ -126,6 +127,7 @@ function DishThumbnail({ src, alt, className }) {
 export default function MenuPlatosManagement({
   products = [],
   categories = [],
+  insumos = [],
   onRefresh,
   showToast,
   showConfirmation,
@@ -134,6 +136,8 @@ export default function MenuPlatosManagement({
   const navigate = useNavigate();
   const currentRest = getActiveRestaurant();
   const restaurantId = currentRest?.id || 1;
+
+  const [localMobileDishes, setLocalMobileDishes] = useState(null);
 
   // Estados de filtros
   const [searchQuery, setSearchQuery] = useState('');
@@ -215,6 +219,28 @@ export default function MenuPlatosManagement({
     // Ordenamiento alfabético garantizado
     return list.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }));
   }, [products, categories, statusMap]);
+
+  // Sincronizar platos para vista móvil
+  useEffect(() => {
+    setLocalMobileDishes(null);
+  }, [products]);
+
+  const dishesForMobile = useMemo(() => {
+    if (localMobileDishes) return localMobileDishes;
+    return normalizedDishes.map((d) => ({
+      ...d,
+      categoria: d.categoriaNombre || (typeof d.categoria === 'string' ? d.categoria : d.categoria?.nombre) || 'Plato Principal',
+      sku: d.sku || d.codigo || `PL-${d.id}`,
+    }));
+  }, [normalizedDishes, localMobileDishes]);
+
+  const handleUpdateMobileDishes = (updater) => {
+    setLocalMobileDishes((prev) => {
+      const base = prev || dishesForMobile;
+      const next = typeof updater === 'function' ? updater(base) : updater;
+      return next;
+    });
+  };
 
   // KPIs de Rentabilidad con persistencia en localStorage por local
   const kpis = useMemo(() => {
@@ -612,8 +638,21 @@ export default function MenuPlatosManagement({
 
   return (
     <div className="space-y-4 animate-fade-in text-left">
-      {/* NIVEL 1: Encabezado Superior con Botones SuperAdminView */}
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Vista Móvil para Teléfonos */}
+      <div className="md:hidden">
+        <MenuPlatosMobileView
+          dishes={dishesForMobile}
+          insumos={insumos}
+          categories={categories}
+          onUpdateDishes={handleUpdateMobileDishes}
+          onNotify={(msg) => (showToast ? showToast(msg, 'info') : null)}
+        />
+      </div>
+
+      {/* Vista Desktop Completa (hidden md:block) */}
+      <div className="hidden md:block space-y-4">
+        {/* NIVEL 1: Encabezado Superior con Botones SuperAdminView */}
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3.5 min-w-0">
           <div className="flex flex-wrap items-baseline gap-2.5 min-w-0">
             <h1 className="text-[20px] sm:text-[22px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
@@ -1272,6 +1311,7 @@ export default function MenuPlatosManagement({
           </div>
         </div>
       </section>
+      </div>
 
       {/* Modal Crear / Editar Plato */}
       <DishModal

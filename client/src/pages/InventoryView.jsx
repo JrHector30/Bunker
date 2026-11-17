@@ -1003,6 +1003,7 @@ const InventoryView = () => {
             <MenuPlatosManagement
                 products={products}
                 categories={categories}
+                insumos={insumos}
                 onRefresh={fetchData}
                 showToast={showToast}
                 showConfirmation={showConfirmation}
