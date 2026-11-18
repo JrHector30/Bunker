@@ -11,7 +11,6 @@ import { useAuth } from '../context/AuthContext';
 import { useCache } from '../hooks/useCache';
 import CategorizedCombobox from '../components/CategorizedCombobox';
 import SimpleCombobox from '../components/SimpleCombobox';
-import DeleteButton from '../components/ui/DeleteButton';
 import EditButton from '../components/ui/EditButton';
 import CloseButton from '../components/ui/CloseButton';
 import { CustomCheckbox } from '../components/ui/CustomCheckbox';

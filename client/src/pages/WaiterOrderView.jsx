@@ -6,7 +6,7 @@ import { Plus, Minus, Send, Trash2, ArrowLeft, Search, Image as ImageIcon, FileT
 import { useCache, setOptimisticLock } from '../hooks/useCache';
 import { enqueueTicket } from '../utils/printer';
 import { getActiveRestaurant } from '../utils/tenant';
-import DeleteButton from '../components/ui/DeleteButton';
+import Trash2Icon from '../components/ui/Trash2Icon';
 import CloseButton from '../components/ui/CloseButton';
 import { db, networkStatus, NetworkState, offlineOrderService, offlineSnapshotService } from '../offline';
 
@@ -520,7 +520,14 @@ const WaiterOrderView = () => {
                                         >
                                             <FileText size={16} />
                                         </button>
-                                         <DeleteButton onClick={() => removeFromCart(item.tempId)} className="scale-[0.67] -mx-2 -my-2" />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeFromCart(item.tempId)}
+                                            title="Quitar producto"
+                                            className="p-1.5 rounded-lg bg-transparent hover:bg-red-50 dark:hover:bg-red-950/30 text-black dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors cursor-pointer border-0 flex items-center justify-center active:scale-95"
+                                        >
+                                            <Trash2Icon className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 </div>
 

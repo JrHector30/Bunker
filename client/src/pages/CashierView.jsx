@@ -20,7 +20,7 @@ import { useCache } from '../hooks/useCache';
 import { useCaja } from '../context/CajaContext';
 
 import { DropdownRangeDatePicker } from '../components/DropdownRangeDatePicker';
-import DeleteButton from '../components/ui/DeleteButton';
+import Trash2Icon from '../components/ui/Trash2Icon';
 import CloseButton from '../components/ui/CloseButton';
 import { CustomCharts } from '../components/CustomCharts';
 import { CheckoutModal } from '../components/CheckoutModal';
@@ -2032,7 +2032,8 @@ const CashierView = () => {
                         </div>
 
                         <div className="flex items-center gap-2 mt-4 font-sans">
-                          <DeleteButton
+                          <button
+                            type="button"
                             onClick={async () => {
                               const motivo = await showConfirmation("Motivo de Anulación", {
                                 message: "Por favor, detalle la razón por la cual se está cancelando la comanda total:",
@@ -2059,8 +2060,10 @@ const CashierView = () => {
                               }
                             }}
                             title="Anular Pedido Total"
-                            className="scale-75 -my-2 -mx-1"
-                          />
+                            className="p-2 rounded-xl bg-transparent hover:bg-red-50 dark:hover:bg-red-950/30 text-black dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors cursor-pointer border-0 flex items-center justify-center active:scale-95 shrink-0"
+                          >
+                            <Trash2Icon className="w-5 h-5" />
+                          </button>
                           <button
                             onClick={() => handleOpenCheckout(cuenta)}
                             className="flex-1 min-h-[38px] py-2 px-3 text-xs font-bold rounded-full bg-[#F26522] hover:bg-[#EA580C] text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all"
@@ -2175,7 +2178,8 @@ const CashierView = () => {
                         </div>
 
                         <div className="flex items-center gap-2 mt-3 pt-2">
-                          <DeleteButton
+                          <button
+                            type="button"
                             onClick={async () => {
                               const motivo = await showConfirmation("Motivo de Anulación", {
                                 message: "Por favor, detalle la razón por la cual se está cancelando la comanda total:",
@@ -2203,8 +2207,10 @@ const CashierView = () => {
                               }
                             }}
                             title="Anular Pedido Total"
-                            className="scale-75 -my-2 -mx-1"
-                          />
+                            className="p-2 rounded-xl bg-transparent hover:bg-red-50 dark:hover:bg-red-950/30 text-black dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors cursor-pointer border-0 flex items-center justify-center active:scale-95 shrink-0"
+                          >
+                            <Trash2Icon className="w-5 h-5" />
+                          </button>
                           <button
                             onClick={() => {
                               handleOpenCheckout(cuenta);

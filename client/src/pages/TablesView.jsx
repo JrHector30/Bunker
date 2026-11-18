@@ -9,7 +9,7 @@ import { useCache } from '../hooks/useCache';
 import { useCaja } from '../context/CajaContext';
 import { enqueueTicket } from '../utils/printer';
 import { getActiveRestaurant } from '../utils/tenant';
-import DeleteButton from '../components/ui/DeleteButton';
+import Trash2Icon from '../components/ui/Trash2Icon';
 import CloseButton from '../components/ui/CloseButton';
 import { networkStatus, NetworkState, db, offlineOrderService, offlineSnapshotService } from '../offline';
 import MesasMobileView from '../components/tables/MesasMobileView';
@@ -1074,10 +1074,14 @@ const TablesView = () => {
                                                                 ✓ Listo
                                                             </button>
                                                         ) : (
-                                                            <DeleteButton
+                                                            <button
+                                                                type="button"
                                                                 onClick={() => deleteItem(item.detailIds[0])}
-                                                                className="scale-75 -my-2 -mx-1"
-                                                            />
+                                                                title="Eliminar producto"
+                                                                className="p-1.5 rounded-lg bg-transparent hover:bg-red-50 dark:hover:bg-red-950/30 text-black dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors cursor-pointer border-0 flex items-center justify-center active:scale-95"
+                                                            >
+                                                                <Trash2Icon className="w-4 h-4" />
+                                                            </button>
                                                         )}
                                                     </div>
                                                 </td>
