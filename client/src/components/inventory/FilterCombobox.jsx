@@ -64,11 +64,16 @@ export function FilterCombobox({
             isFull ? 'w-full' : 'whitespace-nowrap'
           } ${
             isFiltered
-              ? 'border-[#F26522]/45 bg-orange-50/80 dark:bg-orange-950/40 text-[#C2410C] dark:text-orange-300 shadow-[0_1px_2px_rgba(242,101,34,0.08)]'
+              ? 'shadow-[0_1px_2px_rgba(0,0,0,0.08)] font-semibold'
               : open
-                ? 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs ring-2 ring-[#F26522]/15'
+                ? 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
                 : 'border-slate-200/90 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
           }`}
+          style={isFiltered ? {
+            borderColor: 'color-mix(in srgb, var(--primary, #F26522) 45%, transparent)',
+            backgroundColor: 'color-mix(in srgb, var(--primary, #F26522) 12%, transparent)',
+            color: 'var(--primary, #F26522)',
+          } : undefined}
         >
           <span className="flex items-center gap-2 min-w-0">
             {selectedOption?.emoji ? (
@@ -82,11 +87,8 @@ export function FilterCombobox({
               />
             ) : LeadingIcon ? (
               <LeadingIcon
-                className={`w-3.5 h-3.5 shrink-0 ${
-                  isFiltered
-                    ? 'text-[#F26522]'
-                    : 'text-slate-400 dark:text-slate-400'
-                }`}
+                className="w-3.5 h-3.5 shrink-0"
+                style={isFiltered ? { color: 'var(--primary, #F26522)' } : undefined}
               />
             ) : null}
             <span className="truncate">{selectedOption?.label}</span>
@@ -95,7 +97,8 @@ export function FilterCombobox({
           <ChevronDown
             className={`w-3.5 h-3.5 shrink-0 transition-transform duration-150 ${
               open ? 'rotate-180' : ''
-            } ${isFiltered ? 'text-[#F26522]' : 'text-slate-400'}`}
+            } ${isFiltered ? '' : 'text-slate-400'}`}
+            style={isFiltered ? { color: 'var(--primary, #F26522)' } : undefined}
           />
         </button>
       )}
@@ -125,9 +128,13 @@ export function FilterCombobox({
                   }}
                   className={`px-3 py-2 text-[13px] font-medium rounded-xl flex items-center justify-between gap-2.5 cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-orange-50/80 dark:bg-orange-950/40 text-[#C2410C] dark:text-orange-300 font-semibold'
+                      ? 'font-semibold'
                       : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
+                  style={isSelected ? {
+                    backgroundColor: 'color-mix(in srgb, var(--primary, #F26522) 15%, transparent)',
+                    color: 'var(--primary, #F26522)',
+                  } : undefined}
                 >
                   <span className="flex items-center gap-2 truncate">
                     {opt.emoji && (
@@ -144,7 +151,7 @@ export function FilterCombobox({
                     <span className="truncate">{opt.label}</span>
                   </span>
                   {isSelected && (
-                    <Check className="w-3.5 h-3.5 text-[#F26522] shrink-0" />
+                    <Check className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--primary, #F26522)' }} />
                   )}
                 </li>
               );

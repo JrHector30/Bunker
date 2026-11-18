@@ -18,9 +18,13 @@ export const ToggleSwitch = ({
       className={`relative w-11 h-6 rounded-full transition-colors shrink-0 border-0 p-0 outline-none focus:outline-none focus:ring-0 select-none ${
         disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
       } ${
-        checked ? 'bg-[#F26522]' : 'bg-slate-300 dark:bg-slate-600'
+        checked ? '' : 'bg-slate-300 dark:bg-slate-600'
       } ${className}`}
-      style={{ border: 'none', outline: 'none' }}
+      style={{
+        border: 'none',
+        outline: 'none',
+        ...(checked ? { backgroundColor: 'var(--primary, #F26522)' } : {}),
+      }}
     >
       <span
         className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ease-in-out pointer-events-none ${

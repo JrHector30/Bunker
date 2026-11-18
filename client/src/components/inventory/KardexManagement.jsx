@@ -257,9 +257,9 @@ export default function KardexManagement({
       const fechaHora = isNaN(dateObj.getTime())
         ? ''
         : dateObj.toLocaleString('es-PE', {
-            dateStyle: 'short',
-            timeStyle: 'medium',
-          });
+          dateStyle: 'short',
+          timeStyle: 'medium',
+        });
       const usuario = m.usuario?.nombre || 'General / Sistema';
       const isSinReceta = !!m.sinReceta;
 
@@ -483,7 +483,8 @@ export default function KardexManagement({
           <button
             type="button"
             onClick={() => setIsManualModalOpen(true)}
-            className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border-0 bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)] cursor-pointer active:scale-95 transition-all"
+            className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border-0 text-white shadow-md cursor-pointer active:scale-95 transition-all"
+            style={{ backgroundColor: 'var(--primary, #F26522)' }}
           >
             <Plus className="w-4 h-4" />
             <span>Nuevo Movimiento</span>
@@ -499,11 +500,10 @@ export default function KardexManagement({
         <button
           type="button"
           onClick={() => handleKpiClick('TOTAL')}
-          className={`text-left rounded-2xl bg-white dark:bg-slate-900 border p-4 transition-all cursor-pointer shadow-xs ${
-            typeFilter === 'Todos'
+          className={`text-left rounded-2xl bg-white dark:bg-slate-900 border p-4 transition-all cursor-pointer shadow-xs ${typeFilter === 'Todos'
               ? 'border-slate-400 dark:border-slate-500 ring-2 ring-slate-400/20'
               : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
@@ -525,11 +525,10 @@ export default function KardexManagement({
         <button
           type="button"
           onClick={() => handleKpiClick('ENTRADA')}
-          className={`text-left rounded-2xl bg-white dark:bg-slate-900 border p-4 transition-all cursor-pointer shadow-xs ${
-            typeFilter === 'ENTRADA'
+          className={`text-left rounded-2xl bg-white dark:bg-slate-900 border p-4 transition-all cursor-pointer shadow-xs ${typeFilter === 'ENTRADA'
               ? 'border-emerald-500 ring-2 ring-emerald-500/15'
               : 'border-slate-200/80 dark:border-slate-800 hover:border-emerald-300'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
@@ -551,11 +550,10 @@ export default function KardexManagement({
         <button
           type="button"
           onClick={() => handleKpiClick('VENTA')}
-          className={`text-left rounded-2xl bg-white dark:bg-slate-900 border p-4 transition-all cursor-pointer shadow-xs ${
-            typeFilter === 'VENTA'
+          className={`text-left rounded-2xl bg-white dark:bg-slate-900 border p-4 transition-all cursor-pointer shadow-xs ${typeFilter === 'VENTA'
               ? 'border-[#F26522] ring-2 ring-[#F26522]/15'
               : 'border-slate-200/80 dark:border-slate-800 hover:border-orange-300'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
@@ -577,11 +575,10 @@ export default function KardexManagement({
         <button
           type="button"
           onClick={() => handleKpiClick('MERMA')}
-          className={`text-left rounded-2xl bg-white dark:bg-slate-900 border p-4 transition-all cursor-pointer shadow-xs ${
-            typeFilter === 'MERMA'
+          className={`text-left rounded-2xl bg-white dark:bg-slate-900 border p-4 transition-all cursor-pointer shadow-xs ${typeFilter === 'MERMA'
               ? 'border-rose-500 ring-2 ring-rose-500/15'
               : 'border-slate-200/80 dark:border-slate-800 hover:border-rose-300'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
@@ -657,11 +654,10 @@ export default function KardexManagement({
                   setViewMode('agrupado');
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-lg border-0 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  viewMode === 'agrupado'
+                className={`px-3 py-1.5 rounded-lg border-0 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${viewMode === 'agrupado'
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                     : 'bg-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <Layers className="w-3.5 h-3.5" />
                 <span>Por Comanda</span>
@@ -672,11 +668,10 @@ export default function KardexManagement({
                   setViewMode('detallado');
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-lg border-0 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  viewMode === 'detallado'
+                className={`px-3 py-1.5 rounded-lg border-0 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${viewMode === 'detallado'
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                     : 'bg-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <List className="w-3.5 h-3.5" />
                 <span>Detallado</span>
@@ -777,9 +772,8 @@ export default function KardexManagement({
                         </td>
                         <td
                           style={{ textAlign: 'right' }}
-                          className={`py-3 px-4 text-right font-bold tabular-nums whitespace-nowrap ${
-                            isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#F26522]'
-                          }`}
+                          className={`py-3 px-4 text-right font-bold tabular-nums whitespace-nowrap ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#F26522]'
+                            }`}
                         >
                           {m.cantidad > 0 ? `+${m.cantidad}` : m.cantidad} {m.insumo?.unidadMedida || ''}
                         </td>
@@ -847,9 +841,8 @@ export default function KardexManagement({
                         [grp.key]: !prev[grp.key],
                       }))
                     }
-                    className={`w-full cursor-pointer overflow-hidden select-none bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-lg shadow-black/5 dark:shadow-black/40 transition-all duration-500 ease-in-out ${
-                      isOpen ? 'rounded-3xl' : 'rounded-2xl'
-                    }`}
+                    className={`w-full cursor-pointer overflow-hidden select-none bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-lg shadow-black/5 dark:shadow-black/40 transition-all duration-500 ease-in-out ${isOpen ? 'rounded-3xl' : 'rounded-2xl'
+                      }`}
                   >
                     {/* Cabecera */}
                     <div className="flex items-center gap-4 p-4">
@@ -874,11 +867,10 @@ export default function KardexManagement({
                         </div>
 
                         <p
-                          className={`text-sm text-neutral-500 dark:text-neutral-400 truncate transition-all duration-500 ease-in-out ${
-                            isOpen
+                          className={`text-sm text-neutral-500 dark:text-neutral-400 truncate transition-all duration-500 ease-in-out ${isOpen
                               ? 'mt-0 max-h-0 opacity-0'
                               : 'mt-0.5 max-h-6 opacity-100'
-                          }`}
+                            }`}
                         >
                           {grp.subtitulo} · {grp.usuario}
                         </p>
@@ -890,9 +882,8 @@ export default function KardexManagement({
                         </span>
                         <div className="flex h-8 w-8 items-center justify-center">
                           <ChevronUp
-                            className={`h-5 w-5 text-neutral-400 transition-transform duration-500 ease-in-out ${
-                              isOpen ? 'rotate-0' : 'rotate-180'
-                            }`}
+                            className={`h-5 w-5 text-neutral-400 transition-transform duration-500 ease-in-out ${isOpen ? 'rotate-0' : 'rotate-180'
+                              }`}
                           />
                         </div>
                       </div>
@@ -900,29 +891,27 @@ export default function KardexManagement({
 
                     {/* Lista desplegable con animación de arriba hacia abajo */}
                     <div
-                      className={`grid transition-all duration-500 ease-in-out ${
-                        isOpen
+                      className={`grid transition-all duration-500 ease-in-out ${isOpen
                           ? 'grid-rows-[1fr] opacity-100'
                           : 'grid-rows-[0fr] opacity-0'
-                      }`}
+                        }`}
                     >
                       <div className="overflow-hidden">
                         <div className="px-2 pb-4">
                           {grp.items.length === 0 ? (
                             <div className="mx-2 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-200 text-xs sm:text-sm font-medium flex items-center gap-2.5">
                               <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                              <span>El plato o los platos no tienen receta asignada.</span>
+                              <span>El plato no tiene receta asignada.</span>
                             </div>
                           ) : (
                             <div className="space-y-1">
                               {grp.items.map((item, index) => (
                                 <div
                                   key={item.id}
-                                  className={`flex items-start gap-3 rounded-xl p-3 transition-all duration-500 ease-in-out hover:bg-neutral-100 dark:hover:bg-neutral-800/50 ${
-                                    isOpen
+                                  className={`flex items-start gap-3 rounded-xl p-3 transition-all duration-500 ease-in-out hover:bg-neutral-100 dark:hover:bg-neutral-800/50 ${isOpen
                                       ? 'translate-y-0 opacity-100'
                                       : 'translate-y-4 opacity-0'
-                                  }`}
+                                    }`}
                                   style={{
                                     transitionDelay: isOpen ? `${index * 75}ms` : '0ms',
                                   }}
@@ -981,8 +970,8 @@ export default function KardexManagement({
                 const colorTypeClass = isPositive
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : isVenta
-                  ? 'text-[#F26522]'
-                  : 'text-rose-600 dark:text-rose-400';
+                    ? 'text-[#F26522]'
+                    : 'text-rose-600 dark:text-rose-400';
                 const qtyColorClass = isPositive ? 'text-emerald-600' : 'text-[#F26522]';
                 const sign = isPositive ? '+' : '';
 
@@ -1211,7 +1200,8 @@ export default function KardexManagement({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 text-xs font-bold rounded-full border-0 bg-[#F26522] hover:bg-[#DC5616] text-white shadow-xs cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+                  className="px-5 py-2 text-xs font-bold rounded-full border-0 text-white shadow-xs cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--primary, #F26522)' }}
                 >
                   {isSubmitting ? 'Guardando...' : 'Registrar en Kardex'}
                 </button>

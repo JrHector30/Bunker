@@ -92,9 +92,10 @@ export const KpiCards = ({
             key={metric.id}
             className={`relative rounded-2xl p-4 sm:p-5 transition-all duration-200 border flex flex-col justify-between min-h-[132px] ${
               isHighlighted
-                ? 'col-span-2 sm:col-span-1 border-transparent text-white bg-gradient-to-br from-[#F26522] to-[#EA580C] shadow-[0_8px_22px_-6px_rgba(242,101,34,0.45)]'
+                ? 'col-span-2 sm:col-span-1 border-transparent text-white shadow-[0_8px_22px_-6px_rgba(0,0,0,0.35)]'
                 : 'border-slate-200/80 bg-white text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:border-slate-800/90 dark:bg-[#131A26] dark:text-slate-100'
             }`}
+            style={isHighlighted ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
           >
             <div className="flex items-center justify-between gap-1.5">
               <div className="flex min-w-0 items-center gap-2">

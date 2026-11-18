@@ -124,9 +124,10 @@ const EmojiSelector = ({ value, onChange }) => {
                 onClick={() => setActiveTab(cat.id)}
                 className={`px-3 py-1.5 rounded-full border-0 text-[11px] font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 ${
                   activeTab === cat.id
-                    ? 'bg-[#F26522] text-white shadow-md font-bold'
+                    ? 'text-white shadow-md font-bold'
                     : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300'
                 }`}
+                style={activeTab === cat.id ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
               >
                 <span className="text-xs">{cat.icon}</span>
                 <span>{cat.name}</span>
@@ -148,9 +149,13 @@ const EmojiSelector = ({ value, onChange }) => {
                   }}
                   className={`w-9 h-9 rounded-xl border-0 flex items-center justify-center text-xl transition-all cursor-pointer hover:scale-125 active:scale-95 ${
                     isSelected
-                      ? 'bg-[#F26522]/20 ring-2 ring-[#F26522]'
+                      ? 'ring-2'
                       : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700'
                   }`}
+                  style={isSelected ? {
+                    backgroundColor: 'color-mix(in srgb, var(--primary, #F26522) 20%, transparent)',
+                    outlineColor: 'var(--primary, #F26522)',
+                  } : undefined}
                   title={`Seleccionar ${emoji}`}
                 >
                   {emoji}
@@ -509,7 +514,8 @@ export const CategoriesView = () => {
           <button
             type="button"
             onClick={() => handleOpenModal(null)}
-            className="min-h-[40px] w-full sm:w-auto border-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)] transition-colors cursor-pointer whitespace-nowrap"
+            className="min-h-[40px] w-full sm:w-auto border-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl text-white shadow-md transition-colors cursor-pointer whitespace-nowrap active:scale-95"
+            style={{ backgroundColor: 'var(--primary, #F26522)' }}
           >
             <Plus className="w-4 h-4" />
             <span>Nueva Categoría</span>
@@ -672,7 +678,7 @@ export const CategoriesView = () => {
         <div className="hidden md:block">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#F26522] text-white text-[11px] font-bold tracking-wider uppercase">
+              <tr className="text-white text-[11px] font-bold tracking-wider uppercase" style={{ backgroundColor: 'var(--primary, #F26522)' }}>
                 <th className="py-3.5 px-4 w-12">
                   <CustomCheckbox
                     checked={allSelected}
@@ -1075,7 +1081,8 @@ export const CategoriesView = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 min-h-[42px] border-0 rounded-xl bg-[#F26522] hover:bg-[#DC5616] text-white text-xs font-bold shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer font-sans"
+                  className="flex-1 min-h-[42px] border-0 rounded-xl text-white text-xs font-bold shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer font-sans"
+                  style={{ backgroundColor: 'var(--primary, #F26522)' }}
                 >
                   <Save size={16} /> {editingCategory ? 'Guardar Cambios' : 'Crear Categoría'}
                 </button>

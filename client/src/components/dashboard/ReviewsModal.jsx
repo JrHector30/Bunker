@@ -52,9 +52,10 @@ export const ReviewsModal = ({ onClose }) => {
                 onClick={() => setReviewFilter(tab.id)}
                 className={`px-4 py-2 rounded-full border-0 text-xs font-semibold transition-all whitespace-nowrap cursor-pointer select-none shadow-sm active:scale-95 ${
                   isActive
-                    ? 'bg-[#F26522] text-white shadow-md'
+                    ? 'text-white shadow-md'
                     : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300'
                 }`}
+                style={isActive ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
               >
                 {tab.label}
               </button>

@@ -617,9 +617,10 @@ export default function SettingsView() {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between gap-2 border transition-colors cursor-pointer ${isActive
-                  ? 'border-[#F26522] bg-orange-50/80 dark:bg-orange-950/30 text-[#F26522]'
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
                   : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300'
                   }`}
+                style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--primary) 12%, transparent)' } : undefined}
               >
                 <span className="inline-flex items-center gap-2 min-w-0">
                   {tab.icon}
@@ -851,9 +852,10 @@ export default function SettingsView() {
               type="button"
               onClick={handleSavePermissions}
               className={`w-full min-h-[42px] rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-all cursor-pointer border-0 active:scale-95 ${permissionsDirty
-                ? 'bg-[#F26522] active:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)]'
+                ? 'text-white shadow-md'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
                 }`}
+              style={permissionsDirty ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
             >
               <Save className="w-3.5 h-3.5" />
               <span>{permissionsDirty ? 'Guardar Cambios*' : 'Guardar Cambios'}</span>
@@ -905,9 +907,10 @@ export default function SettingsView() {
                       showToast(`Mostrando impresoras asignadas a ${st}.`, 'info');
                     }}
                     className={`min-h-[38px] rounded-xl text-xs font-bold border transition-colors cursor-pointer ${station === st
-                      ? 'bg-[#F26522] border-[#F26522] text-white'
+                      ? 'text-white'
                       : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
                       }`}
+                    style={station === st ? { backgroundColor: 'var(--primary, #F26522)', borderColor: 'var(--primary, #F26522)' } : undefined}
                   >
                     {st}
                   </button>
@@ -964,9 +967,10 @@ export default function SettingsView() {
                                   type="button"
                                   onClick={() => handleSaveUsbWidth(usbP.nombre, w)}
                                   className={`min-h-[34px] rounded-lg text-[11px] font-bold border-0 transition-colors cursor-pointer ${isSelected
-                                    ? 'bg-[#F26522] text-white shadow-sm'
+                                    ? 'text-white shadow-sm'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                     }`}
+                                  style={isSelected ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
                                 >
                                   {w}
                                 </button>
@@ -988,9 +992,10 @@ export default function SettingsView() {
                                   type="button"
                                   onClick={() => handleSaveUsbProfile(usbP.nombre, hw)}
                                   className={`min-h-[32px] px-2.5 rounded-lg text-[11px] font-bold border-0 transition-colors cursor-pointer ${isSelected
-                                    ? 'bg-[#F26522] text-white shadow-sm'
+                                    ? 'text-white shadow-sm'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                     }`}
+                                  style={isSelected ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
                                 >
                                   {hw}
                                 </button>
@@ -1130,7 +1135,12 @@ export default function SettingsView() {
                   type="button"
                   onClick={handleRefreshPrinters}
                   disabled={isRefreshingPrinters}
-                  className="min-h-[40px] rounded-xl border border-orange-200 dark:border-orange-900/40 bg-orange-50/60 dark:bg-orange-950/30 text-[#F26522] text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="min-h-[40px] rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--primary, #F26522) 35%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--primary, #F26522) 12%, transparent)',
+                    color: 'var(--primary, #F26522)',
+                  }}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingPrinters ? 'animate-spin' : ''}`} />
                   <span>Actualizar</span>
@@ -1259,9 +1269,10 @@ export default function SettingsView() {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={`min-h-[40px] px-4 py-2 rounded-t-xl text-xs font-bold inline-flex items-center gap-2 whitespace-nowrap border-b-2 transition-colors cursor-pointer ${isActive
-                  ? 'border-[#F26522] text-[#F26522] bg-orange-50/50 dark:bg-orange-950/20'
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
                   : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
+                style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--primary) 12%, transparent)' } : undefined}
               >
                 {tab.icon}
                 <span>{tab.label}</span>
@@ -1431,9 +1442,10 @@ export default function SettingsView() {
                 type="button"
                 onClick={handleSavePermissions}
                 className={`min-h-[40px] px-4 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0 border-0 ${permissionsDirty
-                  ? 'bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)]'
+                  ? 'text-white shadow-md'
                   : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
                   }`}
+                style={permissionsDirty ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>{permissionsDirty ? 'Guardar Cambios*' : 'Guardar Cambios'}</span>
@@ -1443,7 +1455,7 @@ export default function SettingsView() {
             <div className="overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#F26522] text-white text-xs font-bold uppercase tracking-wider">
+                  <tr className="text-white text-xs font-bold uppercase tracking-wider" style={{ backgroundColor: 'var(--primary, #F26522)' }}>
                     <th className="py-3 px-4">Módulo</th>
                     <th className="py-3 px-4 text-center w-28">Mozo</th>
                     <th className="py-3 px-4 text-center w-28">Cocina</th>
@@ -1545,9 +1557,10 @@ export default function SettingsView() {
                       showToast(`Mostrando impresoras asignadas a ${st}.`, 'info');
                     }}
                     className={`min-h-[34px] px-4 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${station === st
-                      ? 'bg-[#F26522] border-[#F26522] text-white'
+                      ? 'text-white'
                       : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                       }`}
+                    style={station === st ? { backgroundColor: 'var(--primary, #F26522)', borderColor: 'var(--primary, #F26522)' } : undefined}
                   >
                     {st}
                   </button>
@@ -1606,9 +1619,10 @@ export default function SettingsView() {
                                   type="button"
                                   onClick={() => handleSaveUsbWidth(usbP.nombre, w)}
                                   className={`px-2.5 py-1 rounded-md text-[11px] font-bold border-0 cursor-pointer transition-colors ${isSelected
-                                    ? 'bg-[#F26522] text-white shadow-sm'
+                                    ? 'text-white shadow-sm'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                     }`}
+                                  style={isSelected ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
                                 >
                                   {w}
                                 </button>
@@ -1630,9 +1644,10 @@ export default function SettingsView() {
                                   type="button"
                                   onClick={() => handleSaveUsbProfile(usbP.nombre, hw)}
                                   className={`px-2.5 py-1 rounded-md text-[11px] font-bold border-0 cursor-pointer transition-colors ${isSelected
-                                    ? 'bg-[#F26522] text-white shadow-sm'
+                                    ? 'text-white shadow-sm'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                     }`}
+                                  style={isSelected ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
                                 >
                                   {hw}
                                 </button>
@@ -1785,7 +1800,12 @@ export default function SettingsView() {
                     type="button"
                     disabled={isRefreshingPrinters}
                     onClick={handleRefreshPrinters}
-                    className="min-h-[38px] px-3.5 rounded-xl border border-orange-200 dark:border-orange-900/50 bg-orange-50/60 dark:bg-orange-950/30 text-[#F26522] text-xs font-bold inline-flex items-center gap-1.5 hover:bg-orange-100/70 dark:hover:bg-orange-900/40 cursor-pointer disabled:opacity-50"
+                    className="min-h-[38px] px-3.5 rounded-xl border text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    style={{
+                      borderColor: 'color-mix(in srgb, var(--primary, #F26522) 35%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--primary, #F26522) 12%, transparent)',
+                      color: 'var(--primary, #F26522)',
+                    }}
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingPrinters ? 'animate-spin' : ''}`} />
                     <span>Actualizar</span>

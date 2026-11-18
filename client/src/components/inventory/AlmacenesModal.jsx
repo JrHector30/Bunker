@@ -194,7 +194,8 @@ export const AlmacenesModal = ({
             />
             <button
               type="submit"
-              className="min-h-[42px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border-0 bg-[#F26522] hover:bg-[#DC5616] text-white shadow-xs transition-all cursor-pointer shrink-0 active:scale-95"
+              className="min-h-[42px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border-0 text-white shadow-xs transition-all cursor-pointer shrink-0 active:scale-95"
+              style={{ backgroundColor: 'var(--primary, #F26522)' }}
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Crear</span>

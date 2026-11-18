@@ -361,7 +361,8 @@ export const InsumoModal = ({
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 text-xs font-bold rounded-full border-0 bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_14px_-3px_rgba(242,101,34,0.5)] transition-all active:scale-95 cursor-pointer"
+              className="px-6 py-2.5 text-xs font-bold rounded-full border-0 text-white shadow-md transition-all active:scale-95 cursor-pointer"
+              style={{ backgroundColor: 'var(--primary, #F26522)' }}
             >
               {mode === 'create'
                 ? existingMatch

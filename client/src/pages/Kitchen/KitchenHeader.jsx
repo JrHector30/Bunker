@@ -191,9 +191,10 @@ export default function KitchenHeader() {
             title={isAudioEnabled ? 'Sonido Activado' : 'Sonido Silenciado'}
             className={`w-[42px] h-[42px] md:w-auto md:min-h-[42px] inline-flex items-center justify-center gap-2 md:px-4 md:py-2 text-xs font-bold rounded-full border-0 transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95 shadow-sm ${
               isAudioEnabled
-                ? 'bg-[#F26522] hover:bg-[#EA580C] text-white shadow-md'
+                ? 'text-white shadow-md'
                 : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300'
             }`}
+            style={isAudioEnabled ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
           >
             {isAudioEnabled ? (
               <Volume2 className="w-4 h-4" />

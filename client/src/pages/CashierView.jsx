@@ -1949,11 +1949,11 @@ const CashierView = () => {
 
         {/* --- DOCKED SIDEBAR DRAWERS (Cuentas Abiertas - Desktop xl+) --- */}
         {isSidebarDocked && (
-          <aside className="hidden xl:flex flex-col w-[290px] shrink-0 select-none font-sans sticky top-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 shadow-sm">
+          <aside className="hidden xl:flex flex-col w-[290px] shrink-0 select-none font-sans sticky top-6 rounded-2xl bg-white dark:bg-black border border-slate-200/80 dark:border-zinc-800 p-4 shadow-sm">
             <div className="space-y-3 flex-1 flex flex-col min-h-0">
 
               {/* Header */}
-              <div className="flex justify-between items-center pb-2 border-b border-slate-200/80 dark:border-slate-800">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-200/80 dark:border-zinc-800">
                 <div>
                   <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5 font-sans">
                     <Receipt className="w-4 h-4 text-emerald-500 animate-bounce" />
@@ -1967,7 +1967,7 @@ const CashierView = () => {
               </div>
 
               {/* Total floating pending */}
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800">
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200/70 dark:border-zinc-800">
                 <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400 mb-1">
                   <span className="font-semibold">Por cobrar en salón:</span>
                   <span className="font-bold text-sm text-slate-900 dark:text-white tabular-nums">
@@ -1981,7 +1981,7 @@ const CashierView = () => {
 
               {/* Table list container (scrollable) */}
               {openTables.length === 0 ? (
-                <div className="text-center py-12 text-xs text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 space-y-2 font-sans">
+                <div className="text-center py-12 text-xs text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-zinc-800 rounded-xl bg-slate-50/50 dark:bg-zinc-900/20 space-y-2 font-sans">
                   <CheckCircle className="w-8 h-8 text-slate-400 opacity-60 mx-auto" />
                   <p className="font-semibold text-slate-800 dark:text-slate-200">¡Todo facturado!</p>
                   <p className="text-[10px] px-4 font-sans">No hay cuentas pendientes en salón en este momento.</p>
@@ -2003,22 +2003,22 @@ const CashierView = () => {
                     return (
                       <div
                         key={cuenta.id}
-                        className="p-3.5 rounded-xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between group hover:border-[var(--primary)] transition-all duration-300 shadow-xs"
+                        className="p-3.5 rounded-xl bg-white dark:bg-black border border-slate-200/80 dark:border-zinc-800 flex flex-col justify-between group hover:border-[var(--primary)] transition-all duration-300 shadow-xs"
                       >
                         <div className="flex justify-between items-start">
                           <span className="text-sm font-bold text-slate-900 dark:text-white font-sans">
                             Mesa {cuenta.mesa?.numero || ''}
                           </span>
-                          <span className="font-sans text-sm font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-900/30 tabular-nums">
+                          <span className="chart-pill-ingresos font-sans text-xs font-bold px-2.5 py-0.5 rounded-lg tabular-nums inline-flex items-center">
                             {comandaHasError ? 'Precio no disponible' : `S/. ${comandaTotal.toFixed(2)}`}
                           </span>
                         </div>
 
-                        <div className="mt-3 space-y-1.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 font-sans">
+                        <div className="mt-3 space-y-1.5 pt-2.5 border-t border-slate-100 dark:border-zinc-800 font-sans">
                           {cuenta.detalles?.map((prod, pIdx) => {
                             const price = resolveItemPrice(prod);
                             return (
-                              <div key={pIdx} className="flex justify-between text-[12px] font-medium text-slate-600 dark:text-slate-400">
+                              <div key={pIdx} className="flex justify-between text-[12px] font-medium text-slate-600 dark:text-zinc-400">
                                 <span className="truncate max-w-[150px]">
                                   <span className="font-bold text-slate-800 dark:text-slate-200 mr-1">{prod.cantidad}x</span>
                                   {prod.plato?.nombre || 'Plato sin datos'}
@@ -2065,10 +2065,12 @@ const CashierView = () => {
                             <Trash2Icon className="w-5 h-5" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleOpenCheckout(cuenta)}
-                            className="flex-1 min-h-[38px] py-2 px-3 text-xs font-bold rounded-full bg-[#F26522] hover:bg-[#EA580C] text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all"
+                            className="flex-1 min-h-[38px] py-2 px-3 text-xs font-bold rounded-xl text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all border-0 font-sans"
+                            style={{ backgroundColor: 'var(--primary, #F26522)' }}
                           >
-                            <Receipt className="w-3.5 h-3.5" />
+                            <Receipt className="w-3.5 h-3.5 text-white" />
                             <span>Cerrar e Imprimir</span>
                           </button>
                         </div>
@@ -2088,7 +2090,7 @@ const CashierView = () => {
           <div className="fixed inset-0 z-50 xl:hidden flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/60 backdrop-blur-[2px] no-print" onClick={() => setIsSidebarOpen(false)}>
             <div
               onClick={(e) => e.stopPropagation()}
-              className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl max-h-[85vh] flex flex-col p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden font-sans animate-in slide-in-from-bottom duration-200"
+              className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl max-h-[85vh] flex flex-col p-4 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 shadow-2xl overflow-hidden font-sans animate-in slide-in-from-bottom duration-200"
             >
               {/* Barra de arrastre solo móvil */}
               <div className="sm:hidden -mt-1 pb-2 flex justify-center">
@@ -2096,7 +2098,7 @@ const CashierView = () => {
               </div>
 
               {/* Header */}
-              <div className="flex justify-between items-center pb-3 border-b border-slate-200/80 dark:border-slate-800">
+              <div className="flex justify-between items-center pb-3 border-b border-slate-200/80 dark:border-zinc-800">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
                     <Wallet className="w-4 h-4 text-emerald-500" />
@@ -2113,7 +2115,7 @@ const CashierView = () => {
               </div>
 
               {/* Total floating pending */}
-              <div className="p-3 my-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800">
+              <div className="p-3 my-3 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200/70 dark:border-zinc-800">
                 <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400 mb-1">
                   <span className="font-semibold">Por cobrar en salón:</span>
                   <span className="font-bold text-sm text-slate-900 dark:text-white tabular-nums">
@@ -2127,7 +2129,7 @@ const CashierView = () => {
 
               {/* Table List container */}
               {openTables.length === 0 ? (
-                <div className="text-center py-10 text-xs text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/20 space-y-2">
+                <div className="text-center py-10 text-xs text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-zinc-800 rounded-2xl bg-slate-50/50 dark:bg-zinc-900/20 space-y-2">
                   <CheckCircle className="w-8 h-8 text-slate-400 opacity-60 mx-auto" />
                   <p className="font-semibold text-slate-800 dark:text-slate-200">¡Todo facturado!</p>
                   <p className="text-[10px] px-4">No hay cuentas pendientes en salón.</p>
@@ -2149,22 +2151,22 @@ const CashierView = () => {
                     return (
                       <div
                         key={cuenta.id}
-                        className="p-3.5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between shadow-xs hover:border-[var(--primary)] transition-all"
+                        className="p-3.5 rounded-2xl bg-white dark:bg-black border border-slate-200/80 dark:border-zinc-800 flex flex-col justify-between shadow-xs hover:border-[var(--primary)] transition-all"
                       >
                         <div className="flex justify-between items-start">
                           <span className="text-sm font-bold text-slate-900 dark:text-white">
                             Mesa {cuenta.mesa?.numero || ''}
                           </span>
-                          <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-950/20 px-2.5 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-900/30 tabular-nums">
+                          <span className="chart-pill-ingresos font-sans text-xs font-bold px-2.5 py-0.5 rounded-lg tabular-nums inline-flex items-center">
                             {comandaHasError ? 'Precio no disponible' : `S/. ${comandaTotal.toFixed(2)}`}
                           </span>
                         </div>
 
-                        <div className="mt-2.5 space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-[12px]">
+                        <div className="mt-2.5 space-y-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800 text-[12px]">
                           {cuenta.detalles?.map((prod, pIdx) => {
                             const price = resolveItemPrice(prod);
                             return (
-                              <div key={pIdx} className="flex justify-between text-slate-600 dark:text-slate-400">
+                              <div key={pIdx} className="flex justify-between text-slate-600 dark:text-zinc-400">
                                 <span className="truncate max-w-[200px]">
                                   <span className="font-semibold text-slate-800 dark:text-slate-200 mr-1.5">{prod.cantidad}x</span>
                                   {prod.plato?.nombre || 'Plato sin datos'}
@@ -2212,13 +2214,15 @@ const CashierView = () => {
                             <Trash2Icon className="w-5 h-5" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => {
                               handleOpenCheckout(cuenta);
                               setIsSidebarOpen(false);
                             }}
-                            className="flex-1 min-h-[40px] py-2 px-4 text-xs font-bold rounded-full bg-[#F26522] hover:bg-[#EA580C] text-white flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 transition-all"
+                            className="flex-1 min-h-[40px] py-2 px-4 text-xs font-bold rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 transition-all border-0 font-sans"
+                            style={{ backgroundColor: 'var(--primary, #F26522)' }}
                           >
-                            <Receipt className="w-3.5 h-3.5" />
+                            <Receipt className="w-3.5 h-3.5 text-white" />
                             <span>Cerrar e Imprimir</span>
                           </button>
                         </div>
@@ -2237,7 +2241,8 @@ const CashierView = () => {
         type="button"
         onClick={() => setIsSidebarOpen(true)}
         aria-label="Abrir Cuentas Abiertas para cobrar mesas"
-        className="xl:hidden fixed bottom-5 right-5 z-40 min-h-[48px] px-4 py-2.5 rounded-full bg-[#F26522] hover:bg-[#DC5616] active:scale-[0.97] text-white shadow-[0_12px_28px_-4px_rgba(242,101,34,0.55)] flex items-center gap-2 transition-all cursor-pointer no-print"
+        className="xl:hidden fixed bottom-5 right-5 z-40 min-h-[48px] px-4 py-2.5 rounded-full text-white shadow-lg flex items-center gap-2 transition-all cursor-pointer no-print border-0 active:scale-95"
+        style={{ backgroundColor: 'var(--primary, #F26522)' }}
       >
         <Wallet className="w-4 h-4 shrink-0" />
         <span className="text-xs font-bold tracking-wide whitespace-nowrap">

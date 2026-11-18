@@ -496,7 +496,8 @@ export const MenuPlatosMobileView = ({
               setEditingDish(null);
               setDishModalOpen(true);
             }}
-            className="min-h-[42px] inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border-0 bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_4px_14px_-3px_rgba(242,101,34,0.45)] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="min-h-[42px] inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border-0 text-white shadow-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            style={{ backgroundColor: 'var(--primary, #F26522)' }}
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Nuevo Plato</span>
@@ -1125,9 +1126,10 @@ export const MenuPlatosMobileView = ({
                     aria-current={isActive ? 'page' : undefined}
                     className={`min-w-[34px] min-h-[34px] px-2 py-1 text-xs font-semibold rounded-lg border tabular-nums cursor-pointer ${
                       isActive
-                        ? 'bg-[#F26522] text-white border-[#F26522]'
+                        ? 'text-white'
                         : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                     }`}
+                    style={isActive ? { backgroundColor: 'var(--primary, #F26522)', borderColor: 'var(--primary, #F26522)' } : undefined}
                   >
                     {p}
                   </button>

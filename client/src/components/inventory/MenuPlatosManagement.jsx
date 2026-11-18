@@ -769,7 +769,8 @@ export default function MenuPlatosManagement({
               setEditingDish(null);
               setDishModalOpen(true);
             }}
-            className="px-4 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md border-0 active:scale-95 bg-[#F26522] hover:bg-[#DC5616] text-white whitespace-nowrap shrink-0"
+            className="px-4 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md border-0 active:scale-95 text-white whitespace-nowrap shrink-0"
+            style={{ backgroundColor: 'var(--primary, #F26522)' }}
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Nuevo Plato</span>

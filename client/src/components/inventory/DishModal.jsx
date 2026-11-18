@@ -357,7 +357,8 @@ export const DishModal = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-md border-0 active:scale-95 bg-[#F26522] hover:bg-[#DC5616] text-white disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-md border-0 active:scale-95 text-white disabled:opacity-50"
+              style={{ backgroundColor: 'var(--primary, #F26522)' }}
             >
               {isSubmitting ? (
                 <span>Guardando...</span>

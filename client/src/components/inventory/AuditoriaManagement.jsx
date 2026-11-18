@@ -368,9 +368,10 @@ export default function AuditoriaManagement({
             onClick={() => setConfirmModalOpen(true)}
             className={`min-h-[40px] flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border-0 transition-all whitespace-nowrap ${
               kpis.totalChanges > 0
-                ? 'bg-[#F26522] hover:bg-[#DC5616] text-white shadow-[0_6px_16px_-4px_rgba(242,101,34,0.45)] cursor-pointer active:scale-95'
+                ? 'text-white shadow-md cursor-pointer active:scale-95'
                 : 'bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
             }`}
+            style={kpis.totalChanges > 0 ? { backgroundColor: 'var(--primary, #F26522)' } : undefined}
           >
             <ClipboardCheck className="w-4 h-4" />
             <span>
@@ -580,7 +581,7 @@ export default function AuditoriaManagement({
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-[#F26522] text-white text-[11px] font-bold tracking-wider uppercase">
+              <tr className="text-white text-[11px] font-bold tracking-wider uppercase" style={{ backgroundColor: 'var(--primary, #F26522)' }}>
                 <th
                   style={{ textAlign: 'left' }}
                   className="py-3.5 px-5 text-left font-bold cursor-pointer select-none"
@@ -1060,7 +1061,8 @@ export default function AuditoriaManagement({
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleConfirmApply}
-                className="flex-1 min-h-[42px] rounded-full border-0 bg-[#F26522] hover:bg-[#DC5616] text-white text-xs font-bold cursor-pointer shadow-xs active:scale-95 transition-all disabled:opacity-50"
+                className="flex-1 min-h-[42px] rounded-full border-0 text-white text-xs font-bold cursor-pointer shadow-xs active:scale-95 transition-all disabled:opacity-50"
+                style={{ backgroundColor: 'var(--primary, #F26522)' }}
               >
                 {isSubmitting ? 'Aplicando...' : `Confirmar (${pendingAdjustments.length})`}
               </button>
