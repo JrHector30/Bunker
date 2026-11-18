@@ -144,9 +144,16 @@ const DashboardLayout = () => {
     const [lowStockAlerts, setLowStockAlerts] = useState([]);
     const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
     const [isLogisticaExpanded, setIsLogisticaExpanded] = useState(() => {
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin/categories')) return true;
         const saved = localStorage.getItem('bunker_logistica_expanded');
         return saved === 'true';
     });
+
+    useEffect(() => {
+        if (location.pathname.startsWith('/admin/categories')) {
+            setIsLogisticaExpanded(true);
+        }
+    }, [location.pathname]);
 
     const toggleLogistica = () => {
         setIsLogisticaExpanded(prev => {
@@ -239,7 +246,6 @@ const DashboardLayout = () => {
         { id: 'tables', to: '/tables', icon: UtensilsCrossed, label: 'Mesas', modulo: 'mesas' },
         { id: 'kitchen', to: '/kitchen', icon: ChefHat, label: 'Cocina', modulo: 'cocina' },
         { id: 'cashier', to: '/cashier', icon: DollarSign, label: 'Caja', modulo: 'caja' },
-        { id: 'categories', to: '/admin/categories', icon: BookOpen, label: 'Categorías', modulo: 'categories' },
         { id: 'inventory', to: '/admin/inventory', icon: ChartColumn, label: 'Logística', modulo: 'logistica' },
         { id: 'users', to: '/admin/users', icon: User, label: 'Usuarios', modulo: 'usuarios' },
         { id: 'reports', to: '/admin/staff-stats', icon: TrendingUp, label: 'Reportes', modulo: 'reportes' },
@@ -247,7 +253,31 @@ const DashboardLayout = () => {
         { id: 'settings', to: '/settings', icon: Settings, label: 'Ajustes' },
     ];
 
-    const visibleMenuItems = menuItems.filter(item => !item.modulo || tienePermiso(item.modulo));
+    const visibleMenuItems = menuItems.filter(item => {
+        if (item.id === 'inventory') {
+            return tienePermiso('logistica') || tienePermiso('categories');
+        }
+        return !item.modulo || tienePermiso(item.modulo);
+    });
+
+    const logisticaSubItems = [
+        { id: 'logistica-platos', to: '/admin/inventory?tab=platos', icon: Utensils, label: 'Menú (Platos)', modulo: 'logistica' },
+        { id: 'logistica-categorias', to: '/admin/categories', icon: BookOpen, label: 'Categorías', modulo: 'categories' },
+        { id: 'logistica-insumos', to: '/admin/inventory?tab=insumos', icon: Package, label: 'Inventario (Insumos)', modulo: 'logistica' },
+        { id: 'logistica-recetario', to: '/admin/inventory?tab=recetarios', icon: Beaker, label: 'Recetarios (Costeo)', modulo: 'logistica' },
+        { id: 'logistica-kardex', to: '/admin/inventory?tab=kardex', icon: History, label: 'Kardex', modulo: 'logistica' },
+        { id: 'logistica-auditoria', to: '/admin/inventory?tab=auditoria', icon: ClipboardCheck, label: 'Auditoría', modulo: 'logistica' },
+    ];
+
+    const visibleSubItems = logisticaSubItems.filter(sub => !sub.modulo || tienePermiso(sub.modulo));
+
+    const isSubItemActive = (sub) => {
+        if (sub.to === '/admin/categories') {
+            return location.pathname.startsWith('/admin/categories');
+        }
+        const currentPathWithSearch = location.pathname + location.search;
+        return currentPathWithSearch === sub.to || (sub.to.includes('tab=platos') && currentPathWithSearch === '/admin/inventory');
+    };
 
     const getRoleName = (role) => {
         switch (role) {
@@ -267,7 +297,7 @@ const DashboardLayout = () => {
         if (location.pathname.startsWith('/tables')) return 'Mesas';
         if (location.pathname.startsWith('/kitchen')) return 'Cocina';
         if (location.pathname.startsWith('/cashier')) return 'Caja';
-        if (location.pathname.startsWith('/admin/categories')) return 'Categorías';
+        if (location.pathname.startsWith('/admin/categories')) return 'Logística: Categorías';
         if (location.pathname.startsWith('/admin/inventory')) {
             if (location.search.includes('tab=insumos')) return 'Logística: Insumos';
             if (location.search.includes('tab=recetarios')) return 'Logística: Recetarios';
@@ -363,15 +393,7 @@ const DashboardLayout = () => {
                             const Icon = item.icon;
 
                             if (item.id === 'inventory') {
-                                const logisticaSubItems = [
-                                    { id: 'logistica-platos', to: '/admin/inventory?tab=platos', icon: Utensils, label: 'Menú (Platos)' },
-                                    { id: 'logistica-insumos', to: '/admin/inventory?tab=insumos', icon: Package, label: 'Inventario (Insumos)' },
-                                    { id: 'logistica-recetario', to: '/admin/inventory?tab=recetarios', icon: Beaker, label: 'Recetarios (Costeo)' },
-                                    { id: 'logistica-kardex', to: '/admin/inventory?tab=kardex', icon: History, label: 'Kardex' },
-                                    { id: 'logistica-auditoria', to: '/admin/inventory?tab=auditoria', icon: ClipboardCheck, label: 'Auditoría' },
-                                ];
-
-                                const isPathActive = location.pathname.startsWith('/admin/inventory') || location.search.includes('tab=recetarios');
+                                const isPathActive = location.pathname.startsWith('/admin/inventory') || location.pathname.startsWith('/admin/categories') || location.search.includes('tab=recetarios');
 
                                 return (
                                     <div key={item.id} className="w-full flex flex-col gap-1">
@@ -441,10 +463,9 @@ const DashboardLayout = () => {
                                                     transition={{ duration: 0.2, ease: "easeInOut" }}
                                                     className="overflow-hidden flex flex-col gap-1 pl-4 mt-0.5 border-l border-slate-800 ml-6"
                                                 >
-                                                    {logisticaSubItems.map((sub) => {
+                                                    {visibleSubItems.map((sub) => {
                                                         const SubIcon = sub.icon;
-                                                        const currentPathWithSearch = location.pathname + location.search;
-                                                        const isSubActive = currentPathWithSearch === sub.to || (sub.to.includes('tab=platos') && currentPathWithSearch === '/admin/inventory');
+                                                        const isSubActive = isSubItemActive(sub);
 
                                                         return (
                                                             <Link
@@ -669,16 +690,9 @@ const DashboardLayout = () => {
                             <div className="px-2.5 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-800/60 mb-1">
                                 Logística
                             </div>
-                            {[
-                                { id: 'logistica-platos', to: '/admin/inventory?tab=platos', icon: Utensils, label: 'Menú (Platos)' },
-                                { id: 'logistica-insumos', to: '/admin/inventory?tab=insumos', icon: Package, label: 'Inventario (Insumos)' },
-                                { id: 'logistica-recetario', to: '/admin/inventory?tab=recetarios', icon: Beaker, label: 'Recetarios (Costeo)' },
-                                { id: 'logistica-kardex', to: '/admin/inventory?tab=kardex', icon: History, label: 'Kardex' },
-                                { id: 'logistica-auditoria', to: '/admin/inventory?tab=auditoria', icon: ClipboardCheck, label: 'Auditoría' },
-                            ].map((sub) => {
+                            {visibleSubItems.map((sub) => {
                                 const SubIcon = sub.icon;
-                                const currentPathWithSearch = location.pathname + location.search;
-                                const isSubActive = currentPathWithSearch === sub.to || (sub.to.includes('tab=platos') && currentPathWithSearch === '/admin/inventory');
+                                const isSubActive = isSubItemActive(sub);
                                 return (
                                     <Link
                                         key={sub.id}
@@ -738,15 +752,7 @@ const DashboardLayout = () => {
                                         const Icon = item.icon;
 
                                         if (item.id === 'inventory') {
-                                            const logisticaSubItems = [
-                                                { id: 'logistica-platos', to: '/admin/inventory?tab=platos', icon: Utensils, label: 'Menú (Platos)' },
-                                                { id: 'logistica-insumos', to: '/admin/inventory?tab=insumos', icon: Package, label: 'Inventario (Insumos)' },
-                                                { id: 'logistica-recetario', to: '/admin/inventory?tab=recetarios', icon: Beaker, label: 'Recetarios (Costeo)' },
-                                                { id: 'logistica-kardex', to: '/admin/inventory?tab=kardex', icon: History, label: 'Kardex' },
-                                                { id: 'logistica-auditoria', to: '/admin/inventory?tab=auditoria', icon: ClipboardCheck, label: 'Auditoría' },
-                                            ];
-
-                                            const isPathActive = location.pathname.startsWith('/admin/inventory') || location.search.includes('tab=recetarios');
+                                            const isPathActive = location.pathname.startsWith('/admin/inventory') || location.pathname.startsWith('/admin/categories') || location.search.includes('tab=recetarios');
 
                                             return (
                                                 <div key={item.id} className="pt-1 pb-1">
@@ -774,10 +780,9 @@ const DashboardLayout = () => {
 
                                                     {isLogisticaExpanded && (
                                                         <div className="relative mt-1.5 ml-5 pl-3 border-l border-white/[0.12] space-y-1">
-                                                            {logisticaSubItems.map((sub) => {
+                                                            {visibleSubItems.map((sub) => {
                                                                 const SubIcon = sub.icon;
-                                                                const currentPathWithSearch = location.pathname + location.search;
-                                                                const isSubActive = currentPathWithSearch === sub.to || (sub.to.includes('tab=platos') && currentPathWithSearch === '/admin/inventory');
+                                                                const isSubActive = isSubItemActive(sub);
                                                                 return (
                                                                     <Link
                                                                         key={sub.id}
