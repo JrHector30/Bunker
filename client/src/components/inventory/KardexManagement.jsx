@@ -17,12 +17,44 @@ import {
   SlidersHorizontal,
   ListFilter,
   Layers,
+  ReceiptText,
+  Package,
+  List,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { FilterCombobox } from './FilterCombobox';
 import CloseButton from '../ui/CloseButton';
 import { DropdownRangeDatePicker } from '../DropdownRangeDatePicker';
+
+const TYPE_STYLE = {
+  VENTA: {
+    badge: 'bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800',
+    text: 'text-[#F26522]',
+  },
+  ENTRADA: {
+    badge: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
+    text: 'text-emerald-600 dark:text-emerald-400',
+  },
+  MERMA: {
+    badge: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800',
+    text: 'text-rose-600 dark:text-rose-400',
+  },
+  AJUSTE: {
+    badge: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
+    text: 'text-amber-600 dark:text-amber-400',
+  },
+  COMPRA: {
+    badge: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
+    text: 'text-emerald-600 dark:text-emerald-400',
+  },
+};
+
+function formatSignedQty(cantidad, unidad) {
+  const num = Number(cantidad) || 0;
+  const sign = num > 0 ? '+' : '';
+  return `${sign}${num} ${unidad || ''}`.trim();
+}
 
 function parseMotivo(motivo) {
   if (!motivo) return { line1: 'Sin motivo especificado', line2: null };
@@ -58,9 +90,9 @@ export default function KardexManagement({
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('Todos'); // 'Todos' | 'VENTA' | 'ENTRADA' | 'MERMA'
   const [userFilter, setUserFilter] = useState('Todos');
-  const [viewMode, setViewMode] = useState('detallado'); // 'detallado' | 'comanda'
+  const [viewMode, setViewMode] = useState('agrupado'); // 'agrupado' | 'detallado'
   const [currentPage, setCurrentPage] = useState(1);
-  const [openGroups, setOpenGroups] = useState(new Set());
+  const [expandedGroups, setExpandedGroups] = useState({});
 
   // Modal State
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -212,77 +244,86 @@ export default function KardexManagement({
     });
   }, [enrichedMovements, typeFilter, userFilter, searchTerm, dateRange]);
 
-  // 5. Grouped by Comanda / Operation (Vista Por Comanda idéntica a Google AI Studio)
+  // 5. Grouped by Comanda / Operation
   const groupedComandas = useMemo(() => {
     const groups = [];
     const groupMap = new Map();
 
     filteredMovements.forEach((m) => {
       let key;
-      let title = '';
-      let subtitle = '';
+      let titulo = '';
+      let subtitulo = '';
+      const dateObj = new Date(m.fecha);
+      const fechaHora = isNaN(dateObj.getTime())
+        ? ''
+        : dateObj.toLocaleString('es-PE', {
+            dateStyle: 'short',
+            timeStyle: 'medium',
+          });
+      const usuario = m.usuario?.nombre || 'General / Sistema';
+      const isSinReceta = !!m.sinReceta;
 
-      if (m.tipoMovimiento === 'VENTA') {
+      if (isSinReceta) {
+        key = `SINRECETA-${m.id}`;
+        titulo = `MERMA Comanda N° ${m.comandaNumero || 'S/N'} Plato: ${m.platoNombre || m.insumo?.nombre || 'Plato sin receta'}`;
+        subtitulo = m.motivo || 'Anulación de pedido';
+      } else if (m.tipoMovimiento === 'VENTA') {
         const match = m.motivo?.match(/Comanda N°\s*(\d+)/i);
         const comandaNum = match ? match[1] : null;
         const parsed = parseMotivo(m.motivo);
-        const dateMinute = new Date(m.fecha).toISOString().slice(0, 16);
+        const dateMinute = !isNaN(dateObj.getTime()) ? dateObj.toISOString().slice(0, 16) : '';
 
         key = comandaNum
           ? `VENTA-${comandaNum}-${parsed.line2 || ''}-${dateMinute}`
           : `VENTA-${m.id}`;
 
-        title = comandaNum
+        titulo = comandaNum
           ? `Comanda N° ${comandaNum}${parsed.line2 ? ` · ${parsed.line2}` : ''}`
           : m.motivo || 'Venta POS';
 
-        subtitle = `${new Date(m.fecha).toLocaleString('es-PE', {
-          dateStyle: 'short',
-          timeStyle: 'medium',
-        })} · ${m.usuario?.nombre || 'General'}`;
+        subtitulo = parsed.line1 || 'Venta POS';
       } else {
-        const dateMinute = new Date(m.fecha).toISOString().slice(0, 16);
-        key = `${m.tipoMovimiento}-${m.motivo || ''}-${dateMinute}-${m.usuario?.nombre || ''}`;
-        title = `${m.insumo?.nombre || 'Insumo'} · ${m.motivo || m.tipoMovimiento}`;
-        subtitle = `${new Date(m.fecha).toLocaleString('es-PE', {
-          dateStyle: 'short',
-          timeStyle: 'medium',
-        })} · ${m.usuario?.nombre || 'General'}`;
+        const dateMinute = !isNaN(dateObj.getTime()) ? dateObj.toISOString().slice(0, 16) : '';
+        key = `${m.tipoMovimiento}-${m.motivo || ''}-${dateMinute}-${usuario}`;
+        titulo = `${m.insumo?.nombre || 'Insumo'} · ${m.motivo || m.tipoMovimiento}`;
+        subtitulo = m.motivo || m.tipoMovimiento;
       }
 
       if (!groupMap.has(key)) {
         const groupObj = {
           key,
           tipo: m.tipoMovimiento,
-          title,
-          subtitle,
+          titulo,
+          subtitulo,
+          usuario,
+          fechaHora,
+          sinReceta: isSinReceta,
           items: [],
         };
         groupMap.set(key, groupObj);
         groups.push(groupObj);
       }
 
-      groupMap.get(key).items.push(m);
+      if (!isSinReceta) {
+        groupMap.get(key).items.push({
+          id: m.id,
+          insumo: m.insumo?.nombre || '-',
+          stockAnterior: m.stockAnterior != null ? m.stockAnterior : '-',
+          stockNuevo: m.stockNuevo != null ? m.stockNuevo : '-',
+          unidad: m.insumo?.unidadMedida || '',
+          usuario,
+          cantidad: m.cantidad,
+          fechaHora,
+        });
+      }
     });
 
     return groups;
   }, [filteredMovements]);
 
-  const toggleGroup = (key) => {
-    setOpenGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  };
-
-  // 6. Pagination (Arqueo de Caja logic)
+  // 6. Pagination
   const PAGE_SIZE = 10;
-  const totalItems = viewMode === 'comanda' ? groupedComandas.length : filteredMovements.length;
+  const totalItems = viewMode === 'agrupado' ? groupedComandas.length : filteredMovements.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
 
@@ -608,43 +649,37 @@ export default function KardexManagement({
               ariaLabel="Filtrar por usuario"
             />
 
-            {/* Toggle de Vista: Detallado / Por Comanda (Estilo exacto de Menú Platos Tabla/Cuadrícula) */}
-            <div
-              role="group"
-              aria-label="Cambiar vista"
-              className="hidden md:inline-flex items-center p-1 rounded-full bg-zinc-100 dark:bg-zinc-800 border-0 shadow-xs"
-            >
+            {/* Toggle de vista (visible también en Mobile, seguro para preflight: false) */}
+            <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 ml-auto xl:ml-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('agrupado');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-lg border-0 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  viewMode === 'agrupado'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'bg-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Por Comanda</span>
+              </button>
               <button
                 type="button"
                 onClick={() => {
                   setViewMode('detallado');
                   setCurrentPage(1);
                 }}
-                aria-pressed={viewMode === 'detallado'}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-lg border-0 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
                   viewMode === 'detallado'
-                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs'
-                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'bg-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
-                <ListFilter className="w-3.5 h-3.5" />
+                <List className="w-3.5 h-3.5" />
                 <span>Detallado</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode('comanda');
-                  setCurrentPage(1);
-                }}
-                aria-pressed={viewMode === 'comanda'}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 whitespace-nowrap ${
-                  viewMode === 'comanda'
-                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs'
-                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Por Comanda</span>
               </button>
             </div>
           </div>
@@ -782,102 +817,147 @@ export default function KardexManagement({
         )}
 
         {/* ========================================================= */}
-        {/* 5. VISTA WEB AGRUPADA POR COMANDA (IDÉNTICA A AI STUDIO)  */}
+        {/* 5. VISTA AGRUPADA POR COMANDA (ANIMADA PC & MÓVIL)        */}
         {/* ========================================================= */}
-        {viewMode === 'comanda' && (
-          <div className="hidden md:block p-4 sm:p-5 space-y-3">
+        {viewMode === 'agrupado' && (
+          <div className="p-4 sm:p-5 space-y-3.5 bg-slate-50/40 dark:bg-slate-950/30">
             {pageGroups.length === 0 ? (
               <div className="py-12 text-center text-xs text-slate-400">
                 No se encontraron operaciones con los filtros aplicados.
               </div>
             ) : (
-              pageGroups.map((group) => {
-                const isOpen = openGroups.has(group.key);
-                const isPositive = ['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(group.tipo);
-                const isVenta = group.tipo === 'VENTA';
-
-                const badgeBg = isVenta
-                  ? 'bg-orange-50 text-[#C2410C] border-orange-200/80'
-                  : isPositive
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
-                  : 'bg-rose-50 text-rose-700 border-rose-200/80';
+              pageGroups.map((grp) => {
+                const isOpen = !!expandedGroups[grp.key];
+                const style = TYPE_STYLE[grp.tipo] || TYPE_STYLE['AJUSTE'];
+                const GroupIcon =
+                  grp.tipo === 'VENTA'
+                    ? ReceiptText
+                    : grp.tipo === 'ENTRADA'
+                      ? ArrowDownLeft
+                      : grp.tipo === 'MERMA'
+                        ? AlertTriangle
+                        : SlidersHorizontal;
 
                 return (
                   <div
-                    key={group.key}
-                    className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 overflow-hidden bg-white dark:bg-slate-900 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-all"
+                    key={grp.key}
+                    onClick={() =>
+                      setExpandedGroups((prev) => ({
+                        ...prev,
+                        [grp.key]: !prev[grp.key],
+                      }))
+                    }
+                    className={`w-full cursor-pointer overflow-hidden select-none bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-lg shadow-black/5 dark:shadow-black/40 transition-all duration-500 ease-in-out ${
+                      isOpen ? 'rounded-3xl' : 'rounded-2xl'
+                    }`}
                   >
-                    {/* Header Acordeón Fino */}
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(group.key)}
-                      className="w-full px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer select-none"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-bold border uppercase shrink-0 ${badgeBg}`}
+                    {/* Cabecera */}
+                    <div className="flex items-center gap-4 p-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neutral-100 transition-colors duration-300 dark:bg-neutral-800">
+                        <GroupIcon className="h-5 w-5 text-neutral-600 dark:text-neutral-300" />
+                      </div>
+
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-semibold text-neutral-900 dark:text-white truncate">
+                            {grp.titulo}
+                          </h3>
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold ${style.badge}`}
+                          >
+                            {grp.tipo}
+                          </span>
+                          <span className="text-xs font-medium text-neutral-400 dark:text-neutral-500 tabular-nums">
+                            · {grp.items.length}{' '}
+                            {grp.items.length === 1 ? 'insumo' : 'insumos'}
+                          </span>
+                        </div>
+
+                        <p
+                          className={`text-sm text-neutral-500 dark:text-neutral-400 truncate transition-all duration-500 ease-in-out ${
+                            isOpen
+                              ? 'mt-0 max-h-0 opacity-0'
+                              : 'mt-0.5 max-h-6 opacity-100'
+                          }`}
                         >
-                          {group.tipo}
+                          {grp.subtitulo} · {grp.usuario}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="hidden sm:inline text-xs text-neutral-400 dark:text-neutral-500 tabular-nums">
+                          {grp.fechaHora}
                         </span>
-                        <div className="min-w-0">
-                          <h4 className="text-[13px] font-bold text-slate-900 dark:text-white truncate">
-                            {group.title}
-                          </h4>
-                          <p className="text-[11px] text-slate-400 tabular-nums mt-0.5">
-                            {group.subtitle}
-                          </p>
+                        <div className="flex h-8 w-8 items-center justify-center">
+                          <ChevronUp
+                            className={`h-5 w-5 text-neutral-400 transition-transform duration-500 ease-in-out ${
+                              isOpen ? 'rotate-0' : 'rotate-180'
+                            }`}
+                          />
                         </div>
                       </div>
+                    </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                        <span>{group.items.length} insumo(s)</span>
-                        <ChevronDown
-                          className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
-                            isOpen ? 'rotate-180' : ''
-                          }`}
-                        />
-                      </div>
-                    </button>
-
-                    {/* Contenido Acordeón (Desglose limpio sin bordes pesados) */}
-                    {isOpen && (
-                      <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800/60 bg-slate-50/40 dark:bg-slate-900/40">
-                        {group.items.map((item) => {
-                          const isItemPositive = ['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(
-                            item.tipoMovimiento
-                          );
-                          return (
-                            <div
-                              key={item.id}
-                              className="flex items-center justify-between py-2.5 px-6 text-xs transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                            >
-                              <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                {item.insumo?.nombre || '-'}
-                              </span>
-
-                              <div className="flex items-center gap-6 tabular-nums">
-                                <span className="text-slate-400">
-                                  Stock: {item.stockAnterior != null ? item.stockAnterior : '-'} →{' '}
-                                  <strong className="text-slate-700 dark:text-slate-300 font-semibold">
-                                    {item.stockNuevo != null ? item.stockNuevo : '-'} {item.insumo?.unidadMedida || ''}
-                                  </strong>
-                                </span>
-                                <span
-                                  className={`font-bold min-w-[70px] text-right ${
-                                    isItemPositive
-                                      ? 'text-emerald-600 dark:text-emerald-400'
-                                      : 'text-[#F26522]'
-                                  }`}
-                                >
-                                  {item.cantidad > 0 ? `+${item.cantidad}` : item.cantidad}{' '}
-                                  {item.insumo?.unidadMedida || ''}
-                                </span>
-                              </div>
+                    {/* Lista desplegable con animación de arriba hacia abajo */}
+                    <div
+                      className={`grid transition-all duration-500 ease-in-out ${
+                        isOpen
+                          ? 'grid-rows-[1fr] opacity-100'
+                          : 'grid-rows-[0fr] opacity-0'
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="px-2 pb-4">
+                          {grp.items.length === 0 ? (
+                            <div className="mx-2 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-200 text-xs sm:text-sm font-medium flex items-center gap-2.5">
+                              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                              <span>El plato o los platos no tienen receta asignada.</span>
                             </div>
-                          );
-                        })}
+                          ) : (
+                            <div className="space-y-1">
+                              {grp.items.map((item, index) => (
+                                <div
+                                  key={item.id}
+                                  className={`flex items-start gap-3 rounded-xl p-3 transition-all duration-500 ease-in-out hover:bg-neutral-100 dark:hover:bg-neutral-800/50 ${
+                                    isOpen
+                                      ? 'translate-y-0 opacity-100'
+                                      : 'translate-y-4 opacity-0'
+                                  }`}
+                                  style={{
+                                    transitionDelay: isOpen ? `${index * 75}ms` : '0ms',
+                                  }}
+                                >
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 transition-colors duration-300 dark:bg-neutral-800">
+                                    <Package className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+                                    <h4 className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                                      {item.insumo}
+                                    </h4>
+                                    <p className="truncate text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 tabular-nums">
+                                      Stock: {item.stockAnterior} → {item.stockNuevo}{' '}
+                                      {item.unidad} · {item.usuario}
+                                    </p>
+                                  </div>
+
+                                  <div className="shrink-0 pt-0.5 text-right tabular-nums">
+                                    <span
+                                      className={`block text-xs sm:text-sm font-bold ${style.text}`}
+                                    >
+                                      {formatSignedQty(item.cantidad, item.unidad)}
+                                    </span>
+                                    <span className="block text-[11px] text-neutral-400 dark:text-neutral-500">
+                                      {item.fechaHora.split(', ')[1] ?? item.fechaHora}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })
@@ -886,72 +966,74 @@ export default function KardexManagement({
         )}
 
         {/* ========================================================= */}
-        {/* 6. VISTA MÓVIL (md:hidden - MANTENIDA 100% INTACTA)       */}
+        {/* 6. VISTA MÓVIL DETALLADA (SOLO CUANDO viewMode === 'detallado') */}
         {/* ========================================================= */}
-        <div className="md:hidden p-3.5 space-y-3">
-          {pageMovements.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6">
-              No se encontraron movimientos registrados.
-            </div>
-          ) : (
-            pageMovements.map((m) => {
-              const isPositive = ['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(m.tipoMovimiento);
-              const isVenta = m.tipoMovimiento === 'VENTA';
-              const colorTypeClass = isPositive
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : isVenta
-                ? 'text-[#F26522]'
-                : 'text-rose-600 dark:text-rose-400';
-              const qtyColorClass = isPositive ? 'text-emerald-600' : 'text-[#F26522]';
-              const sign = isPositive ? '+' : '';
+        {viewMode === 'detallado' && (
+          <div className="md:hidden p-3.5 space-y-3">
+            {pageMovements.length === 0 ? (
+              <div className="py-12 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6">
+                No se encontraron movimientos registrados.
+              </div>
+            ) : (
+              pageMovements.map((m) => {
+                const isPositive = ['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(m.tipoMovimiento);
+                const isVenta = m.tipoMovimiento === 'VENTA';
+                const colorTypeClass = isPositive
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : isVenta
+                  ? 'text-[#F26522]'
+                  : 'text-rose-600 dark:text-rose-400';
+                const qtyColorClass = isPositive ? 'text-emerald-600' : 'text-[#F26522]';
+                const sign = isPositive ? '+' : '';
 
-              const parsed = parseMotivo(m.motivo);
+                const parsed = parseMotivo(m.motivo);
 
-              return (
-                <div
-                  key={m.id}
-                  className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 space-y-2 shadow-2xs"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                        {m.insumo?.nombre || '-'}
-                      </h3>
-                      <span className={`text-[10.5px] font-bold tracking-wider uppercase ${colorTypeClass}`}>
-                        {m.tipoMovimiento}
+                return (
+                  <div
+                    key={m.id}
+                    className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 space-y-2 shadow-2xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                          {m.insumo?.nombre || '-'}
+                        </h3>
+                        <span className={`text-[10.5px] font-bold tracking-wider uppercase ${colorTypeClass}`}>
+                          {m.tipoMovimiento}
+                        </span>
+                      </div>
+                      <span className={`text-sm font-bold tabular-nums shrink-0 ${qtyColorClass}`}>
+                        {sign}{m.cantidad} {m.insumo?.unidadMedida || ''}
                       </span>
                     </div>
-                    <span className={`text-sm font-bold tabular-nums shrink-0 ${qtyColorClass}`}>
-                      {sign}{m.cantidad} {m.insumo?.unidadMedida || ''}
-                    </span>
-                  </div>
 
-                  {/* Motivo en 2 líneas ordenadas (Tarjeta Móvil) */}
-                  <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-0.5">
-                    <span className="block">{parsed.line1}</span>
-                    {parsed.line2 && (
-                      <span className="block font-semibold text-slate-800 dark:text-slate-100">
-                        {parsed.line2}
+                    {/* Motivo en 2 líneas ordenadas (Tarjeta Móvil) */}
+                    <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-0.5">
+                      <span className="block">{parsed.line1}</span>
+                      {parsed.line2 && (
+                        <span className="block font-semibold text-slate-800 dark:text-slate-100">
+                          {parsed.line2}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 text-[11px] text-slate-400 tabular-nums">
+                      <span>
+                        {new Date(m.fecha).toLocaleString('es-PE', {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
+                        })}
                       </span>
-                    )}
+                      <span className="font-medium text-slate-500 truncate">
+                        {m.usuario?.nombre || 'General / Sistema'}
+                      </span>
+                    </div>
                   </div>
-
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 text-[11px] text-slate-400 tabular-nums">
-                    <span>
-                      {new Date(m.fecha).toLocaleString('es-PE', {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })}
-                    </span>
-                    <span className="font-medium text-slate-500 truncate">
-                      {m.usuario?.nombre || 'General / Sistema'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+                );
+              })
+            )}
+          </div>
+        )}
 
         {/* ========================================================= */}
         {/* 7. PAGINACIÓN IDÉNTICA A ARQUEO DE CAJA (AL MEDIO)        */}
@@ -968,7 +1050,7 @@ export default function KardexManagement({
               <strong className="text-slate-800 dark:text-slate-100 font-bold">
                 {totalItems}
               </strong>{' '}
-              {viewMode === 'comanda' ? 'operaciones' : 'movimientos'}
+              {viewMode === 'agrupado' ? 'operaciones' : 'movimientos'}
             </span>
 
             {/* Centro: Controles de Paginación */}

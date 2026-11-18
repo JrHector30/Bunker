@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Sección 9: Costo del Proyecto y Evaluación Financiera con Crédito Bancario - Búnker</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 18mm 20mm 18mm;
+    @top-center {
+      content: "IESTP María Rosario Aráoz Pinto — Desarrollo de Sistemas de Información";
+      font-size: 8.5pt;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 4px;
+    }
+    @bottom-left {
+      content: "Proyecto BÚNKER — Sección 9: Evaluación Económica y Financiera Integral";
+      font-size: 8pt;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #94a3b8;
+    }
+    @bottom-right {
+      content: "Página " counter(page);
+      font-size: 8pt;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #64748b;
+      font-weight: bold;
+    }
+  }
+
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.5;
+    font-size: 9.5pt;
+    margin: 0;
+    padding: 0;
+  }
+
+  .header-badge {
+    display: inline-block;
+    background-color: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+
+  .doc-title {
+    font-size: 15pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.3px;
+  }
+
+  .doc-subtitle {
+    font-size: 9.5pt;
+    color: #475569;
+    margin: 0 0 12px 0;
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 8px;
+  }
+
+  .meta-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #0284c7;
+    border-radius: 6px;
+    padding: 7px 12px;
+    margin-bottom: 14px;
+    font-size: 8.5pt;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+  .meta-box div span {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  h2 {
+    font-size: 11.5pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 14px 0 6px 0;
+    border-bottom: 1.5px solid #cbd5e1;
+    padding-bottom: 3px;
+    page-break-after: avoid;
+  }
+
+  h3 {
+    font-size: 10pt;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 12px 0 5px 0;
+    page-break-after: avoid;
+  }
+
+  p {
+    margin: 0 0 8px 0;
+    text-align: justify;
+  }
+
+  .callout {
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #16a34a;
+    padding: 7px 11px;
+    border-radius: 6px;
+    margin: 8px 0;
+    font-size: 8.5pt;
+  }
+  .callout-title {
+    font-weight: 700;
+    color: #15803d;
+    margin-bottom: 2px;
+  }
+
+  .callout-blue {
+    background-color: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-left: 4px solid #0284c7;
+    padding: 7px 11px;
+    border-radius: 6px;
+    margin: 8px 0;
+    font-size: 8.5pt;
+  }
+  .callout-blue .callout-title {
+    color: #0369a1;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 12px 0;
+    font-size: 8.5pt;
+    page-break-inside: avoid;
+  }
+
+  th {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: left;
+    padding: 5px 7px;
+    border: 1px solid #0f172a;
+  }
+
+  th.num, td.num {
+    text-align: right;
+  }
+
+  th.center, td.center {
+    text-align: center;
+  }
+
+  td {
+    padding: 5px 7px;
+    border: 1px solid #cbd5e1;
+  }
+
+  tr:nth-child(even) {
+    background-color: #f8fafc;
+  }
+
+  tr.total-row {
+    background-color: #e2e8f0;
+    font-weight: 700;
+    color: #0f172a;
+    border-top: 2px solid #0f172a;
+  }
+
+  tr.highlight-row {
+    background-color: #ecfdf5;
+    font-weight: 700;
+  }
+
+  .table-caption {
+    font-size: 8pt;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 3px;
+    page-break-after: avoid;
+  }
+
+  .indicator-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 10px 0;
+    page-break-inside: avoid;
+  }
+
+  .indicator-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 7px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  .indicator-card .title {
+    font-size: 7pt;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+
+  .indicator-card .value {
+    font-size: 12pt;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .indicator-card .subtext {
+    font-size: 6.8pt;
+    color: #16a34a;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .qa-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 7px 10px;
+    margin-bottom: 8px;
+    page-break-inside: avoid;
+  }
+  .qa-q {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 8.8pt;
+    margin-bottom: 3px;
+  }
+  .qa-a {
+    color: #334155;
+    font-size: 8.4pt;
+    margin: 0;
+    text-align: justify;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ==================== PÁGINA 1 ==================== -->
+  <div class="header-badge">IESTP María Rosario Aráoz Pinto · Titulación Profesional</div>
+  <h1 class="doc-title">9. COSTO DEL PROYECTO Y EVALUACIÓN FINANCIERA INTEGRAL</h1>
+  <div class="doc-subtitle">
+    Modelamiento de Inversión Inicial (CAPEX), Costos Operativos (OPEX), Financiamiento Bancario MYPE a 36 Meses y Evaluación Comparativa: Flujo de Caja Económico (FCE) vs. Flujo de Caja Financiero (FCF).
+  </div>
+
+  <div class="meta-box">
+    <div><span>Programa de Estudios:</span> Desarrollo de Sistemas de Información</div>
+    <div><span>Autores / Desarrolladores:</span> Hector y Melanie</div>
+    <div><span>Proyecto de Innovación:</span> BÚNKER - Gestión Inteligente de Comandas</div>
+    <div><span>Sede / Local Piloto:</span> Búnker Restobar (Lima, Perú · Año 2026)</div>
+  </div>
+
+  <h2>9.1 Presupuesto de Inversión Inicial (CAPEX) y Remuneración Técnica</h2>
+  <p>
+    Para cuantificar con rigor técnico y exactitud contable el desarrollo, configuración de arquitectura, adquisición de equipamiento y puesta en marcha del proyecto <strong>BÚNKER</strong>, se estructuró el presupuesto de capital (CAPEX) a valores de mercado tecnológico del año 2026.
+  </p>
+
+  <div class="callout">
+    <div class="callout-title">✓ Cumplimiento de la Remuneración al Trabajo Intelectual y Costos Operativos</div>
+    El presupuesto inicial de <strong>S/ 25,651.50</strong> contempla y remunera formalmente las <strong>600 horas de desarrollo técnico especializado (S/ 18,000.00)</strong>, así como el consumo energético, servicios de internet, viáticos y contingencias. Ningún recurso humano ni insumo ha sido consignado a costo cero, garantizando una valorización económica 100% real y profesional.
+  </div>
+
+  <div class="table-caption">Tabla 4: Inversión en Recursos Humanos y Desarrollo de Software (600 Horas Hombre)</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Rol Profesional Técnico</th>
+        <th class="center">Horas</th>
+        <th class="num">Costo / Hora (S/.)</th>
+        <th class="num">Subtotal (S/.)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Líder de Proyecto / Analista de Software</td>
+        <td class="center">120</td>
+        <td class="num">S/ 35.00</td>
+        <td class="num">S/ 4,200.00</td>
+      </tr>
+      <tr>
+        <td>Desarrollador Frontend Senior (React 19 / Vite / PWA / UI)</td>
+        <td class="center">180</td>
+        <td class="num">S/ 30.00</td>
+        <td class="num">S/ 5,400.00</td>
+      </tr>
+      <tr>
+        <td>Desarrollador Backend / DBA (Node.js / Express / Prisma / PostgreSQL)</td>
+        <td class="center">180</td>
+        <td class="num">S/ 30.00</td>
+        <td class="num">S/ 5,400.00</td>
+      </tr>
+      <tr>
+        <td>Ingeniero de QA y Especialista en Hardware POS / Redes</td>
+        <td class="center">120</td>
+        <td class="num">S/ 25.00</td>
+        <td class="num">S/ 3,000.00</td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="3">Total Mano de Obra Técnica Especializada:</td>
+        <td class="num">S/ 18,000.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== PÁGINA 2 ==================== -->
+  <div class="page-break"></div>
+
+  <div class="table-caption">Tabla 5: Inversión en Hardware, Periféricos y Equipos Piloto para Salón y Cocina</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Concepto / Equipamiento Físico</th>
+        <th class="center">Cant.</th>
+        <th class="num">Costo Unit. (S/.)</th>
+        <th class="num">Subtotal (S/.)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Terminal All-in-One Táctil Capacitiva 15.6" para Caja Principal</td>
+        <td class="center">1</td>
+        <td class="num">S/ 1,850.00</td>
+        <td class="num">S/ 1,850.00</td>
+      </tr>
+      <tr>
+        <td>Monitor Industrial Táctil KDS 18.5" para Estación de Cocina</td>
+        <td class="center">1</td>
+        <td class="num">S/ 1,200.00</td>
+        <td class="num">S/ 1,200.00</td>
+      </tr>
+      <tr>
+        <td>Tablets Android 10" para Salón (Toma de Comandas - Meseros)</td>
+        <td class="center">2</td>
+        <td class="num">S/ 580.00</td>
+        <td class="num">S/ 1,160.00</td>
+      </tr>
+      <tr>
+        <td>Impresoras Térmicas de 80mm de Red Ethernet/USB (Caja y Cocina)</td>
+        <td class="center">2</td>
+        <td class="num">S/ 360.00</td>
+        <td class="num">S/ 720.00</td>
+      </tr>
+      <tr>
+        <td>Gaveta de Dinero Metálica Eléctrica RJ11 conectada a POS</td>
+        <td class="center">1</td>
+        <td class="num">S/ 190.00</td>
+        <td class="num">S/ 190.00</td>
+      </tr>
+      <tr>
+        <td>Router Wi-Fi 6 Gigabit Doble Banda (Red dedicada para salón)</td>
+        <td class="center">1</td>
+        <td class="num">S/ 280.00</td>
+        <td class="num">S/ 280.00</td>
+      </tr>
+      <tr>
+        <td>Licencias de Despliegue y Certificados SSL (.pe / .com / Cloud)</td>
+        <td class="center">1</td>
+        <td class="num">S/ 180.00</td>
+        <td class="num">S/ 180.00</td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="3">Total Hardware, Equipos e Infraestructura Física:</td>
+        <td class="num">S/ 5,580.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="table-caption">Tabla 6: Resumen Consolidado del Presupuesto de Inversión Inicial (CAPEX)</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Rubro de Inversión</th>
+        <th class="num">Monto (S/.)</th>
+        <th class="center">% Part.</th>
+        <th>Naturaleza del Desembolso</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1. Mano de Obra Técnica Especializada</td>
+        <td class="num">S/ 18,000.00</td>
+        <td class="center">70.17%</td>
+        <td>Remuneración de analistas y programadores</td>
+      </tr>
+      <tr>
+        <td>2. Hardware, Periféricos y Equipos Piloto</td>
+        <td class="num">S/ 5,580.00</td>
+        <td class="center">21.75%</td>
+        <td>Activos tangibles para el restaurante</td>
+      </tr>
+      <tr>
+        <td>3. Pruebas de Campo, Conectividad y Viáticos</td>
+        <td class="num">S/ 850.00</td>
+        <td class="center">3.31%</td>
+        <td>Despliegue in situ, movilidad y energía</td>
+      </tr>
+      <tr>
+        <td>4. Imprevistos y Contingencias Técnicas (5%)</td>
+        <td class="num">S/ 1,221.50</td>
+        <td class="center">4.76%</td>
+        <td>Fondo de contingencia técnica</td>
+      </tr>
+      <tr class="total-row">
+        <td>TOTAL INVERSIÓN INICIAL (I₀):</td>
+        <td class="num">S/ 25,651.50</td>
+        <td class="center">100.00%</td>
+        <td>Presupuesto Total Requerido para Despliegue</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== PÁGINA 3 ==================== -->
+  <div class="page-break"></div>
+
+  <h2>9.2 Costos Operativos Mensuales y Anuales (OPEX)</h2>
+  <p>
+    Los costos recurrentes para asegurar la alta disponibilidad y resiliencia de la plataforma bajo modelo SaaS y arquitectura Cloud Serverless en el año 2026 se detallan a continuación:
+  </p>
+
+  <div class="table-caption">Tabla 7: Presupuesto Operativo Anual de Servicios Cloud y Mantenimiento</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Servicio / Infraestructura Cloud Recurrente</th>
+        <th class="num">Costo Mensual</th>
+        <th class="num">Costo Anual</th>
+        <th>Justificación Técnica</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Hosting Vercel Pro (Edge Network & Frontend CDN)</td>
+        <td class="num">S/ 76.00 ($20)</td>
+        <td class="num">S/ 912.00</td>
+        <td>Despliegue global de alta velocidad y 99.99% SLA</td>
+      </tr>
+      <tr>
+        <td>Base de Datos Supabase Pro / PostgreSQL Administrada</td>
+        <td class="num">S/ 95.00 ($25)</td>
+        <td class="num">S/ 1,140.00</td>
+        <td>Pool de conexiones, réplicas y transacciones ACID</td>
+      </tr>
+      <tr>
+        <td>Almacenamiento S3 y Respaldo Diario Automatizado</td>
+        <td class="num">S/ 30.00</td>
+        <td class="num">S/ 360.00</td>
+        <td>Backups redundantes con retención de 30 días</td>
+      </tr>
+      <tr>
+        <td>Soporte Técnico Especializado Nivel 2 y Mantenimiento</td>
+        <td class="num">S/ 350.00</td>
+        <td class="num">S/ 4,200.00</td>
+        <td>Atención técnica, parches y monitoreo proactivo</td>
+      </tr>
+      <tr class="total-row">
+        <td>Total Costo Operativo (OPEX):</td>
+        <td class="num">S/ 551.00</td>
+        <td class="num">S/ 6,612.00</td>
+        <td>Costo base para operación continua</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>9.3 Estructura de Financiamiento con Crédito Bancario MYPE</h2>
+  <p>
+    Para sustentar la liquidez requerida que permita remunerar de inmediato a los desarrolladores y adquirir los activos sin depender de ahorros personales, se diseñó la estructura de <strong>Financiamiento Mediante Crédito Comercial / Microcrédito MYPE</strong> en el sistema financiero peruano (Cajas Municipales o Banca MYPE):
+  </p>
+
+  <div class="callout-blue">
+    <div class="callout-title">Parámetros del Préstamo Bancario MYPE</div>
+    • <strong>Monto del Financiamiento:</strong> S/ 25,651.50 (100% de la Inversión Inicial CAPEX)<br>
+    • <strong>Plazo de Pago:</strong> 36 meses (3 años, coincidente con el horizonte de evaluación)<br>
+    • <strong>Tasa Efectiva Anual (TEA):</strong> 16.0% anual (tasa de mercado competitiva para pymes en moneda nacional)<br>
+    • <strong>Sistema de Amortización:</strong> Francés (cuota anual fija de S/ 11,421.53, equivalente a S/ 951.79 mensuales)<br>
+    • <strong>Escudo Fiscal por Intereses (Tax Shield):</strong> 15.0% (Régimen MYPE Tributario)
+  </div>
+
+  <div class="table-caption">Tabla 8: Cronograma de Servicio de la Deuda Bancaria y Escudo Fiscal (Método Francés en Soles)</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="center">Año</th>
+        <th class="num">Saldo Inicial (S/.)</th>
+        <th class="num">Interés (16% TEA)</th>
+        <th class="num">Amortización (S/.)</th>
+        <th class="num">Cuota Anual (S/.)</th>
+        <th class="num">Cuota Mensual</th>
+        <th class="num">Escudo Fiscal</th>
+        <th class="num">Saldo Final</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center"><strong>Año 1</strong></td>
+        <td class="num">S/ 25,651.50</td>
+        <td class="num">S/ 4,104.24</td>
+        <td class="num">S/ 7,317.29</td>
+        <td class="num">S/ 11,421.53</td>
+        <td class="num">S/ 951.79</td>
+        <td class="num" style="color: #16a34a;">+ S/ 615.64</td>
+        <td class="num">S/ 18,334.21</td>
+      </tr>
+      <tr>
+        <td class="center"><strong>Año 2</strong></td>
+        <td class="num">S/ 18,334.21</td>
+        <td class="num">S/ 2,933.47</td>
+        <td class="num">S/ 8,488.06</td>
+        <td class="num">S/ 11,421.53</td>
+        <td class="num">S/ 951.79</td>
+        <td class="num" style="color: #16a34a;">+ S/ 440.02</td>
+        <td class="num">S/ 9,846.15</td>
+      </tr>
+      <tr>
+        <td class="center"><strong>Año 3</strong></td>
+        <td class="num">S/ 9,846.15</td>
+        <td class="num">S/ 1,575.38</td>
+        <td class="num">S/ 9,846.15</td>
+        <td class="num">S/ 11,421.53</td>
+        <td class="num">S/ 951.79</td>
+        <td class="num" style="color: #16a34a;">+ S/ 236.31</td>
+        <td class="num"><strong>S/ 0.00</strong></td>
+      </tr>
+      <tr class="total-row">
+        <td class="center">TOTAL</td>
+        <td class="num">—</td>
+        <td class="num">S/ 8,613.09</td>
+        <td class="num">S/ 25,651.50</td>
+        <td class="num">S/ 34,264.59</td>
+        <td class="num">S/ 951.79</td>
+        <td class="num" style="color: #16a34a;">+ S/ 1,291.97</td>
+        <td class="num">Cancelada</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== PÁGINA 4 ==================== -->
+  <div class="page-break"></div>
+
+  <h2>9.4 Evaluación Económica Integral (Flujo de Caja Económico - FCE)</h2>
+  <p>
+    La <strong>Evaluación Económica</strong> mide la rentabilidad del software BÚNKER independientemente de la fuente de financiamiento. Evalúa el proyecto bajo la premisa de que genera suficiente caja operativa para cubrir todos los costos de hardware, software y remuneraciones técnicas.
+  </p>
+
+  <div class="callout">
+    <div class="callout-title">Definición Rigurosa del 12.0% (COK - Costo de Oportunidad del Capital)</div>
+    El <strong>12.0% anual</strong> utilizado como tasa de descuento <strong>NO es una cuota bancaria</strong>. Corresponde al <strong>COK (Costo de Oportunidad del Capital)</strong> estándar para proyectos tecnológicos en el Perú: compuesto por la tasa libre de riesgo de bonos soberanos (5.5% - 6.0%) más una prima de riesgo tecnológico y de mercado (6.0% - 6.5%). Representa el <em>rendimiento mínimo exigido</em> para preferir este proyecto frente a depósitos a plazo u otros instrumentos.
+  </div>
+
+  <div class="table-caption">Tabla 9: Flujo de Caja Económico Proyectado a 3 Años (en Soles)</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Concepto Financiero</th>
+        <th class="center">Año 0</th>
+        <th class="num">Año 1 (15 locales)</th>
+        <th class="num">Año 2 (35 locales)</th>
+        <th class="num">Año 3 (65 locales)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Ingresos por Suscripción SaaS (Plan S/ 149/mes)</td>
+        <td class="center">—</td>
+        <td class="num">S/ 26,820.00</td>
+        <td class="num">S/ 62,580.00</td>
+        <td class="num">S/ 116,220.00</td>
+      </tr>
+      <tr>
+        <td>Ingresos por Instalación y Configuración POS</td>
+        <td class="center">—</td>
+        <td class="num">S/ 6,750.00</td>
+        <td class="num">S/ 9,000.00</td>
+        <td class="num">S/ 13,500.00</td>
+      </tr>
+      <tr class="highlight-row">
+        <td><strong>Total Ingresos Brutos</strong></td>
+        <td class="center">—</td>
+        <td class="num"><strong>S/ 33,570.00</strong></td>
+        <td class="num"><strong>S/ 71,580.00</strong></td>
+        <td class="num"><strong>S/ 129,720.00</strong></td>
+      </tr>
+      <tr>
+        <td>(-) Costos Operativos Cloud (OPEX)</td>
+        <td class="center">—</td>
+        <td class="num">- S/ 6,612.00</td>
+        <td class="num">- S/ 9,500.00</td>
+        <td class="num">- S/ 14,200.00</td>
+      </tr>
+      <tr>
+        <td>(-) Gastos Comerciales y Marketing</td>
+        <td class="center">—</td>
+        <td class="num">- S/ 4,800.00</td>
+        <td class="num">- S/ 8,400.00</td>
+        <td class="num">- S/ 12,000.00</td>
+      </tr>
+      <tr>
+        <td>(-) Soporte Técnico y Atención a Clientes</td>
+        <td class="center">—</td>
+        <td class="num">- S/ 6,000.00</td>
+        <td class="num">- S/ 14,000.00</td>
+        <td class="num">- S/ 24,000.00</td>
+      </tr>
+      <tr>
+        <td>(-) Impuestos y Gastos Administrativos (15%)</td>
+        <td class="center">—</td>
+        <td class="num">- S/ 2,423.70</td>
+        <td class="num">- S/ 5,952.00</td>
+        <td class="num">- S/ 11,928.00</td>
+      </tr>
+      <tr class="total-row">
+        <td>FLUJO NETO DE CAJA ECONÓMICO (FCE)</td>
+        <td class="center" style="color: #b91c1c;">- S/ 25,651.50</td>
+        <td class="num" style="color: #15803d;">+ S/ 13,734.30</td>
+        <td class="num" style="color: #15803d;">+ S/ 33,728.00</td>
+        <td class="num" style="color: #15803d;">+ S/ 67,592.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="indicator-grid">
+    <div class="indicator-card">
+      <div class="title">VAN Económico</div>
+      <div class="value" style="color: #0284c7;">S/ 61,609.68</div>
+      <div class="subtext">VAN &gt; 0 (Altamente Viable)</div>
+    </div>
+    <div class="indicator-card">
+      <div class="title">TIR Económica</div>
+      <div class="value" style="color: #16a34a;">92.7%</div>
+      <div class="subtext">TIR &gt; COK (12.0%)</div>
+    </div>
+    <div class="indicator-card">
+      <div class="title">PRI Económico</div>
+      <div class="value" style="color: #d97706;">16 Meses</div>
+      <div class="subtext">1 Año y 4.2 Meses</div>
+    </div>
+    <div class="indicator-card">
+      <div class="title">Relación B / C</div>
+      <div class="value" style="color: #7c3aed;">1.52</div>
+      <div class="subtext">S/ 1.52 por Sol Invertido</div>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 5 ==================== -->
+  <div class="page-break"></div>
+
+  <h2>9.5 Evaluación Financiera Integral (Flujo de Caja Financiero - FCF con Deuda)</h2>
+  <p>
+    La <strong>Evaluación Financiera</strong> integra el crédito bancario al flujo del proyecto. Demuestra que el sistema genera solvencia inmediata para cubrir las cuotas mensuales del préstamo (S/ 951.79/mes) sin generar déficit de caja en ningún periodo y aprovechando el escudo fiscal tributario.
+  </p>
+
+  <div class="table-caption">Tabla 10: Flujo de Caja Financiero con Financiamiento Bancario del 100% de la Inversión</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Concepto de Evaluación Financiera</th>
+        <th class="center">Año 0</th>
+        <th class="num">Año 1</th>
+        <th class="num">Año 2</th>
+        <th class="num">Año 3</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Flujo Neto de Caja Económico (FCE)</td>
+        <td class="center">- S/ 25,651.50</td>
+        <td class="num">+ S/ 13,734.30</td>
+        <td class="num">+ S/ 33,728.00</td>
+        <td class="num">+ S/ 67,592.00</td>
+      </tr>
+      <tr>
+        <td>(+) Desembolso Neto del Préstamo Bancario</td>
+        <td class="center" style="color: #16a34a; font-weight: bold;">+ S/ 25,651.50</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+      </tr>
+      <tr>
+        <td>(-) Cuota de Pago al Banco (Capital + Interés)</td>
+        <td class="center">—</td>
+        <td class="num" style="color: #b91c1c;">- S/ 11,421.53</td>
+        <td class="num" style="color: #b91c1c;">- S/ 11,421.53</td>
+        <td class="num" style="color: #b91c1c;">- S/ 11,421.53</td>
+      </tr>
+      <tr>
+        <td>(+) Escudo Fiscal por Intereses Deducibles (15%)</td>
+        <td class="center">—</td>
+        <td class="num" style="color: #16a34a;">+ S/ 615.64</td>
+        <td class="num" style="color: #16a34a;">+ S/ 440.02</td>
+        <td class="num" style="color: #16a34a;">+ S/ 236.31</td>
+      </tr>
+      <tr class="total-row">
+        <td>FLUJO NETO FINANCIERO (FCF - 100% DEUDA)</td>
+        <td class="center" style="font-weight: 800;">S/ 0.00</td>
+        <td class="num" style="color: #15803d; font-weight: 800;">+ S/ 2,928.41</td>
+        <td class="num" style="color: #15803d; font-weight: 800;">+ S/ 22,746.49</td>
+        <td class="num" style="color: #15803d; font-weight: 800;">+ S/ 56,406.78</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Escenario Mixto Recomendado: 70% Financiamiento Bancario y 30% Capital Propio</h3>
+  <p>
+    En la práctica financiera real de emprendimientos tecnológicos, las entidades bancarias suelen financiar el 70% de la inversión, solicitando una contrapartida del 30% como capital propio de los fundadores:
+  </p>
+
+  <div class="table-caption">Tabla 11: Evaluación Financiera en Escenario Mixto (70% Crédito Bancario / 30% Aporte Propio)</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Concepto Financiero</th>
+        <th class="center">Año 0</th>
+        <th class="num">Año 1</th>
+        <th class="num">Año 2</th>
+        <th class="num">Año 3</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Aporte Propio Inicial (30%)</td>
+        <td class="center" style="color: #b91c1c; font-weight: bold;">- S/ 7,695.45</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+      </tr>
+      <tr>
+        <td>Crédito Bancario MYPE (70% de la inversión)</td>
+        <td class="center" style="color: #16a34a;">+ S/ 17,956.05</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+      </tr>
+      <tr>
+        <td>(-) Cuota Anual Reducida (S/ 666.26 mensuales)</td>
+        <td class="center">—</td>
+        <td class="num" style="color: #b91c1c;">- S/ 7,995.07</td>
+        <td class="num" style="color: #b91c1c;">- S/ 7,995.07</td>
+        <td class="num" style="color: #b91c1c;">- S/ 7,995.07</td>
+      </tr>
+      <tr>
+        <td>(+) Escudo Fiscal por Intereses (15%)</td>
+        <td class="center">—</td>
+        <td class="num" style="color: #16a34a;">+ S/ 430.94</td>
+        <td class="num" style="color: #16a34a;">+ S/ 308.01</td>
+        <td class="num" style="color: #16a34a;">+ S/ 165.41</td>
+      </tr>
+      <tr class="total-row">
+        <td>FLUJO FINANCIERO MIXTO DEL INVERSIONISTA</td>
+        <td class="center" style="color: #b91c1c;">- S/ 7,695.45</td>
+        <td class="num" style="color: #15803d;">+ S/ 6,170.17</td>
+        <td class="num" style="color: #15803d;">+ S/ 26,040.94</td>
+        <td class="num" style="color: #15803d;">+ S/ 59,762.34</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="indicator-grid">
+    <div class="indicator-card">
+      <div class="title">VAN Financiero (VANF)</div>
+      <div class="value" style="color: #0284c7;">S/ 61,110.97</div>
+      <div class="subtext">Rendimiento Neto del Socio</div>
+    </div>
+    <div class="indicator-card">
+      <div class="title">TIR Financiera (TIRF)</div>
+      <div class="value" style="color: #16a34a;">189.6%</div>
+      <div class="subtext">Apalancamiento Favorable</div>
+    </div>
+    <div class="indicator-card">
+      <div class="title">PRI Financiero</div>
+      <div class="value" style="color: #d97706;">13 Meses</div>
+      <div class="subtext">1 Año y 0.7 Meses</div>
+    </div>
+    <div class="indicator-card">
+      <div class="title">Cuota Mensual MYPE</div>
+      <div class="value" style="color: #0f172a;">S/ 666.26</div>
+      <div class="subtext">Amortización Cómoda</div>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 6 ==================== -->
+  <div class="page-break"></div>
+
+  <h2>9.6 Preguntas Clave y Respuestas de Sustentación ante el Asesor y Jurado</h2>
+
+  <div class="qa-box">
+    <div class="qa-q">1. ¿Por qué el cuadro original de evaluación no cambia al incluir el financiamiento bancario?</div>
+    <div class="qa-a">
+      Porque en formulación y evaluación de proyectos conviven dos herramientas complementarias: el <strong>Flujo Económico (FCE)</strong>, que demuestra que el modelo de negocio de software es viable y rentable por sí mismo; y el <strong>Flujo Financiero (FCF)</strong>, que evalúa la capacidad de servicio de la deuda bancaria. Ambos cuadros se presentan juntos en el informe; el cuadro económico no se descarta.
+    </div>
+  </div>
+
+  <div class="qa-box">
+    <div class="qa-q">2. ¿Qué representa el 12% y por qué es diferente a la tasa del préstamo bancario?</div>
+    <div class="qa-a">
+      El <strong>12% es el COK (Costo de Oportunidad del Capital)</strong> o tasa de descuento, que refleja la rentabilidad mínima exigida al negocio por el riesgo del sector tecnológico y gastronómico. La <strong>TEA del 16%</strong> es la tasa activa de interés que cobra la entidad bancaria por el dinero prestado. Dado que la TIR del proyecto es de <strong>92.7% (económica)</strong> y <strong>189.6% (financiera)</strong>, el negocio supera con holgura ambos umbrales, garantizando rentabilidad y capacidad de pago.
+    </div>
+  </div>
+
+  <div class="qa-box">
+    <div class="qa-q">3. ¿Cómo afecta el crédito bancario al período de recuperación (PRI de 16 meses)?</div>
+    <div class="qa-a">
+      La inversión total de S/ 25,651.50 sigue recuperándose en <strong>16 meses (1 año y 4 meses)</strong> desde la perspectiva económica global. Frente al banco, el préstamo se amortiza de forma programada en <strong>36 meses</strong> con cuotas mensuales totalmente asumibles (S/ 951.79 en 100% deuda o S/ 666.26 en esquema mixto), dejando flujo líquido positivo todos los años. En el esquema mixto (70/30), el capital propio aportado por los socios se recupera en apenas <strong>13 meses</strong>.
+    </div>
+  </div>
+
+  <div class="qa-box">
+    <div class="qa-q">4. ¿Cómo se garantiza que los desarrolladores y gastos operativos estén cobrados?</div>
+    <div class="qa-a">
+      Gracias al desembolso del crédito bancario en el Año 0, los <strong>S/ 18,000.00 en sueldos de programación</strong> y los <strong>S/ 2,071.50 de viáticos, servicios e imprevistos</strong> quedan liquidados y pagados de forma inmediata al equipo técnico desde el primer día de ejecución.
+    </div>
+  </div>
+
+</body>
+</html>

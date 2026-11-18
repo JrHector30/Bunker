@@ -5750,6 +5750,74 @@ app.get('/api/kardex', async (req, res) => {
             }
         });
 
+        // Platos anulados sin receta para que figuren como MERMA con 0 insumos en Kardex
+        if (!insumoId) {
+            const anuladas = await prisma.comanda.findMany({
+                where: {
+                    restauranteId: tenantId,
+                    estado: 'anulada'
+                },
+                include: {
+                    usuario: { select: { id: true, nombre: true, rol: true } },
+                    detalles: {
+                        include: {
+                            plato: {
+                                include: {
+                                    receta: true
+                                }
+                            }
+                        }
+                    }
+                },
+                orderBy: { id: 'desc' },
+                take: 100
+            });
+
+            const logsCancelados = await prisma.pedidoCancelado.findMany({
+                where: {
+                    comandaId: { in: anuladas.map(a => a.id) }
+                }
+            });
+            const logMap = new Map();
+            logsCancelados.forEach(l => logMap.set(l.comandaId, l));
+
+            const mermasSinReceta = [];
+            anuladas.forEach(c => {
+                const cancelLog = logMap.get(c.id);
+                c.detalles.forEach(d => {
+                    if (!d.plato.receta || d.plato.receta.length === 0) {
+                        mermasSinReceta.push({
+                            id: `anulada-${c.id}-${d.id}`,
+                            insumoId: 0,
+                            tipoMovimiento: 'MERMA',
+                            cantidad: 0,
+                            sinReceta: true,
+                            platoNombre: d.plato.nombre,
+                            comandaNumero: c.numeroComanda || c.id,
+                            motivo: `MERMA Comanda N° ${c.numeroComanda || c.id} · Plato: ${d.plato.nombre}`,
+                            fecha: (cancelLog && cancelLog.fecha) ? cancelLog.fecha : c.fecha,
+                            usuarioId: c.usuarioId,
+                            insumo: {
+                                id: 0,
+                                nombre: `${d.plato.nombre} (Sin receta)`,
+                                unidadMedida: 'unid',
+                                precioCompra: 0,
+                                stock: 0
+                            },
+                            usuario: {
+                                id: c.usuario?.id || 1,
+                                nombre: (cancelLog && cancelLog.usuarioResponsable) ? cancelLog.usuarioResponsable : (c.usuario?.nombre || 'Caja/Admin'),
+                                rol: c.usuario?.rol || 'ADMIN'
+                            }
+                        });
+                    }
+                });
+            });
+
+            const todos = [...movimientos, ...mermasSinReceta].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            return res.json(todos);
+        }
+
         res.json(movimientos);
     } catch (e) {
         console.error("Error fetching kardex:", e);
