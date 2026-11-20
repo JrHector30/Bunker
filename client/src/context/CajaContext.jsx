@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { networkStatus, db } from '../offline';
 import { useAuth } from './AuthContext';
 import { getActiveRestaurant } from '../utils/tenant';
@@ -16,6 +16,9 @@ export const CajaProvider = ({ children }) => {
             return {};
         }
     });
+
+    const inFlightRef = useRef(false);
+    const lastCheckTimeRef = useRef(0);
 
     const auth = useAuth();
     const user = auth?.user;
@@ -36,10 +39,12 @@ export const CajaProvider = ({ children }) => {
         return null;
     }, [cajaStatusByTenant, currentTenantId]);
 
-    // Actualizador atómico por local que persiste en localStorage
+    // Actualizador atómico por local que persiste en localStorage sin provocar re-renders innecesarios
     const updateCajaStatusForTenant = useCallback((tenantId, isOpen) => {
-        const id = Number(tenantId || currentTenantId || 1);
+        const id = Number(tenantId || 1);
         setCajaStatusByTenant(prev => {
+            // Evita re-renders si el valor no ha cambiado
+            if (prev[id] === Boolean(isOpen)) return prev;
             const next = { ...prev, [id]: Boolean(isOpen) };
             try {
                 localStorage.setItem('bunker_caja_status_by_tenant', JSON.stringify(next));
@@ -48,10 +53,26 @@ export const CajaProvider = ({ children }) => {
             }
             return next;
         });
-    }, [currentTenantId]);
+    }, []);
 
-    const verificarEstadoCaja = useCallback(async (tenantIdOverride) => {
+    const verificarEstadoCaja = useCallback(async (tenantIdOverride, force = false) => {
+        // En rutas públicas de login / acceso / superadmin, no consultar arqueo de caja
+        if (typeof window !== 'undefined') {
+            const path = window.location.pathname;
+            if (path === '/acceso' || path.startsWith('/superadmin') || path === '/') {
+                return false;
+            }
+        }
+
         const id = Number(tenantIdOverride || currentTenantId || 1);
+        const now = Date.now();
+
+        // Evitar múltiples llamadas simultáneas o llamadas en ráfaga (mínimo 3s entre peticiones automáticas)
+        if (!force && inFlightRef.current) return;
+        if (!force && (now - lastCheckTimeRef.current < 3000)) return;
+
+        inFlightRef.current = true;
+        lastCheckTimeRef.current = now;
 
         try {
             if (networkStatus.isOffline()) {
@@ -75,29 +96,31 @@ export const CajaProvider = ({ children }) => {
                 updateCajaStatusForTenant(id, isOpen);
                 return isOpen;
             } else {
-                console.warn(`[CajaContext] Falló verificación online para local ${id}. Conservando previo:`, cajaStatusByTenant[id]);
-                return cajaStatusByTenant[id] ?? false;
+                console.warn(`[CajaContext] Falló verificación online para local ${id}.`);
+                return false;
             }
         } catch (error) {
-            console.error(`[CajaContext] Error global al verificar estado de caja para local ${id}:`, error);
-            return cajaStatusByTenant[id] ?? false;
+            console.error(`[CajaContext] Error al verificar estado de caja para local ${id}:`, error);
+            return false;
+        } finally {
+            inFlightRef.current = false;
         }
-    }, [currentTenantId, updateCajaStatusForTenant, cajaStatusByTenant]);
+    }, [currentTenantId, updateCajaStatusForTenant]);
 
-    // 1. Revalidación inmediata al montar y cada vez que cambia el local activo o el usuario
+    // 1. Revalidación SOLO cuando cambia el local activo
     useEffect(() => {
-        verificarEstadoCaja(currentTenantId);
-    }, [currentTenantId, verificarEstadoCaja]);
+        verificarEstadoCaja(currentTenantId, true);
+    }, [currentTenantId]);
 
     // 2. Suscripciones reactivas: reconexión de red, foco de ventana y eventos multi-local
     useEffect(() => {
         const handleRevalidate = () => {
-            verificarEstadoCaja();
+            verificarEstadoCaja(currentTenantId, false);
         };
 
         const handleTenantChange = (e) => {
             const newTenantId = e?.detail?.id;
-            verificarEstadoCaja(newTenantId);
+            if (newTenantId) verificarEstadoCaja(newTenantId, true);
         };
 
         const handleCajaStatusChange = (e) => {
@@ -105,12 +128,12 @@ export const CajaProvider = ({ children }) => {
                 const { tenantId, isOpen } = e.detail;
                 updateCajaStatusForTenant(tenantId || currentTenantId, isOpen);
             } else {
-                verificarEstadoCaja();
+                verificarEstadoCaja(currentTenantId, true);
             }
         };
 
         const unsubscribeNetwork = networkStatus.subscribe(() => {
-            verificarEstadoCaja();
+            verificarEstadoCaja(currentTenantId, false);
         });
 
         window.addEventListener('focus', handleRevalidate);
@@ -125,7 +148,7 @@ export const CajaProvider = ({ children }) => {
             window.removeEventListener('bunker-auth-changed', handleRevalidate);
             window.removeEventListener('caja-status-changed', handleCajaStatusChange);
         };
-    }, [verificarEstadoCaja, updateCajaStatusForTenant, currentTenantId]);
+    }, [currentTenantId, updateCajaStatusForTenant]);
 
     return (
         <CajaContext.Provider value={{
