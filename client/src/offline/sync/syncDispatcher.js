@@ -1,6 +1,7 @@
 import { EntityType } from '../operations/entityTypes';
 import { productSyncHandler } from './handlers/productSyncHandler';
 import { orderSyncHandler } from './handlers/orderSyncHandler';
+import { orderItemSyncHandler } from './handlers/orderItemSyncHandler';
 
 export const syncDispatcher = {
   /**
@@ -41,6 +42,22 @@ export const syncDispatcher = {
       }
 
       const err = new Error(`Operación de comanda no soportada: "${opName}"`);
+      err.status = 400;
+      throw err;
+    }
+
+    if (entity === EntityType.ORDER_ITEM || entity === 'ORDER_ITEM') {
+      if (opName === 'UPDATE_ORDER_ITEM' || opName === 'UPDATE') {
+        return await orderItemSyncHandler.update(operation);
+      }
+      if (opName === 'ADD_ORDER_ITEM' || opName === 'ADD') {
+        return await orderItemSyncHandler.add(operation);
+      }
+      if (opName === 'REMOVE_ORDER_ITEM' || opName === 'REMOVE') {
+        return await orderItemSyncHandler.remove(operation);
+      }
+
+      const err = new Error(`Operación de ítem de orden no soportada: "${opName}"`);
       err.status = 400;
       throw err;
     }

@@ -1041,6 +1041,7 @@ const DashboardLayout = () => {
                         .catch(() => {});
                 }}
                 onComplete={() => {
+                    setShowAtomicSyncModal(false);
                     showToast('Sincronización atómica completada exitosamente. Base de datos actualizada.', 'success');
                     db.syncQueue.where('status').equals('PENDING').count()
                         .then(setPendingOps)

@@ -901,8 +901,16 @@ async function checkAndPrintQueue() {
         }
 
         // Ganamos el bloqueo, procedemos a imprimir físicamente
+        const currentTicket = lockRes.rows[0];
+        if (typeof currentTicket.contenido === 'object' && currentTicket.contenido !== null && !currentTicket.contenido.restauranteNombre) {
+          const restRes = await client.query(`SELECT nombre FROM "Restaurante" WHERE id = $1`, [ticketTenantId]);
+          if (restRes.rows.length > 0 && restRes.rows[0].nombre) {
+            currentTicket.contenido.restauranteNombre = restRes.rows[0].nombre;
+          }
+        }
+
         console.log(`⏳ Imprimiendo Ticket #${ticket.id} en "${targetPrinterName}" (${targetPaperSize}) [Restaurante ID: ${ticketTenantId}] (Estación: ${STATION_ID})...`);
-        const formattedText = formatTicket(lockRes.rows[0], targetLineWidth);
+        const formattedText = formatTicket(currentTicket, targetLineWidth);
         await printTicketText(formattedText, ticket.id, targetPrinterName, targetPaperSize);
         console.log(`✅ Ticket #${ticket.id} impreso con éxito.`);
       } catch (err) {

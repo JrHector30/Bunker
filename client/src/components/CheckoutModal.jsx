@@ -281,7 +281,7 @@ export function CheckoutModal({ isOpen, onClose, order, onSuccess }) {
         if (cached) {
           previousTables = cached;
           const parsed = JSON.parse(cached);
-          const updated = parsed.map(t => t.id === parseInt(targetTableId) ? { ...t, estado: 'libre', comandas: [] } : t);
+          const updated = parsed.map(t => (t.id === parseInt(targetTableId) || String(t.id) === String(targetTableId)) ? { ...t, estado: 'libre', comandas: [] } : t);
           localStorage.setItem('tables', JSON.stringify(updated));
           window.dispatchEvent(new CustomEvent('refreshTables'));
         }

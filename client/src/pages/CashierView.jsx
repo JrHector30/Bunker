@@ -381,17 +381,21 @@ const CashierView = () => {
         const endDate = arq.estado === 'abierto' ? new Date() : new Date(arq.fechaFin || arq.fechaInicio);
         const movements = allMovements.filter(m => m.arqueoId === arq.id);
 
-        const manualIngresos = movements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + Number(m.monto), 0);
-        const manualEgresos = movements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + Number(m.monto), 0);
+        // Excluir de movimientos manuales cualquier venta erróneamente guardada en movimientos
+        const isManual = (m) => !String(m.concepto || '').toLowerCase().startsWith('venta');
+        const manualMovements = movements.filter(isManual);
 
-        const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + Number(m.monto), 0);
-        const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + Number(m.monto), 0);
+        const manualIngresos = manualMovements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + Number(m.monto), 0);
+        const manualEgresos = manualMovements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + Number(m.monto), 0);
 
-        const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + Number(m.monto), 0);
-        const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + Number(m.monto), 0);
+        const manualIngresosYape = manualMovements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + Number(m.monto), 0);
+        const manualEgresosYape = manualMovements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + Number(m.monto), 0);
+
+        const manualIngresosPlin = manualMovements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + Number(m.monto), 0);
+        const manualEgresosPlin = manualMovements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + Number(m.monto), 0);
 
         const inicio = Number(arq.montoInicial || 0);
-        const egresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + Number(m.monto), 0);
+        const egresos = manualMovements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + Number(m.monto), 0);
 
         let totalBruto = 0;
         let totalPropinas = 0;
@@ -414,21 +418,26 @@ const CashierView = () => {
 
         let sessionHasError = false;
         closedOrders.forEach(order => {
-          const items = itemMap.get(order.id) || [];
+          const items = itemMap.get(String(order.id)) || itemMap.get(Number(order.id)) || [];
           let orderSubtotal = 0;
           let orderHasError = false;
 
-          items.forEach(item => {
-            const plato = productMap.get(item.platoId);
-            const resolvedPrice = resolveItemPrice(item, plato);
-            if (resolvedPrice !== null) {
-              orderSubtotal += (Number(item.cantidad) * resolvedPrice);
-            } else {
-              orderHasError = true;
-              sessionHasError = true;
-              console.error(`[INTEGRITY ERROR] Precio no disponible para item id: ${item.id} en arqueo local: ${arq.id}`);
-            }
-          });
+          if (items.length > 0) {
+            items.forEach(item => {
+              const plato = productMap.get(item.platoId);
+              const resolvedPrice = resolveItemPrice(item, plato);
+              if (resolvedPrice !== null) {
+                orderSubtotal += (Number(item.cantidad) * resolvedPrice);
+              } else {
+                orderHasError = true;
+                sessionHasError = true;
+                console.error(`[INTEGRITY ERROR] Precio no disponible para item id: ${item.id} en arqueo local: ${arq.id}`);
+              }
+            });
+          } else if (order.montoRecibido || order.total) {
+            // Soporte comanda hidratada sin desglose de detalles
+            orderSubtotal = Number(order.montoRecibido || order.total || 0);
+          }
 
           if (!orderHasError) {
             totalBruto += orderSubtotal;
@@ -453,7 +462,7 @@ const CashierView = () => {
             return !isClosed && !isCancelled;
           });
           pendingOrders.forEach(order => {
-            const items = itemMap.get(order.id) || [];
+            const items = itemMap.get(String(order.id)) || itemMap.get(Number(order.id)) || [];
             items.forEach(item => {
               const plato = productMap.get(item.platoId);
               const resolvedPrice = resolveItemPrice(item, plato);
@@ -466,8 +475,11 @@ const CashierView = () => {
           });
         }
 
+        const resolvedUserName = arq.usuarioNombre || arq.usuario?.nombre || (arq.usuarioId === user?.id ? user.nombre : 'Caja Prueba');
+
         return {
           id: arq.id,
+          numeroSesion: arq.numeroSesion != null ? arq.numeroSesion : arq.id,
           fechaInicio: arq.fechaInicio,
           fechaFin: arq.fechaFin,
           estado: arq.estado,
@@ -477,7 +489,7 @@ const CashierView = () => {
           totalCaja: inicio + manualIngresos + incomeDetails.efectivo - manualEgresos,
           totalBruto: sessionHasError ? null : totalBruto,
           totalPropinas,
-          usuario: { nombre: arq.usuarioId === user?.id ? user.nombre : 'Hector' }
+          usuario: { nombre: resolvedUserName }
         };
       });
 

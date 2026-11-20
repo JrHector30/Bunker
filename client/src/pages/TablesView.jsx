@@ -77,19 +77,26 @@ const TablesView = () => {
                 const isClosed = order.estado === 'cerrada' || order.status === 'cerrada';
                 const isCancelled = order.estado === 'anulada' || order.status === 'anulada';
                 if (!isClosed && !isCancelled) {
-                    if (!activeOrdersMap.has(Number(order.mesaId))) {
-                        activeOrdersMap.set(Number(order.mesaId), []);
+                    const mesaKey = order.mesaId || order.tableId;
+                    const numKey = Number(mesaKey);
+                    const strKey = String(mesaKey);
+                    if (!isNaN(numKey)) {
+                        if (!activeOrdersMap.has(numKey)) activeOrdersMap.set(numKey, []);
                     }
+                    if (!activeOrdersMap.has(strKey)) activeOrdersMap.set(strKey, []);
+
                     const orderUser = order.usuario || {
                         id: order.usuarioId || user?.id || 1,
                         nombre: order.mozoNombre || user?.nombre || 'Mozo'
                     };
-                    activeOrdersMap.get(Number(order.mesaId)).push({
+                    const orderObj = {
                         ...order,
                         usuario: orderUser,
                         mozoNombre: orderUser.nombre,
                         detalles: orderItemMap.get(order.id) || []
-                    });
+                    };
+                    if (!isNaN(numKey)) activeOrdersMap.get(numKey).push(orderObj);
+                    activeOrdersMap.get(strKey).push(orderObj);
                 }
             });
 
@@ -113,9 +120,19 @@ const TablesView = () => {
             });
 
             const data = tablesWithFields.map(t => {
-                const orders = activeOrdersMap.get(t.id) || [];
+                const orders = activeOrdersMap.get(Number(t.id)) || activeOrdersMap.get(String(t.id)) || activeOrdersMap.get(t.id) || [];
+                let computedEstado = t.estado || 'libre';
+                if (orders.length === 0) {
+                    if (computedEstado === 'ocupada' || computedEstado === 'cuenta') {
+                        computedEstado = 'libre';
+                    }
+                } else {
+                    const hasCuenta = orders.some(o => (o.estado || o.status) === 'cuenta');
+                    computedEstado = hasCuenta ? 'cuenta' : 'ocupada';
+                }
                 return {
                     ...t,
+                    estado: computedEstado,
                     comandas: orders
                 };
             });
@@ -736,10 +753,12 @@ const TablesView = () => {
     const handleOpenModal = (e, table, type) => {
         if (e && e.stopPropagation) e.stopPropagation();
 
-        // HOTFIX: Si la mesa no tiene comandas activas válidas, forzamos la recarga al servidor para limpiar caché
+        // HOTFIX: Si la mesa no tiene comandas activas válidas, forzamos la recarga al servidor para limpiar caché solo si estamos online
         if (!table.comandas || table.comandas.length === 0) {
-            fetchTables();
-            showToast("Sincronizando mesa con el servidor...", 'info');
+            if (!networkStatus.isOffline()) {
+                fetchTables();
+                showToast("Sincronizando mesa con el servidor...", 'info');
+            }
         }
 
         setSelectedTableId(table.id);
@@ -1260,10 +1279,14 @@ const TablesView = () => {
         const totalLetras = numberToLetters(total);
         const comandaId = selectedTable.comandas?.[0]?.id || "---";
 
+        const currentRest = getActiveRestaurant();
+        const currentRestName = currentRest?.nombre || 'Búnker';
+
         const handlePrintPrecuenta = async () => {
             try {
                 const content = {
                     type: 'precuenta',
+                    restauranteNombre: currentRestName,
                     total: total,
                     totalLetras: totalLetras,
                     items: groupedItems.map(item => ({
@@ -1285,9 +1308,9 @@ const TablesView = () => {
             <div className="modal-overlay" onClick={() => setShowTicket(false)}>
                 <div className="modal-content print-ticket" onClick={e => e.stopPropagation()} style={{ background: 'white', color: 'black', width: 350, fontFamily: '"Courier New", monospace', padding: 20 }}>
                     <div style={{ textAlign: 'center', marginBottom: 15, borderBottom: '1px dashed black', paddingBottom: 10 }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>BUNKER</div>
-                        <div>DEMO</div>
-                        <div style={{ fontSize: '0.8rem' }}>Telf: 51 9123456789 / RUC: 10000000000</div>
+                        <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{currentRestName.toUpperCase()}</div>
+                        {currentRest?.direccion && <div style={{ fontSize: '0.8rem' }}>{currentRest.direccion}</div>}
+                        <div style={{ fontSize: '0.8rem' }}>Telf: {currentRest?.telefono || '51 9123456789'} / RUC: {currentRest?.ruc || '10000000000'}</div>
                         <div style={{ fontSize: '0.8rem', marginTop: 5 }}>Fecha: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</div>
                     </div>
 

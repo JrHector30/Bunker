@@ -16,6 +16,16 @@ export async function enqueueTicket(mesaId, mozoName, contenido, estacion = 'Caj
   try {
     const activeRest = getActiveRestaurant();
     const restId = activeRest?.id || 1;
+    const restName = activeRest?.nombre || 'Bunker Restobar';
+
+    let enrichedContenido = contenido;
+    if (typeof contenido === 'object' && contenido !== null) {
+      enrichedContenido = {
+        ...contenido,
+        restauranteNombre: contenido.restauranteNombre || restName
+      };
+    }
+
     const res = await fetch('/api/impresoras/imprimir', {
       method: 'POST',
       headers: {
@@ -25,7 +35,7 @@ export async function enqueueTicket(mesaId, mozoName, contenido, estacion = 'Caj
       body: JSON.stringify({
         mesaId: String(mesaId),
         mozo: mozoName || 'Sistema',
-        contenido: contenido,
+        contenido: enrichedContenido,
         estacion: estacion,
         restauranteId: restId
       })

@@ -170,24 +170,38 @@ export const offlineSnapshotService = {
         }
       }
 
-      // 6. Hidratar ARQUEOS y MOVIMIENTOS
+      // 6. Hidratar ARQUEOS, MOVIMIENTOS y VENTAS DE SESIÓN
       if (balance) {
         const lastArqueoIdStr = String(balance.id);
         
         // Protección de merge para la sesión de caja
         if (!pendingCashIds.has(lastArqueoIdStr)) {
           if (balance.estado === 'abierto') {
+            const userName = balance.usuarioNombre || balance.usuario?.nombre || 'Caja Prueba';
             await db.arqueos.put({
               id: balance.id,
+              numeroSesion: balance.numeroSesion != null ? balance.numeroSesion : balance.id,
+              usuarioId: balance.usuarioId || null,
+              usuarioNombre: userName,
+              usuario: { nombre: userName },
               montoInicial: Number(balance.inicio || 0),
               estado: 'abierto',
               fechaInicio: balance.fechaInicio || new Date().toISOString()
             });
 
-            // Registrar los movimientos asociados
+            // Limpiar movimientos locales inválidos (como ventas erróneamente guardadas como movimientos)
+            const localMovements = await db.movimientosCaja.toArray();
+            for (const lm of localMovements) {
+              if (String(lm.concepto || '').toLowerCase().startsWith('venta')) {
+                await db.movimientosCaja.delete(lm.id).catch(() => {});
+              }
+            }
+
+            // Registrar los movimientos manuales asociados (excluyendo ventas)
             const remoteMovements = balance.movimientos || [];
             for (const mov of remoteMovements) {
               if (pendingCashIds.has(String(mov.id))) continue;
+              if (String(mov.concepto || '').toLowerCase().startsWith('venta')) continue;
 
               await db.movimientosCaja.put({
                 id: mov.id,
@@ -200,6 +214,49 @@ export const offlineSnapshotService = {
                 fecha: mov.fecha,
                 metodoPago: mov.metodoPago || 'efectivo'
               });
+            }
+
+            // Hidratar las ventas cerradas de la sesión para que el balance offline preserve el historial completo del turno
+            const remoteVentas = balance.ventas || [];
+            for (const sale of remoteVentas) {
+              const saleIdStr = String(sale.id);
+              if (pendingOrderIds.has(saleIdStr)) continue;
+
+              await db.orders.put({
+                id: sale.id,
+                remoteId: sale.id,
+                mesaId: Number(sale.mesaNum || sale.mesaId || 0),
+                tableId: Number(sale.mesaNum || sale.mesaId || 0),
+                fecha: sale.hora || new Date().toISOString(),
+                fechaCierre: sale.hora || new Date().toISOString(),
+                estado: 'cerrada',
+                status: 'cerrada',
+                metodoPago: sale.metodoPago || sale.metodo || 'efectivo',
+                tipoDocumento: sale.tipoDocumento || sale.doc || 'sin_comprobante',
+                montoRecibido: Number(sale.total || 0),
+                total: Number(sale.total || 0),
+                propina: Number(sale.propina || 0),
+                syncStatus: 'SYNCED',
+                createdAt: sale.hora || new Date().toISOString(),
+                updatedAt: sale.hora || new Date().toISOString()
+              });
+
+              for (const item of (sale.items || [])) {
+                await db.orderItems.put({
+                  id: item.id || `hist_${sale.id}_${item.platoId || Math.random()}`,
+                  comandaId: sale.id,
+                  orderId: sale.id,
+                  platoId: Number(item.platoId || 0),
+                  productId: Number(item.platoId || 0),
+                  nombre: item.descripcion || 'Plato',
+                  precio: Number(item.precio || 0),
+                  precioVenta: Number(item.precio || 0),
+                  cantidad: Number(item.cantidad || 1),
+                  estado: 'entregado',
+                  fechaCreacion: sale.hora || new Date().toISOString(),
+                  createdAt: sale.hora || new Date().toISOString()
+                });
+              }
             }
           } else {
             // Si en el servidor está cerrada, marcar localmente como cerrado

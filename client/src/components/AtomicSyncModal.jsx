@@ -250,6 +250,13 @@ export const AtomicSyncModal = ({
   
   const completedNotifiedRef = useRef(false);
   const isSyncingRef = useRef(false);
+  const hasExecutedRef = useRef(false);
+
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   // Helper para pausas asíncronas suaves de ritmo visual
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -481,8 +488,12 @@ export const AtomicSyncModal = ({
 
       if (!completedNotifiedRef.current) {
         completedNotifiedRef.current = true;
-        onComplete?.();
+        onCompleteRef.current?.();
       }
+
+      // Auto-cerrar suavemente tras 1.2 segundos mostrando 100% de éxito
+      await sleep(1200);
+      onCloseRef.current?.();
     } catch (err) {
       console.error('[AtomicSyncModal] Fallo en la sincronización:', err);
       setHasError(true);
@@ -491,14 +502,18 @@ export const AtomicSyncModal = ({
     } finally {
       isSyncingRef.current = false;
     }
-  }, [onComplete]);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
       isSyncingRef.current = false;
+      hasExecutedRef.current = false;
       return;
     }
-    runSync();
+    if (!hasExecutedRef.current) {
+      hasExecutedRef.current = true;
+      runSync();
+    }
   }, [isOpen, runSync]);
 
   const totalProgress =

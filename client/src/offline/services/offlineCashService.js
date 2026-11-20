@@ -84,10 +84,13 @@ export const offlineCashService = {
     const itemMap = new Map(); // orderId -> Array de detalles
 
     orderItems.forEach(item => {
-      if (!itemMap.has(item.comandaId)) {
-        itemMap.set(item.comandaId, []);
+      const parentId = String(item.comandaId || item.orderId || '');
+      if (parentId) {
+        if (!itemMap.has(parentId)) {
+          itemMap.set(parentId, []);
+        }
+        itemMap.get(parentId).push(item);
       }
-      itemMap.get(item.comandaId).push(item);
     });
 
     // 1. Filtrar ventas locales cerradas del rango
@@ -115,9 +118,11 @@ export const offlineCashService = {
       return 'efectivo';
     };
 
-    // Calcular ingresos y egresos manuales
-    const manualIngresos = movements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + Number(m.monto), 0);
-    const manualEgresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + Number(m.monto), 0);
+    // Calcular ingresos y egresos manuales (excluyendo ventas)
+    const isManual = (m) => !String(m.concepto || '').toLowerCase().startsWith('venta');
+    const manualMovements = movements.filter(isManual);
+    const manualIngresos = manualMovements.filter(m => m.tipo === 'INGRESO').reduce((sum, m) => sum + Number(m.monto), 0);
+    const manualEgresos = manualMovements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + Number(m.monto), 0);
 
     const inicio = Number(lastArqueo.montoInicial || 0);
     const egresos = manualEgresos;
@@ -136,30 +141,35 @@ export const offlineCashService = {
     };
 
     const ventasDetalladas = sales.map(order => {
-      const items = itemMap.get(order.id) || [];
+      const items = itemMap.get(String(order.id)) || itemMap.get(Number(order.id)) || [];
       let subtotal = 0;
       let comandaHasError = false;
 
-      const mappedItems = items.map(item => {
-        const plato = productMap.get(item.platoId);
-        const resolvedPrice = resolveItemPrice(item, plato);
-        
-        let itemTotal = null;
-        if (resolvedPrice !== null) {
-          itemTotal = Number(item.cantidad) * resolvedPrice;
-          subtotal += itemTotal;
-        } else {
-          comandaHasError = true;
-          console.error(`[INTEGRITY ERROR] Precio no disponible para el item id: ${item.id} (platoId: ${item.platoId}) en balance`);
-        }
+      let mappedItems = [];
+      if (items.length > 0) {
+        mappedItems = items.map(item => {
+          const plato = productMap.get(item.platoId);
+          const resolvedPrice = resolveItemPrice(item, plato);
+          
+          let itemTotal = null;
+          if (resolvedPrice !== null) {
+            itemTotal = Number(item.cantidad) * resolvedPrice;
+            subtotal += itemTotal;
+          } else {
+            comandaHasError = true;
+            console.error(`[INTEGRITY ERROR] Precio no disponible para el item id: ${item.id} (platoId: ${item.platoId}) en balance`);
+          }
 
-        return {
-          cantidad: item.cantidad,
-          descripcion: plato ? plato.nombre : 'Plato Desconocido',
-          precio: resolvedPrice, // Puede ser null
-          total: itemTotal       // Puede ser null
-        };
-      });
+          return {
+            cantidad: item.cantidad,
+            descripcion: plato ? plato.nombre : (item.nombre || 'Plato Desconocido'),
+            precio: resolvedPrice,
+            total: itemTotal
+          };
+        });
+      } else if (order.montoRecibido || order.total) {
+        subtotal = Number(order.montoRecibido || order.total || 0);
+      }
 
       const propina = Number(order.propina || 0);
       if (!comandaHasError) {
@@ -210,9 +220,14 @@ export const offlineCashService = {
 
     // totalCaja = Inicio + manualIngresos + cash sales - manualEgresos
     const totalCaja = inicio + manualIngresos + incomeDetails.efectivo - manualEgresos;
+    const resolvedUserName = lastArqueo.usuarioNombre || lastArqueo.usuario?.nombre || 'Caja Prueba';
 
     return {
       id: lastArqueo.id,
+      numeroSesion: lastArqueo.numeroSesion != null ? lastArqueo.numeroSesion : lastArqueo.id,
+      usuarioId: lastArqueo.usuarioId,
+      usuarioNombre: resolvedUserName,
+      usuario: { nombre: resolvedUserName },
       estado: lastArqueo.estado,
       inicio,
       egresos,
@@ -221,7 +236,7 @@ export const offlineCashService = {
       totalBruto,
       totalPendiente,
       ventas: ventasDetalladas,
-      movimientos: movements.map(m => ({
+      movimientos: manualMovements.map(m => ({
         id: m.id,
         arqueoId: m.arqueoId,
         tipo: m.tipo,
@@ -264,10 +279,13 @@ export const offlineCashService = {
     const itemMap = new Map(); // orderId -> Array de detalles
 
     orderItems.forEach(item => {
-      if (!itemMap.has(item.comandaId)) {
-        itemMap.set(item.comandaId, []);
+      const parentId = String(item.comandaId || item.orderId || '');
+      if (parentId) {
+        if (!itemMap.has(parentId)) {
+          itemMap.set(parentId, []);
+        }
+        itemMap.get(parentId).push(item);
       }
-      itemMap.get(item.comandaId).push(item);
     });
 
     const parsePaymentMethod = (metodoPago) => {
@@ -280,17 +298,21 @@ export const offlineCashService = {
       return 'efectivo';
     };
 
-    const manualIngresos = movements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + Number(m.monto), 0);
-    const manualEgresos = movements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + Number(m.monto), 0);
+    // Calcular ingresos y egresos manuales (excluyendo ventas)
+    const isManual = (m) => !String(m.concepto || '').toLowerCase().startsWith('venta');
+    const manualMovements = movements.filter(isManual);
 
-    const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + Number(m.monto), 0);
-    const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + Number(m.monto), 0);
+    const manualIngresos = manualMovements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + Number(m.monto), 0);
+    const manualEgresos = manualMovements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + Number(m.monto), 0);
 
-    const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + Number(m.monto), 0);
-    const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + Number(m.monto), 0);
+    const manualIngresosYape = manualMovements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + Number(m.monto), 0);
+    const manualEgresosYape = manualMovements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + Number(m.monto), 0);
+
+    const manualIngresosPlin = manualMovements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + Number(m.monto), 0);
+    const manualEgresosPlin = manualMovements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + Number(m.monto), 0);
 
     const inicio = Number(arq.montoInicial || 0);
-    const egresos = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + Number(m.monto), 0);
+    const egresos = manualMovements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + Number(m.monto), 0);
 
     let totalPropinas = 0;
     let propinasPorMozo = {};
@@ -314,30 +336,35 @@ export const offlineCashService = {
     });
 
     const salesData = sales.map(order => {
-      const items = itemMap.get(order.id) || [];
+      const items = itemMap.get(String(order.id)) || itemMap.get(Number(order.id)) || [];
       let subtotal = 0;
       let comandaHasError = false;
 
-      const mappedItems = items.map(item => {
-        const plato = productMap.get(item.platoId);
-        const resolvedPrice = resolveItemPrice(item, plato);
-        
-        let itemTotal = null;
-        if (resolvedPrice !== null) {
-          itemTotal = Number(item.cantidad) * resolvedPrice;
-          subtotal += itemTotal;
-        } else {
-          comandaHasError = true;
-          console.error(`[INTEGRITY ERROR] Precio no disponible para el item id: ${item.id} (platoId: ${item.platoId}) en arqueo N° ${arq.id}`);
-        }
+      let mappedItems = [];
+      if (items.length > 0) {
+        mappedItems = items.map(item => {
+          const plato = productMap.get(item.platoId);
+          const resolvedPrice = resolveItemPrice(item, plato);
+          
+          let itemTotal = null;
+          if (resolvedPrice !== null) {
+            itemTotal = Number(item.cantidad) * resolvedPrice;
+            subtotal += itemTotal;
+          } else {
+            comandaHasError = true;
+            console.error(`[INTEGRITY ERROR] Precio no disponible para el item id: ${item.id} (platoId: ${item.platoId}) en arqueo N° ${arq.id}`);
+          }
 
-        return {
-          cantidad: item.cantidad,
-          descripcion: plato ? plato.nombre : 'Plato Desconocido',
-          precio: resolvedPrice, // Puede ser null
-          total: itemTotal       // Puede ser null
-        };
-      });
+          return {
+            cantidad: item.cantidad,
+            descripcion: plato ? plato.nombre : (item.nombre || 'Plato Desconocido'),
+            precio: resolvedPrice, // Puede ser null
+            total: itemTotal       // Puede ser null
+          };
+        });
+      } else if (order.montoRecibido || order.total) {
+        subtotal = Number(order.montoRecibido || order.total || 0);
+      }
 
       const propina = Number(order.propina || 0);
       if (!comandaHasError) {
@@ -413,13 +440,17 @@ export const offlineCashService = {
     }
 
     const totalCaja = inicio + manualIngresos + incomeDetails.efectivo - manualEgresos;
+    const resolvedUserName = arq.usuarioNombre || arq.usuario?.nombre || 'Caja Prueba';
 
     return {
       id: arq.id,
+      numeroSesion: arq.numeroSesion != null ? arq.numeroSesion : arq.id,
+      usuarioId: arq.usuarioId,
+      usuarioNombre: resolvedUserName,
+      usuario: { nombre: resolvedUserName },
       fechaInicio: arq.fechaInicio,
       fechaFin: arq.fechaFin,
       estado: arq.estado,
-      usuarioId: arq.usuarioId,
       montoInicial: arq.montoInicial,
       montoFinal: arq.montoFinal,
       inicio,
@@ -431,7 +462,7 @@ export const offlineCashService = {
       totalPropinas,
       propinasPorMozo: Object.values(propinasPorMozo),
       totalPendiente,
-      movimientos: movements.map(m => ({
+      movimientos: manualMovements.map(m => ({
         id: m.id,
         arqueoId: m.arqueoId,
         tipo: m.tipo,

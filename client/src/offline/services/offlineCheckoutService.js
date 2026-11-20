@@ -18,7 +18,7 @@ export const offlineCheckoutService = {
     const timestamp = getCurrentDate();
     let closedOrder = null;
 
-    await db.transaction('rw', [db.orders, db.orderItems, db.table('tables'), db.arqueos, db.movimientosCaja, db.syncQueue], async () => {
+    await db.transaction('rw', [db.orders, db.orderItems, db.table('tables'), db.arqueos, db.syncQueue], async () => {
       // 1. Verificar si hay un arqueo abierto
       const openArqueos = await db.arqueos
         .where('estado')
@@ -77,27 +77,18 @@ export const offlineCheckoutService = {
       // 5. Actualizar comanda local
       await db.orders.update(order.id, checkoutUpdates);
 
-      // 6. Liberar la mesa localmente (usar String para evitar NaN con UUIDs)
+      // 6. Liberar la mesa localmente (manejar id numérico y string/UUID para compatibilidad con Dexie)
+      const numMesaId = Number(mesaId);
+      if (!isNaN(numMesaId)) {
+        await db.table('tables').update(numMesaId, {
+          estado: 'libre',
+          updatedAt: timestamp
+        }).catch(() => {});
+      }
       await db.table('tables').update(String(mesaId), {
         estado: 'libre',
         updatedAt: timestamp
-      });
-
-      // 7. Registrar movimiento de caja local para actualizar arqueo offline
-      const montoTotalCobrado = Number(paymentDetails.totalReceived || 0);
-      if (montoTotalCobrado > 0) {
-        await db.movimientosCaja.add({
-          id: generateUUID(),
-          arqueoId: activeArqueo.id,
-          tipo: 'INGRESO',
-          tipoComprobante: checkoutUpdates.tipoComprobante || 'Ticket',
-          concepto: `Venta Mesa ${mesaId} (${checkoutUpdates.metodoPago.toUpperCase()})`,
-          observacion: `Cobro offline Comanda #${order.numeroComanda || order.id}`,
-          monto: montoTotalCobrado,
-          fecha: timestamp,
-          metodoPago: checkoutUpdates.metodoPago
-        });
-      }
+      }).catch(() => {});
 
       // Buscar si existe la operación CREATE_ORDER pendiente en cola
       const orderIdStr = String(order.id);

@@ -681,11 +681,22 @@ app.post('/api/impresoras/imprimir', async (req, res) => {
     const { mesaId, mozo, contenido, estacion } = req.body;
     const tenantId = getTenantId(req);
     try {
+        let finalContenido = contenido;
+        if (typeof contenido === 'object' && contenido !== null && !contenido.restauranteNombre) {
+            const rest = await prisma.restaurante.findUnique({
+                where: { id: tenantId },
+                select: { nombre: true }
+            });
+            if (rest?.nombre) {
+                finalContenido = { ...contenido, restauranteNombre: rest.nombre };
+            }
+        }
+
         const ticket = await prisma.ticketPendiente.create({
             data: {
                 mesa_id: String(mesaId),
                 mozo: mozo || 'Sistema',
-                contenido: contenido,
+                contenido: finalContenido,
                 impreso: false,
                 estacion: estacion || 'Caja',
                 restauranteId: tenantId
@@ -1962,7 +1973,7 @@ app.post('/api/sync/operations', async (req, res) => {
                         }
                     }
 
-                    // 4. Actualizar arqueo de turno y registrar movimiento de caja
+                    // 4. Asegurar arqueo de turno activo
                     let activeArqueo = await tx.arqueo.findFirst({
                         where: { restauranteId: tenantId, estado: 'abierto' },
                         orderBy: { id: 'desc' }
@@ -1972,24 +1983,6 @@ app.post('/api/sync/operations', async (req, res) => {
                             where: { estado: 'abierto' },
                             orderBy: { id: 'desc' }
                         });
-                    }
-
-                    if (activeArqueo) {
-                        const totalCobrado = parseFloat(payload.montoRecibido || 0);
-                        if (totalCobrado > 0) {
-                            await tx.movimientoCaja.create({
-                                data: {
-                                    arqueoId: activeArqueo.id,
-                                    tipo: 'INGRESO',
-                                    tipoComprobante: payload.tipoComprobante || 'Ticket',
-                                    concepto: `Venta offline Mesa ${order.mesaId} (${(payload.metodoPago || 'efectivo').toUpperCase()})`,
-                                    observacion: `Comanda #${order.numeroComanda || order.id}`,
-                                    monto: totalCobrado,
-                                    fecha: new Date(),
-                                    metodoPago: payload.metodoPago || 'efectivo'
-                                }
-                            }).catch(() => {});
-                        }
                     }
 
                     } else {
@@ -2025,6 +2018,109 @@ app.post('/api/sync/operations', async (req, res) => {
                     }
                 }
                 businessResult = { localEntityId: entityId, success: true };
+            } else if (entity === 'ORDER_ITEM') {
+                if (operation === 'UPDATE_ORDER_ITEM' || operation === 'UPDATE') {
+                    const alreadyCompleted = await tx.syncOperation.findFirst({
+                        where: { entity: 'ORDER_ITEM', entityId: String(entityId), operation: 'UPDATE_ORDER_ITEM', status: 'COMPLETED' },
+                        orderBy: { id: 'desc' }
+                    });
+                    if (alreadyCompleted && alreadyCompleted.resultPayload) {
+                        businessResult = { ...alreadyCompleted.resultPayload, duplicate: true, success: true };
+                    } else {
+                        let detalle = null;
+                        const directId = parseInt(payload.remoteItemId || payload.itemId || entityId);
+                        if (!isNaN(directId) && directId > 0) {
+                            detalle = await tx.detalleComanda.findUnique({
+                                where: { id: directId }
+                            });
+                        }
+
+                        if (!detalle) {
+                            let remoteOrderId = parseInt(payload.remoteOrderId || payload.orderId);
+                            if (isNaN(remoteOrderId) && payload.dependsOnOperationId) {
+                                const parentOp = await tx.syncOperation.findUnique({
+                                    where: { operationId: payload.dependsOnOperationId }
+                                });
+                                remoteOrderId = parseInt(parentOp?.resultPayload?.remoteEntityId || parentOp?.resultPayload?.orderId);
+                            }
+                            if (isNaN(remoteOrderId) && payload.localOrderId) {
+                                const matchCreateOp = await tx.syncOperation.findFirst({
+                                    where: { entityId: String(payload.localOrderId), operation: 'CREATE_ORDER', status: 'COMPLETED' },
+                                    orderBy: { id: 'desc' }
+                                });
+                                remoteOrderId = parseInt(matchCreateOp?.resultPayload?.remoteEntityId || matchCreateOp?.resultPayload?.orderId);
+                            }
+
+                            if (remoteOrderId && payload.platoId) {
+                                detalle = await tx.detalleComanda.findFirst({
+                                    where: { comandaId: remoteOrderId, platoId: parseInt(payload.platoId) }
+                                });
+                            } else if (remoteOrderId) {
+                                detalle = await tx.detalleComanda.findFirst({
+                                    where: { comandaId: remoteOrderId }
+                                });
+                            }
+                        }
+
+                        if (detalle) {
+                            const updateData = {};
+                            if (payload.estado) {
+                                updateData.estado = payload.estado;
+                                if (payload.estado === 'preparando') updateData.fechaPreparacion = new Date();
+                                if (payload.estado === 'listo') updateData.fechaListo = new Date();
+                            }
+                            if (payload.cocineroId) {
+                                updateData.cocineroId = parseInt(payload.cocineroId);
+                            }
+                            if (Object.keys(updateData).length > 0) {
+                                await tx.detalleComanda.update({
+                                    where: { id: detalle.id },
+                                    data: updateData
+                                });
+                            }
+                        }
+
+                        businessResult = {
+                            localEntityId: entityId,
+                            remoteEntityId: detalle?.id || null,
+                            success: true
+                        };
+                    }
+                } else if (operation === 'ADD_ORDER_ITEM' || operation === 'ADD') {
+                    let remoteOrderId = parseInt(payload.remoteOrderId || payload.orderId);
+                    if (isNaN(remoteOrderId) && payload.localOrderId) {
+                        const matchCreateOp = await tx.syncOperation.findFirst({
+                            where: { entityId: String(payload.localOrderId), operation: 'CREATE_ORDER', status: 'COMPLETED' },
+                            orderBy: { id: 'desc' }
+                        });
+                        remoteOrderId = parseInt(matchCreateOp?.resultPayload?.remoteEntityId || matchCreateOp?.resultPayload?.orderId);
+                    }
+                    if (remoteOrderId && payload.platoId) {
+                        const newDetalle = await tx.detalleComanda.create({
+                            data: {
+                                comandaId: remoteOrderId,
+                                platoId: parseInt(payload.platoId),
+                                cantidad: parseInt(payload.cantidad || 1),
+                                estado: payload.estado || 'pendiente',
+                                observacion: payload.observacion || null
+                            }
+                        });
+                        businessResult = { localEntityId: entityId, remoteEntityId: newDetalle.id, success: true };
+                    } else {
+                        businessResult = { localEntityId: entityId, success: true };
+                    }
+                } else if (operation === 'REMOVE_ORDER_ITEM' || operation === 'REMOVE') {
+                    const directId = parseInt(payload.remoteItemId || payload.itemId || entityId);
+                    if (!isNaN(directId) && directId > 0) {
+                        await tx.detalleComanda.update({
+                            where: { id: directId },
+                            data: { estado: 'anulado' }
+                        }).catch(() => {});
+                    }
+                    businessResult = { localEntityId: entityId, success: true };
+                } else {
+                    businessResult = { localEntityId: entityId, success: true };
+                }
             }
 
             // C. Actualizar estado a COMPLETED y guardar el payload de resultado
@@ -4329,17 +4425,20 @@ app.get('/api/cashier/balance', async (req, res) => {
             return 'efectivo';
         };
 
-        // Calculate manual incomes and egresos segregated by payment method
-        const manualIngresos = (movements || []).filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
-        const manualEgresos = (movements || []).filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
+        // Calculate manual incomes and egresos segregated by payment method (excluding sales)
+        const isManualMovement = (m) => !String(m.concepto || '').toLowerCase().startsWith('venta');
+        const manualMovements = (movements || []).filter(isManualMovement);
 
-        const manualIngresosYape = (movements || []).filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
-        const manualEgresosYape = (movements || []).filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
+        const manualIngresos = manualMovements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
+        const manualEgresos = manualMovements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
 
-        const manualIngresosPlin = (movements || []).filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
-        const manualEgresosPlin = (movements || []).filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+        const manualIngresosYape = manualMovements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
+        const manualEgresosYape = manualMovements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
 
-        const totalEgresosAll = (movements || []).filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
+        const manualIngresosPlin = manualMovements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+        const manualEgresosPlin = manualMovements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+
+        const totalEgresosAll = manualMovements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
 
         // Dynamic Inicio -> Fixed initial amount
         const inicio = round2(lastArqueo.montoInicial || 0);
@@ -4411,10 +4510,18 @@ app.get('/api/cashier/balance', async (req, res) => {
         // totalCaja = Inicio + manualIngresos (efectivo) + cash sales - manualEgresos (efectivo)
         const totalCaja = round2((lastArqueo.montoInicial || 0) + manualIngresos + incomeDetails.efectivo - manualEgresos);
 
+        let userName = 'Caja Prueba';
+        if (lastArqueo.usuarioId) {
+            const userObj = await prisma.user.findUnique({ where: { id: lastArqueo.usuarioId } });
+            if (userObj) userName = userObj.nombre;
+        }
+
         const ventasDetalladas = (sales || []).map(order => ({
             id: order.id,
             hora: order.fecha,
             items: (order.detalles || []).map(d => ({
+                id: d.id,
+                platoId: d.platoId,
                 cantidad: d.cantidad || 1,
                 descripcion: d.plato?.nombre || 'Plato',
                 precio: d.plato?.precio || 0,
@@ -4422,7 +4529,10 @@ app.get('/api/cashier/balance', async (req, res) => {
             })),
             total: (order.detalles || []).reduce((s, d) => s + ((d.cantidad || 1) * (d.plato?.precio || 0)), 0),
             metodo: order.metodoPago || 'efectivo',
+            metodoPago: order.metodoPago || 'efectivo',
             doc: order.tipoDocumento || 'sin_comprobante',
+            tipoDocumento: order.tipoDocumento || 'sin_comprobante',
+            propina: order.propina || 0,
             waiterName: order.usuario ? order.usuario.nombre : 'Mesero',
             mesaNum: order.mesa ? order.mesa.numero : order.mesaId
         }));
@@ -4430,6 +4540,9 @@ app.get('/api/cashier/balance', async (req, res) => {
         res.json({
             id: lastArqueo.id,
             numeroSesion: lastArqueo.numeroSesion != null ? lastArqueo.numeroSesion : lastArqueo.id,
+            usuarioId: lastArqueo.usuarioId,
+            usuarioNombre: userName,
+            usuario: { nombre: userName },
             estado: lastArqueo.estado,
             fechaInicio: lastArqueo.fechaInicio,
             fechaFin: lastArqueo.fechaFin,
@@ -4442,7 +4555,7 @@ app.get('/api/cashier/balance', async (req, res) => {
             propinasPorMozo: desglosePropinas,
             totalPendiente,
             ventas: ventasDetalladas,
-            movimientos: movements
+            movimientos: manualMovements
         });
 
     } catch (e) {
@@ -4925,16 +5038,19 @@ app.get('/api/cashier/history', async (req, res) => {
                 return orderTime >= startDate.getTime() && orderTime <= endDate.getTime();
             });
 
-            const manualIngresos = movements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
-            const manualEgresos = movements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
+            const isManualMovement = (m) => !String(m.concepto || '').toLowerCase().startsWith('venta');
+            const manualMovements = movements.filter(isManualMovement);
 
-            const manualIngresosYape = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
-            const manualEgresosYape = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualIngresos = manualMovements.filter(m => m.tipo === 'INGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualEgresos = manualMovements.filter(m => m.tipo === 'EGRESO' && (m.metodoPago === 'efectivo' || !m.metodoPago)).reduce((sum, m) => sum + (m.monto || 0), 0);
 
-            const manualIngresosPlin = movements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
-            const manualEgresosPlin = movements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualIngresosYape = manualMovements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualEgresosYape = manualMovements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'yape').reduce((sum, m) => sum + (m.monto || 0), 0);
 
-            const totalEgresosAll = movements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualIngresosPlin = manualMovements.filter(m => m.tipo === 'INGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+            const manualEgresosPlin = manualMovements.filter(m => m.tipo === 'EGRESO' && m.metodoPago === 'plin').reduce((sum, m) => sum + (m.monto || 0), 0);
+
+            const totalEgresosAll = manualMovements.filter(m => m.tipo === 'EGRESO').reduce((sum, m) => sum + (m.monto || 0), 0);
 
             const inicio = round2(arq.montoInicial || 0);
             const egresos = round2(totalEgresosAll);
@@ -5686,12 +5802,21 @@ app.get('/api/insumos/:id/platos', async (req, res) => {
     try {
         const tenantId = getTenantId(req);
         const insumoId = parseInt(id, 10);
+        if (isNaN(insumoId)) return res.json([]);
+
+        // Resolver restauranteId del insumo directamente como primera fuente de verdad
+        const insumoRecord = await prisma.insumo.findUnique({
+            where: { id: insumoId },
+            select: { id: true, restauranteId: true }
+        });
+        const resolvedTenantId = insumoRecord?.restauranteId || tenantId;
+
         const recetas = await prisma.recetaInsumo.findMany({
             where: {
                 insumoId: insumoId,
                 plato: {
                     deleted: false,
-                    restauranteId: tenantId
+                    ...(resolvedTenantId ? { restauranteId: resolvedTenantId } : {})
                 }
             },
             include: {
@@ -5719,6 +5844,7 @@ app.get('/api/insumos/:id/platos', async (req, res) => {
 
         res.json(platos);
     } catch (e) {
+        console.error('Error fetching platos de insumo:', e);
         res.status(500).json({ error: e.message });
     }
 });
@@ -5859,16 +5985,19 @@ app.delete('/api/insumos/:id', async (req, res) => {
 app.get('/api/recetas/:platoId', async (req, res) => {
     const { platoId } = req.params;
     try {
-        const tenantId = getTenantId(req);
+        const idNum = parseInt(platoId, 10);
+        if (isNaN(idNum)) return res.json([]);
+
         const plato = await prisma.plato.findUnique({
-            where: { id: parseInt(platoId) },
-            select: { restauranteId: true }
+            where: { id: idNum },
+            select: { id: true, restauranteId: true, deleted: true }
         });
-        if (!plato || plato.restauranteId !== tenantId) {
+        if (!plato || plato.deleted) {
             return res.json([]);
         }
+
         const receta = await prisma.recetaInsumo.findMany({
-            where: { platoId: parseInt(platoId) },
+            where: { platoId: idNum },
             include: { insumo: true }
         });
         res.json(receta);

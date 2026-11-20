@@ -972,7 +972,9 @@ const InventoryView = () => {
     // --- TAB 3: RECETARIO EFECTOS Y CONTROLADORES ---
     useEffect(() => {
         if (selectedPlatoId) {
-            fetch(`/api/recetas/${selectedPlatoId}`)
+            fetch(`/api/recetas/${selectedPlatoId}`, {
+                headers: getTenantHeader()
+            })
                 .then(res => res.json())
                 .then(data => {
                     const mapped = data.map(d => ({ insumoId: d.insumoId, cantidad: d.cantidad, insumo: d.insumo }));
@@ -994,7 +996,9 @@ const InventoryView = () => {
 
     const handleDiscardRecipe = useCallback(() => {
         if (selectedPlatoId) {
-            fetch(`/api/recetas/${selectedPlatoId}`)
+            fetch(`/api/recetas/${selectedPlatoId}`, {
+                headers: getTenantHeader()
+            })
                 .then(res => res.json())
                 .then(data => {
                     const mapped = data.map(d => ({ insumoId: d.insumoId, cantidad: d.cantidad, insumo: d.insumo }));
@@ -1039,7 +1043,10 @@ const InventoryView = () => {
         try {
             const res = await fetch(`/api/recetas/${selectedPlatoId}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getTenantHeader()
+                },
                 body: JSON.stringify({ ingredientes: validIngredients })
             });
 

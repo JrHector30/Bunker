@@ -16,7 +16,7 @@ export const InsumoDetailsModal = ({
     const fetchPlatos = async () => {
       setLoading(true);
       try {
-        const tenantId = getActiveRestaurant()?.id || 1;
+        const tenantId = insumo.restauranteId || getActiveRestaurant()?.id || 1;
         const res = await fetch(`/api/insumos/${insumo.id}/platos`, {
           headers: { 'x-restaurante-id': String(tenantId) }
         });

@@ -496,14 +496,17 @@ export default function SettingsView() {
 
   const handleTestPrint = async () => {
     try {
+      const activeRest = getActiveRestaurant();
+      const currentRestaurantName = activeRest?.nombre || user?.nombreRestaurante || 'Búnker';
       const testContent = {
         type: 'precuenta',
+        restauranteNombre: currentRestaurantName,
         total: 0,
         totalLetras: 'cero soles y 00/100 céntimos',
         items: [{ nombre: `Prueba en estación: ${station}`, precio: 0, cantidad: 1 }],
       };
       await enqueueTicket('TEST', user?.nombre || 'Administrador', testContent, station);
-      showToast(`Enviando ticket de prueba a ${station} (${usbWidth}).`, 'success');
+      showToast(`Enviando ticket de prueba a ${station} (${usbWidth}) para ${currentRestaurantName}.`, 'success');
     } catch (err) {
       showToast(`Error al imprimir ticket de prueba: ${err.message}`, 'error');
     }
