@@ -1772,6 +1772,25 @@ app.post('/api/sync/operations', async (req, res) => {
                     orderId: order.id
                 };
             } else if (entity === 'ORDER' && operation === 'PAY_ORDER') {
+                // 0. Idempotencia de negocio: Si este cobro de orden ya fue procesado y completado exitosamente antes
+                const alreadyCompletedPay = await tx.syncOperation.findFirst({
+                    where: {
+                        entity: 'ORDER',
+                        entityId: String(entityId),
+                        operation: 'PAY_ORDER',
+                        status: 'COMPLETED'
+                    },
+                    orderBy: { id: 'desc' }
+                });
+                if (alreadyCompletedPay && alreadyCompletedPay.resultPayload) {
+                    businessResult = {
+                        ...alreadyCompletedPay.resultPayload,
+                        localEntityId: entityId,
+                        duplicate: true,
+                        success: true
+                    };
+                } else {
+
                 const targetMesaId = parseInt(payload.mesaId || payload.tableId);
                 
                 let order = null;
@@ -1851,7 +1870,9 @@ app.post('/api/sync/operations', async (req, res) => {
                     throw new Error(`No se encontró la comanda activa en el servidor para procesar el cobro (Mesa: ${targetMesaId || 'desconocida'}, LocalId: ${entityId}).`);
                 }
 
-                if (order) {
+                const isAlreadyClosed = order.estado === 'cerrada';
+
+                if (!isAlreadyClosed) {
                     // 1. Cerrar comanda
                     await tx.comanda.update({
                         where: { id: order.id },
@@ -1971,10 +1992,21 @@ app.post('/api/sync/operations', async (req, res) => {
                         }
                     }
 
+                    } else {
+                        // Si la comanda ya figuraba cerrada en el servidor, asegurar la mesa liberada
+                        if (order.mesaId) {
+                            await tx.mesa.update({
+                                where: { id: order.mesaId },
+                                data: { estado: 'libre' }
+                            }).catch(() => {});
+                        }
+                    }
+
                     businessResult = {
                         localEntityId: entityId,
                         remoteEntityId: order.id,
                         orderId: order.id,
+                        duplicate: isAlreadyClosed,
                         success: true
                     };
                 }

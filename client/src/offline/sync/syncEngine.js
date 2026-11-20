@@ -221,10 +221,15 @@ export const syncEngine = {
    * Procesa una única operación encolada.
    * 
    * @param {Object} operation La operación en estado PROCESSING
+   * @param {Object} [options] Opciones adicionales (ej: force para reintentos atómicos manuales)
    * @returns {Promise<boolean>} True si tuvo éxito
    */
-  async processNext(operation) {
+  async processNext(operation, options = {}) {
     try {
+      if (options.force) {
+        operation.retryCount = 0;
+      }
+
       // 1. Validar si ya superó el límite de reintentos
       if (operation.retryCount >= SYNC_CONFIG.MAX_RETRY_COUNT) {
         const err = new Error(`Excedió el límite máximo de ${SYNC_CONFIG.MAX_RETRY_COUNT} reintentos.`);

@@ -272,6 +272,23 @@ export const AtomicSyncModal = ({
       // Asegurar motor activo
       syncEngine.start();
 
+      // Resetear cualquier operación previa en estado FAILED o atascada en PROCESSING
+      // y restablecer su retryCount a 0 para que la sincronización atómica las procese limpiamente
+      const nonDoneOps = await db.syncQueue
+        .where('status')
+        .anyOf([QueueStatus.FAILED, QueueStatus.PROCESSING, QueueStatus.PENDING])
+        .toArray();
+
+      for (const op of nonDoneOps) {
+        if (op.status !== QueueStatus.PENDING || (op.retryCount && op.retryCount > 0)) {
+          await db.syncQueue.update(op.id, {
+            status: QueueStatus.PENDING,
+            retryCount: 0,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+
       // 1. Inspeccionar operaciones locales en db.syncQueue para títulos dinámicos
       const allPending = await db.syncQueue
         .where('status')
@@ -328,9 +345,11 @@ export const AtomicSyncModal = ({
       if (orderOps.length > 0) {
         for (let i = 0; i < orderOps.length; i++) {
           const op = orderOps[i];
-          const success = await syncEngine.processNext(op);
+          const success = await syncEngine.processNext(op, { force: true });
           if (!success) {
-            throw new Error(`Error al subir la comanda local (${op.entityId || op.id}).`);
+            const latestOp = await db.syncQueue.get(op.id);
+            const detailMsg = latestOp?.lastError?.message;
+            throw new Error(`Error al subir la comanda local (${op.entityId || op.id})${detailMsg ? ': ' + detailMsg : '.'}`);
           }
           const pct = Math.round(((i + 1) / orderOps.length) * 100);
           setStepProgress(prev => {
@@ -363,12 +382,41 @@ export const AtomicSyncModal = ({
         op => op.entity === 'ORDER' && op.operation === 'PAY_ORDER' && op.recordingSource !== 'shadow' && op.recordingSource !== 'diagnostic'
       );
 
+      // Inyectar remoteOrderId si aún no lo tiene mapeado
+      for (const payOp of freshPayOps) {
+        if (!payOp.payload?.remoteOrderId && !payOp.payload?.orderId) {
+          const localOrder = await db.orders.get(payOp.entityId);
+          let resolvedRemoteId = localOrder?.remoteId;
+          
+          if (!resolvedRemoteId) {
+            const createOp = await db.syncQueue
+              .where('entityId')
+              .equals(String(payOp.entityId))
+              .filter(o => o.operation === 'CREATE_ORDER' && o.status === QueueStatus.DONE)
+              .first();
+            resolvedRemoteId = createOp?.syncResult?.remoteEntityId || createOp?.payload?.remoteOrderId;
+          }
+
+          if (resolvedRemoteId) {
+            const numRemoteId = Number(resolvedRemoteId);
+            payOp.payload = {
+              ...payOp.payload,
+              remoteOrderId: numRemoteId,
+              orderId: numRemoteId
+            };
+            await db.syncQueue.update(payOp.id, { payload: payOp.payload });
+          }
+        }
+      }
+
       if (freshPayOps.length > 0) {
         for (let i = 0; i < freshPayOps.length; i++) {
           const op = freshPayOps[i];
-          const success = await syncEngine.processNext(op);
+          const success = await syncEngine.processNext(op, { force: true });
           if (!success) {
-            throw new Error(`Error al registrar el cobro en Caja (${op.entityId || op.id}).`);
+            const latestOp = await db.syncQueue.get(op.id);
+            const detailMsg = latestOp?.lastError?.message;
+            throw new Error(`Error al registrar el cobro en Caja (${op.entityId || op.id})${detailMsg ? ': ' + detailMsg : '.'}`);
           }
           const pct = Math.round(((i + 1) / freshPayOps.length) * 100);
           setStepProgress(prev => {
@@ -388,9 +436,11 @@ export const AtomicSyncModal = ({
       // Procesar cualquier otra operación restante en cola (ej. UPDATE_ORDER_STATUS, PRODUCT CREATE)
       const remaining = await queueService.getPendingSyncable();
       for (const remOp of remaining) {
-        const success = await syncEngine.processNext(remOp);
+        const success = await syncEngine.processNext(remOp, { force: true });
         if (!success) {
-          throw new Error(`Error al sincronizar operación pendiente (${remOp.entity} - ${remOp.operation}).`);
+          const latestOp = await db.syncQueue.get(remOp.id);
+          const detailMsg = latestOp?.lastError?.message;
+          throw new Error(`Error al sincronizar operación pendiente (${remOp.entity} - ${remOp.operation})${detailMsg ? ': ' + detailMsg : '.'}`);
         }
       }
 
