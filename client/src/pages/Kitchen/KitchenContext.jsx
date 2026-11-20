@@ -90,6 +90,12 @@ export const KitchenProvider = ({ children }) => {
                     const pending = pendingUpdates.current[item.id];
                     return pending ? { ...item, ...pending } : item;
                 });
+
+                // Si la red falló temporalmente pero offline no tiene datos y estamos en modo ONLINE, conservar los platos en pantalla
+                if (mergedData.length === 0 && !networkStatus.isOffline()) {
+                    return;
+                }
+
                 updateGlobalCache(mergedData);
             })
             .catch(err => console.error("[KitchenContext] Error leyendo cola local offline:", err));

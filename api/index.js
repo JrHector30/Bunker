@@ -2775,7 +2775,6 @@ app.get('/api/kitchen/queue', async (req, res) => {
                             select: {
                                 id: true,
                                 numero: true,
-                                nombre: true,
                                 mesasHijas: {
                                     select: { id: true, numero: true }
                                 }

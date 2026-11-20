@@ -14,6 +14,7 @@ import CloseButton from '../components/ui/CloseButton';
 import { useTheme } from '../context/ThemeContext';
 import { networkStatus, NetworkState, db, offlineOrderService, offlineSnapshotService } from '../offline';
 import MesasMobileView from '../components/tables/MesasMobileView';
+import TableRadialMenu, { HandPlatterIcon, UnlinkMinimalIcon } from '../components/TableRadialMenu';
 
 export function BackupRestoreIcon({ size = 24, ...props }) {
     return (
@@ -167,6 +168,7 @@ const TablesView = () => {
     }, [refreshCajaStatus]);
     const [modalType, setModalType] = useState(null); // 'view' | 'pre-check'
     const [showTransferMode, setShowTransferMode] = useState(false);
+    const [radialAnchor, setRadialAnchor] = useState(null);
 
     // Diners Modal State
     const [showDinersModal, setShowDinersModal] = useState(false);
@@ -597,10 +599,22 @@ const TablesView = () => {
     };
 
     // Handlers
-    const handleTableClick = (table) => {
-        // Si la mesa ya está ocupada o tiene ítems, permitimos ver la comanda pase lo que pase con la caja
-        if (table.estado === 'ocupada' || (table.comandas && table.comandas.length > 0)) {
-            navigate(`/order/${table.id}`);
+    const handleTableClick = (table, event) => {
+        // Si la mesa es hija de una mesa unida, no interactúa individualmente
+        if (table.mesaPadreId) return;
+
+        // Si la mesa ya está ocupada o tiene ítems/cuenta, abrir el Menú Radial Interactivo
+        if (table.estado === 'ocupada' || table.estado === 'cuenta' || (table.comandas && table.comandas.length > 0)) {
+            if (event?.currentTarget) {
+                const rect = event.currentTarget.getBoundingClientRect();
+                setRadialAnchor({
+                    tableId: table.id,
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2,
+                });
+            } else {
+                navigate(`/order/${table.id}`);
+            }
             return;
         }
 
@@ -714,7 +728,7 @@ const TablesView = () => {
     };
 
     const handleOpenModal = (e, table, type) => {
-        e.stopPropagation();
+        if (e && e.stopPropagation) e.stopPropagation();
 
         // HOTFIX: Si la mesa no tiene comandas activas válidas, forzamos la recarga al servidor para limpiar caché
         if (!table.comandas || table.comandas.length === 0) {
@@ -1645,13 +1659,13 @@ const TablesView = () => {
                             key={table.id}
                             className={`mesa-mapa ${claseNeon}`}
                             onPointerDown={(e) => handlePointerDown(e, table)}
-                            onClick={() => {
+                            onClick={(e) => {
                                 if (isEditMode) return;
                                 if (isDaughter) {
                                     showToast(`Esta mesa está unida a la Mesa ${padreMesa ? padreMesa.numero : ''}. Realice el pedido en ella.`, "info");
                                     return;
                                 }
-                                handleTableClick(table);
+                                handleTableClick(table, e);
                             }}
                             style={{
                                 position: 'absolute',
@@ -1742,6 +1756,22 @@ const TablesView = () => {
                                 {isDaughter ? badgeText : (debaBloquear ? 'CERRADA' : (table.estado === 'ocupada' ? 'OCUPADA' : 'LIBRE'))}
                             </div>
 
+                            {/* 🔗 Botón físico minimalista para separar mesas unidas libres, ubicado justo debajo del texto LIBRE */}
+                            {!isDaughter && table.mesasHijas && table.mesasHijas.length > 0 && table.estado === 'libre' && !isEditMode && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDirectUnmergeAll(table, e);
+                                    }}
+                                    title="Separar mesas unidas"
+                                    className="border-0 mt-1 px-2.5 py-0.5 rounded-full bg-neutral-200/90 dark:bg-neutral-800/90 hover:bg-white dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-[10px] font-semibold tracking-tight inline-flex items-center gap-1 shadow-sm transition-all duration-150 cursor-pointer active:scale-95"
+                                >
+                                    <UnlinkMinimalIcon className="w-3 h-3 stroke-[2]" />
+                                    <span>Separar</span>
+                                </button>
+                            )}
+
                             <div style={{
                                 fontSize: '0.65rem',
                                 marginTop: 3,
@@ -1749,70 +1779,14 @@ const TablesView = () => {
                                 background: 'var(--item-hover, rgba(255,255,255,0.1))',
                                 padding: '2px 6px',
                                 borderRadius: 10,
-                                visibility: (!isDaughter && table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? 'visible' : 'hidden'
+                                visibility: (!isDaughter && table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? 'visible' : 'hidden',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4
                             }}>
-                                🤵 {(!isDaughter && table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? table.comandas[0].usuario.nombre.split(' ')[0] : 'Vacio'}
+                                <HandPlatterIcon className="w-3 h-3 shrink-0" />
+                                <span>{(!isDaughter && table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? table.comandas[0].usuario.nombre.split(' ')[0] : 'Vacio'}</span>
                             </div>
-
-                            {!isDaughter && table.estado !== 'libre' && !isEditMode && (
-                                <div className="satelite-buttons" style={{ position: 'absolute', top: '110%', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 12, zIndex: 50 }}>
-                                    <button className="glass-button primary" style={{ padding: '12px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={(e) => { e.stopPropagation(); navigate(`/order/${table.id}`); }}>
-                                        <Plus size={24} />
-                                    </button>
-                                    <button className="glass-button" style={{ padding: '12px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }} onClick={(e) => handleOpenModal(e, table, 'view')}>
-                                        <Eye size={24} />
-                                        {itemsBarraPendientes > 0 && (
-                                            <span style={{
-                                                position: 'absolute',
-                                                top: -6,
-                                                right: -6,
-                                                background: '#ff0055',
-                                                color: 'white',
-                                                fontSize: '0.70rem',
-                                                fontWeight: 'bold',
-                                                width: '18px',
-                                                height: '18px',
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                borderRadius: '50%',
-                                                boxShadow: '0 0 12px #ff0055, inset 0 0 4px rgba(255,255,255,0.5)',
-                                                border: '1px solid rgba(255,255,255,0.2)',
-                                                zIndex: 60,
-                                                animation: 'pulse 2s infinite'
-                                            }}>
-                                                {itemsBarraPendientes}
-                                            </span>
-                                        )}
-                                    </button>
-                                    <button className="glass-button" style={{ padding: '12px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={(e) => handleOpenModal(e, table, 'pre-check')}>
-                                        <Calculator size={24} />
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* 🔗 Botón satélite minimalista para separar mesas unidas libres */}
-                            {!isDaughter && table.mesasHijas && table.mesasHijas.length > 0 && table.estado === 'libre' && !isEditMode && (
-                                <div className="absolute top-[105%] left-1/2 -translate-x-1/2 flex z-50">
-                                    <button
-                                        onClick={(e) => handleDirectUnmergeAll(table, e)}
-                                        title="Separar mesas"
-                                        className="
-                group flex h-10 w-10 items-center justify-center rounded-full cursor-pointer select-none
-                border border-red-500/30 bg-red-950/20 text-white backdrop-blur-sm
-                transition-all duration-300 ease-out 
-                hover:scale-110 hover:border-red-500 hover:bg-red-500 hover:text-white 
-                hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]
-                active:scale-95 disabled:pointer-events-none disabled:opacity-50
-            "
-                                    >
-                                        <Unlink
-                                            size={18}
-                                            className="transition-transform duration-300 ease-in-out group-hover:rotate-12"
-                                        />
-                                    </button>
-                                </div>
-                            )}
                         </div>
                     );
                 })}
