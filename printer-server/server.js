@@ -55,6 +55,9 @@ const connectionString = cleanedUrl;
 // Inicializar Pool de conexiones a PostgreSQL
 const pool = new Pool({
   connectionString,
+  max: 2, // Máximo 2 conexiones concurrentes por equipo para evitar saturar el pooler de Supabase
+  idleTimeoutMillis: 5000,
+  connectionTimeoutMillis: 3000,
   ssl: {
     rejectUnauthorized: false // Requerido para conexiones externas de Supabase
   }
@@ -213,6 +216,22 @@ function getWindowsPrinters() {
   });
 }
 
+// Caché en memoria para evitar saturar la CPU y el bucle de eventos ejecutando PowerShell cada segundo
+let cachedWindowsPrinters = null;
+let lastWindowsPrintersScan = 0;
+const PRINTER_CACHE_TTL_MS = 8000;
+
+async function getCachedWindowsPrinters(force = false) {
+  const now = Date.now();
+  if (!force && cachedWindowsPrinters && (now - lastWindowsPrintersScan < PRINTER_CACHE_TTL_MS)) {
+    return cachedWindowsPrinters;
+  }
+  const printers = await getWindowsPrinters();
+  cachedWindowsPrinters = printers;
+  lastWindowsPrintersScan = Date.now();
+  return printers;
+}
+
 // --- 2. Rutina: Procesar Escaneo Remoto solicitado desde el Móvil/Web ---
 async function handlePrinterScanRequests() {
   let client;
@@ -236,12 +255,16 @@ async function handlePrinterScanRequests() {
         return;
       }
 
+      // Liberar la conexión a la base de datos mientras realizamos el escaneo local de red y Windows
+      client.release();
+      client = null;
+
       try {
         console.log(`🔍 Solicitud de escaneo de impresoras detectada para esta estación (${STATION_ID}).`);
         
         // Escaneo concurrente de Windows y Smart Scan de Red
         const [printersList, ethernetList] = await Promise.all([
-          getWindowsPrinters(),
+          getCachedWindowsPrinters(true),
           smartScanNetwork()
         ]);
 
@@ -250,6 +273,8 @@ async function handlePrinterScanRequests() {
 
         const jsonList = JSON.stringify(printersList);
         const jsonEthernet = JSON.stringify(ethernetList);
+
+        client = await pool.connect();
 
         // Guardar impresoras disponibles para ESTA estación
         await client.query(`
@@ -714,6 +739,19 @@ async function checkAndPrintQueue() {
   let client;
   try {
     client = await pool.connect();
+
+    // 0. Comprobación ultrarrápida: ¿hay tickets pendientes para esta estación?
+    const checkFast = await client.query(
+      `SELECT id FROM tickets_pendientes WHERE impreso = false AND (estacion = $1 OR (estacion IS NULL AND $1 = 'Caja')) LIMIT 1`,
+      [STATION_ID]
+    );
+
+    if (checkFast.rows.length === 0) {
+      // Sin tickets pendientes: terminar ciclo de inmediato (menos de 5ms, 0 llamadas pesadas a PowerShell)
+      isProcessing = false;
+      return;
+    }
+
     // 1. Obtener la impresora activa de la base de datos (con fallback heredado)
     let activeDevice = null;
     const activeDevRes = await client.query(
@@ -747,7 +785,7 @@ async function checkAndPrintQueue() {
     }
 
     // Verificar si la impresora configurada está realmente conectada en esta máquina
-    const winPrinters = await getWindowsPrinters();
+    const winPrinters = await getCachedWindowsPrinters();
     const isPhysicallyPresent = activeDevice && activeDevice.transport === 'USB'
       ? winPrinters.some(p => p.name.toLowerCase() === activeDevice.nombre.toLowerCase() && !p.offline)
       : true;
@@ -773,17 +811,8 @@ async function checkAndPrintQueue() {
         };
         console.log(`ℹ️ [Auto-Fallback] Usando impresora física detectada en el equipo: "${physicalPrinter.name}" (${activeDevice.medida}) para la estación "${STATION_ID}".`);
       } else {
-        // Si no hay ninguna impresora conectada físicamente para esta estación:
-        // Descartar automáticamente los tickets pendientes para evitar que se acumulen
-        const discarded = await client.query(
-          `UPDATE tickets_pendientes 
-           SET impreso = true 
-           WHERE impreso = false AND (estacion = $1 OR (estacion IS NULL AND $1 = 'Caja')) RETURNING id`,
-          [STATION_ID]
-        );
-        if (discarded.rows.length > 0) {
-          console.log(`ℹ️ [Sin Impresora] ${discarded.rows.length} ticket(s) descartado(s) automáticamente para evitar acumulación.`);
-        }
+        // Si no hay ninguna impresora conectada físicamente para esta estación en este instante,
+        // esperar al siguiente ciclo (nunca descartar tickets recién creados).
         isProcessing = false;
         return;
       }
@@ -892,20 +921,20 @@ async function checkAndPrintQueue() {
 }
 
 // --- 6. Inicializar Bucles de Vigilancia ---
-// Cada 1 segundo vigilar la cola de tickets para respuesta casi instantánea
-setInterval(checkAndPrintQueue, 1000);
+// Cada 1.2 segundos vigilar la cola de tickets (con check ultrarrápido <5ms)
+setInterval(checkAndPrintQueue, 1200);
 
-// Cada 1 segundo vigilar si hay solicitudes de escaneo de impresoras
-setInterval(handlePrinterScanRequests, 1000);
+// Cada 3 segundos vigilar si hay solicitudes de escaneo de impresoras
+setInterval(handlePrinterScanRequests, 3000);
 
-// Cada 2 segundos reportar latido de vida de la estación
-setInterval(writeStationHeartbeat, 2000);
+// Cada 5 segundos reportar latido de vida de la estación (margen web es 20s)
+setInterval(writeStationHeartbeat, 5000);
 
-// Cada 3 segundos comprobar solicitudes de Auto Recovery
-setInterval(handleAutoRecoveryRequests, 3000);
+// Cada 5 segundos comprobar solicitudes de Auto Recovery
+setInterval(handleAutoRecoveryRequests, 5000);
 
-// Cada 10 segundos diagnosticar de forma periódica las impresoras de red vinculadas
-setInterval(runPeriodicHealthCheck, 10000);
+// Cada 15 segundos diagnosticar de forma periódica las impresoras de red vinculadas
+setInterval(runPeriodicHealthCheck, 15000);
 
 // Ejecutar barridos y latido inmediato al arrancar
 checkAndPrintQueue();

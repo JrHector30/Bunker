@@ -203,22 +203,26 @@ app.get('/api/impresoras', async (req, res) => {
             }
         }
 
-        // Traer mapas de medidas y perfiles guardados para esta estación
-        const [medidasConf, perfilesConf] = await Promise.all([
+        // Traer mapas de medidas, perfiles e impresora activa guardada para esta estación
+        const activeKey = tenantId === 1 ? `impresora_activa_${estacion}` : `impresora_activa_${tenantId}_${estacion}`;
+        const [medidasConf, perfilesConf, activeConf] = await Promise.all([
             prisma.configuracion.findUnique({
                 where: { clave: tenantId === 1 ? `impresora_medidas_${estacion}` : `impresora_medidas_${tenantId}_${estacion}` }
             }).catch(() => null),
             prisma.configuracion.findUnique({
                 where: { clave: tenantId === 1 ? `impresora_perfiles_${estacion}` : `impresora_perfiles_${tenantId}_${estacion}` }
+            }).catch(() => null),
+            prisma.configuracion.findUnique({
+                where: { clave: activeKey }
             }).catch(() => null)
         ]);
         const medidasMap = medidasConf?.valor ? JSON.parse(medidasConf.valor) : {};
         const perfilesMap = perfilesConf?.valor ? JSON.parse(perfilesConf.valor) : {};
+        const activePrinterName = activeConf?.valor || '';
         
-        // Mapear impresoras físicas de Windows: solo mostrar las que estén REALMENTE CONECTADAS / EN LÍNEA
+        // Mapear impresoras físicas de Windows: mantener siempre en pantalla los dispositivos físicos
         const winPrintersMapped = winPrinters
             .filter(p => !p.name.match(/pdf|xps|onenote|fax|root|microsoft|nitro/i))
-            .filter(p => !p.offline)
             .map(p => ({
                 id: `usb_${p.name}`,
                 nombre: p.name,
@@ -227,13 +231,32 @@ app.get('/api/impresoras', async (req, res) => {
                 transport: 'USB',
                 mac: null,
                 ultimaIp: null,
-                ultimoEstado: 'ONLINE',
-                offline: false,
+                ultimoEstado: p.offline ? 'OFFLINE' : 'ONLINE',
+                offline: p.offline === true,
                 port: p.port,
-                medida: medidasMap[p.name] || '80mm',
+                medida: medidasMap[p.name] || (p.name.toLowerCase().includes('58') ? '58mm' : '80mm'),
                 perfil: perfilesMap[p.name] || 'Genérico',
                 ultimaRespuestaMs: 0
             }));
+
+        // Si la estación ya tiene una impresora activa asignada, mantenerla SIEMPRE en pantalla para no reiniciar la selección
+        if (activePrinterName && !winPrintersMapped.some(p => p.nombre.toLowerCase() === activePrinterName.toLowerCase())) {
+            winPrintersMapped.unshift({
+                id: `usb_${activePrinterName}`,
+                nombre: activePrinterName,
+                estacion,
+                tipo: 'impresora',
+                transport: 'USB',
+                mac: null,
+                ultimaIp: null,
+                ultimoEstado: 'ONLINE',
+                offline: false,
+                port: 'Configurada',
+                medida: medidasMap[activePrinterName] || (activePrinterName.toLowerCase().includes('58') ? '58mm' : '80mm'),
+                perfil: perfilesMap[activePrinterName] || 'Genérico',
+                ultimaRespuestaMs: 0
+            });
+        }
 
         // Fetch registered Ethernet printers from DB for THIS restaurant (solo TCP9100)
         const netPrinters = await prisma.dispositivoRed.findMany({
