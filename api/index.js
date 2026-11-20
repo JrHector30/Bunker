@@ -871,16 +871,24 @@ app.post('/api/auth/tenant-login', async (req, res) => {
     try {
         const cleanEmail = correo.trim().toLowerCase();
 
-        // 1. Si es la cuenta Master de Superadmin, autenticar y retornar acceso directo a /superadmin
-        const superadminUser = await prisma.user.findFirst({
+        // 1. Búsqueda directa indexada por correo (Superadmin o Admin de Restaurante)
+        const user = await prisma.user.findFirst({
             where: {
                 correo: cleanEmail,
-                rol: 'superadmin'
+                rol: { in: ['superadmin', 'admin'] }
+            },
+            include: {
+                restaurante: true
             }
         });
 
-        if (superadminUser) {
-            const isMatch = bcrypt.compareSync(password, superadminUser.password);
+        if (!user) {
+            return res.status(401).json({ error: "Credenciales de negocio no válidas o correo no registrado." });
+        }
+
+        // Si es la cuenta Master de Superadmin
+        if (user.rol === 'superadmin') {
+            const isMatch = bcrypt.compareSync(password, user.password);
             if (!isMatch) {
                 return res.status(401).json({ error: "Contraseña incorrecta." });
             }
@@ -888,32 +896,20 @@ app.post('/api/auth/tenant-login', async (req, res) => {
                 success: true,
                 isSuperadmin: true,
                 superadmin: {
-                    id: superadminUser.id,
-                    nombre: superadminUser.nombre,
-                    correo: superadminUser.correo
+                    id: user.id,
+                    nombre: user.nombre,
+                    correo: user.correo
                 }
             });
         }
 
-        // 2. Si es Administrador de un Restaurante
-        const adminUser = await prisma.user.findFirst({
-            where: {
-                correo: cleanEmail,
-                rol: 'admin'
-            },
-            include: {
-                restaurante: true
-            }
-        });
-
-        if (!adminUser) {
-            return res.status(401).json({ error: "Credenciales de negocio no válidas o correo no registrado." });
-        }
+        // Si es Administrador de un Restaurante
+        const adminUser = user;
 
         // Consultar si tiene contraseña web dedicada almacenada
         const webPwdConfig = await prisma.configuracion.findUnique({
             where: { clave: `tenant_web_pwd_${adminUser.id}` }
-        });
+        }).catch(() => null);
 
         let isMatch = false;
         if (webPwdConfig && webPwdConfig.valor) {
