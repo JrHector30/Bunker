@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -18,11 +18,22 @@ import ToggleSwitch from '../components/ui/ToggleSwitch';
 import { motion } from 'motion/react';
 import { safeRecordProductShadow } from '../offline';
 import RecetarioEscandallo from '../components/recetario/RecetarioEscandallo';
+import UnsavedChangesModal from '../components/recetario/UnsavedChangesModal';
 import InsumosManagement from '../components/inventory/InsumosManagement';
 import MenuPlatosManagement from '../components/inventory/MenuPlatosManagement';
 import KardexManagement from '../components/inventory/KardexManagement';
 import AuditoriaManagement from '../components/inventory/AuditoriaManagement';
 import { getActiveRestaurant } from '../utils/tenant';
+
+const serializeRecipe = (items) => {
+    if (!items || !Array.isArray(items)) return '[]';
+    return JSON.stringify(
+        items
+            .filter(m => m && m.insumoId && m.cantidad !== '' && m.cantidad !== null && Number(m.cantidad) > 0)
+            .map(m => ({ id: Number(m.insumoId), qty: Number(parseFloat(m.cantidad).toFixed(4)) }))
+            .sort((a, b) => a.id - b.id)
+    );
+};
 
 
 const InventoryView = () => {
@@ -47,7 +58,32 @@ const InventoryView = () => {
 
 
 
+    // --- TAB 3: RECETARIO & ESTADO DE CAMBIOS PENDIENTES ---
+    const [selectedPlatoId, setSelectedPlatoId] = useState('');
+    const [currentRecipe, setCurrentRecipe] = useState([]);
+    const [savedRecipeSnapshot, setSavedRecipeSnapshot] = useState(null);
+    const [selectedPlatoObj, setSelectedPlatoObj] = useState(null);
+    const [isSavingRecipe, setIsSavingRecipe] = useState(false);
+    const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+    const [pendingNavAction, setPendingNavAction] = useState(null);
+
+    const isDirtyRecipe = useMemo(() => {
+        if (!selectedPlatoId || savedRecipeSnapshot === null) return false;
+        const currentSerialized = serializeRecipe(currentRecipe);
+        return currentSerialized !== savedRecipeSnapshot;
+    }, [currentRecipe, savedRecipeSnapshot, selectedPlatoId]);
+
     const handleTabChange = (newTab) => {
+        if (newTab === activeTab) return;
+        const isRecetario = activeTab === 'recetarios' || activeTab === 'recetario';
+        if (isDirtyRecipe && isRecetario) {
+            setPendingNavAction(() => () => {
+                setActiveTab(newTab);
+                setSearchParams({ tab: newTab });
+            });
+            setShowUnsavedModal(true);
+            return;
+        }
         setActiveTab(newTab);
         setSearchParams({ tab: newTab });
     };
@@ -933,11 +969,7 @@ const InventoryView = () => {
         }
     };
 
-    // --- TAB 3: RECETARIO ---
-    const [selectedPlatoId, setSelectedPlatoId] = useState('');
-    const [currentRecipe, setCurrentRecipe] = useState([]);
-    const [selectedPlatoObj, setSelectedPlatoObj] = useState(null);
-
+    // --- TAB 3: RECETARIO EFECTOS Y CONTROLADORES ---
     useEffect(() => {
         if (selectedPlatoId) {
             fetch(`/api/recetas/${selectedPlatoId}`)
@@ -945,15 +977,36 @@ const InventoryView = () => {
                 .then(data => {
                     const mapped = data.map(d => ({ insumoId: d.insumoId, cantidad: d.cantidad, insumo: d.insumo }));
                     setCurrentRecipe(mapped);
+                    setSavedRecipeSnapshot(serializeRecipe(mapped));
+                })
+                .catch(() => {
+                    setSavedRecipeSnapshot('[]');
                 });
 
             const p = products.find(p => p.id === parseInt(selectedPlatoId));
-            setSelectedPlatoObj(p);
+            setSelectedPlatoObj(p || null);
         } else {
             setCurrentRecipe([]);
             setSelectedPlatoObj(null);
+            setSavedRecipeSnapshot(null);
         }
     }, [selectedPlatoId, products]);
+
+    const handleDiscardRecipe = useCallback(() => {
+        if (selectedPlatoId) {
+            fetch(`/api/recetas/${selectedPlatoId}`)
+                .then(res => res.json())
+                .then(data => {
+                    const mapped = data.map(d => ({ insumoId: d.insumoId, cantidad: d.cantidad, insumo: d.insumo }));
+                    setCurrentRecipe(mapped);
+                    setSavedRecipeSnapshot(serializeRecipe(mapped));
+                    showToast('Cambios descartados.', 'info');
+                })
+                .catch(() => {
+                    setSavedRecipeSnapshot('[]');
+                });
+        }
+    }, [selectedPlatoId, showToast]);
 
     const handleAddIngredientRow = () => setCurrentRecipe([...currentRecipe, { insumoId: '', cantidad: '', insumo: null }]);
 
@@ -969,32 +1022,116 @@ const InventoryView = () => {
     const handleRemoveIngredient = (index) => setCurrentRecipe(currentRecipe.filter((_, i) => i !== index));
 
     const handleSaveRecipe = async () => {
-        if (!selectedPlatoId) return;
+        if (!selectedPlatoId) return false;
         setFormError(null);
+        setIsSavingRecipe(true);
 
         // Validar NaNs en receta
-        const hasInvalidQty = currentRecipe.some(i => i.insumoId && (Number.isNaN(i.cantidad) || i.cantidad === null || i.cantidad === ''));
+        const hasInvalidQty = currentRecipe.some(i => i.insumoId && (Number.isNaN(Number(i.cantidad)) || i.cantidad === null || i.cantidad === ''));
         if (hasInvalidQty) {
             showToast("Error: Existen cantidades inválidas en la receta.", 'error');
-            return;
+            setIsSavingRecipe(false);
+            return false;
         }
 
-        const validIngredients = currentRecipe.filter(i => i.insumoId && i.cantidad > 0);
+        const validIngredients = currentRecipe.filter(i => i.insumoId && Number(i.cantidad) > 0);
 
         try {
             const res = await fetch(`/api/recetas/${selectedPlatoId}`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ingredientes: validIngredients })
             });
 
             if (res.ok) {
                 showToast('Receta guardada. Costos actualizados.', 'success');
+                setSavedRecipeSnapshot(serializeRecipe(validIngredients));
                 fetchData(); // refresh product list for new cost
+                setIsSavingRecipe(false);
+                return true;
             } else {
                 showToast('Error al guardar receta.', 'error');
+                setIsSavingRecipe(false);
+                return false;
             }
-        } catch (e) { showToast('Error de red al guardar receta.', 'error'); }
+        } catch (e) {
+            showToast('Error de red al guardar receta.', 'error');
+            setIsSavingRecipe(false);
+            return false;
+        }
     };
+
+    const handleRequestChangePlato = (newPlatoId) => {
+        if (String(newPlatoId) === String(selectedPlatoId)) return;
+        if (isDirtyRecipe) {
+            setPendingNavAction(() => () => {
+                setSelectedPlatoId(newPlatoId);
+            });
+            setShowUnsavedModal(true);
+            return;
+        }
+        setSelectedPlatoId(newPlatoId);
+    };
+
+    const handleSaveAndProceed = async () => {
+        const success = await handleSaveRecipe();
+        if (success) {
+            setShowUnsavedModal(false);
+            if (typeof pendingNavAction === 'function') {
+                const action = pendingNavAction;
+                setPendingNavAction(null);
+                action();
+            }
+        }
+    };
+
+    const handleDiscardAndProceed = () => {
+        handleDiscardRecipe();
+        setShowUnsavedModal(false);
+        if (typeof pendingNavAction === 'function') {
+            const action = pendingNavAction;
+            setPendingNavAction(null);
+            action();
+        }
+    };
+
+    const handleCancelNavigation = () => {
+        setShowUnsavedModal(false);
+        setPendingNavAction(null);
+    };
+
+    // Interceptor global para advertir sobre cambios sin guardar antes de salir del módulo
+    useEffect(() => {
+        const isRecetario = activeTab === 'recetarios' || activeTab === 'recetario';
+        if (isDirtyRecipe && isRecetario) {
+            window.__bunkerUnsavedChanges = {
+                hasChanges: true,
+                entityName: selectedPlatoObj?.nombre || 'este plato',
+                requestNavigation: (proceedCallback) => {
+                    setPendingNavAction(() => proceedCallback);
+                    setShowUnsavedModal(true);
+                }
+            };
+        } else {
+            window.__bunkerUnsavedChanges = null;
+        }
+        return () => {
+            window.__bunkerUnsavedChanges = null;
+        };
+    }, [isDirtyRecipe, activeTab, selectedPlatoObj]);
+
+    // Interceptor nativo para cerrar ventana o refrescar
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            const isRecetario = activeTab === 'recetarios' || activeTab === 'recetario';
+            if (isDirtyRecipe && isRecetario) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isDirtyRecipe, activeTab]);
 
     // --- RENDER HELPERS ---
     const renderPlatosTab = () => {
@@ -1038,6 +1175,10 @@ const InventoryView = () => {
                 currentRecipe={currentRecipe}
                 setCurrentRecipe={setCurrentRecipe}
                 onSaveRecipe={handleSaveRecipe}
+                onDiscardRecipe={handleDiscardRecipe}
+                onRequestChangePlato={handleRequestChangePlato}
+                isDirty={isDirtyRecipe}
+                isSaving={isSavingRecipe}
                 showToast={showToast}
             />
         );
@@ -1152,12 +1293,16 @@ const InventoryView = () => {
                         <button
                             type="button"
                             onClick={handleSaveRecipe}
-                            className="rounded-full px-4 py-1.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md border-0 active:scale-95 text-white"
-                            style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}
+                            disabled={isSavingRecipe}
+                            className={`rounded-full px-4 py-1.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border-0 active:scale-95 text-white ${
+                                isDirtyRecipe
+                                    ? 'bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400 ring-offset-2 dark:ring-offset-slate-900 animate-pulse'
+                                    : 'bg-[#F26522] hover:bg-[#DC5616] shadow-sm'
+                            }`}
                             title="Guardar escandallo y actualizar costos en Búnker"
                         >
                             <Save size={14} />
-                            <span>Guardar Escandallo</span>
+                            <span>{isSavingRecipe ? 'Guardando...' : isDirtyRecipe ? '● Guardar Escandallo' : 'Guardar Escandallo'}</span>
                         </button>
                     )}
                 </div>
@@ -1641,6 +1786,16 @@ const InventoryView = () => {
                     </div>
                 </div>
             )}
+
+            {/* Modal de confirmación para cambios sin guardar */}
+            <UnsavedChangesModal
+                isOpen={showUnsavedModal}
+                platoNombre={selectedPlatoObj?.nombre || 'este plato'}
+                onSaveAndProceed={handleSaveAndProceed}
+                onDiscardAndProceed={handleDiscardAndProceed}
+                onCancel={handleCancelNavigation}
+                isSaving={isSavingRecipe}
+            />
         </div>
     );
 };

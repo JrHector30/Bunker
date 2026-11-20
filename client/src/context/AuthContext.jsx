@@ -53,6 +53,7 @@ export const AuthProvider = ({ children }) => {
                 setUser(data);
                 localStorage.setItem('bunker_user', JSON.stringify(data));
                 await loadPermisos(data.rol);
+                window.dispatchEvent(new CustomEvent('bunker-auth-changed'));
                 return { success: true };
             } else {
                 return { success: false, error: data.error };
@@ -67,6 +68,7 @@ export const AuthProvider = ({ children }) => {
         setPermisosUsuario([]);
         localStorage.removeItem('bunker_user');
         clearGlobalCache();
+        window.dispatchEvent(new CustomEvent('bunker-auth-changed'));
     };
 
     const tienePermiso = (modulo) => {

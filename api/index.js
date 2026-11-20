@@ -112,31 +112,51 @@ function scanWindowsPrintersLive() {
     return new Promise((resolve) => {
         if (process.platform !== 'win32') return resolve([]);
         const psCmd = `
-          $activePorts = [System.IO.Ports.SerialPort]::GetPortNames();
+          $pnpPorts = @{};
+          Get-PnpDevice -Class Ports -ErrorAction SilentlyContinue | ForEach-Object {
+            if ($_.Present -eq $true -and $_.Status -eq 'OK') {
+              if ($_.FriendlyName -match '\\((COM\\d+)\\)') {
+                $pnpPorts[$matches[1]] = $true;
+              }
+            }
+          };
+          $activeUsb = @{};
+          Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like '*USBPRINT*' } | ForEach-Object {
+            if ($_.Present -eq $true -and $_.Status -eq 'OK') {
+              $activeUsb[$_.InstanceId] = $true;
+            }
+          };
           Get-CimInstance -ClassName Win32_Printer | ForEach-Object {
             $pName = $_.Name;
             $port = $_.PortName;
             $offline = [bool]$_.WorkOffline;
             if ($port -like 'COM*' -or $port -like 'BTH*') {
               $clean = ($port -replace ':','').Trim();
-              if ($activePorts -notcontains $clean) {
+              if (-not $pnpPorts.ContainsKey($clean)) { $offline = $true; }
+            } elseif ($port -like 'USB*') {
+              if ($activeUsb.Count -eq 0) {
                 $offline = $true;
+              } else {
+                $cleanPort = ($port -replace ':','').Trim();
+                $found = $false;
+                foreach ($k in $activeUsb.Keys) {
+                  if ($k.IndexOf($cleanPort) -ge 0) { $found = $true; break; }
+                }
+                if (-not $found) { $offline = $true; }
               }
             };
-            if ($_.PrinterStatus -eq 2 -or $_.ExtendedPrinterStatus -eq 7) {
-              $offline = $true;
-            };
+            if ($_.PrinterStatus -eq 2 -or $_.ExtendedPrinterStatus -eq 7) { $offline = $true; };
             [PSCustomObject]@{
               Name = $pName;
-              WorkOffline = $offline;
-              PortName = $port
+              PortName = $port;
+              WorkOffline = $offline
             }
           } | ConvertTo-Json -Compress
         `.replace(/\r?\n/g, ' ').trim();
 
         const command = `powershell -NoProfile -Command "${psCmd}"`;
         const { exec } = require('child_process');
-        exec(command, { timeout: 5000 }, (error, stdout) => {
+        exec(command, { timeout: 6000 }, (error, stdout) => {
             if (error) {
                 console.error("Error al escanear impresoras con PowerShell:", error);
                 return resolve([]);
@@ -160,8 +180,10 @@ function scanWindowsPrintersLive() {
 }
 
 app.get('/api/impresoras', async (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const estacion = req.query.estacion || 'Caja';
     const tenantId = getTenantId(req);
+    const currentServerStation = (process.env.STATION_ID || 'Caja').trim();
     try {
         // Fetch Windows printers from local station cache
         let config = await prisma.configuracion.findUnique({
@@ -169,8 +191,8 @@ app.get('/api/impresoras', async (req, res) => {
         });
         let winPrinters = config ? JSON.parse(config.valor) : [];
 
-        // Si no hay impresoras cacheadas para esta estación en Windows, escanear en vivo
-        if (winPrinters.length === 0 && process.platform === 'win32') {
+        // Solo escanear en vivo si esta instancia física del backend coincide con la estación solicitada
+        if (winPrinters.length === 0 && process.platform === 'win32' && estacion === currentServerStation) {
             winPrinters = await scanWindowsPrintersLive();
             if (winPrinters.length > 0) {
                 await prisma.configuracion.upsert({
@@ -307,10 +329,11 @@ app.post('/api/impresoras/solicitar-actualizacion', async (req, res) => {
     try {
         const { estacion } = req.body || {};
         const targetEstacion = estacion || 'Caja';
+        const currentServerStation = (process.env.STATION_ID || 'Caja').trim();
 
-        // 1. Escaneo inmediato en tiempo real si el servidor corre sobre Windows
+        // 1. Escaneo inmediato local SOLO si este servidor físico es el dueño de la estación solicitada
         let livePrinters = [];
-        if (process.platform === 'win32') {
+        if (process.platform === 'win32' && targetEstacion === currentServerStation) {
             livePrinters = await scanWindowsPrintersLive();
             if (livePrinters.length > 0) {
                 await prisma.configuracion.upsert({
@@ -321,7 +344,7 @@ app.post('/api/impresoras/solicitar-actualizacion', async (req, res) => {
             }
         }
 
-        // 2. Notificar a printer-server local por si ejecuta tareas de red TCP9100 / ARP
+        // 2. Notificar al printer-server de la estación correspondiente para que escanee en su propia PC/Laptop
         await prisma.configuracion.upsert({
             where: { clave: 'solicitar_actualizacion_impresoras' },
             update: { valor: targetEstacion },
@@ -578,10 +601,11 @@ app.get('/api/recovery/estado-estacion', async (req, res) => {
             where: { clave: `estacion_latido_${estacion}` }
         });
         if (!latido) {
-            return res.json({ enLinea: false });
+            return res.json({ enLinea: false, diffMs: null });
         }
         const diff = Date.now() - parseInt(latido.valor, 10);
-        res.json({ enLinea: diff < 6000 });
+        // Margen de 20 segundos para tolerar latencia de red WiFi / internet residencial
+        res.json({ enLinea: diff < 20000, diffMs: diff });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -5013,20 +5037,33 @@ app.get('/api/dashboard/resumen-general', async (req, res) => {
             }
         }
 
-        // Estado de cocina hoy (conteo de platos en items de comandas)
+        // Estado de cocina en tiempo real (sincronizado con /api/kitchen/queue)
+        const activeKitchenItems = await prisma.detalleComanda.findMany({
+            where: {
+                estado: { notIn: ['entregado', 'anulado'] },
+                comanda: {
+                    estado: { notIn: ['cerrada', 'anulada'] },
+                    restauranteId: tenantId
+                },
+                plato: {
+                    categoria: { enviarCocina: true }
+                }
+            },
+            select: { id: true, estado: true, cantidad: true }
+        });
+
         let kitchenListos = 0;
         let kitchenEnProceso = 0;
         let kitchenPendientes = 0;
 
-        for (const c of todayComandas) {
-            for (const d of c.detalles) {
-                if (d.estado === 'listo' || d.estado === 'entregado') {
-                    kitchenListos += d.cantidad || 1;
-                } else if (d.estado === 'en_proceso' || d.estado === 'preparando') {
-                    kitchenEnProceso += d.cantidad || 1;
-                } else if (d.estado !== 'anulado') {
-                    kitchenPendientes += d.cantidad || 1;
-                }
+        for (const item of activeKitchenItems) {
+            const qty = item.cantidad || 1;
+            if (item.estado === 'listo' || item.estado === 'lista') {
+                kitchenListos += qty;
+            } else if (item.estado === 'preparando' || item.estado === 'en_proceso') {
+                kitchenEnProceso += qty;
+            } else {
+                kitchenPendientes += qty;
             }
         }
 

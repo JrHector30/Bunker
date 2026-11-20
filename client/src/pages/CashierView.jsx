@@ -53,7 +53,7 @@ const CashierView = () => {
   const { showToast } = useNotification();
   const { showConfirmation } = useConfirmation();
   const { user } = useAuth();
-  const { refreshCajaStatus } = useCaja();
+  const { refreshCajaStatus, setCajaStatus } = useCaja();
   const navigate = useNavigate();
 
   // Range Date Filter State
@@ -236,7 +236,13 @@ const CashierView = () => {
     }
 
     try {
-      const res = await fetch(`/api/cashier/balance?_t=${Date.now()}`);
+      const activeTenant = getActiveRestaurant();
+      const tenantId = user?.restauranteId || activeTenant?.id || 1;
+      const res = await fetch(`/api/cashier/balance?restauranteId=${tenantId}&_t=${Date.now()}`, {
+        headers: {
+          'x-restaurante-id': String(tenantId)
+        }
+      });
       if (!res.ok) throw new Error('Error al conectar con el servidor');
       const data = await res.json();
       setConnectionError(false);
@@ -246,9 +252,18 @@ const CashierView = () => {
       setConnectionError(true);
       throw err; // Re-lanzar para conservar los últimos datos válidos en useCache
     }
-  }, [loadBalanceLocal]);
+  }, [loadBalanceLocal, user?.restauranteId]);
 
   const { data: currentStatus, mutate: fetchStatus } = useCache('cashier_balance', statusFetcher, null);
+
+  // Sincronizar reactivamente el estado de caja con CajaContext para el local actual
+  useEffect(() => {
+    if (currentStatus?.estado) {
+      const activeTenant = getActiveRestaurant();
+      const tenantId = user?.restauranteId || activeTenant?.id || 1;
+      setCajaStatus?.(tenantId, currentStatus.estado === 'abierto');
+    }
+  }, [currentStatus?.estado, setCajaStatus, user?.restauranteId]);
 
   const shiftStatus = currentStatus?.estado || 'cerrado';
 
@@ -659,6 +674,8 @@ const CashierView = () => {
 
   const executeToggle = (montoInicial) => {
     const accion = currentStatus?.estado === 'abierto' ? 'close' : 'open';
+    const activeTenant = getActiveRestaurant();
+    const tenantId = user?.restauranteId || activeTenant?.id || 1;
 
     if (networkStatus.isOffline()) {
       offlineCashService.toggleCashSession({
@@ -671,7 +688,11 @@ const CashierView = () => {
           fetchStatus();
           setCurrentPage(1);
           setShowInitialAmountModal(false);
-          if (refreshCajaStatus) await refreshCajaStatus();
+          if (setCajaStatus) setCajaStatus(tenantId, accion === 'open');
+          if (refreshCajaStatus) await refreshCajaStatus(tenantId);
+          window.dispatchEvent(new CustomEvent('caja-status-changed', {
+            detail: { tenantId, isOpen: accion === 'open' }
+          }));
           showToast("Estado de caja cambiado localmente (Modo Offline).", "success");
         })
         .catch(err => showToast(err.message, 'error'));
@@ -680,8 +701,11 @@ const CashierView = () => {
 
     fetch('/api/cashier/toggle', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ montoInicial, usuarioId: user?.id })
+      headers: {
+        'Content-Type': 'application/json',
+        'x-restaurante-id': String(tenantId)
+      },
+      body: JSON.stringify({ montoInicial, usuarioId: user?.id, restauranteId: tenantId })
     })
       .then(async res => {
         const body = await res.json();
@@ -696,7 +720,11 @@ const CashierView = () => {
         setCurrentPage(1);
         fetchHistory();
         setShowInitialAmountModal(false);
-        await refreshCajaStatus();
+        if (setCajaStatus) setCajaStatus(tenantId, accion === 'open');
+        if (refreshCajaStatus) await refreshCajaStatus(tenantId);
+        window.dispatchEvent(new CustomEvent('caja-status-changed', {
+          detail: { tenantId, isOpen: accion === 'open' }
+        }));
         showToast("Estado de caja cambiado correctamente.", "success");
       })
       .catch(err => showToast(err.message, 'error'));

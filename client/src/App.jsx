@@ -72,8 +72,8 @@ function App() {
       <ThemeProvider>
         <NotificationProvider>
           <ConfirmationProvider>
-            <CajaProvider>
-              <AuthProvider>
+            <AuthProvider>
+              <CajaProvider>
               <Routes>
               <Route path="/superadmin" element={<SuperAdminView />} />
               <Route path="/superadmin/login" element={<SuperAdminView />} />
@@ -162,8 +162,8 @@ function App() {
             </Route>
             <Route path="*" element={<NotFoundView />} />
           </Routes>
-          </AuthProvider>
-            </CajaProvider>
+              </CajaProvider>
+            </AuthProvider>
           </ConfirmationProvider>
         </NotificationProvider>
       </ThemeProvider>

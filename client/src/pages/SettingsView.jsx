@@ -196,6 +196,7 @@ export default function SettingsView() {
     return localStorage.getItem('bunker_settings_selected_station') || 'Caja';
   });
   const [serverOnline, setServerOnline] = useState(true);
+  const [activePrinterName, setActivePrinterName] = useState('');
   const [usbWidth, setUsbWidth] = useState('80mm');
   const [usbHardware, setUsbHardware] = useState('SPRT');
   const [printerSizes, setPrinterSizes] = useState({});
@@ -253,14 +254,17 @@ export default function SettingsView() {
   // Cargar Hardware e Impresoras
   const loadHardwareData = useCallback(async (selectedSt = station) => {
     try {
+      const timestamp = Date.now();
       const reqHeaders = { 'x-restaurante-id': String(tenantId) };
-      const [serverRes, listRes, sizesRes, profilesRes, histRes, auditConfRes] = await Promise.all([
-        fetch(`/api/recovery/estado-estacion?estacion=${selectedSt}&restauranteId=${tenantId}`, { headers: reqHeaders }).catch(() => null),
-        fetch(`/api/impresoras?estacion=${selectedSt}&restauranteId=${tenantId}`, { headers: reqHeaders }).catch(() => null),
-        fetch(`/api/impresoras/medidas?estacion=${selectedSt}&restauranteId=${tenantId}`, { headers: reqHeaders }).catch(() => null),
-        fetch(`/api/impresoras/perfiles?estacion=${selectedSt}&restauranteId=${tenantId}`, { headers: reqHeaders }).catch(() => null),
-        fetch(`/api/recovery/historial?estacion=${selectedSt}&restauranteId=${tenantId}`, { headers: reqHeaders }).catch(() => null),
-        fetch('/api/configuracion/imprimir_ticket_auditoria_recovery').catch(() => null),
+      const fetchOpts = { headers: reqHeaders, cache: 'no-store' };
+      const [serverRes, listRes, sizesRes, profilesRes, histRes, auditConfRes, activeRes] = await Promise.all([
+        fetch(`/api/recovery/estado-estacion?estacion=${selectedSt}&restauranteId=${tenantId}&_t=${timestamp}`, fetchOpts).catch(() => null),
+        fetch(`/api/impresoras?estacion=${selectedSt}&restauranteId=${tenantId}&_t=${timestamp}`, fetchOpts).catch(() => null),
+        fetch(`/api/impresoras/medidas?estacion=${selectedSt}&restauranteId=${tenantId}&_t=${timestamp}`, fetchOpts).catch(() => null),
+        fetch(`/api/impresoras/perfiles?estacion=${selectedSt}&restauranteId=${tenantId}&_t=${timestamp}`, fetchOpts).catch(() => null),
+        fetch(`/api/recovery/historial?estacion=${selectedSt}&restauranteId=${tenantId}&_t=${timestamp}`, fetchOpts).catch(() => null),
+        fetch(`/api/configuracion/imprimir_ticket_auditoria_recovery?_t=${timestamp}`, { cache: 'no-store' }).catch(() => null),
+        fetch(`/api/impresoras/activa?estacion=${selectedSt}&restauranteId=${tenantId}&_t=${timestamp}`, fetchOpts).catch(() => null),
       ]);
 
       if (serverRes && serverRes.ok) {
@@ -268,6 +272,11 @@ export default function SettingsView() {
         setServerOnline(sData.enLinea !== false);
       } else {
         setServerOnline(true);
+      }
+
+      if (activeRes && activeRes.ok) {
+        const actData = await activeRes.json();
+        setActivePrinterName(actData?.nombre || '');
       }
 
       if (listRes && listRes.ok) {
@@ -319,6 +328,25 @@ export default function SettingsView() {
   useEffect(() => {
     loadHardwareData(station);
   }, [station, loadHardwareData]);
+
+  // Polling periódico (cada 4s) del estado del servidor para la estación seleccionada
+  useEffect(() => {
+    if (activeTab !== 'impresoras') return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/recovery/estado-estacion?estacion=${station}&restauranteId=${tenantId}`, {
+          headers: { 'x-restaurante-id': String(tenantId) }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setServerOnline(data.enLinea !== false);
+        }
+      } catch (err) {
+        // Silencioso
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [activeTab, station, tenantId]);
 
   // Handlers
   const handleToggleOffline = async () => {
@@ -432,29 +460,15 @@ export default function SettingsView() {
   const handleRefreshPrinters = async () => {
     setIsRefreshingPrinters(true);
     try {
-      const scanReq = await fetch('/api/impresoras/solicitar-actualizacion', {
+      await fetch('/api/impresoras/solicitar-actualizacion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
         body: JSON.stringify({ estacion: station, restauranteId: tenantId }),
       }).catch(() => null);
 
-      // Si el servidor local respondió directamente, recargar de inmediato
-      if (scanReq && scanReq.ok) {
-        await loadHardwareData(station);
-      } else {
-        // Fallback: esperar activamente a que el printer-server procese el escaneo
-        for (let i = 0; i < 4; i++) {
-          await new Promise((r) => setTimeout(r, 1000));
-          const stRes = await fetch(`/api/impresoras/estado-solicitud?estacion=${station}`, {
-            headers: { 'x-restaurante-id': String(tenantId) }
-          }).catch(() => null);
-          if (stRes && stRes.ok) {
-            const stData = await stRes.json();
-            if (!stData.solicitando) break;
-          }
-        }
-        await loadHardwareData(station);
-      }
+      // Esperar brevemente (2.5s) para que el daemon de la estación local/remota complete el escaneo de hardware y guarde en BD
+      await new Promise((r) => setTimeout(r, 2500));
+      await loadHardwareData(station);
 
       setEthRepairing(false);
       showToast(`Estación ${station}: escaneo completado en tiempo real.`, 'success');
@@ -462,6 +476,21 @@ export default function SettingsView() {
       showToast(`Error al actualizar impresoras: ${err.message}`, 'error');
     } finally {
       setIsRefreshingPrinters(false);
+    }
+  };
+
+  const handleSelectActivePrinter = async (printerName, transport = 'USB') => {
+    setActivePrinterName(printerName);
+    try {
+      await fetch('/api/impresoras/seleccionar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-restaurante-id': String(tenantId) },
+        body: JSON.stringify({ nombre: printerName, estacion: station, transport, restauranteId: tenantId }),
+      });
+      showToast(`Impresora "${printerName}" activada para ${station}.`, 'success');
+      await loadHardwareData(station);
+    } catch (err) {
+      showToast(`Error al seleccionar impresora: ${err.message}`, 'error');
     }
   };
 
@@ -881,9 +910,9 @@ export default function SettingsView() {
                     Dispositivos de Impresión
                   </h2>
                 </div>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  {serverOnline ? 'En línea' : 'Verificando'}
+                <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold shrink-0 ${serverOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                  <span className={`w-2 h-2 rounded-full ${serverOnline ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'}`} />
+                  Servidor {serverOnline ? 'En línea' : 'Desconectado'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -932,9 +961,10 @@ export default function SettingsView() {
               {printers.filter(p => p.transport === 'USB' && !p.offline).length > 0 ? (
                 printers.filter(p => p.transport === 'USB' && !p.offline).map(usbP => {
                   const isOnline = usbP.ultimoEstado === 'ONLINE' && !usbP.offline;
+                  const isActive = activePrinterName ? activePrinterName.toLowerCase() === usbP.nombre.toLowerCase() : false;
                   return (
                     <div key={usbP.id} className={`rounded-xl bg-white dark:bg-slate-900 border p-3 space-y-3 transition-colors ${
-                      isOnline ? 'border-emerald-400/80 dark:border-emerald-500/80' : 'border-rose-300 dark:border-rose-900/60'
+                      isActive ? 'border-[#F26522] ring-2 ring-[#F26522]/20' : (isOnline ? 'border-emerald-400/80 dark:border-emerald-500/80' : 'border-rose-300 dark:border-rose-900/60')
                     }`}>
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
@@ -945,12 +975,28 @@ export default function SettingsView() {
                             USB Windows {usbP.port ? `(${usbP.port})` : ''}
                           </p>
                         </div>
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-white text-[10px] font-bold shrink-0 ${
-                          isOnline ? 'bg-emerald-500' : 'bg-rose-500'
-                        }`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                          {isOnline ? 'CONECTADA' : 'DESCONECTADA'}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {isActive ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-white text-[10px] font-bold bg-emerald-600 shadow-sm">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                              ACTIVA
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSelectActivePrinter(usbP.nombre, 'USB')}
+                              className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold border border-slate-300 dark:border-slate-600 hover:border-[#F26522] hover:text-[#F26522] bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                            >
+                              Usar para {station}
+                            </button>
+                          )}
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white text-[9.5px] font-bold shrink-0 ${
+                            isOnline ? 'bg-slate-500' : 'bg-rose-500'
+                          }`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                            {isOnline ? 'CONECTADA' : 'DESCONECTADA'}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -1535,8 +1581,8 @@ export default function SettingsView() {
                 </div>
               </div>
 
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 ${serverOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                <span className={`w-2 h-2 rounded-full ${serverOnline ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'}`} />
                 Servidor Local: {serverOnline ? 'En línea' : 'Desconectado'}
               </span>
             </div>
@@ -1583,13 +1629,14 @@ export default function SettingsView() {
               {printers.filter(p => p.transport === 'USB' && !p.offline).length > 0 ? (
                 printers.filter(p => p.transport === 'USB' && !p.offline).map(usbP => {
                   const isOnline = usbP.ultimoEstado === 'ONLINE' && !usbP.offline;
+                  const isActive = activePrinterName ? activePrinterName.toLowerCase() === usbP.nombre.toLowerCase() : false;
                   return (
                     <div key={usbP.id} className={`rounded-xl bg-white dark:bg-slate-900 border p-3.5 space-y-3 transition-colors ${
-                      isOnline ? 'border-emerald-400/80 dark:border-emerald-500/60' : 'border-rose-300 dark:border-rose-900/60'
+                      isActive ? 'border-[#F26522] ring-2 ring-[#F26522]/20' : (isOnline ? 'border-emerald-400/80 dark:border-emerald-500/60' : 'border-rose-300 dark:border-rose-900/60')
                     }`}>
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <Printer className={`w-4 h-4 ${isOnline ? 'text-[#F26522]' : 'text-slate-400'}`} />
+                          <Printer className={`w-4 h-4 ${isActive ? 'text-[#F26522]' : (isOnline ? 'text-emerald-500' : 'text-slate-400')}`} />
                           <span className="text-xs font-bold text-slate-900 dark:text-white">
                             {usbP.nombre}
                           </span>
@@ -1597,12 +1644,28 @@ export default function SettingsView() {
                             USB {usbP.port ? `(${usbP.port})` : ''}
                           </span>
                         </div>
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-white text-[10.5px] font-bold ${
-                          isOnline ? 'bg-emerald-500' : 'bg-rose-500'
-                        }`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                          {isOnline ? 'CONECTADA' : 'DESCONECTADA'}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isActive ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-white text-[11px] font-bold bg-emerald-600 shadow-sm">
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              ACTIVA PARA {station.toUpperCase()}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSelectActivePrinter(usbP.nombre, 'USB')}
+                              className="px-3 py-1 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-600 hover:border-[#F26522] hover:text-[#F26522] bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                            >
+                              Usar para {station}
+                            </button>
+                          )}
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-white text-[10px] font-bold ${
+                            isOnline ? 'bg-slate-500' : 'bg-rose-500'
+                          }`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                            {isOnline ? 'CONECTADA' : 'DESCONECTADA'}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">

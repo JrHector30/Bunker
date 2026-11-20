@@ -157,6 +157,7 @@ $restartItem = New-Object System.Windows.Forms.ToolStripMenuItem("Reiniciar Bunk
 })
 
 $exitItem = New-Object System.Windows.Forms.ToolStripMenuItem("Salir de la Bandeja", $null, {
+    Stop-BunkerProcesses
     $notifyIcon.Visible = $false
     try {
         $mutex.ReleaseMutex()

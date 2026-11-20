@@ -40,9 +40,17 @@ const TYPE_STYLE = {
     badge: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800',
     text: 'text-rose-600 dark:text-rose-400',
   },
+  AJUSTE_POSITIVO: {
+    badge: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
+    text: 'text-emerald-600 dark:text-emerald-400',
+  },
+  AJUSTE_NEGATIVO: {
+    badge: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800',
+    text: 'text-rose-600 dark:text-rose-400',
+  },
   AJUSTE: {
-    badge: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
-    text: 'text-amber-600 dark:text-amber-400',
+    badge: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
+    text: 'text-emerald-600 dark:text-emerald-400',
   },
   COMPRA: {
     badge: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
@@ -148,9 +156,9 @@ export default function KardexManagement({
     let mermasCount = 0;
 
     all.forEach((m) => {
-      const isPositive = ['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(m.tipoMovimiento);
+      const isPositive = ['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(m.tipoMovimiento) || (m.tipoMovimiento === 'AJUSTE' && Number(m.cantidad) > 0);
       const isVenta = m.tipoMovimiento === 'VENTA';
-      const isMerma = ['MERMA', 'AJUSTE_NEGATIVO', 'AJUSTE', 'TRANSFERENCIA'].includes(m.tipoMovimiento);
+      const isMerma = ['MERMA', 'AJUSTE_NEGATIVO'].includes(m.tipoMovimiento) || (m.tipoMovimiento === 'AJUSTE' && Number(m.cantidad) < 0) || m.tipoMovimiento === 'TRANSFERENCIA';
 
       if (isPositive) {
         entradasCount++;
@@ -199,11 +207,11 @@ export default function KardexManagement({
       // Type Filter
       if (typeFilter !== 'Todos') {
         if (typeFilter === 'ENTRADA') {
-          if (!['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(m.tipoMovimiento)) return false;
+          if (!['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(m.tipoMovimiento) && !(m.tipoMovimiento === 'AJUSTE' && Number(m.cantidad) > 0)) return false;
         } else if (typeFilter === 'VENTA') {
           if (m.tipoMovimiento !== 'VENTA') return false;
         } else if (typeFilter === 'MERMA') {
-          if (!['MERMA', 'AJUSTE_NEGATIVO', 'AJUSTE', 'TRANSFERENCIA'].includes(m.tipoMovimiento)) return false;
+          if (!['MERMA', 'AJUSTE_NEGATIVO'].includes(m.tipoMovimiento) && !(m.tipoMovimiento === 'AJUSTE' && Number(m.cantidad) < 0) && m.tipoMovimiento !== 'TRANSFERENCIA') return false;
         } else if (m.tipoMovimiento !== typeFilter) {
           return false;
         }
@@ -720,9 +728,9 @@ export default function KardexManagement({
                   </tr>
                 ) : (
                   pageMovements.map((m) => {
-                    const isPositive = ['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(m.tipoMovimiento);
+                    const isPositive = ['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(m.tipoMovimiento) || (m.tipoMovimiento === 'AJUSTE' && Number(m.cantidad) > 0);
                     const isVenta = m.tipoMovimiento === 'VENTA';
-                    const isMerma = ['MERMA', 'AJUSTE_NEGATIVO', 'AJUSTE', 'TRANSFERENCIA'].includes(m.tipoMovimiento);
+                    const isMerma = ['MERMA', 'AJUSTE_NEGATIVO'].includes(m.tipoMovimiento) || (m.tipoMovimiento === 'AJUSTE' && Number(m.cantidad) < 0) || m.tipoMovimiento === 'TRANSFERENCIA';
 
                     let badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
                     let dotClass = 'bg-slate-400';
@@ -736,8 +744,8 @@ export default function KardexManagement({
                       badgeClass = 'bg-rose-50 text-rose-700 border-rose-200/80';
                       dotClass = 'bg-rose-500';
                     } else {
-                      badgeClass = 'bg-amber-50 text-amber-700 border-amber-200/80';
-                      dotClass = 'bg-amber-500';
+                      badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200/80';
+                      dotClass = 'bg-emerald-500';
                     }
 
                     const parsed = parseMotivo(m.motivo);
@@ -965,7 +973,7 @@ export default function KardexManagement({
               </div>
             ) : (
               pageMovements.map((m) => {
-                const isPositive = ['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(m.tipoMovimiento);
+                const isPositive = ['COMPRA', 'ENTRADA', 'AJUSTE_POSITIVO'].includes(m.tipoMovimiento) || (m.tipoMovimiento === 'AJUSTE' && Number(m.cantidad) > 0);
                 const isVenta = m.tipoMovimiento === 'VENTA';
                 const colorTypeClass = isPositive
                   ? 'text-emerald-600 dark:text-emerald-400'

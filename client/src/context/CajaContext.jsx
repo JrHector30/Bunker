@@ -1,47 +1,139 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { networkStatus, db } from '../offline';
+import { useAuth } from './AuthContext';
+import { getActiveRestaurant } from '../utils/tenant';
 
 const CajaContext = createContext();
 
 export const CajaProvider = ({ children }) => {
-    const [isCajaAbierta, setIsCajaAbierta] = useState(null); // 'null' indica que está cargando inicialmente
+    // Estado multi-tenant aislado: mapa de { [tenantId]: boolean }
+    // Evita que el cierre o apertura de caja en un local contamine a otro local
+    const [cajaStatusByTenant, setCajaStatusByTenant] = useState(() => {
+        try {
+            const saved = localStorage.getItem('bunker_caja_status_by_tenant');
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    });
 
-    const verificarEstadoCaja = async () => {
+    const auth = useAuth();
+    const user = auth?.user;
+
+    // Resolver de forma determinista el ID del restaurante activo
+    const currentTenantId = useMemo(() => {
+        if (user?.restauranteId) return Number(user.restauranteId);
+        const activeTenant = getActiveRestaurant();
+        if (activeTenant?.id) return Number(activeTenant.id);
+        return 1;
+    }, [user?.restauranteId]);
+
+    // Estado reactivo de la caja para el local actualmente activo (null = cargando)
+    const isCajaAbierta = useMemo(() => {
+        if (cajaStatusByTenant[currentTenantId] !== undefined) {
+            return cajaStatusByTenant[currentTenantId];
+        }
+        return null;
+    }, [cajaStatusByTenant, currentTenantId]);
+
+    // Actualizador atómico por local que persiste en localStorage
+    const updateCajaStatusForTenant = useCallback((tenantId, isOpen) => {
+        const id = Number(tenantId || currentTenantId || 1);
+        setCajaStatusByTenant(prev => {
+            const next = { ...prev, [id]: Boolean(isOpen) };
+            try {
+                localStorage.setItem('bunker_caja_status_by_tenant', JSON.stringify(next));
+            } catch (e) {
+                console.warn('[CajaContext] Error al guardar bunker_caja_status_by_tenant:', e);
+            }
+            return next;
+        });
+    }, [currentTenantId]);
+
+    const verificarEstadoCaja = useCallback(async (tenantIdOverride) => {
+        const id = Number(tenantIdOverride || currentTenantId || 1);
+
         try {
             if (networkStatus.isOffline()) {
-                const openArqueos = await db.arqueos.where('estado').equals('abierto').toArray();
+                const openArqueos = await db.arqueos
+                    .filter(a => a.estado === 'abierto' && (Number(a.restauranteId) === id || !a.restauranteId))
+                    .toArray();
                 const isOpen = openArqueos.length > 0;
-                setIsCajaAbierta(isOpen);
-                return;
+                updateCajaStatusForTenant(id, isOpen);
+                return isOpen;
             }
 
-            const res = await fetch(`/api/cashier/balance?_t=${Date.now()}`);
+            const res = await fetch(`/api/cashier/balance?restauranteId=${id}&_t=${Date.now()}`, {
+                headers: {
+                    'x-restaurante-id': String(id)
+                }
+            });
+
             if (res.ok) {
                 const data = await res.json();
-                setIsCajaAbierta(data && data.estado === 'abierto');
+                const isOpen = Boolean(data && data.estado === 'abierto');
+                updateCajaStatusForTenant(id, isOpen);
+                return isOpen;
             } else {
-                console.warn('[CajaContext] Falló verificación online. Conservando estado de caja anterior:', isCajaAbierta);
-                setIsCajaAbierta(prev => prev ?? false);
+                console.warn(`[CajaContext] Falló verificación online para local ${id}. Conservando previo:`, cajaStatusByTenant[id]);
+                return cajaStatusByTenant[id] ?? false;
             }
         } catch (error) {
-            console.error("[CajaContext] Error global al verificar estado de caja:", error);
-            setIsCajaAbierta(prev => prev ?? false);
+            console.error(`[CajaContext] Error global al verificar estado de caja para local ${id}:`, error);
+            return cajaStatusByTenant[id] ?? false;
         }
-    };
+    }, [currentTenantId, updateCajaStatusForTenant, cajaStatusByTenant]);
 
-    // Registrar validador inicial y suscripción reactiva a cambios de red
+    // 1. Revalidación inmediata al montar y cada vez que cambia el local activo o el usuario
     useEffect(() => {
-        verificarEstadoCaja();
-        const unsubscribe = networkStatus.subscribe(() => {
+        verificarEstadoCaja(currentTenantId);
+    }, [currentTenantId, verificarEstadoCaja]);
+
+    // 2. Suscripciones reactivas: reconexión de red, foco de ventana y eventos multi-local
+    useEffect(() => {
+        const handleRevalidate = () => {
+            verificarEstadoCaja();
+        };
+
+        const handleTenantChange = (e) => {
+            const newTenantId = e?.detail?.id;
+            verificarEstadoCaja(newTenantId);
+        };
+
+        const handleCajaStatusChange = (e) => {
+            if (e?.detail) {
+                const { tenantId, isOpen } = e.detail;
+                updateCajaStatusForTenant(tenantId || currentTenantId, isOpen);
+            } else {
+                verificarEstadoCaja();
+            }
+        };
+
+        const unsubscribeNetwork = networkStatus.subscribe(() => {
             verificarEstadoCaja();
         });
+
+        window.addEventListener('focus', handleRevalidate);
+        window.addEventListener('bunker-tenant-changed', handleTenantChange);
+        window.addEventListener('bunker-auth-changed', handleRevalidate);
+        window.addEventListener('caja-status-changed', handleCajaStatusChange);
+
         return () => {
-            unsubscribe();
+            unsubscribeNetwork();
+            window.removeEventListener('focus', handleRevalidate);
+            window.removeEventListener('bunker-tenant-changed', handleTenantChange);
+            window.removeEventListener('bunker-auth-changed', handleRevalidate);
+            window.removeEventListener('caja-status-changed', handleCajaStatusChange);
         };
-    }, []);
+    }, [verificarEstadoCaja, updateCajaStatusForTenant, currentTenantId]);
 
     return (
-        <CajaContext.Provider value={{ isCajaAbierta, refreshCajaStatus: verificarEstadoCaja }}>
+        <CajaContext.Provider value={{
+            isCajaAbierta,
+            currentTenantId,
+            refreshCajaStatus: verificarEstadoCaja,
+            setCajaStatus: updateCajaStatusForTenant
+        }}>
             {children}
         </CajaContext.Provider>
     );

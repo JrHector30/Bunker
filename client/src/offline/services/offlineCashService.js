@@ -2,6 +2,7 @@ import db from '../database';
 import { QueueStatus } from '../tables';
 import { createOperation } from '../operations/createOperation';
 import { generateUUID, getCurrentDate } from '../offlineUtils';
+import { getActiveRestaurant } from '../../utils/tenant';
 
 /**
  * Resuelve de forma defensiva el precio de un plato en base al detalle histórico
@@ -456,14 +457,19 @@ export const offlineCashService = {
     const timestamp = getCurrentDate();
 
     await db.transaction('rw', [db.arqueos, db.syncQueue], async () => {
+      const currentRestId = Number(getActiveRestaurant()?.id || 1);
+
       if (accion === 'open') {
-        // Validar que no haya ya una abierta
-        const open = await db.arqueos.where('estado').equals('abierto').toArray();
+        // Validar que no haya ya una abierta para este restaurante
+        const open = await db.arqueos
+          .filter(a => a.estado === 'abierto' && (Number(a.restauranteId) === currentRestId || !a.restauranteId))
+          .toArray();
         if (open.length > 0) throw new Error('Ya existe una sesión de caja abierta localmente.');
 
         const nextId = Date.now(); // ID único numérico basado en timestamp
         const openRecord = {
           id: nextId,
+          restauranteId: currentRestId,
           montoInicial: Number(montoInicial || 0),
           estado: 'abierto',
           fechaInicio: timestamp,
@@ -480,6 +486,7 @@ export const offlineCashService = {
           operation: 'TOGGLE_CASH_SESSION',
           payload: {
             id: nextId,
+            restauranteId: currentRestId,
             accion: 'open',
             montoInicial: Number(montoInicial || 0),
             fecha: timestamp,
@@ -490,7 +497,9 @@ export const offlineCashService = {
         await db.syncQueue.add(op);
       } else {
         // Cerrar
-        const open = await db.arqueos.where('estado').equals('abierto').toArray();
+        const open = await db.arqueos
+          .filter(a => a.estado === 'abierto' && (Number(a.restauranteId) === currentRestId || !a.restauranteId))
+          .toArray();
         if (open.length === 0) throw new Error('No hay ninguna sesión de caja abierta para cerrar.');
         const active = open[0];
 

@@ -249,6 +249,16 @@ export const KitchenProvider = ({ children }) => {
                     });
                     updateGlobalCache(mergedData);
                 }
+
+                // Notificar a otras vistas y pestañas (p. ej. Estado de Cocina en Inicio)
+                window.dispatchEvent(new CustomEvent('refreshKitchenQueue'));
+                window.dispatchEvent(new CustomEvent('refreshTables'));
+                try {
+                    const channel = new BroadcastChannel('bunker');
+                    channel.postMessage('refreshKitchenQueue');
+                    channel.postMessage('refreshTables');
+                    channel.close();
+                } catch (e) {}
             } else {
                 delete pendingUpdates.current[itemId];
                 fetchQueue();

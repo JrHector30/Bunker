@@ -91,6 +91,7 @@ export default function TenantLoginView() {
 
             // Guardar restaurante en localStorage y avanzar
             localStorage.setItem('bunker_current_tenant', JSON.stringify(data.restaurante));
+            window.dispatchEvent(new CustomEvent('bunker-tenant-changed', { detail: data.restaurante }));
             navigate('/login');
         } catch (err) {
             console.error('Error de red al conectar:', err);
@@ -143,6 +144,7 @@ export default function TenantLoginView() {
 
             // Éxito: guardar restaurante y entrar al selector de personal
             localStorage.setItem('bunker_current_tenant', JSON.stringify(firstAccessData.restaurante));
+            window.dispatchEvent(new CustomEvent('bunker-tenant-changed', { detail: firstAccessData.restaurante }));
             navigate('/login');
         } catch (err) {
             setPasswordChangeError('Error de red al actualizar contraseña.');

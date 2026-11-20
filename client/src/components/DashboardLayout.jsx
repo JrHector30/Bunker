@@ -214,6 +214,36 @@ const DashboardLayout = () => {
         setMobileMenuOpen(false);
     }, [location.pathname, location.search]);
 
+    // Interceptar navegación cuando hay cambios pendientes sin guardar (ej. Escandallo / Recetas)
+    useEffect(() => {
+        const handleCaptureClick = (e) => {
+            if (!window.__bunkerUnsavedChanges || !window.__bunkerUnsavedChanges.hasChanges) return;
+
+            const target = e.target;
+            if (!target || typeof target.closest !== 'function') return;
+
+            // Busca enlace a[href] o elemento con data-nav-to
+            const clickable = target.closest('a[href], [data-nav-to]');
+            if (!clickable) return;
+
+            const destination = clickable.getAttribute('href') || clickable.getAttribute('data-nav-to');
+            if (!destination || destination.startsWith('#') || destination.startsWith('javascript:')) return;
+
+            const currentFull = location.pathname + location.search;
+            if (destination === currentFull) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.__bunkerUnsavedChanges.requestNavigation(() => {
+                navigate(destination);
+            });
+        };
+
+        window.addEventListener('click', handleCaptureClick, true);
+        return () => window.removeEventListener('click', handleCaptureClick, true);
+    }, [location.pathname, location.search, navigate]);
+
     // Fetch alerts globally if user is admin or caja
     const fetchAlerts = () => {
         if (user && (user.rol === 'admin' || user.rol === 'caja')) {
@@ -332,7 +362,7 @@ const DashboardLayout = () => {
                         {isRail ? (
                             /* Collapsed Branding */
                             <div className="flex flex-col items-center gap-2.5 w-full">
-                                <div className="relative group cursor-pointer" onClick={() => navigate('/home')}>
+                                <div className="relative group cursor-pointer" data-nav-to="/home" onClick={() => navigate('/home')}>
                                     <div className="absolute -inset-1 rounded-2xl logo-glow opacity-30 blur-md group-hover:opacity-100 transition duration-500"></div>
                                     <div className="relative w-11 h-11 rounded-xl bg-black border border-slate-800/90 flex items-center justify-center shadow-md overflow-hidden">
                                         <img src="/android-chrome-192x192.png" alt="Búnker" className="w-7 h-7 object-contain" />
@@ -356,7 +386,7 @@ const DashboardLayout = () => {
                         ) : (
                             /* Expanded Branding */
                             <div className="flex items-center justify-between w-full">
-                                <div className="flex items-center gap-3.5 cursor-pointer group min-w-0" onClick={() => navigate('/home')}>
+                                <div className="flex items-center gap-3.5 cursor-pointer group min-w-0" data-nav-to="/home" onClick={() => navigate('/home')}>
                                     <div className="relative flex-shrink-0">
                                         <div className="absolute -inset-1 rounded-2xl logo-glow opacity-30 blur-md group-hover:opacity-100 transition duration-500"></div>
                                         <div className="relative w-11 h-11 rounded-xl bg-black border border-slate-800/90 flex items-center justify-center shadow-md overflow-hidden">

@@ -85,7 +85,7 @@ export default function HomeView() {
       };
     } catch (_) { }
 
-    const interval = setInterval(loadDashboardData, 12000);
+    const interval = setInterval(loadDashboardData, 5000);
 
     return () => {
       clearInterval(interval);

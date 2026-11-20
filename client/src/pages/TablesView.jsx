@@ -11,6 +11,7 @@ import { enqueueTicket } from '../utils/printer';
 import { getActiveRestaurant } from '../utils/tenant';
 import Trash2Icon from '../components/ui/Trash2Icon';
 import CloseButton from '../components/ui/CloseButton';
+import { useTheme } from '../context/ThemeContext';
 import { networkStatus, NetworkState, db, offlineOrderService, offlineSnapshotService } from '../offline';
 import MesasMobileView from '../components/tables/MesasMobileView';
 
@@ -34,6 +35,7 @@ export function BackupRestoreIcon({ size = 24, ...props }) {
 }
 
 const TablesView = () => {
+    const { mode } = useTheme();
     const { showConfirmation } = useConfirmation();
     const { showToast } = useNotification();
     const { user } = useAuth();
@@ -126,7 +128,14 @@ const TablesView = () => {
         }
 
         // Flujo ONLINE habitual
-        return fetch('/api/tables')
+        const activeTenant = getActiveRestaurant();
+        const tenantId = user?.restauranteId || activeTenant?.id || 1;
+
+        return fetch(`/api/tables?_t=${Date.now()}`, {
+            headers: {
+                'x-restaurante-id': String(tenantId)
+            }
+        })
             .then(res => {
                 if (!res.ok) throw new Error('Error al conectar');
                 return res.json();
@@ -150,7 +159,12 @@ const TablesView = () => {
     const { data: tables, mutate: fetchTables } = useCache('tables', fetcher, []);
 
     const [selectedTableId, setSelectedTableId] = useState(null);
-    const { isCajaAbierta } = useCaja();
+    const { isCajaAbierta, refreshCajaStatus } = useCaja();
+
+    // Revalidar inmediatamente el estado de caja del local al entrar a Mesas
+    useEffect(() => {
+        refreshCajaStatus?.();
+    }, [refreshCajaStatus]);
     const [modalType, setModalType] = useState(null); // 'view' | 'pre-check'
     const [showTransferMode, setShowTransferMode] = useState(false);
 
@@ -780,17 +794,45 @@ const TablesView = () => {
                 body: JSON.stringify({ estado: newState })
             });
             fetchTables();
+            window.dispatchEvent(new CustomEvent('refreshKitchenQueue'));
+            try {
+                const channel = new BroadcastChannel('bunker');
+                channel.postMessage('refreshKitchenQueue');
+                channel.postMessage('refreshTables');
+                channel.close();
+            } catch (e) {}
         } catch (error) { console.error(error); }
     };
 
     const getItemStatusBadge = (status) => {
+        const isFinished = status === 'listo' || status === 'lista' || status === 'entregado';
+        if (isFinished) {
+            const isDark = mode === 'dark';
+            return (
+                <span
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold select-none"
+                    style={{
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#dcfce7',
+                        color: isDark ? '#ffffff' : '#166534',
+                        border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #bbf7d0',
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        fontSize: '0.8rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        fontWeight: 600
+                    }}
+                >
+                    ✅ Entregado
+                </span>
+            );
+        }
+
         const styles = {
-            pendiente: { bg: 'var(--danger)', color: '#ffffff', icon: '🕑' },
-            enviada: { bg: 'rgba(0, 0, 255, 0.2)', color: '#4dabf7', icon: '🔵' },
-            preparando: { bg: 'var(--warning)', color: '#ffffff', icon: '🟠' },
-            lista: { bg: 'rgba(0, 0, 0, 0.05)', color: '#000000ff', icon: '✅' },
-            listo: { bg: 'rgba(0, 0, 0, 0.05)', color: '#ffffffff', icon: '✅' },
-            entregado: { bg: 'rgba(255, 255, 255, 0.1)', color: '#888', icon: '✅' }
+            pendiente: { bg: 'var(--danger)', color: '#ffffff', icon: '🕑', label: 'Pendiente' },
+            enviada: { bg: 'rgba(0, 0, 255, 0.2)', color: '#4dabf7', icon: '🔵', label: 'Enviada' },
+            preparando: { bg: 'var(--warning)', color: '#ffffff', icon: '🟠', label: 'Preparando' },
         };
         const s = styles[status] || styles['pendiente'];
         return (
@@ -800,7 +842,7 @@ const TablesView = () => {
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 fontWeight: 500
             }}>
-                {s.icon} {status.charAt(0).toUpperCase() + status.slice(1)}
+                {s.icon} {s.label}
             </span>
         );
     };
@@ -1056,20 +1098,12 @@ const TablesView = () => {
                                                 </td>
                                                 <td style={{ padding: 10, textAlign: 'center' }}>
                                                     <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
-                                                        {(!item.enviarCocina && (item.estado === 'lista' || item.estado === 'listo')) ? (
-                                                            <button
-                                                                className="glass-button primary"
-                                                                style={{ padding: '4px 8px', fontSize: '0.8rem' }}
-                                                                onClick={() => { item.detailIds.forEach(id => updateItemStatus(id, 'entregado')); }}
-                                                            >
-                                                                Entregar
-                                                            </button>
-                                                        ) : (!item.enviarCocina && (item.estado === 'pendiente' || item.estado === 'enviada')) ? (
+                                                        {(!item.enviarCocina && (item.estado === 'pendiente' || item.estado === 'enviada')) ? (
                                                             <button
                                                                 className="glass-button"
                                                                 style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'var(--success)', color: 'white', borderColor: 'transparent' }}
-                                                                onClick={() => { item.detailIds.forEach(id => updateItemStatus(id, 'listo')); }}
-                                                                title="Marcar bebida/producto como Listo inmediatamente"
+                                                                onClick={() => { item.detailIds.forEach(id => updateItemStatus(id, 'entregado')); }}
+                                                                title="Marcar producto como Entregado inmediatamente"
                                                             >
                                                                 ✓ Listo
                                                             </button>

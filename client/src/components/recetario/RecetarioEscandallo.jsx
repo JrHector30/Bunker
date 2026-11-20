@@ -5,7 +5,9 @@ import {
   Search,
   Copy,
   PackagePlus,
-  ChevronDown
+  ChevronDown,
+  Save,
+  AlertTriangle
 } from 'lucide-react';
 import CategorizedCombobox from '../CategorizedCombobox';
 import SimpleCombobox from '../SimpleCombobox';
@@ -43,6 +45,10 @@ export const RecetarioEscandallo = ({
   currentRecipe = [],
   setCurrentRecipe,
   onSaveRecipe,
+  onDiscardRecipe,
+  onRequestChangePlato,
+  isDirty = false,
+  isSaving = false,
   showToast,
 }) => {
   const { mode } = useTheme();
@@ -254,9 +260,17 @@ export const RecetarioEscandallo = ({
         {/* Card 1: Ficha del Plato */}
         <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 space-y-4 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
           <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2">
-            <h2 className="text-[15px] font-bold tracking-wide uppercase text-slate-900 dark:text-white">
-              FICHA DEL PLATO
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-[15px] font-bold tracking-wide uppercase text-slate-900 dark:text-white">
+                FICHA DEL PLATO
+              </h2>
+              {isDirty && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                  Sin guardar
+                </span>
+              )}
+            </div>
             <span className="text-xs font-medium text-slate-400 tabular-nums">
               {comboboxItems.length} platos
             </span>
@@ -271,8 +285,13 @@ export const RecetarioEscandallo = ({
               items={comboboxItems}
               selectedItem={selectedComboboxItem}
               onSelect={(item) => {
-                setSelectedPlatoId(item ? item.id : '');
-                setCustomPvp('');
+                const newId = item ? item.id : '';
+                if (onRequestChangePlato) {
+                  onRequestChangePlato(newId);
+                } else {
+                  setSelectedPlatoId(newId);
+                  setCustomPvp('');
+                }
               }}
               categoriesList={categoriesList}
             />
@@ -490,12 +509,12 @@ export const RecetarioEscandallo = ({
               />
             </div>
 
-            {/* Botones Fila Rápida y Agregar Insumo: comparten la fila debajo en móvil */}
-            <div className="flex items-center gap-2.5 w-full md:w-auto">
+            {/* Botones Fila Rápida, Agregar Insumo y Guardar Escandallo */}
+            <div className="flex items-center gap-2.5 w-full md:w-auto flex-wrap">
               <button
                 type="button"
                 onClick={handleAddQuickRow}
-                className="flex-1 md:flex-initial min-h-[40px] md:min-h-[34px] px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer"
+                className="flex-1 md:flex-initial min-h-[40px] md:min-h-[34px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer"
                 title="Añadir fila vacía para seleccionar insumo rápidamente"
               >
                 <Plus size={14} />
@@ -505,12 +524,26 @@ export const RecetarioEscandallo = ({
               <button
                 type="button"
                 onClick={() => setIsCatalogModalOpen(true)}
-                className="flex-1 md:flex-initial min-h-[40px] md:min-h-[34px] px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 active:scale-95 border-0 text-white shadow-sm cursor-pointer whitespace-nowrap"
-                style={{ backgroundColor: 'var(--primary, #F26522)' }}
+                className="flex-1 md:flex-initial min-h-[40px] md:min-h-[34px] px-3.5 py-2 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 active:scale-95 border border-slate-200 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 shadow-2xs cursor-pointer whitespace-nowrap"
                 title="Abrir catálogo completo de bodega"
               >
                 <PackagePlus size={15} />
                 <span>Agregar Insumo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onSaveRecipe}
+                disabled={isSaving}
+                className={`w-full sm:w-auto flex-1 md:flex-initial min-h-[40px] md:min-h-[34px] px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 active:scale-95 border-0 text-white cursor-pointer transition-all disabled:opacity-50 whitespace-nowrap ${
+                  isDirty
+                    ? 'bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400 ring-offset-2 dark:ring-offset-slate-900 animate-pulse'
+                    : 'bg-[#F26522] hover:bg-[#DC5616] shadow-sm'
+                }`}
+                title="Guardar escandallo y actualizar costos en Búnker"
+              >
+                <Save size={15} />
+                <span>{isSaving ? 'Guardando...' : isDirty ? '● Guardar Escandallo' : 'Guardar Escandallo'}</span>
               </button>
             </div>
           </div>
@@ -830,6 +863,47 @@ export const RecetarioEscandallo = ({
         onAddIngredient={handleAddFromModal}
         existingInsumoIds={existingInsumoIds}
       />
+
+      {/* Floating Action Banner cuando hay cambios sin guardar */}
+      {isDirty && (
+        <div className="fixed bottom-6 right-6 z-40 bg-slate-900/95 dark:bg-white/95 backdrop-blur-md text-white dark:text-slate-900 px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700/80 dark:border-slate-200 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-5 duration-200 select-none">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <div className="text-left">
+              <p className="text-xs font-bold leading-tight">
+                Cambios pendientes en {selectedPlatoObj?.nombre || 'este plato'}
+              </p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                Guarda los cambios antes de salir o cambiar de plato
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {onDiscardRecipe && (
+              <button
+                type="button"
+                onClick={onDiscardRecipe}
+                disabled={isSaving}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-700 dark:border-slate-300 hover:bg-slate-800 dark:hover:bg-slate-100 text-slate-300 dark:text-slate-700 cursor-pointer transition-all disabled:opacity-50"
+              >
+                Descartar
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onSaveRecipe}
+              disabled={isSaving}
+              className="px-4 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-md shadow-emerald-600/30 active:scale-95 cursor-pointer transition-all border-0 disabled:opacity-50"
+            >
+              <Save size={13} />
+              <span>{isSaving ? 'Guardando...' : 'Guardar Escandallo'}</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -40,14 +40,17 @@ lockServer.on('error', (err) => {
   }
 });
 
-const databaseUrl = process.env.DATABASE_URL || "postgresql://postgres:71367006Hq.2026@db.iyskqnlikuwatulyotcb.supabase.co:5432/postgres";
+const rawDatabaseUrl = process.env.DATABASE_URL || "postgresql://postgres.iyskqnlikuwatulyotcb:71367006Hq.2026@aws-1-us-west-2.pooler.supabase.com:6543/postgres";
+let cleanedUrl = (rawDatabaseUrl || '').replace(/^["']|["']$/g, '').trim();
 
-// Fallback de conexión directa a IP para evitar errores de DNS (getaddrinfo ENOENT) en Windows
-const SUPABASE_HOST = 'db.iyskqnlikuwatulyotcb.supabase.co';
-const SUPABASE_DIRECT_IPV6 = '2600:1f14:131e:fd00:c121:2812:82a0:48f6';
-const connectionString = databaseUrl.includes(SUPABASE_HOST) 
-  ? databaseUrl.replace(SUPABASE_HOST, `[${SUPABASE_DIRECT_IPV6}]`)
-  : databaseUrl;
+// Migración automática a Connection Pooler IPv4 para evitar ENOTFOUND en redes residenciales sin IPv6
+if (cleanedUrl.includes('db.iyskqnlikuwatulyotcb.supabase.co')) {
+  cleanedUrl = cleanedUrl
+    .replace('postgres:71367006Hq.2026@db.iyskqnlikuwatulyotcb.supabase.co:5432', 'postgres.iyskqnlikuwatulyotcb:71367006Hq.2026@aws-1-us-west-2.pooler.supabase.com:6543')
+    .replace('db.iyskqnlikuwatulyotcb.supabase.co:5432', 'aws-1-us-west-2.pooler.supabase.com:6543');
+}
+
+const connectionString = cleanedUrl;
 
 // Inicializar Pool de conexiones a PostgreSQL
 const pool = new Pool({
@@ -131,17 +134,41 @@ console.log("=================================================\n");
 // --- 1. Utilidad: Escanear Impresoras de Windows con PowerShell ---
 function getWindowsPrinters() {
   return new Promise((resolve) => {
-    // Detección estricta: verifica WorkOffline, estado de puerto serial (COM/BTH) y estado del spooler
+    // Detección estricta: verifica estado PnP en tiempo real para COM/Bluetooth y USBPRINT físico
     const psCmd = `
-      $activePorts = [System.IO.Ports.SerialPort]::GetPortNames();
+      $pnpPorts = @{};
+      Get-PnpDevice -Class Ports -ErrorAction SilentlyContinue | ForEach-Object {
+        if ($_.Present -eq $true -and $_.Status -eq 'OK') {
+          if ($_.FriendlyName -match '\\((COM\\d+)\\)') {
+            $pnpPorts[$matches[1]] = $true;
+          }
+        }
+      };
+      $activeUsb = @{};
+      Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like '*USBPRINT*' } | ForEach-Object {
+        if ($_.Present -eq $true -and $_.Status -eq 'OK') {
+          $activeUsb[$_.InstanceId] = $true;
+        }
+      };
       Get-CimInstance -ClassName Win32_Printer | ForEach-Object {
         $pName = $_.Name;
         $port = $_.PortName;
         $offline = [bool]$_.WorkOffline;
         if ($port -like 'COM*' -or $port -like 'BTH*') {
           $clean = ($port -replace ':','').Trim();
-          if ($activePorts -notcontains $clean) {
+          if (-not $pnpPorts.ContainsKey($clean)) {
             $offline = $true;
+          }
+        } elseif ($port -like 'USB*') {
+          if ($activeUsb.Count -eq 0) {
+            $offline = $true;
+          } else {
+            $cleanPort = ($port -replace ':','').Trim();
+            $found = $false;
+            foreach ($k in $activeUsb.Keys) {
+              if ($k.IndexOf($cleanPort) -ge 0) { $found = $true; break; }
+            }
+            if (-not $found) { $offline = $true; }
           }
         };
         if ($_.PrinterStatus -eq 2 -or $_.ExtendedPrinterStatus -eq 7) {
@@ -712,29 +739,42 @@ async function checkAndPrintQueue() {
         const medidasMap = medidasRes.rows[0]?.valor ? JSON.parse(medidasRes.rows[0].valor) : {};
         activeDevice = {
           nombre: legacyName,
-          medida: medidasMap[legacyName] || '80mm',
+          medida: medidasMap[legacyName] || (legacyName.toLowerCase().includes('58') ? '58mm' : '80mm'),
           perfil: 'Generic',
           transport: 'USB'
         };
       }
     }
 
-    if (!activeDevice) {
-      // Fallback inteligente: si no se ha asignado aún en Ajustes, usar la primera impresora física CONECTADA de Windows (excluyendo PDF/Fax)
-      const winPrinters = await getWindowsPrinters();
-      const physicalPrinter = winPrinters.find(p => !p.offline && !p.name.match(/pdf|xps|onenote|fax|root|microsoft|nitro/i));
+    // Verificar si la impresora configurada está realmente conectada en esta máquina
+    const winPrinters = await getWindowsPrinters();
+    const isPhysicallyPresent = activeDevice && activeDevice.transport === 'USB'
+      ? winPrinters.some(p => p.name.toLowerCase() === activeDevice.nombre.toLowerCase() && !p.offline)
+      : true;
+
+    if (!activeDevice || !isPhysicallyPresent) {
+      if (activeDevice && !isPhysicallyPresent) {
+        console.warn(`⚠️ [Aviso] La impresora activa configurada "${activeDevice.nombre}" no está conectada físicamente en este equipo.`);
+      }
+      // Priorizar impresora térmica (POS, 58, 80, Ticket) sobre impresoras de inyección de tinta (Epson L3250, etc.)
+      const thermalPrinter = winPrinters.find(p => !p.offline && !p.name.match(/pdf|xps|onenote|fax|root|microsoft|nitro/i) && p.name.match(/pos|thermal|58|80|termic|receipt|ticket/i));
+      const physicalPrinter = thermalPrinter || winPrinters.find(p => !p.offline && !p.name.match(/pdf|xps|onenote|fax|root|microsoft|nitro/i));
       if (physicalPrinter) {
+        const medidasRes = await client.query(
+          `SELECT valor FROM "Configuracion" WHERE clave = $1`,
+          [`impresora_medidas_${STATION_ID}`]
+        );
+        const medidasMap = medidasRes.rows[0]?.valor ? JSON.parse(medidasRes.rows[0].valor) : {};
         activeDevice = {
           nombre: physicalPrinter.name,
-          medida: '80mm',
+          medida: medidasMap[physicalPrinter.name] || (physicalPrinter.name.toLowerCase().includes('58') ? '58mm' : '80mm'),
           perfil: 'Generic',
           transport: 'USB'
         };
-        console.log(`ℹ️ [Auto-Fallback] Usando impresora detectada en el equipo: "${physicalPrinter.name}" para la estación "${STATION_ID}".`);
+        console.log(`ℹ️ [Auto-Fallback] Usando impresora física detectada en el equipo: "${physicalPrinter.name}" (${activeDevice.medida}) para la estación "${STATION_ID}".`);
       } else {
         // Si no hay ninguna impresora conectada físicamente para esta estación:
         // Descartar automáticamente los tickets pendientes para evitar que se acumulen
-        // y se impriman decenas de tickets viejos cuando se enchufe la impresora horas o días después
         const discarded = await client.query(
           `UPDATE tickets_pendientes 
            SET impreso = true 
@@ -855,8 +895,8 @@ async function checkAndPrintQueue() {
 // Cada 1 segundo vigilar la cola de tickets para respuesta casi instantánea
 setInterval(checkAndPrintQueue, 1000);
 
-// Cada 3 segundos vigilar si hay solicitudes de escaneo de impresoras
-setInterval(handlePrinterScanRequests, 3000);
+// Cada 1 segundo vigilar si hay solicitudes de escaneo de impresoras
+setInterval(handlePrinterScanRequests, 1000);
 
 // Cada 2 segundos reportar latido de vida de la estación
 setInterval(writeStationHeartbeat, 2000);
@@ -878,6 +918,7 @@ runPeriodicHealthCheck();
 // --- 7. Búnker Auto Recovery & Network Helpers ---
 
 // Bucle de Latido (Heartbeat) de la Estación
+let lastHeartbeatErrorLog = 0;
 async function writeStationHeartbeat() {
   let client;
   try {
@@ -888,7 +929,10 @@ async function writeStationHeartbeat() {
       ON CONFLICT (clave) DO UPDATE SET valor = $2
     `, [`estacion_latido_${STATION_ID}`, Date.now().toString()]);
   } catch (err) {
-    // Silencioso para no saturar consola
+    if (Date.now() - lastHeartbeatErrorLog > 30000) {
+      console.warn(`⚠️ [Heartbeat] No se pudo enviar latido de la estación "${STATION_ID}":`, err.message);
+      lastHeartbeatErrorLog = Date.now();
+    }
   } finally {
     if (client) client.release();
   }
