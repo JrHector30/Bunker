@@ -1859,6 +1859,32 @@ const TablesView = () => {
                     </div>
                 );
             })()}
+            {/* Menú Radial Interactivo para Mesas Ocupadas */}
+            <TableRadialMenu
+                table={tables.find((t) => t.id === radialAnchor?.tableId) ?? null}
+                anchor={radialAnchor ? { x: radialAnchor.x, y: radialAnchor.y } : null}
+                onClose={() => setRadialAnchor(null)}
+                onSelectAction={(action) => {
+                    const targetTable = tables.find((t) => t.id === radialAnchor?.tableId);
+                    setRadialAnchor(null);
+                    if (!targetTable) return;
+
+                    if (action === 'agregar') {
+                        navigate(`/order/${targetTable.id}`);
+                    } else if (action === 'pedidos') {
+                        handleOpenModal(null, targetTable, 'view');
+                    } else if (action === 'precuenta') {
+                        handleOpenModal(null, targetTable, 'pre-check');
+                    } else if (action === 'trasladar') {
+                        setSelectedTableId(targetTable.id);
+                        setModalType('view');
+                        setShowTransferMode(true);
+                    } else if (action === 'separar') {
+                        handleDirectUnmergeAll(targetTable);
+                    }
+                }}
+                radius={typeof window !== 'undefined' && window.innerWidth < 768 ? 90 : 104}
+            />
         </div>
     );
 };
