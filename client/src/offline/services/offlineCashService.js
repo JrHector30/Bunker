@@ -93,10 +93,11 @@ export const offlineCashService = {
       }
     });
 
-    // 1. Filtrar ventas locales cerradas del rango
+    // 1. Filtrar ventas locales cerradas del rango (por arqueoId directo o rango de fechas)
     const sales = orders.filter(order => {
       const isClosed = order.estado === 'cerrada' || order.status === 'cerrada';
       if (!isClosed) return false;
+      if (order.arqueoId != null && String(order.arqueoId) === String(lastArqueo.id)) return true;
       const orderDate = new Date(order.fechaCierre || order.fecha);
       return orderDate >= startDate && orderDate <= endDate;
     });

@@ -28,6 +28,7 @@ import { useConfirmation } from '../context/ConfirmationContext';
 import { enqueueTicket } from '../utils/printer';
 import { getActiveRestaurant } from '../utils/tenant';
 import { networkStatus, NetworkState } from '../offline/network/networkStatus';
+import { offlineSnapshotService } from '../offline/services/offlineSnapshotService';
 import ToggleSwitch from '../components/ui/ToggleSwitch';
 import CustomCheckbox from '../components/ui/CustomCheckbox';
 
@@ -353,7 +354,7 @@ export default function SettingsView() {
     if (!forceOffline) {
       const confirmed = await showConfirmation({
         title: '¿Activar Modo Offline?',
-        message: 'El sistema operará de manera local sin sincronizar con el servidor en tiempo real. Esta opción se recomienda únicamente ante cortes de internet o pruebas técnicas. ¿Deseas activar el modo Offline?',
+        message: 'El sistema capturará el estado más reciente de caja, mesas y platos para operar localmente sin internet. ¿Deseas activar el modo Offline?',
         confirmText: 'Sí, activar Offline',
         cancelText: 'Cancelar',
         isDestructive: false,
@@ -361,9 +362,24 @@ export default function SettingsView() {
 
       if (!confirmed) return;
 
+      try {
+        showToast('Guardando snapshot operativo del turno...', 'info');
+        await offlineSnapshotService.hydrateOperationalSnapshot();
+      } catch (err) {
+        console.warn('[SettingsView] Error al hidratar snapshot previo a offline:', err);
+      }
+
       networkStatus.setManualOverride(NetworkState.OFFLINE_CONFIRMED);
       setNetState(NetworkState.OFFLINE_CONFIRMED);
-      showToast('Modo Offline activado de forma persistente. Operando de forma local.', 'info');
+      showToast('Modo Offline activado con éxito. Operando de forma local.', 'success');
+      window.dispatchEvent(new CustomEvent('refreshCashCount'));
+      window.dispatchEvent(new CustomEvent('refreshTables'));
+      try {
+        const channel = new BroadcastChannel('bunker');
+        channel.postMessage('refreshCashCount');
+        channel.postMessage('refreshTables');
+        channel.close();
+      } catch (e) {}
     } else {
       const confirmed = await showConfirmation({
         title: '¿Restaurar Modo Online?',

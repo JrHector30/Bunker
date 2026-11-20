@@ -225,6 +225,7 @@ export const offlineSnapshotService = {
               await db.orders.put({
                 id: sale.id,
                 remoteId: sale.id,
+                arqueoId: Number(balance.id),
                 mesaId: Number(sale.mesaNum || sale.mesaId || 0),
                 tableId: Number(sale.mesaNum || sale.mesaId || 0),
                 fecha: sale.hora || new Date().toISOString(),

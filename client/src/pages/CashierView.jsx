@@ -292,6 +292,10 @@ const CashierView = () => {
       if (!res.ok) throw new Error('Error al conectar con el servidor');
       const data = await res.json();
       setConnectionError(false);
+
+      // Hidratar snapshot de caja de fondo para mantener IndexedDB 100% fresco con el servidor
+      offlineSnapshotService.hydrateOperationalSnapshot({ skipProducts: true }).catch(() => {});
+
       return data;
     } catch (err) {
       console.error('[CashierView] statusFetcher falló:', err);
@@ -412,6 +416,7 @@ const CashierView = () => {
         const closedOrders = allOrders.filter(order => {
           const isClosed = order.estado === 'cerrada' || order.status === 'cerrada';
           if (!isClosed) return false;
+          if (order.arqueoId != null && String(order.arqueoId) === String(arq.id)) return true;
           const orderDate = new Date(order.fechaCierre || order.fecha);
           return orderDate >= startDate && orderDate <= endDate;
         });
@@ -538,6 +543,10 @@ const CashierView = () => {
       if (!res.ok) throw new Error('Error al conectar con el servidor');
       const data = await res.json();
       setConnectionError(false);
+
+      // Hidratar snapshot de caja de fondo para mantener IndexedDB 100% fresco con el servidor
+      offlineSnapshotService.hydrateOperationalSnapshot({ skipProducts: true }).catch(() => {});
+
       return data;
     } catch (err) {
       if (err.name === 'AbortError') {
