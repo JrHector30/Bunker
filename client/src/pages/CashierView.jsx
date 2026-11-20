@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
-import { getActiveRestaurantName } from '../utils/tenant';
+import { getActiveRestaurant, getActiveRestaurantName } from '../utils/tenant';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import {
