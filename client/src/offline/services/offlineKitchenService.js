@@ -41,14 +41,23 @@ export const offlineKitchenService = {
     let kitchenCategories = new Set();
     let hasCategoryFilter = false;
     try {
-      const cachedCats = localStorage.getItem('categories');
+      let cachedCats = null;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key === 'categories' || key.endsWith('_categories'))) {
+          const val = localStorage.getItem(key);
+          if (val && val.startsWith('[')) {
+            cachedCats = val;
+            break;
+          }
+        }
+      }
       if (cachedCats) {
         const parsed = JSON.parse(cachedCats);
         if (Array.isArray(parsed) && parsed.length > 0) {
           parsed.forEach(c => {
-            if (c.enviarCocina) kitchenCategories.add(String(c.id));
+            if (c.enviarCocina !== false) kitchenCategories.add(String(c.id));
           });
-          // Solo activar el filtro si hay al menos una categoría marcada para cocina
           hasCategoryFilter = kitchenCategories.size > 0;
         }
       }
@@ -63,6 +72,9 @@ export const offlineKitchenService = {
         const itemEstado = (item.estado || 'pendiente').toLowerCase();
         if (itemEstado === 'entregado' || itemEstado === 'anulado') return false;
 
+        // Si el ítem explícitamente tiene enviarCocina === false (ej. bebidas, gaseosas, tragos), excluirlo de cocina
+        if (item.enviarCocina === false) return false;
+
         // Resolver orderId/comandaId con normalización de tipo
         const parentId = String(item.orderId || item.comandaId || '');
         if (!parentId) return false;
@@ -73,23 +85,27 @@ export const offlineKitchenService = {
         const orderEstado = (order.estado || order.status || 'pendiente').toLowerCase();
         if (orderEstado === 'cerrada' || orderEstado === 'anulada') return false;
 
+        // Si el ítem ya viene marcado para cocina (enviarCocina === true), pasa directamente
+        if (item.enviarCocina === true) return true;
+
         // Resolver platoId/productId con normalización de tipo
         const productKey = String(item.platoId || item.productId || '');
-        if (!productKey) return false;
+        if (!productKey) return true;
 
         const plato = productMap.get(productKey) || productMap.get(Number(productKey));
 
         // Si no existe el producto en el snapshot local, pasar igual con fallback visual
         if (!plato) return true;
 
+        if (plato.enviarCocina === false) return false;
+        if (plato.enviarCocina === true) return true;
+
         // Filtro de categoría: solo aplicar si hay categorías marcadas Y el producto tiene categoría
-        // Si el producto no tiene categoría definida, NO excluirlo (fallback permisivo)
         if (hasCategoryFilter) {
           const catId = plato.categoriaId != null ? String(plato.categoriaId)
                       : plato.categoryId != null ? String(plato.categoryId)
                       : null;
           if (catId !== null && !kitchenCategories.has(catId)) return false;
-          // Si catId === null → producto sin categoría, se deja pasar (no excluir)
         }
 
         return true;

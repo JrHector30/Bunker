@@ -31,12 +31,24 @@ export const offlineOrderService = {
     const localOrderId = generateUUID();
     const timestamp = getCurrentDate();
 
+    // Obtener nombre del mozo / usuario actual
+    let currentUserName = 'Mozo';
+    try {
+      const storedUser = localStorage.getItem('bunker_user');
+      if (storedUser) {
+        const u = JSON.parse(storedUser);
+        if (u.nombre || u.name) currentUserName = u.nombre || u.name;
+      }
+    } catch (_) {}
+
     // Estructurar el objeto comanda local
     const orderRecord = {
       id: localOrderId,
       remoteId: null, // Pendiente de asignación al sincronizar
       mesaId: Number(mesaId),
       usuarioId: Number(usuarioId),
+      usuario: { id: Number(usuarioId), nombre: currentUserName },
+      mozoNombre: currentUserName,
       comensales: Number(comensales || 2),
       fecha: timestamp,
       estado: 'pendiente',

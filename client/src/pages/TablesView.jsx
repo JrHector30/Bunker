@@ -80,8 +80,14 @@ const TablesView = () => {
                     if (!activeOrdersMap.has(Number(order.mesaId))) {
                         activeOrdersMap.set(Number(order.mesaId), []);
                     }
+                    const orderUser = order.usuario || {
+                        id: order.usuarioId || user?.id || 1,
+                        nombre: order.mozoNombre || user?.nombre || 'Mozo'
+                    };
                     activeOrdersMap.get(Number(order.mesaId)).push({
                         ...order,
+                        usuario: orderUser,
+                        mozoNombre: orderUser.nombre,
                         detalles: orderItemMap.get(order.id) || []
                     });
                 }
@@ -1638,6 +1644,10 @@ const TablesView = () => {
                     // Extraer la cantidad real de comensales desde la comanda activa en la BD (por defecto usa la capacidad si no hay orden)
                     const totalComensales = table.estado === 'ocupada' && comandaActiva ? (comandaActiva.comensales || 2) : 0;
 
+                    const rawMozoName = comandaActiva?.usuario?.nombre || comandaActiva?.mozoNombre || (comandaActiva ? (user?.nombre || 'Mozo') : '');
+                    const displayMozoName = rawMozoName ? rawMozoName.split(' ')[0] : (user?.nombre ? user.nombre.split(' ')[0] : 'Mozo');
+                    const showMozoBadge = !isDaughter && table.estado !== 'libre';
+
                     // Cálculo de productos de barra pendientes (no enviados a cocina)
                     const itemsBarraPendientes = comandaActiva?.detalles?.filter(d =>
                         d.estado !== 'entregado' &&
@@ -1779,13 +1789,13 @@ const TablesView = () => {
                                 background: 'var(--item-hover, rgba(255,255,255,0.1))',
                                 padding: '2px 6px',
                                 borderRadius: 10,
-                                visibility: (!isDaughter && table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? 'visible' : 'hidden',
+                                visibility: showMozoBadge ? 'visible' : 'hidden',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: 4
                             }}>
                                 <HandPlatterIcon className="w-3 h-3 shrink-0" />
-                                <span>{(!isDaughter && table.estado !== 'libre' && table.comandas?.[0]?.usuario) ? table.comandas[0].usuario.nombre.split(' ')[0] : 'Vacio'}</span>
+                                <span>{showMozoBadge ? displayMozoName : 'Vacio'}</span>
                             </div>
                         </div>
                     );
