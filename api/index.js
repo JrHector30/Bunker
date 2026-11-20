@@ -1775,18 +1775,61 @@ app.post('/api/sync/operations', async (req, res) => {
                 const targetMesaId = parseInt(payload.mesaId || payload.tableId);
                 
                 let order = null;
-                if (payload.dependsOnOperationId) {
-                    const parentOp = await tx.syncOperation.findUnique({
-                        where: { operationId: payload.dependsOnOperationId }
+
+                // 1. Búsqueda por ID remoto directo si vino en el payload (ej. mesa abierta previa o mapeada)
+                const directOrderId = parseInt(payload.remoteOrderId || payload.orderId || payload.comandaId);
+                if (!isNaN(directOrderId) && directOrderId > 0) {
+                    order = await tx.comanda.findUnique({
+                        where: { id: directOrderId },
+                        include: { detalles: { include: { plato: true } } }
                     });
-                    if (parentOp?.resultPayload?.remoteEntityId) {
+                }
+
+                // 2. Búsqueda por entityId numérico directo
+                if (!order) {
+                    const parsedEntityId = parseInt(entityId);
+                    if (!isNaN(parsedEntityId) && parsedEntityId > 0 && String(parsedEntityId) === String(entityId).trim()) {
                         order = await tx.comanda.findUnique({
-                            where: { id: parentOp.resultPayload.remoteEntityId },
+                            where: { id: parsedEntityId },
                             include: { detalles: { include: { plato: true } } }
                         });
                     }
                 }
 
+                // 3. Búsqueda por dependsOnOperationId (comanda creada en Paso 1)
+                if (!order && payload.dependsOnOperationId) {
+                    const parentOp = await tx.syncOperation.findUnique({
+                        where: { operationId: payload.dependsOnOperationId }
+                    });
+                    const remoteId = parseInt(parentOp?.resultPayload?.remoteEntityId || parentOp?.resultPayload?.orderId);
+                    if (!isNaN(remoteId) && remoteId > 0) {
+                        order = await tx.comanda.findUnique({
+                            where: { id: remoteId },
+                            include: { detalles: { include: { plato: true } } }
+                        });
+                    }
+                }
+
+                // 4. Búsqueda por UUID entityId en el historial de CREATE_ORDER completadas
+                if (!order && entityId) {
+                    const matchCreateOp = await tx.syncOperation.findFirst({
+                        where: {
+                            entityId: String(entityId),
+                            operation: 'CREATE_ORDER',
+                            status: 'COMPLETED'
+                        },
+                        orderBy: { id: 'desc' }
+                    });
+                    const remoteId = parseInt(matchCreateOp?.resultPayload?.remoteEntityId || matchCreateOp?.resultPayload?.orderId);
+                    if (!isNaN(remoteId) && remoteId > 0) {
+                        order = await tx.comanda.findUnique({
+                            where: { id: remoteId },
+                            include: { detalles: { include: { plato: true } } }
+                        });
+                    }
+                }
+
+                // 5. Búsqueda de comanda activa por mesaId
                 if (!order && targetMesaId) {
                     order = await tx.comanda.findFirst({
                         where: { mesaId: targetMesaId, restauranteId: tenantId, estado: { notIn: ['cerrada', 'anulada'] } },
@@ -1795,12 +1838,17 @@ app.post('/api/sync/operations', async (req, res) => {
                     });
                 }
 
+                // 6. Fallback final: comanda más reciente de la mesa
                 if (!order && targetMesaId) {
                     order = await tx.comanda.findFirst({
                         where: { mesaId: targetMesaId, restauranteId: tenantId },
                         include: { detalles: { include: { plato: true } } },
                         orderBy: { id: 'desc' }
                     });
+                }
+
+                if (!order) {
+                    throw new Error(`No se encontró la comanda activa en el servidor para procesar el cobro (Mesa: ${targetMesaId || 'desconocida'}, LocalId: ${entityId}).`);
                 }
 
                 if (order) {
@@ -1894,10 +1942,16 @@ app.post('/api/sync/operations', async (req, res) => {
                     }
 
                     // 4. Actualizar arqueo de turno y registrar movimiento de caja
-                    const activeArqueo = await tx.arqueo.findFirst({
+                    let activeArqueo = await tx.arqueo.findFirst({
                         where: { restauranteId: tenantId, estado: 'abierto' },
                         orderBy: { id: 'desc' }
                     });
+                    if (!activeArqueo) {
+                        activeArqueo = await tx.arqueo.findFirst({
+                            where: { estado: 'abierto' },
+                            orderBy: { id: 'desc' }
+                        });
+                    }
 
                     if (activeArqueo) {
                         const totalCobrado = parseFloat(payload.montoRecibido || 0);
@@ -1920,6 +1974,7 @@ app.post('/api/sync/operations', async (req, res) => {
                     businessResult = {
                         localEntityId: entityId,
                         remoteEntityId: order.id,
+                        orderId: order.id,
                         success: true
                     };
                 }
@@ -2007,9 +2062,19 @@ app.post('/api/sync/operations', async (req, res) => {
                     });
                 }
 
-                // Caso C: Falló previamente
+                // Caso C: Falló previamente -> Liberar registro para permitir reintento transparente
+                if (existingOp.status === 'FAILED') {
+                    await prisma.syncOperation.delete({
+                        where: { id: existingOp.id }
+                    }).catch(() => {});
+                    return res.status(409).json({
+                        error: "Registro fallido previo liberado. Reintento habilitado.",
+                        canRetry: true
+                    });
+                }
+
                 return res.status(500).json({
-                    error: "La operación de sincronización falló previamente en el servidor.",
+                    error: "La operación de sincronización se encuentra en estado anómalo en el servidor.",
                     errorPayload: existingOp.errorPayload
                 });
             } catch (errDb) {

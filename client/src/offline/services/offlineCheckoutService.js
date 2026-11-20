@@ -100,20 +100,27 @@ export const offlineCheckoutService = {
       }
 
       // Buscar si existe la operación CREATE_ORDER pendiente en cola
-      const pendingCreate = await db.syncQueue
-        .where('entityId')
-        .equals(order.id)
-        .and(op => op.operation === 'CREATE_ORDER')
-        .toArray();
+      const orderIdStr = String(order.id);
+      const allQueueOps = await db.syncQueue.toArray();
+      const pendingCreate = allQueueOps.filter(
+        op => op.operation === 'CREATE_ORDER' && String(op.entityId) === orderIdStr
+      );
       const dependsOnOperationId = pendingCreate.length > 0 ? pendingCreate[0].operationId : null;
+
+      const parsedRemoteOrderId = order.remoteId || (Number.isInteger(Number(order.id)) ? Number(order.id) : null);
+      const resolvedMesaId = Number(mesaId || order.mesaId || order.tableId);
 
       // 8. Registrar la operación PAY_ORDER
       const op = createOperation({
         entity: 'ORDER',
-        entityId: order.id,
+        entityId: String(order.id),
         operation: 'PAY_ORDER',
         payload: {
-          localOrderId: order.id,
+          localOrderId: String(order.id),
+          remoteOrderId: parsedRemoteOrderId,
+          orderId: parsedRemoteOrderId,
+          mesaId: resolvedMesaId,
+          tableId: resolvedMesaId,
           arqueoId: activeArqueo.id,
           ...checkoutUpdates,
           dependsOnOperationId,

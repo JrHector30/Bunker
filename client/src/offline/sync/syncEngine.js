@@ -258,9 +258,10 @@ export const syncEngine = {
         } else {
           // Sincronización Real Exitosa (Fase 5B)
           // Actualizar snapshot local conservando el ID local estable
-          await db.transaction('rw', [db.products, db.syncQueue], async () => {
+          await db.transaction('rw', [db.products, db.orders, db.syncQueue], async () => {
             const localId = result.result?.localEntityId || operation.entityId;
             const remoteId = String(result.result?.remoteEntityId || '');
+            const remoteIdNum = Number(remoteId) || (parseInt(remoteId) || null);
             
             // 1. Actualizar el snapshot del producto con su remoteId y syncStatus
             if (operation.entity === 'PRODUCT') {
@@ -272,8 +273,31 @@ export const syncEngine = {
                 });
               }
             }
+
+            // 2. Si es una comanda creada, actualizar comanda y mapear ID remoto en operaciones hijas dependientes
+            if (operation.entity === 'ORDER' && operation.operation === 'CREATE_ORDER' && remoteIdNum) {
+              const existingOrder = await db.orders.get(localId);
+              if (existingOrder) {
+                await db.orders.update(localId, {
+                  remoteId: remoteIdNum,
+                  syncStatus: 'SYNCED'
+                });
+              }
+              // Inyectar remoteOrderId directamente a operaciones PAY_ORDER en cola para evitar búsquedas indirectas
+              const pendingOps = await db.syncQueue.toArray();
+              for (const qOp of pendingOps) {
+                if (String(qOp.entityId) === String(localId) && qOp.operation === 'PAY_ORDER') {
+                  const updatedPayload = {
+                    ...qOp.payload,
+                    remoteOrderId: remoteIdNum,
+                    orderId: remoteIdNum
+                  };
+                  await db.syncQueue.update(qOp.id, { payload: updatedPayload });
+                }
+              }
+            }
             
-            // 2. Marcar la operación como DONE con metadatos reales de sincronización
+            // 3. Marcar la operación como DONE con metadatos reales de sincronización
             await db.syncQueue.update(operation.id, {
               status: QueueStatus.DONE,
               updatedAt: timestamp,

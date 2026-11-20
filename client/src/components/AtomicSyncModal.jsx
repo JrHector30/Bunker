@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertCircle, AlertTriangle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import db from '../offline/database';
 import { QueueStatus } from '../offline/tables';
 import { queueService } from '../offline/queue/queueService';
@@ -254,12 +254,7 @@ export const AtomicSyncModal = ({
   // Helper para pausas asíncronas suaves de ritmo visual
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  useEffect(() => {
-    if (!isOpen) {
-      isSyncingRef.current = false;
-      return;
-    }
-
+  const runSync = useCallback(async () => {
     if (isSyncingRef.current) return;
     isSyncingRef.current = true;
 
@@ -271,170 +266,190 @@ export const AtomicSyncModal = ({
     setErrorStepIndex(null);
     setErrorMessage('');
 
-    const startSyncExecution = async () => {
-      try {
-        // Asegurar motor activo
-        syncEngine.start();
+    let currentStepIndex = 0;
 
-        // 1. Inspeccionar operaciones locales en db.syncQueue para títulos dinámicos
-        const allPending = await db.syncQueue
-          .where('status')
-          .anyOf([QueueStatus.PENDING, QueueStatus.PROCESSING])
-          .toArray();
+    try {
+      // Asegurar motor activo
+      syncEngine.start();
 
-        const syncableOps = allPending.filter(
-          op => op.recordingSource !== 'shadow' && op.recordingSource !== 'diagnostic'
-        );
+      // 1. Inspeccionar operaciones locales en db.syncQueue para títulos dinámicos
+      const allPending = await db.syncQueue
+        .where('status')
+        .anyOf([QueueStatus.PENDING, QueueStatus.PROCESSING])
+        .toArray();
 
-        const orderOps = syncableOps.filter(
-          op => op.entity === 'ORDER' && op.operation === 'CREATE_ORDER'
-        );
-        const payOps = syncableOps.filter(
-          op => op.entity === 'ORDER' && op.operation === 'PAY_ORDER'
-        );
+      const syncableOps = allPending.filter(
+        op => op.recordingSource !== 'shadow' && op.recordingSource !== 'diagnostic'
+      );
 
-        const orderCount = orderOps.length;
-        const payCount = payOps.length;
+      const orderOps = syncableOps.filter(
+        op => op.entity === 'ORDER' && op.operation === 'CREATE_ORDER'
+      );
+      const payOps = syncableOps.filter(
+        op => op.entity === 'ORDER' && op.operation === 'PAY_ORDER'
+      );
 
-        const dynamicSteps = [
-          {
-            id: 'comandas',
-            stepNumber: 1,
-            label: orderCount > 0
-              ? `Paso 1: Subiendo ${orderCount} comanda${orderCount === 1 ? '' : 's'} local${orderCount === 1 ? '' : 'es'}...`
-              : 'Paso 1: Verificando comandas locales...',
-          },
-          {
-            id: 'cobros',
-            stepNumber: 2,
-            label: payCount > 0
-              ? `Paso 2: Aplicando ${payCount} transacci${payCount === 1 ? 'ón' : 'ones'} de cobro en Caja...`
-              : 'Paso 2: Verificando transacciones de cobro en Caja...',
-          },
-          {
-            id: 'kardex',
-            stepNumber: 3,
-            label: 'Paso 3: Impactando Kardex y reduciendo stock de insumos por receta...',
-          },
-          {
-            id: 'arqueo',
-            stepNumber: 4,
-            label: 'Paso 4: Actualizando arqueo de turno y saldo en vivo...',
-          },
-        ];
+      const orderCount = orderOps.length;
+      const payCount = payOps.length;
 
-        setSteps(dynamicSteps);
-        await sleep(300);
+      const dynamicSteps = [
+        {
+          id: 'comandas',
+          stepNumber: 1,
+          label: orderCount > 0
+            ? `Paso 1: Subiendo ${orderCount} comanda${orderCount === 1 ? '' : 's'} local${orderCount === 1 ? '' : 'es'}...`
+            : 'Paso 1: Verificando comandas locales...',
+        },
+        {
+          id: 'cobros',
+          stepNumber: 2,
+          label: payCount > 0
+            ? `Paso 2: Aplicando ${payCount} transacci${payCount === 1 ? 'ón' : 'ones'} de cobro en Caja...`
+            : 'Paso 2: Verificando transacciones de cobro en Caja...',
+        },
+        {
+          id: 'kardex',
+          stepNumber: 3,
+          label: 'Paso 3: Impactando Kardex y reduciendo stock de insumos por receta...',
+        },
+        {
+          id: 'arqueo',
+          stepNumber: 4,
+          label: 'Paso 4: Actualizando arqueo de turno y saldo en vivo...',
+        },
+      ];
 
-        // --- PASO 1: Subiendo Comandas Locales ---
-        setActiveIndex(0);
-        if (orderOps.length > 0) {
-          for (let i = 0; i < orderOps.length; i++) {
-            const op = orderOps[i];
-            const success = await syncEngine.processNext(op);
-            if (!success) {
-              throw new Error(`Error al subir la comanda local (${op.entityId || op.id}).`);
-            }
-            const pct = Math.round(((i + 1) / orderOps.length) * 100);
-            setStepProgress(prev => {
-              const next = [...prev];
-              next[0] = pct;
-              return next;
-            });
-            await sleep(200);
-          }
-        } else {
-          // Animación suave de confirmación
-          for (let p = 25; p <= 100; p += 25) {
-            setStepProgress(prev => [p, prev[1], prev[2], prev[3]]);
-            await sleep(120);
-          }
-        }
-        setStepProgress(prev => [100, prev[1], prev[2], prev[3]]);
-        await sleep(350);
+      setSteps(dynamicSteps);
+      await sleep(300);
 
-        // --- PASO 2: Transacciones de Cobro en Caja ---
-        setActiveIndex(1);
-        if (payOps.length > 0) {
-          for (let i = 0; i < payOps.length; i++) {
-            const op = payOps[i];
-            const success = await syncEngine.processNext(op);
-            if (!success) {
-              throw new Error(`Error al registrar el cobro en Caja (${op.entityId || op.id}).`);
-            }
-            const pct = Math.round(((i + 1) / payOps.length) * 100);
-            setStepProgress(prev => {
-              const next = [...prev];
-              next[1] = pct;
-              return next;
-            });
-            await sleep(220);
-          }
-        } else {
-          for (let p = 25; p <= 100; p += 25) {
-            setStepProgress(prev => [100, p, prev[2], prev[3]]);
-            await sleep(120);
-          }
-        }
-
-        // Procesar cualquier otra operación restante en cola (ej. UPDATE_ORDER_STATUS, PRODUCT CREATE)
-        const remaining = await queueService.getPendingSyncable();
-        for (const remOp of remaining) {
-          const success = await syncEngine.processNext(remOp);
+      // --- PASO 1: Subiendo Comandas Locales ---
+      currentStepIndex = 0;
+      setActiveIndex(0);
+      if (orderOps.length > 0) {
+        for (let i = 0; i < orderOps.length; i++) {
+          const op = orderOps[i];
+          const success = await syncEngine.processNext(op);
           if (!success) {
-            throw new Error(`Error al sincronizar operación pendiente (${remOp.entity} - ${remOp.operation}).`);
+            throw new Error(`Error al subir la comanda local (${op.entityId || op.id}).`);
           }
+          const pct = Math.round(((i + 1) / orderOps.length) * 100);
+          setStepProgress(prev => {
+            const next = [...prev];
+            next[0] = pct;
+            return next;
+          });
+          await sleep(200);
         }
-
-        setStepProgress(prev => [100, 100, prev[2], prev[3]]);
-        await sleep(400);
-
-        // --- PASO 3: Impacto en Kardex y Reducción de Stock por Receta ---
-        setActiveIndex(2);
-        for (let p = 20; p <= 100; p += 20) {
-          setStepProgress(prev => [100, 100, p, prev[3]]);
-          await sleep(160);
+      } else {
+        // Animación suave de confirmación
+        for (let p = 25; p <= 100; p += 25) {
+          setStepProgress(prev => [p, prev[1], prev[2], prev[3]]);
+          await sleep(120);
         }
-        setStepProgress(prev => [100, 100, 100, prev[3]]);
-        await sleep(350);
-
-        // --- PASO 4: Actualizando Arqueo de Turno y Saldo en Vivo ---
-        setActiveIndex(3);
-        for (let p = 20; p <= 80; p += 30) {
-          setStepProgress(prev => [100, 100, 100, p]);
-          await sleep(150);
-        }
-
-        // Hidratar snapshot de datos operativos frescos desde el servidor SQL
-        try {
-          await offlineSnapshotService.hydrateOperationalSnapshot();
-        } catch (hErr) {
-          console.warn('[AtomicSyncModal] Advertencia en hidratación final:', hErr);
-        }
-
-        // Notificar a los componentes de UI (Caja, Mesas, Cocina)
-        window.dispatchEvent(new Event('syncQueueChanged'));
-
-        setStepProgress([100, 100, 100, 100]);
-        setActiveIndex(4);
-        setIsDone(true);
-
-        if (!completedNotifiedRef.current) {
-          completedNotifiedRef.current = true;
-          onComplete?.();
-        }
-      } catch (err) {
-        console.error('[AtomicSyncModal] Fallo en la sincronización:', err);
-        setHasError(true);
-        setErrorStepIndex((prev) => (prev !== null ? prev : activeIndex));
-        setErrorMessage(err.message || 'Error inesperado durante la sincronización.');
-      } finally {
-        isSyncingRef.current = false;
       }
-    };
+      setStepProgress(prev => [100, prev[1], prev[2], prev[3]]);
+      await sleep(350);
 
-    startSyncExecution();
-  }, [isOpen]);
+      // --- PASO 2: Transacciones de Cobro en Caja ---
+      currentStepIndex = 1;
+      setActiveIndex(1);
+
+      // Re-consultar operaciones de cobro en cola para incorporar los remoteOrderId mapeados en el Paso 1
+      const queueAfterStep1 = await db.syncQueue
+        .where('status')
+        .anyOf([QueueStatus.PENDING, QueueStatus.PROCESSING])
+        .toArray();
+      const freshPayOps = queueAfterStep1.filter(
+        op => op.entity === 'ORDER' && op.operation === 'PAY_ORDER' && op.recordingSource !== 'shadow' && op.recordingSource !== 'diagnostic'
+      );
+
+      if (freshPayOps.length > 0) {
+        for (let i = 0; i < freshPayOps.length; i++) {
+          const op = freshPayOps[i];
+          const success = await syncEngine.processNext(op);
+          if (!success) {
+            throw new Error(`Error al registrar el cobro en Caja (${op.entityId || op.id}).`);
+          }
+          const pct = Math.round(((i + 1) / freshPayOps.length) * 100);
+          setStepProgress(prev => {
+            const next = [...prev];
+            next[1] = pct;
+            return next;
+          });
+          await sleep(220);
+        }
+      } else {
+        for (let p = 25; p <= 100; p += 25) {
+          setStepProgress(prev => [100, p, prev[2], prev[3]]);
+          await sleep(120);
+        }
+      }
+
+      // Procesar cualquier otra operación restante en cola (ej. UPDATE_ORDER_STATUS, PRODUCT CREATE)
+      const remaining = await queueService.getPendingSyncable();
+      for (const remOp of remaining) {
+        const success = await syncEngine.processNext(remOp);
+        if (!success) {
+          throw new Error(`Error al sincronizar operación pendiente (${remOp.entity} - ${remOp.operation}).`);
+        }
+      }
+
+      setStepProgress(prev => [100, 100, prev[2], prev[3]]);
+      await sleep(400);
+
+      // --- PASO 3: Impacto en Kardex y Reducción de Stock por Receta ---
+      currentStepIndex = 2;
+      setActiveIndex(2);
+      for (let p = 20; p <= 100; p += 20) {
+        setStepProgress(prev => [100, 100, p, prev[3]]);
+        await sleep(160);
+      }
+      setStepProgress(prev => [100, 100, 100, prev[3]]);
+      await sleep(350);
+
+      // --- PASO 4: Actualizando Arqueo de Turno y Saldo en Vivo ---
+      currentStepIndex = 3;
+      setActiveIndex(3);
+      for (let p = 20; p <= 80; p += 30) {
+        setStepProgress(prev => [100, 100, 100, p]);
+        await sleep(150);
+      }
+
+      // Hidratar snapshot de datos operativos frescos desde el servidor SQL
+      try {
+        await offlineSnapshotService.hydrateOperationalSnapshot();
+      } catch (hErr) {
+        console.warn('[AtomicSyncModal] Advertencia en hidratación final:', hErr);
+      }
+
+      // Notificar a los componentes de UI (Caja, Mesas, Cocina)
+      window.dispatchEvent(new Event('syncQueueChanged'));
+
+      setStepProgress([100, 100, 100, 100]);
+      setActiveIndex(4);
+      setIsDone(true);
+
+      if (!completedNotifiedRef.current) {
+        completedNotifiedRef.current = true;
+        onComplete?.();
+      }
+    } catch (err) {
+      console.error('[AtomicSyncModal] Fallo en la sincronización:', err);
+      setHasError(true);
+      setErrorStepIndex(currentStepIndex);
+      setErrorMessage(err.message || 'Error inesperado durante la sincronización.');
+    } finally {
+      isSyncingRef.current = false;
+    }
+  }, [onComplete]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      isSyncingRef.current = false;
+      return;
+    }
+    runSync();
+  }, [isOpen, runSync]);
 
   const totalProgress =
     steps.length > 0
@@ -674,22 +689,45 @@ export const AtomicSyncModal = ({
 
             {/* Footer */}
             <div className="px-6 py-4 bg-neutral-50/70 dark:bg-neutral-950/60 border-t border-neutral-100 dark:border-neutral-900 flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  if (isDone && !hasError) {
-                    onClose();
-                  }
-                }}
-                disabled={!isDone || hasError}
-                className={`px-5 py-2.5 rounded-xl border-0 text-xs font-semibold transition-all whitespace-nowrap ${
-                  isDone && !hasError
-                    ? 'bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-200 cursor-pointer shadow-md'
-                    : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600 cursor-not-allowed opacity-60'
-                }`}
-              >
-                Finalizar
-              </button>
+              {hasError ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      isSyncingRef.current = false;
+                      runSync();
+                    }}
+                    className="px-5 py-2.5 rounded-xl border-0 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Reintentar Sincronización
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isDone) {
+                      onClose();
+                    }
+                  }}
+                  disabled={!isDone}
+                  className={`px-5 py-2.5 rounded-xl border-0 text-xs font-semibold transition-all whitespace-nowrap ${
+                    isDone
+                      ? 'bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-200 cursor-pointer shadow-md'
+                      : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  Finalizar
+                </button>
+              )}
             </div>
           </motion.div>
         </motion.div>
