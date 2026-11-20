@@ -2038,6 +2038,9 @@ app.post('/api/sync/operations', async (req, res) => {
             });
 
             return businessResult;
+        }, {
+            maxWait: 15000,
+            timeout: 30000
         });
 
         return res.json({
