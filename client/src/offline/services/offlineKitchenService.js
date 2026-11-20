@@ -68,7 +68,7 @@ export const offlineKitchenService = {
         if (!parentId) return false;
 
         // Validar que la comanda asociada exista y esté activa
-        const order = orderMap.get(parentId);
+        const order = orderMap.get(parentId) || orderMap.get(Number(parentId));
         if (!order) return false;
         const orderEstado = (order.estado || order.status || 'pendiente').toLowerCase();
         if (orderEstado === 'cerrada' || orderEstado === 'anulada') return false;
@@ -77,7 +77,7 @@ export const offlineKitchenService = {
         const productKey = String(item.platoId || item.productId || '');
         if (!productKey) return false;
 
-        const plato = productMap.get(productKey);
+        const plato = productMap.get(productKey) || productMap.get(Number(productKey));
 
         // Si no existe el producto en el snapshot local, pasar igual con fallback visual
         if (!plato) return true;

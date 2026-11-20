@@ -2434,6 +2434,8 @@ app.get('/api/tables', async (req, res) => {
                         where: { estado: { notIn: ['anulado'] } },
                         select: {
                             id: true,
+                            comandaId: true,
+                            platoId: true,
                             cantidad: true,
                             estado: true,
                             observacion: true,

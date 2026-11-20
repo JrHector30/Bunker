@@ -128,8 +128,9 @@ export const offlineSnapshotService = {
             await db.orders.put({
               id: comanda.id,
               remoteId: comanda.id,
-              mesaId: Number(comanda.mesaId),
-              usuarioId: Number(comanda.usuarioId),
+              mesaId: Number(comanda.mesaId || mesa.id),
+              tableId: Number(comanda.mesaId || mesa.id),
+              usuarioId: Number(comanda.usuarioId || comanda.usuario?.id || 1),
               comensales: Number(comanda.comensales || 2),
               fecha: comanda.fecha,
               estado: comanda.estado,
@@ -143,14 +144,20 @@ export const offlineSnapshotService = {
             for (const det of detalles) {
               if (pendingOrderItemIds.has(String(det.id))) continue;
 
+              const platoIdResolved = Number(det.platoId || det.plato?.id || det.productId || 0);
+              const unitPrice = Number(det.precio != null ? det.precio : det.plato?.precio || 0);
+
               await db.orderItems.put({
                 id: det.id,
                 remoteId: det.id,
-                comandaId: det.comandaId,
-                orderId: det.comandaId, // Duplicado para compatibilidad Dexie
-                platoId: Number(det.platoId),
-                productId: Number(det.platoId), // Duplicado para compatibilidad Dexie
-                cantidad: Number(det.cantidad),
+                comandaId: comanda.id,
+                orderId: comanda.id, // Duplicado para compatibilidad Dexie
+                platoId: platoIdResolved,
+                productId: platoIdResolved, // Duplicado para compatibilidad Dexie
+                nombre: det.plato?.nombre || det.nombre || 'Plato',
+                precio: unitPrice,
+                precioVenta: unitPrice,
+                cantidad: Number(det.cantidad || 1),
                 estado: det.estado || 'pendiente',
                 observacion: det.observacion || '',
                 cocineroId: det.cocineroId || null,

@@ -46,11 +46,11 @@ export const offlineCheckoutService = {
 
       const order = activeOrders[0];
 
-      // 3. Validación de integridad antes del cobro
+      // 3. Validación de integridad antes del cobro (comparación determinista en string)
       const orderItems = await db.orderItems
         .filter(item => {
           const parentId = String(item.comandaId || item.orderId || '');
-          return parentId === order.id;
+          return Boolean(parentId && parentId === String(order.id));
         })
         .toArray();
 

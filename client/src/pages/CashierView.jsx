@@ -150,18 +150,19 @@ const CashierView = () => {
         const product = productMap.get(productKey);
 
         // Resolver precio defensivamente: precio ?? precioVenta del item, luego del producto
-        const unitPrice = item.precio != null ? Number(item.precio)
-          : item.precioVenta != null ? Number(item.precioVenta)
-            : product?.precio != null ? Number(product.precio)
-              : product?.precioVenta != null ? Number(product.precioVenta)
+        const unitPrice = item.precio != null && Number.isFinite(Number(item.precio)) ? Number(item.precio)
+          : item.precioVenta != null && Number.isFinite(Number(item.precioVenta)) ? Number(item.precioVenta)
+            : product?.precio != null && Number.isFinite(Number(product.precio)) ? Number(product.precio)
+              : product?.precioVenta != null && Number.isFinite(Number(product.precioVenta)) ? Number(product.precioVenta)
                 : 0;
 
         orderItemMap.get(parentId).push({
           ...item,
           _unitPrice: unitPrice,
+          precio: unitPrice,
           plato: product
             ? { ...product, precio: unitPrice }
-            : { id: productKey, nombre: item.nombre || item.plato?.nombre || 'Plato sin datos', precio: unitPrice }
+            : { id: productKey, nombre: item.nombre || item.plato?.nombre || 'Plato', precio: unitPrice }
         });
       });
 
@@ -180,10 +181,11 @@ const CashierView = () => {
             : null;
         const mesa = resolvedTableId ? tableMap.get(resolvedTableId) : null;
 
-        // Número visible: numero ?? name (nunca Number(uuid))
-        const mesaNumero = mesa
+        // Número visible: numero ?? name (nunca 'NaN')
+        let mesaNumero = mesa
           ? (mesa.numero ?? mesa.name ?? resolvedTableId)
           : (resolvedTableId ?? '?');
+        if (String(mesaNumero).toLowerCase() === 'nan') mesaNumero = resolvedTableId || '?';
 
         return {
           ...order,
@@ -209,6 +211,50 @@ const CashierView = () => {
       if (!res.ok) throw new Error('Error al conectar con el servidor');
       const data = await res.json();
       setConnectionError(false);
+
+      // Sincronizar en segundo plano con Dexie para garantizar cobro offline sin NaN si cae el internet
+      if (Array.isArray(data) && data.length > 0) {
+        data.forEach(async (order) => {
+          try {
+            await db.orders.put({
+              id: order.id,
+              remoteId: order.id,
+              mesaId: order.mesa?.id || order.mesaId,
+              tableId: order.mesa?.id || order.mesaId,
+              usuarioId: order.usuario?.id || order.usuarioId || 1,
+              comensales: order.comensales || 2,
+              fecha: order.fecha,
+              estado: order.estado || 'enviada',
+              status: order.estado || 'enviada',
+              syncStatus: 'SYNCED',
+              updatedAt: order.fecha || new Date().toISOString()
+            });
+
+            if (Array.isArray(order.detalles)) {
+              for (const det of order.detalles) {
+                const pId = Number(det.platoId || det.plato?.id || 0);
+                const price = Number(det.precio != null && Number.isFinite(Number(det.precio)) ? det.precio : (det.plato?.precio || 0));
+                await db.orderItems.put({
+                  id: det.id,
+                  remoteId: det.id,
+                  comandaId: order.id,
+                  orderId: order.id,
+                  platoId: pId,
+                  productId: pId,
+                  nombre: det.plato?.nombre || det.nombre || 'Plato',
+                  precio: price,
+                  precioVenta: price,
+                  cantidad: Number(det.cantidad || 1),
+                  estado: det.estado || 'pendiente',
+                  observacion: det.observacion || '',
+                  syncStatus: 'SYNCED'
+                });
+              }
+            }
+          } catch (_) {}
+        });
+      }
+
       return data;
     } catch (err) {
       console.error('[CashierView] openAccountsFetcher falló:', err);
