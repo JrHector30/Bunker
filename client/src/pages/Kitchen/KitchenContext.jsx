@@ -4,6 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import useKitchenPolling from './hooks/useKitchenPolling';
 import { soundPlayer } from './KitchenSounds';
 import { networkStatus, NetworkState, offlineKitchenService } from '../../offline';
+import { getActiveRestaurant } from '../../utils/tenant';
 
 const KitchenContext = createContext();
 
@@ -12,14 +13,29 @@ export const KitchenProvider = ({ children }) => {
     const { mode } = useTheme();
     const isDarkMode = mode === 'dark';
 
-    // Global Queue Cache preservation across mounts
+    // Global Queue Cache preservation across mounts & page reloads (0 ms instant render)
     const [queue, setQueue] = useState(() => {
-        const saved = window.__globalKitchenQueueCache;
-        return saved || [];
+        if (window.__globalKitchenQueueCache && Array.isArray(window.__globalKitchenQueueCache) && window.__globalKitchenQueueCache.length > 0) {
+            return window.__globalKitchenQueueCache;
+        }
+        try {
+            const saved = localStorage.getItem('bunker_kitchen_queue');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    window.__globalKitchenQueueCache = parsed;
+                    return parsed;
+                }
+            }
+        } catch (_) {}
+        return window.__globalKitchenQueueCache || [];
     });
 
     const updateGlobalCache = (newQueue) => {
         window.__globalKitchenQueueCache = newQueue;
+        try {
+            localStorage.setItem('bunker_kitchen_queue', JSON.stringify(newQueue));
+        } catch (_) {}
         setQueue(newQueue);
     };
 
@@ -61,6 +77,7 @@ export const KitchenProvider = ({ children }) => {
     const pendingUpdates = useRef({});
     const fetchCounter = useRef(0);
     const lastAppliedFetchId = useRef(0);
+    const activeControllerRef = useRef(null);
 
     const loadKitchenQueueLocal = useCallback((currentFetchId) => {
         offlineKitchenService.getQueue()
@@ -79,6 +96,9 @@ export const KitchenProvider = ({ children }) => {
     }, []);
 
     const fetchQueue = useCallback(() => {
+        // No realizar polling si el usuario no ha iniciado sesión
+        if (!user) return;
+
         fetchCounter.current += 1;
         const currentFetchId = fetchCounter.current;
 
@@ -87,7 +107,22 @@ export const KitchenProvider = ({ children }) => {
             return;
         }
 
-        fetch('/api/kitchen/queue')
+        // Cancelar petición anterior en vuelo para evitar acumulación de llamadas concurrentes
+        if (activeControllerRef.current) {
+            try { activeControllerRef.current.abort(); } catch (_) {}
+        }
+        const controller = new AbortController();
+        activeControllerRef.current = controller;
+
+        const activeTenant = getActiveRestaurant();
+        const tenantId = user?.restauranteId || activeTenant?.id || 1;
+
+        fetch(`/api/kitchen/queue?_t=${Date.now()}`, {
+            signal: controller.signal,
+            headers: {
+                'x-restaurante-id': String(tenantId)
+            }
+        })
             .then(res => {
                 // Tratar HTTP 500 / !ok igual que error de red → usar fallback offline
                 if (!res.ok) {
@@ -110,13 +145,19 @@ export const KitchenProvider = ({ children }) => {
                 updateGlobalCache(mergedData);
             })
             .catch(err => {
+                if (err.name === 'AbortError') return; // Cancelación esperada
                 console.warn("[KitchenContext] Polling online falló (error de red). Usando fallback local silencioso.");
                 loadKitchenQueueLocal(currentFetchId);
+            })
+            .finally(() => {
+                if (activeControllerRef.current === controller) {
+                    activeControllerRef.current = null;
+                }
             });
-    }, [loadKitchenQueueLocal]);
+    }, [loadKitchenQueueLocal, user]);
 
-    // Start Polling (Visibility API smart polling is managed inside hook)
-    useKitchenPolling(fetchQueue, 1500);
+    // Start Polling (Visibility API smart polling is managed inside hook: 3500ms + eventos instantáneos)
+    useKitchenPolling(fetchQueue, 3500);
 
     // Initial play sound setup (Autoplay compliance)
     const [hasInteracted, setHasInteracted] = useState(false);

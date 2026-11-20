@@ -31,7 +31,7 @@ export function getScopedKey(baseKey) {
 
 export function clearGlobalCache() {
     for (const k in globalCache) {
-        if (k !== 'locks') delete globalCache[k];
+        if (k !== 'locks' && !k.includes('users')) delete globalCache[k];
     }
 }
 

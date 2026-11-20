@@ -51,6 +51,18 @@ function KitchenContent() {
  * Wraps the components in the global KitchenProvider.
  */
 export default function KitchenView() {
+  const context = useKitchen();
+
+  // Si ya está envuelto en el KitchenProvider global de App.jsx, renderizar directo
+  if (context) {
+    return (
+      <div className="h-full flex flex-col overflow-hidden" style={{ minHeight: 'calc(100vh - 110px)' }}>
+        <KitchenContent />
+      </div>
+    );
+  }
+
+  // Fallback si se monta de forma aislada
   return (
     <KitchenProvider>
       <div className="h-full flex flex-col overflow-hidden" style={{ minHeight: 'calc(100vh - 110px)' }}>

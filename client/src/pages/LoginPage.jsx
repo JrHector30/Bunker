@@ -21,7 +21,7 @@ const LoginPage = () => {
         root.classList.add('mode-dark');
     }, []);
 
-    // Dynamic Users from API Cache
+    // Dynamic Users from API Cache con persistencia inmediata
     const currentTenant = (() => {
         try {
             const raw = localStorage.getItem('bunker_current_tenant');
@@ -31,6 +31,19 @@ const LoginPage = () => {
         }
     })();
 
+    const tenantStorageKey = `bunker_login_users_${currentTenant?.id || 'default'}`;
+
+    const initialCachedUsers = (() => {
+        try {
+            const saved = localStorage.getItem(tenantStorageKey);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch (_) {}
+        return [];
+    })();
+
     const fetcher = () => {
         let url = '/api/users';
         if (currentTenant?.id) {
@@ -38,16 +51,20 @@ const LoginPage = () => {
         }
         return fetch(url).then(res => res.json()).then(data => {
             const list = Array.isArray(data) ? data : [];
-            return list.filter(u => u.activo !== false).map(u => ({
+            const processed = list.filter(u => u.activo !== false).map(u => ({
                 ...u,
                 initial: u.nombre ? u.nombre.charAt(0).toUpperCase() : '?',
                 shift: u.rol === 'admin' ? 'Acceso 24/7' : (u.rol === 'mozo' ? '08:00 AM - 04:00 PM' : 'Turno Operativo')
             }));
+            try {
+                localStorage.setItem(tenantStorageKey, JSON.stringify(processed));
+            } catch (_) {}
+            return processed;
         });
     };
 
     const cacheKey = currentTenant?.id ? `users_tenant_${currentTenant.id}` : 'users';
-    const { data: usersList, mutate: fetchUsers } = useCache(cacheKey, fetcher, []);
+    const { data: usersList, mutate: fetchUsers } = useCache(cacheKey, fetcher, initialCachedUsers);
     const [isExiting, setIsExiting] = useState(false);
 
     // Password Recovery State

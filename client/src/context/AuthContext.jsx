@@ -10,15 +10,28 @@ export const AuthProvider = ({ children }) => {
     const [loadingPermisos, setLoadingPermisos] = useState(false);
 
     const loadPermisos = async (rol) => {
-        if (rol === 'admin') {
+        if (!rol || rol === 'admin') {
             setPermisosUsuario([]);
             return;
         }
+        // Carga inmediata de permisos cacheados para evitar parpadeos
+        try {
+            const cached = localStorage.getItem(`bunker_permisos_${rol}`);
+            if (cached) {
+                setPermisosUsuario(JSON.parse(cached));
+            }
+        } catch (_) {}
+
         setLoadingPermisos(true);
         try {
             const res = await fetch(`/api/permisos/${rol}`);
-            const data = await res.json();
-            setPermisosUsuario(data);
+            if (res.ok) {
+                const data = await res.json();
+                setPermisosUsuario(data);
+                try {
+                    localStorage.setItem(`bunker_permisos_${rol}`, JSON.stringify(data));
+                } catch (_) {}
+            }
         } catch (err) {
             console.error("Error fetching permissions", err);
         } finally {
@@ -80,7 +93,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{ user, login, logout, loading, tienePermiso, loadingPermisos, loadPermisos }}>
-            {(!loading && !loadingPermisos) && children}
+            {!loading && children}
         </AuthContext.Provider>
     );
 };

@@ -11,7 +11,26 @@ const sharp = require('sharp');
 const OpenAI = require('openai'); // Import OpenAI
 
 const app = express();
-const prisma = new PrismaClient();
+
+// Prisma Client Singleton optimizado para Vercel Serverless (evita agotar conexiones en Supabase y cuelgues TCP)
+const prismaClientSingleton = () => {
+    let url = process.env.DATABASE_URL || '';
+    if (url && !url.includes('connection_limit=')) {
+        const sep = url.includes('?') ? '&' : '?';
+        url = `${url}${sep}connection_limit=3&connect_timeout=5&pool_timeout=5`;
+    }
+    return new PrismaClient({
+        datasources: {
+            db: { url }
+        }
+    });
+};
+
+const globalForPrisma = globalThis;
+const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+else globalForPrisma.prisma = prisma;
+
 const PORT = process.env.PORT || 3000;
 
 // Helper: Redondear a 2 decimales para evitar errores de precisión flotante
@@ -682,6 +701,7 @@ app.post('/api/impresoras/imprimir', async (req, res) => {
 // 1. Users (Auth placeholder)
 app.get('/api/users', async (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=60');
         const { restauranteId, slug } = req.query;
         let where = {};
         if (restauranteId) {
@@ -696,6 +716,16 @@ app.get('/api/users', async (req, res) => {
 
         const users = await prisma.user.findMany({
             where,
+            select: {
+                id: true,
+                nombre: true,
+                usuario: true,
+                rol: true,
+                activo: true,
+                foto: true,
+                correo: true,
+                restauranteId: true
+            },
             orderBy: { nombre: 'asc' }
         });
         res.json(Array.isArray(users) ? users : []);
@@ -2708,6 +2738,7 @@ app.post('/api/tables/unmerge', async (req, res) => {
 // Kitchen Queue Endpoint (Item-based)
 app.get('/api/kitchen/queue', async (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
         const tenantId = getTenantId(req);
         const queue = await prisma.detalleComanda.findMany({
             where: {
@@ -2720,10 +2751,41 @@ app.get('/api/kitchen/queue', async (req, res) => {
                     categoria: { enviarCocina: true } // FILTER: Only Kitchen Categories
                 }
             },
-            include: {
-                plato: true,
-                comanda: { include: { mesa: { include: { mesasHijas: true } } } },
-                cocinero: true
+            select: {
+                id: true,
+                cantidad: true,
+                estado: true,
+                observacion: true,
+                fechaCreacion: true,
+                cocineroId: true,
+                plato: {
+                    select: {
+                        id: true,
+                        nombre: true,
+                        categoriaId: true
+                    }
+                },
+                comanda: {
+                    select: {
+                        id: true,
+                        fecha: true,
+                        estado: true,
+                        numeroComanda: true,
+                        mesa: {
+                            select: {
+                                id: true,
+                                numero: true,
+                                nombre: true,
+                                mesasHijas: {
+                                    select: { id: true, numero: true }
+                                }
+                            }
+                        }
+                    }
+                },
+                cocinero: {
+                    select: { id: true, nombre: true }
+                }
             },
             orderBy: { id: 'asc' } // FIFO
         });
@@ -2746,11 +2808,13 @@ app.post('/api/orders', async (req, res) => {
     }
 
     const { mesaId, usuarioId, detalles } = req.body;
+    const parsedMesaId = parseInt(mesaId);
+    const parsedUsuarioId = parseInt(usuarioId);
 
     // Hotfix: Check if there are MULTIPLE active orders due to desyncs
     const activeOrders = await prisma.comanda.findMany({
         where: { 
-            mesaId: parseInt(mesaId), 
+            mesaId: parsedMesaId, 
             estado: { notIn: ['cerrada', 'anulada'] },
             restauranteId: tenantId 
         },
@@ -2759,29 +2823,26 @@ app.post('/api/orders', async (req, res) => {
 
     let order = activeOrders.length > 0 ? activeOrders[0] : null;
 
-    // Self-heal: If there are older orphaned orders on this table, anulate them to prevent array collisions in Frontend
+    // Self-heal: If there are older orphaned orders on this table, anulate them in batch
     if (activeOrders.length > 1) {
-        for (let i = 1; i < activeOrders.length; i++) {
-            await prisma.comanda.update({
-                where: { id: activeOrders[i].id },
-                data: { estado: 'anulada' }
-            });
-            console.log(`Auto-Healed: Cancelled orphaned comanda ${activeOrders[i].id} on Mesa ${mesaId}`);
-        }
+        const orphanIds = activeOrders.slice(1).map(o => o.id);
+        await prisma.comanda.updateMany({
+            where: { id: { in: orphanIds } },
+            data: { estado: 'anulada' }
+        });
+        console.log(`Auto-Healed: Cancelled ${orphanIds.length} orphaned comandas on Mesa ${parsedMesaId}`);
     }
 
-    console.log(`Mesa ${mesaId}: Buscando orden activa... Encontrada: ${order ? order.id : 'NINGUNA. Generando NUEVO orderId.'}`);
-
     if (!order) {
-        const lastOrder = await prisma.comanda.findFirst({
-            where: { restauranteId: tenantId },
-            orderBy: { id: 'desc' }
-        });
-        const maxOrder = await prisma.comanda.findFirst({
-            where: { restauranteId: tenantId, numeroComanda: { not: null } },
-            orderBy: { numeroComanda: 'desc' }
-        });
-        const totalOrdersCount = await prisma.comanda.count({ where: { restauranteId: tenantId } });
+        const [maxOrder, totalOrdersCount] = await Promise.all([
+            prisma.comanda.findFirst({
+                where: { restauranteId: tenantId, numeroComanda: { not: null } },
+                orderBy: { numeroComanda: 'desc' },
+                select: { numeroComanda: true }
+            }),
+            prisma.comanda.count({ where: { restauranteId: tenantId } })
+        ]);
+
         const nextNumeroComanda = Math.max(
             maxOrder?.numeroComanda || 0,
             totalOrdersCount
@@ -2789,8 +2850,8 @@ app.post('/api/orders', async (req, res) => {
 
         order = await prisma.comanda.create({
             data: {
-                mesaId: parseInt(mesaId),
-                usuarioId: parseInt(usuarioId),
+                mesaId: parsedMesaId,
+                usuarioId: parsedUsuarioId,
                 estado: 'enviada',
                 comensales: parseInt(req.body.comensales || 1),
                 restauranteId: tenantId,
@@ -2806,32 +2867,33 @@ app.post('/api/orders', async (req, res) => {
             },
             include: { detalles: true }
         });
-        // Update table status
-        await prisma.mesa.update({
-            where: { id: parseInt(mesaId) },
-            data: { estado: 'ocupada' }
-        });
 
-        // Sincronizar estado de mesas hijas
-        await prisma.mesa.updateMany({
-            where: { mesaPadreId: parseInt(mesaId) },
-            data: { estado: 'ocupada' }
-        });
+        // Actualizar estado de mesa principal y mesas hijas en paralelo
+        await Promise.all([
+            prisma.mesa.update({
+                where: { id: parsedMesaId },
+                data: { estado: 'ocupada' }
+            }),
+            prisma.mesa.updateMany({
+                where: { mesaPadreId: parsedMesaId },
+                data: { estado: 'ocupada' }
+            })
+        ]);
     } else {
-        // Self-Healing: If for any reason the mesa was visually 'libre', force it back to 'ocupada'
-        await prisma.mesa.update({
-            where: { id: parseInt(mesaId) },
-            data: { estado: 'ocupada' }
-        });
+        // Actualizar estado de mesa principal y mesas hijas en paralelo
+        await Promise.all([
+            prisma.mesa.update({
+                where: { id: parsedMesaId },
+                data: { estado: 'ocupada' }
+            }),
+            prisma.mesa.updateMany({
+                where: { mesaPadreId: parsedMesaId },
+                data: { estado: 'ocupada' }
+            })
+        ]);
 
-        // Sincronizar estado de mesas hijas
-        await prisma.mesa.updateMany({
-            where: { mesaPadreId: parseInt(mesaId) },
-            data: { estado: 'ocupada' }
-        });
-
-        // Append to existing order
-        for (const d of detalles) {
+        // Procesar detalles concurrentemente
+        await Promise.all(detalles.map(async (d) => {
             let existingDetail = null;
             if (!d.observacion) {
                 existingDetail = await prisma.detalleComanda.findFirst({
@@ -2845,12 +2907,12 @@ app.post('/api/orders', async (req, res) => {
             }
 
             if (existingDetail) {
-                await prisma.detalleComanda.update({
+                return prisma.detalleComanda.update({
                     where: { id: existingDetail.id },
                     data: { cantidad: existingDetail.cantidad + d.cantidad }
                 });
             } else {
-                await prisma.detalleComanda.create({
+                return prisma.detalleComanda.create({
                     data: {
                         comandaId: order.id,
                         platoId: d.platoId,
@@ -2860,7 +2922,7 @@ app.post('/api/orders', async (req, res) => {
                     }
                 });
             }
-        }
+        }));
     }
 
     res.json(order);
@@ -4074,6 +4136,26 @@ app.get('/api/cashier/open-accounts', async (req, res) => {
     } catch (e) {
         console.error('Error en open-accounts:', e);
         res.json([]);
+    }
+});
+
+// 7.1.5 Fast Cashier Status Check (Ultraligero: solo consulta el estado booleano de arqueo sin calcular balance financiero)
+app.get('/api/cashier/status', async (req, res) => {
+    try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        const tenantId = getTenantId(req);
+        const lastArqueo = await prisma.arqueo.findFirst({
+            where: { restauranteId: tenantId },
+            orderBy: { id: 'desc' },
+            select: { id: true, estado: true }
+        });
+        res.json({
+            estado: lastArqueo?.estado || 'cerrado',
+            abierto: lastArqueo?.estado === 'abierto'
+        });
+    } catch (err) {
+        console.error("Error en /api/cashier/status:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 

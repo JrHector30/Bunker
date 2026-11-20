@@ -56,10 +56,11 @@ export const CajaProvider = ({ children }) => {
     }, []);
 
     const verificarEstadoCaja = useCallback(async (tenantIdOverride, force = false) => {
-        // En rutas públicas de login / acceso / superadmin, no consultar arqueo de caja
+        // Si no hay usuario autenticado o está en rutas de autenticación, no consultar caja
+        if (!user) return false;
         if (typeof window !== 'undefined') {
             const path = window.location.pathname;
-            if (path === '/acceso' || path.startsWith('/superadmin') || path === '/') {
+            if (path === '/login' || path === '/acceso' || path.startsWith('/superadmin') || path === '/') {
                 return false;
             }
         }
@@ -67,9 +68,9 @@ export const CajaProvider = ({ children }) => {
         const id = Number(tenantIdOverride || currentTenantId || 1);
         const now = Date.now();
 
-        // Evitar múltiples llamadas simultáneas o llamadas en ráfaga (mínimo 3s entre peticiones automáticas)
+        // Evitar múltiples llamadas simultáneas o llamadas en ráfaga (mínimo 5s entre peticiones automáticas)
         if (!force && inFlightRef.current) return;
-        if (!force && (now - lastCheckTimeRef.current < 3000)) return;
+        if (!force && (now - lastCheckTimeRef.current < 5000)) return;
 
         inFlightRef.current = true;
         lastCheckTimeRef.current = now;
@@ -84,7 +85,8 @@ export const CajaProvider = ({ children }) => {
                 return isOpen;
             }
 
-            const res = await fetch(`/api/cashier/balance?restauranteId=${id}&_t=${Date.now()}`, {
+            // Endpoint ultraligero que solo consulta el estado de arqueo en milisegundos
+            const res = await fetch(`/api/cashier/status?restauranteId=${id}&_t=${Date.now()}`, {
                 headers: {
                     'x-restaurante-id': String(id)
                 }
@@ -92,11 +94,10 @@ export const CajaProvider = ({ children }) => {
 
             if (res.ok) {
                 const data = await res.json();
-                const isOpen = Boolean(data && data.estado === 'abierto');
+                const isOpen = Boolean(data && (data.abierto === true || data.estado === 'abierto'));
                 updateCajaStatusForTenant(id, isOpen);
                 return isOpen;
             } else {
-                console.warn(`[CajaContext] Falló verificación online para local ${id}.`);
                 return false;
             }
         } catch (error) {
@@ -105,7 +106,7 @@ export const CajaProvider = ({ children }) => {
         } finally {
             inFlightRef.current = false;
         }
-    }, [currentTenantId, updateCajaStatusForTenant]);
+    }, [user, currentTenantId, updateCajaStatusForTenant]);
 
     // 1. Revalidación SOLO cuando cambia el local activo
     useEffect(() => {

@@ -203,6 +203,7 @@ model DetalleComanda {
   fechaListo       DateTime?
 
   @@index([comandaId])
+  @@index([estado, comandaId])
 }
 
 model Insumo {

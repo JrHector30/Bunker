@@ -45,9 +45,7 @@ let cleanedUrl = (rawDatabaseUrl || '').replace(/^["']|["']$/g, '').trim();
 
 // Migración automática a Connection Pooler IPv4 para evitar ENOTFOUND en redes residenciales sin IPv6
 if (cleanedUrl.includes('db.iyskqnlikuwatulyotcb.supabase.co')) {
-  cleanedUrl = cleanedUrl
-    .replace('postgres:71367006Hq.2026@db.iyskqnlikuwatulyotcb.supabase.co:5432', 'postgres.iyskqnlikuwatulyotcb:71367006Hq.2026@aws-1-us-west-2.pooler.supabase.com:6543')
-    .replace('db.iyskqnlikuwatulyotcb.supabase.co:5432', 'aws-1-us-west-2.pooler.supabase.com:6543');
+  cleanedUrl = "postgresql://postgres.iyskqnlikuwatulyotcb:71367006Hq.2026@aws-1-us-west-2.pooler.supabase.com:6543/postgres";
 }
 
 const connectionString = cleanedUrl;

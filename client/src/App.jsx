@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ConfirmationProvider } from './context/ConfirmationContext';
 import { CajaProvider } from './context/CajaContext';
+import { KitchenProvider } from './pages/Kitchen/KitchenContext';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/DashboardLayout';
 import TablesView from './pages/TablesView';
@@ -74,7 +75,7 @@ function App() {
           <ConfirmationProvider>
             <AuthProvider>
               <CajaProvider>
-              <Routes>
+                <Routes>
               <Route path="/superadmin" element={<SuperAdminView />} />
               <Route path="/superadmin/login" element={<SuperAdminView />} />
               <Route path="/acceso" element={<TenantLoginView />} />
